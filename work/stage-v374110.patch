@@ -1,0 +1,8 @@
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -26,2 +26,2 @@ android {
+-        versionCode = 241
+-        versionName = "3.74.108"
++        versionCode = 243
++        versionName = "3.74.110"

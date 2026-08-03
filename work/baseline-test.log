@@ -1,0 +1,27 @@
+Starting a Gradle Daemon, 1 busy and 1 incompatible and 1 stopped Daemons could not be reused, use --status for details
+> Task :app:verifyFfmpegKitAar
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:checkDebugAarMetadata'.
+> Dependency verification failed for configuration ':app:debugRuntimeClasspath'
+  One artifact failed verification: compose-bom-2024.02.01.pom (androidx.compose:compose-bom:2024.02.01) from repository Google
+  If the artifacts are trustworthy, you will need to update the gradle/verification-metadata.xml file. For more on how to do this, please refer to https://docs.gradle.org/8.9/userguide/dependency_verification.html#sec:troubleshooting-verification in the Gradle documentation.
+  
+  Open this report for more details: file:///C:/Users/--/repos/CleanCut/build/reports/dependency-verification/at-1784773781566/dependency-verification-report.html
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 22s
+3 actionable tasks: 2 executed, 1 up-to-date
+EXIT: 1

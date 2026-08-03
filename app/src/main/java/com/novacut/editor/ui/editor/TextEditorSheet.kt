@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.automirrored.filled.FormatAlignRight
@@ -20,12 +21,43 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
 import com.novacut.editor.model.*
+
+private data class TextColorOption(val value: Long, val labelRes: Int)
+
+private val textColorOptions = listOf(
+    TextColorOption(0xFFFFFFFF, R.string.text_editor_color_white),
+    TextColorOption(0xFF000000, R.string.text_editor_color_black),
+    TextColorOption(0xFFF38BA8, R.string.text_editor_color_red),
+    TextColorOption(0xFFFAB387, R.string.text_editor_color_orange),
+    TextColorOption(0xFFF9E2AF, R.string.text_editor_color_yellow),
+    TextColorOption(0xFFA6E3A1, R.string.text_editor_color_green),
+    TextColorOption(0xFF89B4FA, R.string.text_editor_color_blue),
+    TextColorOption(0xFFCBA6F7, R.string.text_editor_color_purple),
+    TextColorOption(0xFFF5C2E7, R.string.text_editor_color_pink),
+    TextColorOption(0xFF94E2D5, R.string.text_editor_color_teal),
+    TextColorOption(0xFF89DCEB, R.string.text_editor_color_cyan),
+    TextColorOption(0xFFB4BEFE, R.string.text_editor_color_periwinkle)
+)
+
+private val glowColorOptions = listOf(
+    TextColorOption(0x00000000L, R.string.text_editor_glow_off),
+    TextColorOption(0xFFFFFFFF, R.string.text_editor_color_white),
+    TextColorOption(0xFFF38BA8, R.string.text_editor_color_red),
+    TextColorOption(0xFFFAB387, R.string.text_editor_color_orange),
+    TextColorOption(0xFFF9E2AF, R.string.text_editor_color_yellow),
+    TextColorOption(0xFFA6E3A1, R.string.text_editor_color_green),
+    TextColorOption(0xFF89B4FA, R.string.text_editor_color_blue),
+    TextColorOption(0xFFCBA6F7, R.string.text_editor_color_purple)
+)
 
 @Composable
 fun TextEditorSheet(
@@ -75,11 +107,6 @@ fun TextEditorSheet(
     )
     val fontFamilies = systemFonts + importedFonts
 
-    val colorOptions = listOf(
-        0xFFFFFFFF, 0xFF000000, 0xFFF38BA8, 0xFFFAB387,
-        0xFFF9E2AF, 0xFFA6E3A1, 0xFF89B4FA, 0xFFCBA6F7,
-        0xFFF5C2E7, 0xFF94E2D5, 0xFF89DCEB, 0xFFB4BEFE
-    )
     val previewFontFamily = remember(fontFamily) { previewFontFamily(fontFamily) }
     val previewTextAlign = when (alignment) {
         TextAlignment.LEFT -> TextAlign.Start
@@ -314,18 +341,30 @@ fun TextEditorSheet(
 
             Text(stringResource(R.string.text_editor_color), color = semanticColors.subtextStrong, style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(colorOptions) { color ->
+                items(textColorOptions, key = { it.value }) { option ->
+                    val optionLabel = stringResource(option.labelRes)
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color(color))
-                            .then(
-                                if (selectedColor == color) Modifier.border(2.dp, ClearCutAccents.Mauve, CircleShape)
-                                else Modifier.border(1.dp, semanticColors.cardStroke, CircleShape)
-                            )
-                            .clickable { selectedColor = color }
-                    )
+                            .size(48.dp)
+                            .semantics { contentDescription = optionLabel }
+                            .selectable(
+                                selected = selectedColor == option.value,
+                                role = Role.RadioButton,
+                                onClick = { selectedColor = option.value }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(Color(option.value))
+                                .then(
+                                    if (selectedColor == option.value) Modifier.border(2.dp, ClearCutAccents.Mauve, CircleShape)
+                                    else Modifier.border(1.dp, semanticColors.cardStroke, CircleShape)
+                                )
+                        )
+                    }
                 }
             }
         }
@@ -392,28 +431,38 @@ fun TextEditorSheet(
 
             Text(stringResource(R.string.text_editor_glow_color), color = semanticColors.subtextStrong, style = MaterialTheme.typography.labelLarge)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(listOf(
-                    0x00000000L, 0xFFFFFFFF, 0xFFF38BA8, 0xFFFAB387,
-                    0xFFF9E2AF, 0xFFA6E3A1, 0xFF89B4FA, 0xFFCBA6F7
-                )) { color ->
+                items(glowColorOptions, key = { it.value }) { option ->
+                    val optionLabel = stringResource(option.labelRes)
+                    val isOff = option.value == 0x00000000L
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .background(if (color == 0x00000000L) semanticColors.panel else Color(color))
-                            .then(
-                                if (glowColor == color) Modifier.border(2.dp, ClearCutAccents.Green, CircleShape)
-                                else Modifier.border(1.dp, semanticColors.cardStroke, CircleShape)
-                            )
-                            .clickable { glowColor = color }
+                            .size(48.dp)
+                            .semantics { contentDescription = optionLabel }
+                            .selectable(
+                                selected = glowColor == option.value,
+                                role = Role.RadioButton,
+                                onClick = { glowColor = option.value }
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (color == 0x00000000L) {
-                            Text(
-                                text = stringResource(R.string.text_editor_off),
-                                color = semanticColors.subtext,
-                                fontSize = 7.sp,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(if (isOff) semanticColors.panel else Color(option.value))
+                                .then(
+                                    if (glowColor == option.value) Modifier.border(2.dp, ClearCutAccents.Green, CircleShape)
+                                    else Modifier.border(1.dp, semanticColors.cardStroke, CircleShape)
+                                )
+                        ) {
+                            if (isOff) {
+                                Text(
+                                    text = stringResource(R.string.text_editor_off),
+                                    color = semanticColors.subtext,
+                                    fontSize = 7.sp,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
                         }
                     }
                 }

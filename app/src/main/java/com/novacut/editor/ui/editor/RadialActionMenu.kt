@@ -21,6 +21,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
@@ -72,7 +73,7 @@ fun RadialActionMenu(
         noClipActions
     }
     val radiusPx = with(LocalDensity.current) { 70.dp.toPx() }
-    val buttonSizePx = with(LocalDensity.current) { 40.dp.toPx() }
+    val buttonSizePx = with(LocalDensity.current) { 48.dp.toPx() }
     val centerDotSizePx = with(LocalDensity.current) { 20.dp.toPx() }
 
     var visible by remember { mutableStateOf(false) }
@@ -121,20 +122,26 @@ fun RadialActionMenu(
                             (position.y + offsetY - buttonSizePx / 2).roundToInt()
                         )
                     }
-                    .size(40.dp)
+                    .size(48.dp)
                     .scale(scale)
-                    .clip(CircleShape)
-                    .background(semanticColors.surfaceLow)
                     .semantics { contentDescription = actionLabel }
-                    .clickable { onAction(action.id) },
+                    .clickable(role = Role.Button) { onAction(action.id) },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    action.icon,
-                    contentDescription = actionLabel,
-                    tint = semanticColors.subtextStrong,
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(semanticColors.surfaceLow),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        action.icon,
+                        contentDescription = null,
+                        tint = semanticColors.subtextStrong,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

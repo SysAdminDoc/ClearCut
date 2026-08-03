@@ -43,6 +43,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -733,6 +734,7 @@ private fun AudioEffectChip(
     onRemove: () -> Unit
 ) {
     val semanticColors = LocalClearCutColors.current
+    val removeEffectLabel = androidx.compose.ui.res.stringResource(R.string.cd_mixer_remove_effect)
     Surface(
         color = if (isSelected) ClearCutAccents.Mauve.copy(alpha = 0.16f) else semanticColors.panelRaised,
         shape = RoundedCornerShape(18.dp),
@@ -763,14 +765,22 @@ private fun AudioEffectChip(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = androidx.compose.ui.res.stringResource(R.string.cd_mixer_remove_effect),
-                tint = semanticColors.subtext,
+            Box(
                 modifier = Modifier
-                    .size(16.dp)
-                    .clickable(onClick = onRemove)
-            )
+                    .size(48.dp)
+                    .semantics {
+                        contentDescription = removeEffectLabel
+                    }
+                    .clickable(role = Role.Button, onClick = onRemove),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = null,
+                    tint = semanticColors.subtext,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
         }
     }
 }
