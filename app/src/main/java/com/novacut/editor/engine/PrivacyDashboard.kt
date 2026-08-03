@@ -210,9 +210,9 @@ object PrivacyDashboard {
             controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
             collectedBy = listOf("AiUsageLedger", "ProjectAutoSave", "ExportDelegate", "DirectPublishEngine", "C2paExportEngine"),
             retentionPolicy = "Stored only inside the project autosave; users can clear it from the export " +
-                "disclosure review. Export can write local .ai-use.json and unsigned " +
-                ".c2pa-draft-manifest.json sidecars; remote C2PA signing requires explicit per-export " +
-                "consent before any media or hashes leave the device.",
+                "disclosure review. Export can write local .ai-use.json and unsigned, unverifiable " +
+                ".c2pa-draft-manifest.json sidecars. This build has no C2PA signing or embed bridge, " +
+                "and no media or hashes leave the device for this feature.",
             collectedByDefault = false,
             controlLocation = "Editor → Export → AI disclosure review",
         ),

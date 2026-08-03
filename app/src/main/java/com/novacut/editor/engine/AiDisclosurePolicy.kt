@@ -124,7 +124,7 @@ object AiDisclosurePolicy {
      * See IPTC Photo Metadata Standard 2025.1.
      */
     const val IPTC_DIGIT_SOURCE_TYPE_COMPOSITE_WITH_AI =
-        "http://cv.iptc.org/newscodes/digitalsourcetype/compositeWithTrainedAlgorithmicMedia"
+        "http://cv.iptc.org/newscodes/digitalsourcetype/compositedWithTrainedAlgorithmicMedia"
 
     const val IPTC_DIGIT_SOURCE_TYPE_TRAINED_ALGORITHMIC =
         "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"

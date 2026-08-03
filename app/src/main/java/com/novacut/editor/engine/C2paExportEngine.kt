@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -87,12 +88,14 @@ class C2paExportEngine @Inject constructor() {
     )
 
     enum class AvailabilityStatus {
+        /** Reserved for a future build that includes a complete signer bridge. */
         READY,
         LIBRARY_UNAVAILABLE,
         CERTIFICATE_ENROLLMENT_REQUIRED,
         USER_PEM_REQUIRED,
         REMOTE_SIGNER_REQUIRED,
-        REMOTE_CONSENT_REQUIRED
+        REMOTE_CONSENT_REQUIRED,
+        SIGNER_BRIDGE_UNAVAILABLE
     }
 
     data class SigningAvailability(
@@ -103,15 +106,15 @@ class C2paExportEngine @Inject constructor() {
     )
 
     /**
-     * Convert an [AiUsageLedger] into the canonical C2PA `c2pa.actions`
+     * Convert an [AiUsageLedger] into the canonical C2PA `c2pa.actions.v2`
      * assertion list. Each merged ledger entry becomes one action:
      *
      *  - GENERATIVE_*, INPAINTING_CLOUD, LIP_SYNC_CLOUD → `c2pa.created`
-     *    with `digitalSourceType = trainedAlgorithmicMedia`.
+     *    with the IPTC `trainedAlgorithmicMedia` digital-source IRI.
      *  - AUTO_EDIT_LOCAL → `c2pa.edited` with `digitalSourceType =
-     *    compositeWithTrainedAlgorithmicMedia`.
+     *    compositedWithTrainedAlgorithmicMedia`.
      *  - The remaining DISCLOSURE_RECOMMENDED kinds → `c2pa.edited` with
-     *    `digitalSourceType = algorithmicMedia`.
+     *    the IPTC `algorithmicMedia` digital-source IRI.
      *  - INTERNAL_ONLY kinds emit no action (not disclosure-bearing per
      *    [AiUsageLedger.defaultSeverity]).
      */
@@ -122,19 +125,19 @@ class C2paExportEngine @Inject constructor() {
             if (severity == AiUsageLedger.Severity.INTERNAL_ONLY) return@mapNotNull null
             mapOf(
                 "action" to actionForKind(entry.effectKind),
-                "softwareAgent" to entry.modelName,
-                "when" to entry.recordedAtEpochMs,
+                "softwareAgent" to mapOf("name" to entry.modelName),
+                "when" to c2paTimestamp(entry.recordedAtEpochMs),
                 "digitalSourceType" to digitalSourceTypeForKind(entry.effectKind),
                 "parameters" to mapOf(
-                    "clipId" to entry.clipId,
-                    "rangeStartMs" to entry.rangeStartMs,
-                    "rangeEndMs" to entry.rangeEndMs
+                    "com.clearcut.clipId" to entry.clipId,
+                    "com.clearcut.rangeStartMs" to entry.rangeStartMs,
+                    "com.clearcut.rangeEndMs" to entry.rangeEndMs
                 )
             )
         }
         if (actions.isEmpty()) return null
         return Assertion(
-            label = "c2pa.actions",
+            label = ACTIONS_V2_LABEL,
             data = mapOf("actions" to actions)
         )
     }
@@ -157,24 +160,28 @@ class C2paExportEngine @Inject constructor() {
         AiUsageLedger.EffectKind.TTS_LOCAL -> "c2pa.opinion"
     }
 
-    /** C2PA v2 `digitalSourceType` IRI suffix; full IRI prepended by signer. */
+    /** C2PA 2.4 `digitalSourceType` values are full IPTC IRIs. */
     private fun digitalSourceTypeForKind(kind: AiUsageLedger.EffectKind): String = when (kind) {
         AiUsageLedger.EffectKind.GENERATIVE_VIDEO_CLOUD,
         AiUsageLedger.EffectKind.LIP_SYNC_CLOUD,
         AiUsageLedger.EffectKind.GENERATIVE_FILL_CLOUD,
-        AiUsageLedger.EffectKind.INPAINTING_CLOUD -> "trainedAlgorithmicMedia"
+        AiUsageLedger.EffectKind.INPAINTING_CLOUD ->
+            "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia"
 
         AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL,
-        AiUsageLedger.EffectKind.VOICE_CLONE_LOCAL -> "compositeWithTrainedAlgorithmicMedia"
+        AiUsageLedger.EffectKind.VOICE_CLONE_LOCAL ->
+            "http://cv.iptc.org/newscodes/digitalsourcetype/compositedWithTrainedAlgorithmicMedia"
 
         AiUsageLedger.EffectKind.INPAINTING_LOCAL_LARGE,
         AiUsageLedger.EffectKind.STYLE_TRANSFER_LOCAL,
         AiUsageLedger.EffectKind.UPSCALING_LOCAL,
-        AiUsageLedger.EffectKind.FRAME_INTERPOLATION_LOCAL -> "algorithmicMedia"
+        AiUsageLedger.EffectKind.FRAME_INTERPOLATION_LOCAL ->
+            "http://cv.iptc.org/newscodes/digitalsourcetype/algorithmicMedia"
 
         AiUsageLedger.EffectKind.CAPTION_TRANSLATION_LOCAL,
         AiUsageLedger.EffectKind.BACKGROUND_REMOVAL_LOCAL,
-        AiUsageLedger.EffectKind.TTS_LOCAL -> "minorHumanEdits"
+        AiUsageLedger.EffectKind.TTS_LOCAL ->
+            "http://cv.iptc.org/newscodes/digitalsourcetype/minorHumanEdits"
     }
 
     /**
@@ -203,46 +210,46 @@ class C2paExportEngine @Inject constructor() {
         require(exporterCreationTimeMs >= 0L) {
             "exporterCreationTimeMs must be >= 0"
         }
-        val assertions = buildList {
-            // Always emit the CAWG training-mining opt-out. ClearCut's privacy
-            // posture is that exports can be marked do-not-train.
+        val actions = buildList {
+            // A new export starts from a blank output asset. The draft does
+            // not claim input ingredients because it is not signed or bound.
             add(
-                Assertion(
-                    label = "cawg.training-mining",
-                    data = mapOf(
-                        "entries" to mapOf(
-                            "cawg.ai_generative_training" to mapOf("use" to "notAllowed"),
-                            "cawg.ai_inference" to mapOf("use" to "notAllowed"),
-                            "cawg.ai_training" to mapOf("use" to "notAllowed"),
-                            "cawg.data_mining" to mapOf("use" to "notAllowed")
-                        )
-                    )
+                mapOf(
+                    "action" to "c2pa.created",
+                    "softwareAgent" to mapOf(
+                        "name" to "ClearCut",
+                        "version" to novaCutVersionName,
+                        "operating_system" to "Android"
+                    ),
+                    "when" to c2paTimestamp(exporterCreationTimeMs),
+                    "digitalSourceType" to EMPTY_DIGITAL_SOURCE_TYPE
                 )
             )
+            aiActionsAssertion(ledger)?.let { assertion ->
+                @Suppress("UNCHECKED_CAST")
+                addAll(assertion.data["actions"] as List<Map<String, Any?>>)
+            }
+        }
+        val assertions = buildList {
             add(
                 Assertion(
                     label = "c2pa.thumbnail.claim.jpeg",
                     data = mapOf(
                         "claimGeneratorInfo" to mapOf(
                             "name" to "ClearCut",
-                            "version" to novaCutVersionName
+                            "version" to novaCutVersionName,
+                            "operating_system" to "Android",
+                            "specVersion" to C2PA_SPEC_VERSION
                         )
                     )
                 )
             )
-            // c2pa.created action for the export itself.
             add(
                 Assertion(
-                    label = "c2pa.actions.created",
-                    data = mapOf(
-                        "action" to "c2pa.created",
-                        "softwareAgent" to "ClearCut/$novaCutVersionName",
-                        "when" to exporterCreationTimeMs
-                    )
+                    label = ACTIONS_V2_LABEL,
+                    data = mapOf("actions" to actions)
                 )
             )
-            // AI usage actions, when any.
-            aiActionsAssertion(ledger)?.let { add(it) }
         }
         return C2paManifest(
             claimGenerator = "ClearCut/$novaCutVersionName",
@@ -255,14 +262,15 @@ class C2paExportEngine @Inject constructor() {
 
     fun manifestDefinitionToJson(manifest: C2paManifest): JSONObject {
         return JSONObject().apply {
-            put("claim_generator", manifest.claimGenerator)
-            put("claim_generator_info", JSONArray().apply {
-                put(JSONObject().apply {
-                    put("name", "ClearCut")
-                    put("version", manifest.claimGeneratorInfoVersion)
-                })
+            // C2PA 2.4 claim-map-v2 uses one generator-info-map object. The
+            // old array form is intentionally not emitted.
+            put("claim_generator_info", JSONObject().apply {
+                put("name", "ClearCut")
+                put("version", manifest.claimGeneratorInfoVersion)
+                put("operating_system", "Android")
+                put("specVersion", C2PA_SPEC_VERSION)
             })
-            if (manifest.title != null) put("title", manifest.title)
+            if (manifest.title != null) put("dc:title", manifest.title)
             put("assertions", JSONArray().apply {
                 manifest.assertions.forEach { assertion ->
                     put(JSONObject().apply {
@@ -287,15 +295,23 @@ class C2paExportEngine @Inject constructor() {
         availability: SigningAvailability,
         exportedFileName: String?
     ): JSONObject {
+        val effectiveAvailability = availability.takeUnless {
+            it.canSignEmbeddedManifest || it.status == AvailabilityStatus.READY
+        } ?: SigningAvailability(
+            status = AvailabilityStatus.SIGNER_BRIDGE_UNAVAILABLE,
+            canSignEmbeddedManifest = false,
+            message = UNSIGNED_DRAFT_MESSAGE
+        )
         return JSONObject().apply {
             put("schema", "com.clearcut.c2pa-draft-manifest.v2")
-            put("c2paSpecification", "2.4")
+            put("c2paSpecification", C2PA_SPEC_VERSION)
             put("format", "video/mp4")
             put("embeddedManifestStore", false)
             put("hardBinding", false)
-            put("isVerifiableContentCredential", availability.canSignEmbeddedManifest)
-            put("contentCredentialsStatus", availability.status.name)
-            put("contentCredentialsMessage", availability.message)
+            put("isUnsignedDraft", true)
+            put("isVerifiableContentCredential", false)
+            put("contentCredentialsStatus", effectiveAvailability.status.name)
+            put("contentCredentialsMessage", effectiveAvailability.message)
             put("exportedFileName", exportedFileName ?: JSONObject.NULL)
             put("title", manifest.title ?: JSONObject.NULL)
             put("signingMode", manifest.signingMode.name)
@@ -370,9 +386,9 @@ class C2paExportEngine @Inject constructor() {
             SigningMode.STRONGBOX -> {
                 if (keystoreKeyAvailable && certificateChainAvailable) {
                     SigningAvailability(
-                        status = AvailabilityStatus.READY,
-                        canSignEmbeddedManifest = true,
-                        message = "Content Credentials signer is ready for embedded MP4 signing."
+                        status = AvailabilityStatus.SIGNER_BRIDGE_UNAVAILABLE,
+                        canSignEmbeddedManifest = false,
+                        message = UNSIGNED_DRAFT_MESSAGE
                     )
                 } else {
                     SigningAvailability(
@@ -385,9 +401,9 @@ class C2paExportEngine @Inject constructor() {
             SigningMode.USER_PEM -> {
                 if (certificateChainAvailable && userPrivateKeyAvailable) {
                     SigningAvailability(
-                        status = AvailabilityStatus.READY,
-                        canSignEmbeddedManifest = true,
-                        message = "User PEM signer is ready for embedded MP4 signing."
+                        status = AvailabilityStatus.SIGNER_BRIDGE_UNAVAILABLE,
+                        canSignEmbeddedManifest = false,
+                        message = UNSIGNED_DRAFT_MESSAGE
                     )
                 } else {
                     SigningAvailability(
@@ -412,9 +428,9 @@ class C2paExportEngine @Inject constructor() {
                     )
                 } else {
                     SigningAvailability(
-                        status = AvailabilityStatus.READY,
-                        canSignEmbeddedManifest = true,
-                        message = "Remote signer is ready after explicit user consent."
+                        status = AvailabilityStatus.SIGNER_BRIDGE_UNAVAILABLE,
+                        canSignEmbeddedManifest = false,
+                        message = UNSIGNED_DRAFT_MESSAGE
                     )
                 }
             }
@@ -459,6 +475,14 @@ class C2paExportEngine @Inject constructor() {
     }
 
     companion object {
+        const val C2PA_SPEC_VERSION = "2.4.0"
+
+        private const val ACTIONS_V2_LABEL = "c2pa.actions.v2"
+        private const val EMPTY_DIGITAL_SOURCE_TYPE = "http://c2pa.org/digitalsourcetype/empty"
+        private const val UNSIGNED_DRAFT_MESSAGE =
+            "Unsigned and unverifiable draft: ClearCut does not embed Content Credentials in this build."
         private const val TAG = "C2paExportEngine"
+
+        private fun c2paTimestamp(epochMs: Long): String = Instant.ofEpochMilli(epochMs).toString()
     }
 }

@@ -31,7 +31,7 @@ class C2paExportEngineTest {
     )
 
     @Test
-    fun buildManifest_alwaysEmitsCawgTrainingMiningOptOutAndThumbnailAndCreated() {
+    fun buildManifest_emitsC2pa24ActionsAndThumbnail() {
         val m = engine.buildManifest(
             projectTitle = "My Project",
             novaCutVersionName = "3.74.9",
@@ -40,15 +40,22 @@ class C2paExportEngineTest {
             exporterCreationTimeMs = 1_700_000_000_000L
         )
         val labels = m.assertions.map { it.label }
-        assertTrue("cawg.training-mining" in labels)
-        assertTrue("c2pa.thumbnail.claim.jpeg" in labels)
-        assertTrue("c2pa.actions.created" in labels)
-        // No AI actions assertion when ledger empty.
-        assertFalse("c2pa.actions" in labels)
+        assertEquals(listOf("c2pa.thumbnail.claim.jpeg", "c2pa.actions.v2"), labels)
+        assertFalse("cawg.training-mining" in labels)
+        assertFalse("c2pa.actions.created" in labels)
+
+        @Suppress("UNCHECKED_CAST")
+        val actions = m.assertions.last().data["actions"] as List<Map<String, Any?>>
+        assertEquals(1, actions.size)
+        assertEquals("c2pa.created", actions[0]["action"])
+        assertEquals(
+            "http://c2pa.org/digitalsourcetype/empty",
+            actions[0]["digitalSourceType"]
+        )
     }
 
     @Test
-    fun buildManifest_trainingMiningUsesCurrentCawgEntriesMap() {
+    fun buildManifest_doesNotEmitRemovedTrainingMiningAssertion() {
         val m = engine.buildManifest(
             projectTitle = "My Project",
             novaCutVersionName = "3.74.9",
@@ -56,17 +63,8 @@ class C2paExportEngineTest {
             ledger = emptyList(),
             exporterCreationTimeMs = 1_700_000_000_000L
         )
-        val assertion = m.assertions.first { it.label == "cawg.training-mining" }
-        @Suppress("UNCHECKED_CAST")
-        val entries = assertion.data["entries"] as Map<String, Map<String, String>>
-
-        assertEquals(setOf(
-            "cawg.ai_generative_training",
-            "cawg.ai_inference",
-            "cawg.ai_training",
-            "cawg.data_mining"
-        ), entries.keys)
-        assertTrue(entries.values.all { it["use"] == "notAllowed" })
+        assertTrue(m.assertions.none { it.label == "cawg.training-mining" })
+        assertFalse(engine.manifestDefinitionToJson(m).toString().contains("training-mining"))
     }
 
     @Test
@@ -144,17 +142,23 @@ class C2paExportEngineTest {
             )
         )
         assertNotNull(a)
-        assertEquals("c2pa.actions", a!!.label)
+        assertEquals("c2pa.actions.v2", a!!.label)
         @Suppress("UNCHECKED_CAST")
         val actions = a.data["actions"] as List<Map<String, Any?>>
         assertEquals(1, actions.size)
         val action = actions[0]
         assertEquals("c2pa.created", action["action"])
-        assertEquals("Wan 2.2", action["softwareAgent"])
-        assertEquals("trainedAlgorithmicMedia", action["digitalSourceType"])
+        @Suppress("UNCHECKED_CAST")
+        val softwareAgent = action["softwareAgent"] as Map<String, String>
+        assertEquals("Wan 2.2", softwareAgent["name"])
+        assertEquals(
+            "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia",
+            action["digitalSourceType"]
+        )
         @Suppress("UNCHECKED_CAST")
         val params = action["parameters"] as Map<String, Any?>
-        assertEquals("c1", params["clipId"])
+        assertEquals("c1", params["com.clearcut.clipId"])
+        assertEquals("2023-11-14T22:13:20Z", action["when"])
     }
 
     @Test
@@ -167,7 +171,10 @@ class C2paExportEngineTest {
         @Suppress("UNCHECKED_CAST")
         val action = (a!!.data["actions"] as List<Map<String, Any?>>)[0]
         assertEquals("c2pa.edited", action["action"])
-        assertEquals("compositeWithTrainedAlgorithmicMedia", action["digitalSourceType"])
+        assertEquals(
+            "http://cv.iptc.org/newscodes/digitalsourcetype/compositedWithTrainedAlgorithmicMedia",
+            action["digitalSourceType"]
+        )
     }
 
     @Test
@@ -183,7 +190,10 @@ class C2paExportEngineTest {
         @Suppress("UNCHECKED_CAST")
         val action = (a!!.data["actions"] as List<Map<String, Any?>>)[0]
         assertEquals("c2pa.edited", action["action"])
-        assertEquals("algorithmicMedia", action["digitalSourceType"])
+        assertEquals(
+            "http://cv.iptc.org/newscodes/digitalsourcetype/algorithmicMedia",
+            action["digitalSourceType"]
+        )
     }
 
     @Test
@@ -216,7 +226,13 @@ class C2paExportEngineTest {
             exporterCreationTimeMs = 1_700_000_000_000L
         )
         val labels = m.assertions.map { it.label }
-        assertTrue("c2pa.actions" in labels)
+        assertEquals(1, labels.count { it == "c2pa.actions.v2" })
+        @Suppress("UNCHECKED_CAST")
+        val actions = m.assertions.first { it.label == "c2pa.actions.v2" }
+            .data["actions"] as List<Map<String, Any?>>
+        assertEquals(2, actions.size)
+        assertEquals("c2pa.created", actions.first()["action"])
+        assertEquals("c2pa.created", actions[1]["action"])
     }
 
     @Test
@@ -235,18 +251,22 @@ class C2paExportEngineTest {
         val assertions = json.getJSONArray("assertions")
         val aiActions = (0 until assertions.length())
             .map { assertions.getJSONObject(it) }
-            .first { it.getString("label") == "c2pa.actions" }
+            .first { it.getString("label") == "c2pa.actions.v2" }
             .getJSONObject("data")
             .getJSONArray("actions")
 
-        assertEquals("ClearCut/3.74.9", json.getString("claim_generator"))
-        assertEquals("ClearCut", json.getJSONArray("claim_generator_info").getJSONObject(0).getString("name"))
-        assertEquals("3.74.9", json.getJSONArray("claim_generator_info").getJSONObject(0).getString("version"))
-        assertEquals("Project", json.getString("title"))
-        assertEquals("c2pa.edited", aiActions.getJSONObject(0).getString("action"))
+        val generatorInfo = json.getJSONObject("claim_generator_info")
+        assertFalse(json.has("claim_generator"))
+        assertEquals("ClearCut", generatorInfo.getString("name"))
+        assertEquals("3.74.9", generatorInfo.getString("version"))
+        assertEquals("Android", generatorInfo.getString("operating_system"))
+        assertEquals("2.4.0", generatorInfo.getString("specVersion"))
+        assertEquals("Project", json.getString("dc:title"))
+        assertEquals("c2pa.created", aiActions.getJSONObject(0).getString("action"))
+        assertEquals("c2pa.edited", aiActions.getJSONObject(1).getString("action"))
         assertEquals(
-            "compositeWithTrainedAlgorithmicMedia",
-            aiActions.getJSONObject(0).getString("digitalSourceType")
+            "http://cv.iptc.org/newscodes/digitalsourcetype/compositedWithTrainedAlgorithmicMedia",
+            aiActions.getJSONObject(1).getString("digitalSourceType")
         )
     }
 
@@ -260,7 +280,7 @@ class C2paExportEngineTest {
             exporterCreationTimeMs = 1_700_000_000_000L
         )
 
-        assertFalse(engine.manifestDefinitionToJson(manifest).has("title"))
+        assertFalse(engine.manifestDefinitionToJson(manifest).has("dc:title"))
     }
 
     @Test
@@ -283,13 +303,46 @@ class C2paExportEngineTest {
         )
 
         assertEquals("com.clearcut.c2pa-draft-manifest.v2", json.getString("schema"))
-        assertEquals("2.4", json.getString("c2paSpecification"))
+        assertEquals("2.4.0", json.getString("c2paSpecification"))
         assertEquals("video/mp4", json.getString("format"))
         assertFalse(json.getBoolean("embeddedManifestStore"))
         assertFalse(json.getBoolean("hardBinding"))
+        assertTrue(json.getBoolean("isUnsignedDraft"))
         assertFalse(json.getBoolean("isVerifiableContentCredential"))
         assertEquals("project.mp4", json.getString("exportedFileName"))
-        assertEquals("ClearCut/3.74.9", json.getJSONObject("manifestDefinition").getString("claim_generator"))
+        assertEquals(
+            "2.4.0",
+            json.getJSONObject("manifestDefinition")
+                .getJSONObject("claim_generator_info")
+                .getString("specVersion")
+        )
+    }
+
+    @Test
+    fun draftSidecarToJson_forcesUnsignedWhenCallerClaimsReadySigner() {
+        val manifest = engine.buildManifest(
+            projectTitle = "Project",
+            novaCutVersionName = "3.74.9",
+            signingMode = C2paExportEngine.SigningMode.USER_PEM,
+            ledger = emptyList(),
+            exporterCreationTimeMs = 1_700_000_000_000L
+        )
+        val json = engine.draftSidecarToJson(
+            manifest = manifest,
+            availability = C2paExportEngine.SigningAvailability(
+                status = C2paExportEngine.AvailabilityStatus.READY,
+                canSignEmbeddedManifest = true,
+                message = "Synthetic ready state"
+            ),
+            exportedFileName = "project.mp4"
+        )
+
+        assertFalse(json.getBoolean("isVerifiableContentCredential"))
+        assertEquals(
+            C2paExportEngine.AvailabilityStatus.SIGNER_BRIDGE_UNAVAILABLE.name,
+            json.getString("contentCredentialsStatus")
+        )
+        assertTrue(json.getString("contentCredentialsMessage").contains("does not embed"))
     }
 
     @Test
@@ -323,7 +376,7 @@ class C2paExportEngineTest {
     }
 
     @Test
-    fun signingAvailability_acceptsReadyUserPemCredentials() {
+    fun signingAvailability_blocksUserPemUntilSignerBridgeExists() {
         val availability = engine.signingAvailability(
             signingMode = C2paExportEngine.SigningMode.USER_PEM,
             libraryAvailable = true,
@@ -331,8 +384,8 @@ class C2paExportEngineTest {
             userPrivateKeyAvailable = true
         )
 
-        assertEquals(C2paExportEngine.AvailabilityStatus.READY, availability.status)
-        assertTrue(availability.canSignEmbeddedManifest)
+        assertEquals(C2paExportEngine.AvailabilityStatus.SIGNER_BRIDGE_UNAVAILABLE, availability.status)
+        assertFalse(availability.canSignEmbeddedManifest)
     }
 
     @Test
@@ -352,8 +405,8 @@ class C2paExportEngineTest {
 
         assertEquals(C2paExportEngine.AvailabilityStatus.REMOTE_CONSENT_REQUIRED, needsConsent.status)
         assertFalse(needsConsent.canSignEmbeddedManifest)
-        assertEquals(C2paExportEngine.AvailabilityStatus.READY, ready.status)
-        assertTrue(ready.canSignEmbeddedManifest)
+        assertEquals(C2paExportEngine.AvailabilityStatus.SIGNER_BRIDGE_UNAVAILABLE, ready.status)
+        assertFalse(ready.canSignEmbeddedManifest)
     }
 
     @Test

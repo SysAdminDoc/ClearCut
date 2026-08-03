@@ -132,7 +132,7 @@
     <string name="export_ai_use_empty">No se registró asistencia de IA para este proyecto.</string>
     <string name="export_ai_use_disclose_title">Divulgar uso de IA</string>
     <string name="export_ai_use_sidecar_title">Escribir sidecar de uso de IA</string>
-    <string name="export_ai_use_sidecar_description">Crea .ai-use.json y un .c2pa-draft-manifest.json sin firmar. Las credenciales de contenido firmadas requieren un firmante configurado.</string>
+    <string name="export_ai_use_sidecar_description">Crea .ai-use.json y un .c2pa-draft-manifest.json sin firmar y no verificable. Esta versión de ClearCut no incrusta credenciales de contenido.</string>
     <string name="export_ai_ledger_clear_button">Borrar registro de IA</string>
     <string name="export_ai_ledger_clear_title">¿Borrar registro de IA?</string>
     <string name="export_ai_ledger_clear_message">Esto elimina el registro de uso de IA por proyecto que se usa para los valores de divulgación y la exportación sidecar.</string>

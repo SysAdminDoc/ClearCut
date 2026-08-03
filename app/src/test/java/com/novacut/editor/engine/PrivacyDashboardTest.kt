@@ -117,6 +117,8 @@ class PrivacyDashboardTest {
         assertTrue(entry.collectedBy.contains("C2paExportEngine"))
         assertTrue(entry.retentionPolicy.contains("project autosave", ignoreCase = true))
         assertTrue(entry.retentionPolicy.contains(".c2pa-draft-manifest.json"))
+        assertTrue(entry.retentionPolicy.contains("unsigned, unverifiable"))
+        assertFalse(entry.retentionPolicy.contains("remote C2PA signing requires"))
     }
 
     @Test

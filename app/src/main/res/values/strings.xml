@@ -145,7 +145,7 @@
     <string name="export_ai_use_empty">No AI assistance recorded for this project.</string>
     <string name="export_ai_use_disclose_title">Disclose AI use</string>
     <string name="export_ai_use_sidecar_title">Write AI-use sidecar</string>
-    <string name="export_ai_use_sidecar_description">Creates .ai-use.json and an unsigned .c2pa-draft-manifest.json. Signed Content Credentials require a configured signer.</string>
+    <string name="export_ai_use_sidecar_description">Creates .ai-use.json and an unsigned, unverifiable .c2pa-draft-manifest.json. ClearCut does not embed Content Credentials in this build.</string>
     <string name="export_ai_ledger_clear_button">Clear AI ledger</string>
     <string name="export_ai_ledger_clear_title">Clear AI ledger?</string>
     <string name="export_ai_ledger_clear_message">This removes the per-project AI-use record used for disclosure defaults and sidecar export.</string>
