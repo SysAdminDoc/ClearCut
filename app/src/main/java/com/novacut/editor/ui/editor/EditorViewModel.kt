@@ -68,6 +68,7 @@ import com.novacut.editor.engine.StabilizationEngine
 import com.novacut.editor.engine.StyleTransferEngine
 import com.novacut.editor.engine.SmartReframeEngine
 import com.novacut.editor.engine.TimelineExportCoordinator
+import com.novacut.editor.engine.TrackBlendModeCapability
 import com.novacut.editor.engine.TimelineExchangeValidator
 import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
@@ -2443,6 +2444,10 @@ class EditorViewModel @Inject constructor(
     }
 
     fun setTrackBlendMode(trackId: String, blendMode: BlendMode) {
+        if (!TrackBlendModeCapability.isSupported(blendMode)) {
+            showToast(text(R.string.vm_track_blend_unsupported_toast), ToastSeverity.Warning)
+            return
+        }
         saveUndoState("Track blend mode")
         _state.update { s ->
             s.copy(tracks = s.tracks.map { track ->

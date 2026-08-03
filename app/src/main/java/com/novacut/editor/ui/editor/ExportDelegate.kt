@@ -31,6 +31,7 @@ import com.novacut.editor.engine.MixedRenderExportPlanner
 import com.novacut.editor.engine.ProjectDependencyManifest
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
+import com.novacut.editor.engine.TrackBlendModeCapability
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.buildExportHistoryEntry
 import com.novacut.editor.engine.exportMimeTypeFor
@@ -645,12 +646,21 @@ class ExportDelegate(
                 watermarkPresent = currentState.exportConfig.watermark != null,
             ),
         ).disclosure
+        val unsupportedTrackBlendCount = TrackBlendModeCapability
+            .unsupportedTracks(currentState.tracks)
+            .size
+        val renderWarnings = buildList {
+            hdrOverlayDisclosure?.let(::add)
+            if (unsupportedTrackBlendCount > 0) {
+                add(text(R.string.export_warning_track_blend_unsupported, unsupportedTrackBlendCount))
+            }
+        }
         val mediaPreflight = ExportMediaPreflight.evaluate(
             healthReport = healthReport,
             relinkReports = currentState.media.relinkReports,
             audioConformance = audioConformance,
             dependencies = projectDependencyManifest(currentState),
-            additionalWarnings = hdrOverlayDisclosure?.let { listOf(it) }.orEmpty(),
+            additionalWarnings = renderWarnings,
             intentFallbacks = reverseIntentFallbacks(currentState),
         )
         stateFlow.update { state ->

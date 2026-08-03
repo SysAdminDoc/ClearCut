@@ -68,6 +68,7 @@
     <string name="export_warning_long_render">Heads up: estimated render time is %1$s. Exports run in the background, but plug in to avoid battery drain.</string>
     <string name="export_warning_large_file">Estimated output is over 1 GB. Most share targets reject files this large — consider a Target File Size preset.</string>
     <string name="export_warning_av1_slow">AV1 can be slow when this device does not advertise hardware encode. If file size isn\'t critical, HEVC is safer for long renders.</string>
+    <string name="export_warning_track_blend_unsupported">%1$d track blend mode(s) are not supported on export. They will render as Normal; switch them to Normal before exporting.</string>
     <string name="export_hdr_preserve">Preserve HDR Metadata</string>
     <string name="export_hdr_preserve_description">Keep HDR color metadata when the source and selected encoder both support it.</string>
     <string name="export_hdr_preserve_disabled">Requires HEVC, AV1, or VP9. H.264 exports are SDR.</string>
@@ -1158,6 +1159,7 @@
     <string name="editor_select_clip_keyframes">Select a clip for keyframes</string>
     <string name="editor_select_clip_masks">Select a clip for masks</string>
     <string name="editor_select_clip_blend_mode">Select a clip for blend mode</string>
+    <string name="vm_track_blend_unsupported_toast">Track blend modes are not available yet; choose Normal.</string>
     <string name="editor_select_clip_pip">Select a clip for PiP</string>
     <string name="editor_select_clip_chroma_key">Select a clip for chroma key</string>
     <string name="editor_select_clip_captions">Select a clip for captions</string>

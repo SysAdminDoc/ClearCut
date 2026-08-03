@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Raised compact editor actions to 48dp semantic hit targets while keeping their visual geometry, with localized labels and radio-button semantics for text and glow swatches.
+- Track-level blend modes now share an explicit capability policy: unsupported edits are rejected before mutation, and imported non-NORMAL track state is disclosed as a normal-alpha export fallback requiring consent.
 - Rebuilt the vendored FFmpegKitNext AAR under an LGPL-3.0-or-later profile, removed x264, disabled every currently reachable FFmpeg advisory surface with named runtime refusals, and upgraded the native lock/SBOM gate to require the full CVE inventory and reproducible security patch.
 - Added a shared safe declarative-pack contract with schema migration outcomes, SHA-256 payload verification, executable-field rejection, provenance reporting, conflict previews, atomic installs, and one-step rollback across style/effect/LUT/font asset flows.
 - Added a shared, device-ceiling-aware lease queue for decoder, retriever, preview-player, and proxy-pipeline work, with cancellation-safe contention tests and live counts in diagnostic bundles.

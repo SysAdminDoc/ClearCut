@@ -65,6 +65,7 @@
     <string name="export_warning_long_render">Aviso: el tiempo de renderizado estimado es %1$s. Las exportaciones se ejecutan en segundo plano, pero se conectan para evitar que se agote la batería.</string>
     <string name="export_warning_large_file">La producción estimada es superior a 1 GB. La mayoría de los destinos compartidos rechazan archivos de este tamaño; considere un ajuste preestablecido de Tamaño de archivo de destino.</string>
     <string name="export_warning_av1_slow">AV1 puede ser lento cuando este dispositivo no anuncia codificación de hardware. Si el tamaño del archivo no es crítico, HEVC es más seguro para renderizaciones largas.</string>
+    <string name="export_warning_track_blend_unsupported">%1$d modo(s) de mezcla de pista no son compatibles al exportar. Se renderizarán como Normal; cámbialos a Normal antes de exportar.</string>
     <string name="export_hdr_preserve">Preservar metadatos HDR</string>
     <string name="export_hdr_preserve_description">Mantenga los metadatos de color HDR cuando tanto la fuente como el codificador seleccionado los admitan.</string>
     <string name="export_hdr_preserve_disabled">Requiere HEVC, AV1 o VP9. Las exportaciones H.264 son DEG.</string>
@@ -1111,6 +1112,7 @@
     <string name="editor_select_clip_keyframes">Seleccionar un clip para keyframes</string>
     <string name="editor_select_clip_masks">Seleccione un clip para máscaras</string>
     <string name="editor_select_clip_blend_mode">Seleccione un clip para el modo de fusión</string>
+    <string name="vm_track_blend_unsupported_toast">Los modos de mezcla de pista aún no están disponibles; elija Normal.</string>
     <string name="editor_select_clip_pip">Seleccione un clip para PiP</string>
     <string name="editor_select_clip_chroma_key">Seleccione un clip para la clave de croma</string>
     <string name="editor_select_clip_captions">Seleccione un clip para subtítulos</string>
