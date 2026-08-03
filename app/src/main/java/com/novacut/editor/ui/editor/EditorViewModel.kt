@@ -72,7 +72,6 @@ import com.novacut.editor.engine.TimelineExchangeValidator
 import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
 import com.novacut.editor.engine.MediaImportEngine
-import com.novacut.editor.engine.MediaIngestWorker
 import com.novacut.editor.engine.MediaHealth
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.OverlayAssetImportResult
@@ -96,13 +95,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.novacut.editor.engine.EditingSuggestionEngine
 import com.novacut.editor.engine.EffectPreviewRenderer
-import com.novacut.editor.engine.MediaHashWorker
-import com.novacut.editor.engine.ProxyGenerationWorker
 import java.io.File
 import java.security.MessageDigest
 import java.util.UUID
@@ -659,6 +653,7 @@ class EditorViewModel @Inject constructor(
     private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine,
     private val documentCoordinator: EditorDocumentCoordinator,
     private val projectTransferCoordinator: EditorProjectTransferCoordinator,
+    private val backgroundJobCoordinator: EditorBackgroundJobCoordinator,
     @ApplicationContext private val appContext: Context,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -1356,9 +1351,7 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun enqueueMediaHashJob() {
-        val request = OneTimeWorkRequestBuilder<MediaHashWorker>().build()
-        WorkManager.getInstance(appContext)
-            .enqueueUniqueWork(MediaHashWorker.WORK_NAME, ExistingWorkPolicy.KEEP, request)
+        backgroundJobCoordinator.enqueueMediaHashJob()
     }
 
     private fun applyAutoSaveSettings(settings: AppSettings? = latestSettings) {
@@ -1556,91 +1549,48 @@ class EditorViewModel @Inject constructor(
      * Called after importing high-res clips when proxy editing is enabled.
      */
     fun enqueueProxyGeneration() {
-        val request = OneTimeWorkRequestBuilder<ProxyGenerationWorker>()
-            .addTag(ProxyGenerationWorker.TAG)
-            .build()
-        WorkManager.getInstance(appContext)
-            .enqueueUniqueWork(
-                ProxyGenerationWorker.WORK_NAME,
-                ExistingWorkPolicy.KEEP,
-                request
-            )
+        backgroundJobCoordinator.enqueueProxyGeneration()
     }
 
     // --- Background Media Ingest ---
     fun enqueueMediaIngest(sourceUri: Uri, mediaType: String, displayName: String) {
-        val workId = java.util.UUID.randomUUID().toString()
-        val request = OneTimeWorkRequestBuilder<MediaIngestWorker>()
-            .setInputData(
-                androidx.work.workDataOf(
-                    MediaIngestWorker.KEY_SOURCE_URI to sourceUri.toString(),
-                    MediaIngestWorker.KEY_MEDIA_TYPE to mediaType
-                )
-            )
-            .addTag(MediaIngestWorker.TAG)
-            .setId(java.util.UUID.fromString(workId))
-            .build()
-
-        _state.update { state ->
-            state.copyMedia { media ->
-                media.copy(
-                    pendingIngests = media.pendingIngests + PendingIngest(
-                        workId = workId,
-                        displayName = displayName,
-                        mediaType = mediaType
-                    )
-                )
-            }
-        }
-
-        val wm = WorkManager.getInstance(appContext)
-        wm.enqueue(request)
-
-        val liveData = wm.getWorkInfoByIdLiveData(java.util.UUID.fromString(workId))
-        val observer = object : androidx.lifecycle.Observer<androidx.work.WorkInfo?> {
-            override fun onChanged(value: androidx.work.WorkInfo?) {
-                val info = value ?: return
-                when (info.state) {
-                    androidx.work.WorkInfo.State.RUNNING -> {
-                        val progress = info.progress.getFloat(MediaIngestWorker.KEY_PROGRESS, 0f)
-                        updateIngestProgress(workId, progress)
-                    }
-                    androidx.work.WorkInfo.State.SUCCEEDED -> {
-                        val managedUri = info.outputData.getString(MediaIngestWorker.KEY_MANAGED_URI)
-                        val type = info.outputData.getString(MediaIngestWorker.KEY_MEDIA_TYPE) ?: "video"
-                        removeIngest(workId)
-                        if (managedUri != null) {
-                            val trackType = when {
-                                type.startsWith("audio") -> TrackType.AUDIO
-                                type.startsWith("image") -> TrackType.OVERLAY
-                                else -> TrackType.VIDEO
-                            }
-                            addClipToTrack(Uri.parse(managedUri), trackType)
+        backgroundJobCoordinator.enqueueMediaIngest(
+            sourceUri = sourceUri,
+            mediaType = mediaType,
+            displayName = displayName,
+            callbacks = EditorBackgroundJobCoordinator.IngestCallbacks(
+                onQueued = { pending ->
+                    _state.update { state ->
+                        state.copyMedia { media ->
+                            media.copy(pendingIngests = media.pendingIngests + pending)
                         }
-                        liveData.removeObserver(this)
                     }
-                    androidx.work.WorkInfo.State.FAILED -> {
-                        val error = info.outputData.getString(MediaIngestWorker.KEY_ERROR)
-                        removeIngest(workId)
-                        if (error != null) Log.w("EditorViewModel", "Media import failed: $error")
-                        showToast(text(R.string.editor_import_failed_toast))
-                        liveData.removeObserver(this)
+                },
+                onProgress = ::updateIngestProgress,
+                onSucceeded = { workId, managedUri, type ->
+                    removeIngest(workId)
+                    val trackType = when {
+                        type.startsWith("audio") -> TrackType.AUDIO
+                        type.startsWith("image") -> TrackType.OVERLAY
+                        else -> TrackType.VIDEO
                     }
-                    androidx.work.WorkInfo.State.CANCELLED -> {
-                        removeIngest(workId)
-                        liveData.removeObserver(this)
-                    }
-                    else -> { /* ENQUEUED, BLOCKED — no action */ }
-                }
-            }
-        }
-        liveData.observeForever(observer)
+                    addClipToTrack(managedUri, trackType)
+                },
+                onFailed = { workId, error ->
+                    removeIngest(workId)
+                    if (error != null) Log.w("EditorViewModel", "Media import failed: $error")
+                    showToast(text(R.string.editor_import_failed_toast))
+                },
+                onCancelled = ::removeIngest,
+            ),
+        )
     }
 
     fun cancelMediaIngest(workId: String) {
-        WorkManager.getInstance(appContext).cancelWorkById(java.util.UUID.fromString(workId))
-        removeIngest(workId)
-        showToast(text(R.string.vm_import_cancelled_toast))
+        backgroundJobCoordinator.cancelMediaIngest(workId) {
+            removeIngest(workId)
+            showToast(text(R.string.vm_import_cancelled_toast))
+        }
     }
 
     private fun updateIngestProgress(workId: String, progress: Float) {
@@ -6416,6 +6366,7 @@ class EditorViewModel @Inject constructor(
         playbackStartRecoveryJob?.cancel()
         aiToolsDelegate.cancelAiTool()
         documentCoordinator.stopAutoSave()
+        backgroundJobCoordinator.removeObservers()
         voiceoverDurationJob?.cancel()
         voiceoverEngine.release()
         ttsEngine.stopPreview()
