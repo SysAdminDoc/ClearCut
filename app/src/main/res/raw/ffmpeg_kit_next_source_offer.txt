@@ -1,14 +1,17 @@
-ClearCut bundles a GPLv3 build of FFmpegKitNext 8.1.0 with FFmpeg 8.1.2.
+ClearCut bundles an LGPL-3.0-or-later build of FFmpegKitNext 8.1.0 with FFmpeg 8.1.2.
 
 Exact corresponding source:
 https://github.com/arthenica/ffmpeg-kit-next/tree/3e223118e6e8fb6208693ecf3952e77cd096f587
 
 Reproduction command:
-./nix-android.sh -p android-r27d --enable-gpl --enable-x264 --enable-libass --jobs=8
+./nix-android.sh -p android-r27d --enable-libass --enable-libjxl --enable-android-media-codec --enable-android-zlib --enable-openh264 --jobs=8
 
-Build inputs: Android NDK 27.3.13750724, Android API 24, x264 commit
-55d517bc4569272a2c9a367a4106c234aba2ffbc, libass 0.17.4 commit
-bbb3c7f1570a4a021e52683f3fbdf74fe492ae84.
+Build inputs: Android NDK 27.3.13750724, Android API 24, OpenH264 2.3.1
+commit 0a48f4d2e9be2abb4fb01b4c3be83cf44ce91a6e, libass 0.17.4 commit
+bbb3c7f1570a4a021e52683f3fbdf74fe492ae84. The ClearCut security patch
+at third_party/ffmpeg-kit-next/clearcut-security.patch disables the
+advisory-covered native components; its checksum and every required CVE
+record are in the native lock.
 
 The source lock and artifact checksum are distributed alongside ClearCut at
 third_party/ffmpeg-kit-next/native-lock.json.

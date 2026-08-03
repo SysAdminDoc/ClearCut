@@ -46,15 +46,16 @@ class OpenSourceLicensesTest {
     }
 
     @Test
-    fun ffmpegKitNoticePreservesSourceOfferAndGplWarning() {
+    fun ffmpegKitNoticePreservesSourceOfferAndLgplProfile() {
         val notice = OpenSourceLicenses.ffmpegKitNotice()
 
         assertTrue(notice.version.contains("8.1.0"))
         assertTrue(notice.version.contains("FFmpeg 8.1.2"))
-        assertTrue(notice.licenseName.contains("General Public License"))
-        assertTrue(notice.licenseText.contains("GPL"))
+        assertTrue(notice.licenseName.contains("Lesser General Public License"))
+        assertTrue(notice.licenseText.contains("LGPL"))
         assertTrue(notice.sourceOfferText.orEmpty().contains("source", ignoreCase = true))
-        assertTrue(notice.sourceOfferText.orEmpty().contains("GPL v3.0"))
+        assertTrue(notice.sourceOfferText.orEmpty().contains("LGPL v3.0-or-later"))
+        assertTrue(notice.sourceOfferText.orEmpty().contains("clearcut-security.patch"))
         assertTrue(notice.sourceOfferText.orEmpty().contains("3e223118e6e8fb6208693ecf3952e77cd096f587"))
         assertTrue(notice.sourceOfferText.orEmpty().contains("nix-android.sh"))
         assertTrue(notice.complianceNote.orEmpty().contains("res/raw/source.txt"))

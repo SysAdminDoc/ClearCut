@@ -21,17 +21,18 @@ import kotlin.coroutines.resume
  *
  * ## Dependency path
  *
- * ClearCut vendors a source-pinned FFmpegKitNext 8.1.0 AAR carrying FFmpeg
- * 8.1.2. Local gates verify its checksum, source/build lock, native advisory
- * review, deterministic SBOMs, and 16 KB page alignment.
+ * ClearCut vendors a source-pinned LGPL-profile FFmpegKitNext 8.1.0 AAR
+ * carrying FFmpeg 8.1.2. Local gates verify its checksum, source/build lock,
+ * disabled-format advisory coverage, deterministic SBOMs, and 16 KB page
+ * alignment.
  *
  * ## License note
  *
  * ClearCut itself is MIT-licensed; bundling an AAR whose packaged license
- * resources carry GPLv3 text does not relicense ClearCut's Kotlin source, but it
+ * resources carry LGPL text does not relicense ClearCut's Kotlin source, but it
  * does require shipping the FFmpeg license addendum and source offer with
- * release artifacts. If we need a no-GPL distribution channel, use a separate
- * LGPL-only/no-FFmpeg flavor and keep Media3 Transformer as the H.264/HEVC path.
+ * release artifacts. The shipped profile has no x264/GPL encoder and keeps
+ * Media3 Transformer as the primary H.264/HEVC path.
  *
  * ## Use cases beyond Media3 Transformer
  *
@@ -90,8 +91,9 @@ import kotlin.coroutines.resume
  *
  * ### License analysis
  *
- * ffmpeg-kt is GPL v3.0. Same as ClearCut's FFmpegKitNext build, so no
- * license improvement. The alternative JamaisMagic fork
+ * ffmpeg-kt is GPL v3.0. ClearCut's current FFmpegKitNext profile is LGPL-only,
+ * so adopting it would not improve the distribution posture. The alternative
+ * JamaisMagic fork
  * (`io.github.jamaismagic.ffmpeg:ffmpeg-kit-lts-16kb:6.1.7`) offers an
  * LGPL-3.0 variant, which would be a license improvement if ClearCut ever
  * needs a no-GPL distribution channel.
@@ -330,8 +332,8 @@ class FFmpegEngine @Inject constructor(
         if (vs != null) return@withContext NativeProcessingPolicy.logAndReject(vs)
         val filter = subtitleFilter(subtitleFile.absolutePath)
         // No -c:v here previously meant FFmpeg picked the container default,
-        // which resolves to libx264 on a GPL build. This pass writes the file
-        // the user receives, so the encoder is named explicitly.
+        // which could resolve to a build-dependent encoder. This pass writes
+        // the file the user receives, so the encoder is named explicitly.
         val encoder = preferredIntermediateEncoder()
         executeArguments(
             buildList {
@@ -416,8 +418,8 @@ class FFmpegEngine @Inject constructor(
      * and silently inherited whatever the build's default happened to be.
      *
      * [MEDIACODEC] wraps the device's hardware encoder and is licence-neutral.
-     * [X264] is GPL: usable, but it is the reason the shipped artifact is
-     * GPL-encumbered, so it is never preferred. [MPEG4] is FFmpeg's own
+     * [X264] is retained only as a compatibility probe for a future artifact;
+     * the locked ClearCut profile does not build it. [MPEG4] is FFmpeg's own
      * LGPL encoder and is the always-present floor — MPEG-4 Part 2 in MP4 is
      * decodable by Android MediaCodec, so an intermediate written with it still
      * feeds back into the Media3 composition.
@@ -433,10 +435,10 @@ class FFmpegEngine @Inject constructor(
      * intermediate, chosen from what the linked build actually provides.
      *
      * Probed once against `-encoders` rather than assumed, because the answer
-     * changes with the vendored AAR: the current GPL build reports `libx264`
-     * and has MediaCodec disabled, while an LGPL rebuild reports
-     * `h264_mediacodec` instead. Selecting explicitly means swapping the AAR
-     * does not silently change (or break) what these passes encode.
+     * changes with the vendored AAR: the locked LGPL profile reports
+     * `h264_mediacodec` and has no `libx264`. Selecting explicitly means
+     * swapping the AAR does not silently change (or break) what these passes
+     * encode.
      */
     suspend fun preferredIntermediateEncoder(): H264Encoder {
         cachedEncoder?.let { return it }
@@ -552,10 +554,16 @@ class FFmpegEngine @Inject constructor(
                 { completed ->
                     val code = returnCodeValue(completed.getReturnCode())
                     if (code == 0) notifyProgress(onProgress, 1f)
+                    if (code != 0) {
+                        NativeProcessingPolicy.unsupportedNativeFailure(
+                            completed.getOutput(),
+                            "FFmpeg",
+                        )?.let { NativeProcessingPolicy.logAndReject(it) }
+                    }
                     if (continuation.isActive) continuation.resume(code)
                 },
                 { log ->
-                    val message = log.message?.trim().orEmpty()
+                    val message = log.message.trim()
                     if (message.isNotEmpty()) Log.v(TAG, message)
                 },
                 { stats ->
@@ -612,10 +620,16 @@ class FFmpegEngine @Inject constructor(
                 { completed ->
                     val code = returnCodeValue(completed.getReturnCode())
                     if (code == 0) notifyProgress(onProgress, 1f)
+                    if (code != 0) {
+                        NativeProcessingPolicy.unsupportedNativeFailure(
+                            completed.getOutput(),
+                            "FFmpeg",
+                        )?.let { NativeProcessingPolicy.logAndReject(it) }
+                    }
                     if (continuation.isActive) continuation.resume(code)
                 },
                 { log ->
-                    val message = log.message?.trim().orEmpty()
+                    val message = log.message.trim()
                     if (message.isNotEmpty()) Log.v(TAG, message)
                 },
                 { stats ->

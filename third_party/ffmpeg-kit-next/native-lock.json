@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "artifact": {
     "path": "third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar",
-    "size": 64228197,
-    "sha256": "4b7654925340bb4a5eb0c4e50350a6f664f4568a228d46e9e128eb032406fd00",
+    "size": 62247665,
+    "sha256": "7971240aff84ce59a4ab28400bb4af59d24c20ce68c25525d41d910246ccff62",
     "pomPath": "third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.pom",
     "pomSize": 669,
     "pomSha256": "1b2f22bab50ff6abae874c42b335857d0ca23a318773369a77933261a25e731b"
@@ -11,14 +11,19 @@
   "source": {
     "repository": "https://github.com/arthenica/ffmpeg-kit-next",
     "commit": "3e223118e6e8fb6208693ecf3952e77cd096f587",
-    "builtAt": "2026-07-12T00:00:00Z"
+    "ffmpegRevision": "38b88335f99e76ed89ff3c93f877fdefce736c13",
+    "ffmpegVersion": "8.1.2",
+    "securityPatch": "third_party/ffmpeg-kit-next/clearcut-security.patch",
+    "securityPatchSha256": "0433ae68f6c8c78c35fc81eb7e2747fa27c513af4d6b97a423603c9132d41965",
+    "builtAt": "2026-08-02T00:00:00Z",
+    "reviewUntil": "2026-10-31"
   },
   "build": {
-    "command": "./nix-android.sh -p android-r27d --enable-gpl --enable-x264 --enable-libass --jobs=8",
+    "command": "./nix-android.sh -p android-r27d --enable-libass --enable-libjxl --enable-android-media-codec --enable-android-zlib --enable-openh264 --jobs=8",
     "androidNdk": "27.3.13750724",
     "androidApi": 24,
     "abis": ["armeabi-v7a", "armeabi-v7a-neon", "arm64-v8a", "x86", "x86_64"],
-    "license": "GPL-3.0-only"
+    "license": "LGPL-3.0-or-later"
   },
   "components": [
     {
@@ -26,21 +31,21 @@
       "version": "8.1.0",
       "commit": "3e223118e6e8fb6208693ecf3952e77cd096f587",
       "purl": "pkg:github/arthenica/ffmpeg-kit-next@3e223118e6e8fb6208693ecf3952e77cd096f587",
-      "license": "GPL-3.0-only"
+      "license": "LGPL-3.0-or-later"
     },
     {
       "name": "FFmpeg",
       "version": "8.1.2",
       "commit": "38b88335f99e76ed89ff3c93f877fdefce736c13",
       "purl": "pkg:generic/ffmpeg@8.1.2",
-      "license": "GPL-3.0-or-later"
+      "license": "LGPL-3.0-or-later"
     },
     {
-      "name": "x264",
-      "version": "55d517bc4569272a2c9a367a4106c234aba2ffbc",
-      "commit": "55d517bc4569272a2c9a367a4106c234aba2ffbc",
-      "purl": "pkg:generic/x264@55d517bc4569272a2c9a367a4106c234aba2ffbc",
-      "license": "GPL-2.0-or-later"
+      "name": "OpenH264",
+      "version": "2.3.1",
+      "commit": "0a48f4d2e9be2abb4fb01b4c3be83cf44ce91a6e",
+      "purl": "pkg:github/cisco/openh264@0a48f4d2e9be2abb4fb01b4c3be83cf44ce91a6e",
+      "license": "BSD-2-Clause"
     },
     {
       "name": "libass",
@@ -127,24 +132,56 @@
       "license": "Apache-2.0-with-LLVM-exception"
     }
   ],
+  "security": {
+    "profile": "clearcut-disabled-format-surface",
+    "reviewUntil": "2026-10-31",
+    "disabledComponents": [
+      "vobsub_demuxer",
+      "tdsc_decoder",
+      "mace6_decoder",
+      "adpcm_adx_decoder",
+      "adx_demuxer",
+      "aax_demuxer",
+      "png_encoder",
+      "apng_encoder",
+      "rasc_decoder",
+      "iamf_demuxer",
+      "zlib_decoder"
+    ],
+    "requiredAdvisories": [
+      "CVE-2026-64830",
+      "CVE-2026-65703",
+      "CVE-2026-66039",
+      "CVE-2026-64835",
+      "CVE-2026-66040",
+      "CVE-2026-58049",
+      "CVE-2026-12706",
+      "CVE-2026-66037",
+      "CVE-2026-66038"
+    ]
+  },
   "advisories": [
     {
       "id": "CVE-2026-8461",
       "component": "FFmpeg",
       "severity": "HIGH",
-      "status": "not_affected",
+      "status": "fixed",
       "fixedVersion": "8.1.2",
+      "rationale": "The shipped FFmpeg revision is 8.1.2, which contains the upstream fix.",
       "reviewUntil": "2027-07-12",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-8461"
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-8461",
+      "disabledComponents": []
     },
     {
       "id": "CVE-2024-36617",
       "component": "FFmpeg",
       "severity": "MEDIUM",
-      "status": "not_affected",
+      "status": "fixed",
       "fixedVersion": "6.1.2",
+      "rationale": "The shipped FFmpeg revision is newer than the fixed version.",
       "reviewUntil": "2027-07-12",
-      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-36617"
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2024-36617",
+      "disabledComponents": []
     },
     {
       "id": "CVE-2026-30999",
@@ -152,8 +189,100 @@
       "severity": "UNKNOWN",
       "status": "not_affected",
       "fixedVersion": "8.1.2",
+      "rationale": "The current FFmpeg security review found no affected reachable component in the shipped profile.",
       "reviewUntil": "2027-07-12",
-      "url": "https://ffmpeg.org/security.html"
+      "url": "https://ffmpeg.org/security.html",
+      "disabledComponents": []
+    },
+    {
+      "id": "CVE-2026-64830",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The VobSub demuxer is disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-64830",
+      "disabledComponents": ["vobsub_demuxer"]
+    },
+    {
+      "id": "CVE-2026-65703",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The TDSC decoder is disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-65703",
+      "disabledComponents": ["tdsc_decoder"]
+    },
+    {
+      "id": "CVE-2026-66039",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The MACE6 decoder is disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-66039",
+      "disabledComponents": ["mace6_decoder"]
+    },
+    {
+      "id": "CVE-2026-64835",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The ADX decoder and ADX/AAX demuxers are disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-64835",
+      "disabledComponents": ["adpcm_adx_decoder", "adx_demuxer", "aax_demuxer"]
+    },
+    {
+      "id": "CVE-2026-66040",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The PNG and APNG encoders are disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-66040",
+      "disabledComponents": ["png_encoder", "apng_encoder"]
+    },
+    {
+      "id": "CVE-2026-58049",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The RASC decoder is disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-58049",
+      "disabledComponents": ["rasc_decoder"]
+    },
+    {
+      "id": "CVE-2026-12706",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The RASC decoder is disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-12706",
+      "disabledComponents": ["rasc_decoder"]
+    },
+    {
+      "id": "CVE-2026-66037",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The IAMF demuxer is disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-66037",
+      "disabledComponents": ["iamf_demuxer"]
+    },
+    {
+      "id": "CVE-2026-66038",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The ZLIB decoder used by the LCL path is disabled in the ClearCut security profile.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-66038",
+      "disabledComponents": ["zlib_decoder"]
     }
   ]
 }

@@ -100,7 +100,7 @@
     <string name="settings_open_source_licenses_section_title">Avisos de terceros</string>
     <string name="settings_open_source_licenses_section_description">Revise las licencias de dependencia empaquetadas y las obligaciones de oferta de origen.</string>
     <string name="settings_open_source_licenses">Licencias de código abierto</string>
-    <string name="settings_open_source_licenses_description">Enumera los avisos de dependencia enviados, incluido el material de oferta fuente de FFmpegKit GPLv3.</string>
+    <string name="settings_open_source_licenses_description">Enumera los avisos de dependencia enviados, incluido el material de oferta fuente de FFmpegKit LGPL.</string>
     <string name="settings_open_source_licenses_action">Abierto</string>
     <string name="settings_open_source_licenses_close">Cerrar</string>
     <string name="opensource_licenses_title">Licencias de código abierto</string>

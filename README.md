@@ -192,8 +192,8 @@
 
 ### v3.74.129 Reproducible native video stack
 
-- Replaced the obsolete binary fork with a source-pinned FFmpegKitNext 8.1.0 / FFmpeg 8.1.2 GPL build across five Android targets; AVI processing is restored on the fixed decoder.
-- Release preflight verifies the vendored AAR, exact source/build lock and advisory review, then emits deterministic CycloneDX 1.6 and SPDX 2.3 native inventories.
+- Replaced the obsolete binary fork with a source-pinned LGPL-3.0-or-later FFmpegKitNext 8.1.0 / FFmpeg 8.1.2 build across five Android targets; AVI processing is restored on the fixed decoder and the advisory-covered native formats are explicitly refused.
+- Release preflight verifies the vendored AAR, exact source/build lock, security patch, and complete advisory inventory, then emits deterministic CycloneDX 1.6 and SPDX 2.3 native inventories.
 
 ### v3.74.128 Bounded model downloads
 
@@ -633,7 +633,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | Coil Compose | 3.3.0 | Image and video thumbnails |
 | Hilt / Dagger | 2.60.1 | Dependency injection |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
-| FFmpegKitNext / FFmpeg | 8.1.0 (FFmpeg 8.1.2) | GPL FFmpeg paths not covered by Media3 Transformer |
+| FFmpegKitNext / FFmpeg | 8.1.0 (FFmpeg 8.1.2) | LGPL FFmpeg paths not covered by Media3 Transformer |
 | AndroidX Benchmark/ProfileInstaller | 1.5.0-beta01 / 1.4.1 | Baseline profile generation and installation |
 | Sherpa-ONNX | 1.13.2 target | Future native Moonshine v2 ASR path (target) |
 | SAM 2.1 ONNX | Targeted | Future tracked-mask path; MobileSAM fallback (target) |
@@ -641,7 +641,7 @@ Key external dependencies currently in `build.gradle.kts`:
 
 ### Distribution and Third-party Notices
 
-Open-source notices are available in **Settings > Third-party notices > Open source licenses**. ClearCut's GPL FFmpegKitNext 8.1.0 / FFmpeg 8.1.2 build is pinned by commit, build command, component revisions, and AAR checksum in `third_party/ffmpeg-kit-next/native-lock.json`; redistributed builds must keep the packaged license and exact source-offer resources.
+Open-source notices are available in **Settings > Third-party notices > Open source licenses**. ClearCut's LGPL FFmpegKitNext 8.1.0 / FFmpeg 8.1.2 build is pinned by commit, build command, security patch, component revisions, and AAR checksum in `third_party/ffmpeg-kit-next/native-lock.json`; redistributed builds must keep the packaged license and exact source-offer resources.
 
 ## Supported Devices
 

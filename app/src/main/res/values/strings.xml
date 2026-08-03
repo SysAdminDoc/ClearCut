@@ -107,7 +107,7 @@
     <string name="settings_open_source_licenses_section_title">Third-party notices</string>
     <string name="settings_open_source_licenses_section_description">Review bundled dependency licenses and source-offer obligations.</string>
     <string name="settings_open_source_licenses">Open source licenses</string>
-    <string name="settings_open_source_licenses_description">Lists shipped dependency notices, including FFmpegKit GPLv3 source-offer material.</string>
+    <string name="settings_open_source_licenses_description">Lists shipped dependency notices, including FFmpegKit LGPL source-offer material.</string>
     <string name="settings_open_source_licenses_action">Open</string>
     <string name="settings_open_source_licenses_close">Close</string>
     <string name="opensource_licenses_title">Open source licenses</string>

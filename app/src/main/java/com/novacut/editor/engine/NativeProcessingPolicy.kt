@@ -7,6 +7,7 @@ import android.provider.OpenableColumns
 import android.util.Log
 import android.webkit.MimeTypeMap
 import java.io.File
+import java.util.Locale
 
 object NativeProcessingPolicy {
 
@@ -54,6 +55,21 @@ object NativeProcessingPolicy {
         "srt", "ssa", "ass", "vtt"
     )
 
+    private val DISABLED_FORMAT_LABELS = mapOf(
+        "vobsub" to "VobSub subtitles",
+        "tdsc" to "TDSC/AVI video",
+        "mace6" to "MACE6/CAF audio",
+        "adpcm_adx" to "ADX audio",
+        "adx" to "ADX audio",
+        "aax" to "AAX audio",
+        "png" to "PNG image encoding",
+        "apng" to "APNG image encoding",
+        "rasc" to "RASC video",
+        "iamf" to "IAMF audio",
+        "zlib" to "LCL/ZLIB video",
+        "lcl" to "LCL/ZLIB video",
+    )
+
     sealed class PolicyViolation(val operation: String) {
         class Oversized(
             val actualBytes: Long,
@@ -64,18 +80,55 @@ object NativeProcessingPolicy {
         class UnsupportedFormat(
             val detectedMime: String?,
             val detectedExtension: String?,
-            operation: String
-        ) : PolicyViolation(operation)
+            operation: String,
+            labelOverride: String? = null,
+        ) : PolicyViolation(operation) {
+            val formatLabel: String? = labelOverride
+                ?: detectedExtension?.lowercase(Locale.ROOT)?.let(DISABLED_FORMAT_LABELS::get)
+        }
 
         fun userMessage(): String = when (this) {
             is Oversized -> "File is too large for $operation"
-            is UnsupportedFormat -> "Unsupported file format for $operation"
+            is UnsupportedFormat -> formatLabel?.let { "Unsupported format ($it) for $operation" }
+                ?: "Unsupported file format for $operation"
         }
 
         fun diagnosticMessage(): String = when (this) {
             is Oversized -> "$operation: input $actualBytes bytes exceeds limit $maxBytes"
-            is UnsupportedFormat -> "$operation: unsupported mime=$detectedMime ext=$detectedExtension"
+            is UnsupportedFormat -> buildString {
+                append("$operation: unsupported")
+                formatLabel?.let { append(" format=$it") }
+                append(" mime=$detectedMime ext=$detectedExtension")
+            }
         }
+    }
+
+    /**
+     * Converts FFmpeg's refusal of a deliberately disabled component into a
+     * named policy violation. This keeps security-surface reductions explicit
+     * to callers instead of exposing a generic non-zero process result.
+     */
+    fun unsupportedNativeFailure(
+        output: String,
+        operation: String,
+    ): PolicyViolation.UnsupportedFormat? {
+        val normalized = output.lowercase(Locale.ROOT)
+        val token = DISABLED_FORMAT_LABELS.keys.firstOrNull { candidate ->
+            listOf(
+                "unknown decoder '$candidate'",
+                "decoder (codec $candidate) not found",
+                "no decoder for $candidate",
+                "unknown encoder '$candidate'",
+                "unknown format '$candidate'",
+                "unknown input format: '$candidate'",
+            ).any(normalized::contains)
+        } ?: return null
+        return PolicyViolation.UnsupportedFormat(
+            detectedMime = null,
+            detectedExtension = null,
+            operation = operation,
+            labelOverride = DISABLED_FORMAT_LABELS.getValue(token),
+        )
     }
 
     fun validateVideoFile(

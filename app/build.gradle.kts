@@ -152,7 +152,7 @@ ksp {
 }
 
 val ffmpegKitAar = rootProject.file("third_party/ffmpeg-kit-next/ffmpeg-kit-next-8.1.0.aar")
-val ffmpegKitAarSha256 = "4b7654925340bb4a5eb0c4e50350a6f664f4568a228d46e9e128eb032406fd00"
+val ffmpegKitAarSha256 = "7971240aff84ce59a4ab28400bb4af59d24c20ce68c25525d41d910246ccff62"
 
 fun File.sha256(): String {
     val digest = MessageDigest.getInstance("SHA-256")
@@ -498,7 +498,7 @@ dependencies {
     // Tier 2: Lottie animated titles
     implementation(libs.lottie.compose)
 
-    // Source-pinned GPL build: FFmpegKitNext 8.1.0 / FFmpeg 8.1.2, five Android ABIs.
+    // Source-pinned LGPL build: FFmpegKitNext 8.1.0 / FFmpeg 8.1.2, five Android ABIs.
     implementation(files(ffmpegKitAar))
     implementation("com.arthenica:smart-exception-java:0.2.1")
 

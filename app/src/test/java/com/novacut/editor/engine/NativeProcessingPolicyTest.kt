@@ -56,4 +56,44 @@ class NativeProcessingPolicyTest {
         assertTrue(violation is NativeProcessingPolicy.PolicyViolation.UnsupportedFormat)
     }
 
+    @Test
+    fun unsupportedNativeFailure_namesDisabledDecoder() {
+        val violation = NativeProcessingPolicy.unsupportedNativeFailure(
+            "Unknown decoder 'tdsc' for input stream #0:0",
+            "FFmpeg",
+        )
+
+        assertNotNull(violation)
+        assertTrue(violation!!.userMessage().contains("TDSC/AVI video"))
+    }
+
+    @Test
+    fun unsupportedNativeFailure_namesDisabledDemuxer() {
+        val violation = NativeProcessingPolicy.unsupportedNativeFailure(
+            "Unknown input format: 'vobsub'",
+            "FFmpeg",
+        )
+
+        assertNotNull(violation)
+        assertTrue(violation!!.diagnosticMessage().contains("VobSub subtitles"))
+    }
+
+    @Test
+    fun unsupportedExtension_usesDisabledFormatName() {
+        val violation = NativeProcessingPolicy.validateVideoPath("clip.aax", "streamCopyTrim")
+
+        assertNotNull(violation)
+        assertTrue(violation!!.userMessage().contains("AAX audio"))
+    }
+
+    @Test
+    fun unsupportedNativeFailure_ignoresUnrelatedFailures() {
+        assertNull(
+            NativeProcessingPolicy.unsupportedNativeFailure(
+                "Invalid argument while opening output file",
+                "FFmpeg",
+            )
+        )
+    }
+
 }

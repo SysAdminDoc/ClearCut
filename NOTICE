@@ -2,7 +2,7 @@ ClearCut third-party notices
 
 FFmpegKitNext / FFmpeg
 
-ClearCut bundles a source-pinned GPLv3 build of FFmpegKitNext 8.1.0 with FFmpeg 8.1.2, x264, libass, and the supporting libraries recorded in third_party/ffmpeg-kit-next/native-lock.json. The exact upstream commit is 3e223118e6e8fb6208693ecf3952e77cd096f587 and the reproducible build command is ./nix-android.sh -p android-r27d --enable-gpl --enable-x264 --enable-libass --jobs=8.
+ClearCut bundles a source-pinned LGPL-3.0-or-later build of FFmpegKitNext 8.1.0 with FFmpeg 8.1.2, OpenH264, libass, and the supporting libraries recorded in third_party/ffmpeg-kit-next/native-lock.json. The exact upstream commit is 3e223118e6e8fb6208693ecf3952e77cd096f587 and the reproducible build command is ./nix-android.sh -p android-r27d --enable-libass --enable-libjxl --enable-android-media-codec --enable-android-zlib --enable-openh264 --jobs=8. The ClearCut security patch disables the VobSub, TDSC, MACE6, ADX/AAX, PNG/APNG, RASC, IAMF, and LCL/ZLIB components named in the lockfile's required advisory inventory.
 
 The Android package includes the upstream license resources under res/raw/license*.txt and res/raw/source.txt, plus ClearCut's exact source recipe under res/raw/ffmpeg_kit_next_source_offer.txt. Keep those resources and the corresponding-source access available with redistributed builds.
 
