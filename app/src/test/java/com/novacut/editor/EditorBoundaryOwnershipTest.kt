@@ -15,6 +15,8 @@ class EditorBoundaryOwnershipTest {
         assertFalse(source.contains("projectDao.saveProjectWithMediaAssets"))
         assertTrue(source.contains("timelineExportCoordinator.export"))
         assertTrue(source.contains("projectPersistenceCoordinator.save"))
+        assertFalse(source.contains("MutableStateFlow(EditorState())"))
+        assertTrue(source.contains("private val stateStore = EditorStateStore()"))
     }
 
     @Test

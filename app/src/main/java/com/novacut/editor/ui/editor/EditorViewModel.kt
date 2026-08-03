@@ -686,8 +686,9 @@ class EditorViewModel @Inject constructor(
     private val projectMediaManifestCacheLock = Any()
     private var projectMediaManifestCache: CachedProjectMediaManifest? = null
 
-    private val _state = MutableStateFlow(EditorState())
-    val state: StateFlow<EditorState> = _state.asStateFlow()
+    private val stateStore = EditorStateStore()
+    private val _state: MutableStateFlow<EditorState> get() = stateStore.mutable
+    val state: StateFlow<EditorState> get() = stateStore.state
 
     /** The most recently deleted checkpoint remains restorable until dismissed or replaced. */
     private val _restorableSnapshot = MutableStateFlow<ProjectSnapshot?>(null)
