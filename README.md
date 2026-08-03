@@ -404,7 +404,7 @@ Planning files are local-only in the development checkout:
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously
 - Background export with progress notification, ETA display, and cancel
-- **Timeline interchange** — OTIO (OpenTimelineIO), FCPXML, and EDL export for desktop NLE handoff; incoming OTIO/FCPXML/EDL files show a guarded import preview until parsers are active
+- **Timeline interchange** — OTIO (OpenTimelineIO), FCPXML, and EDL export for desktop NLE handoff; incoming files show a guarded fidelity/media-relink preview before one atomic editor commit
 - EDL export (CMX 3600) with sanitized reel names and proper timecodes
 - Chapter markers and subtitle export (SRT, VTT with word-level cues, ASS/SSA with full styling)
 - **Burned-in subtitle rendering** — Canvas-based with ASS/SSA file generation for FFmpeg integration
@@ -465,7 +465,7 @@ Planning files are local-only in the development checkout:
 | ASR acceleration target | Sherpa-ONNX v1.13.2 AAR + Moonshine v2 Tiny EN policy (native backend still gated) |
 | Animated Titles | Lottie Compose 6.7.1 and Media3 Lottie overlay support |
 | Startup performance | AndroidX Baseline Profile / Macrobenchmark 1.5.0-beta01 |
-| Timeline Exchange | OpenTimelineIO / FCPXML / EDL export (import not implemented) |
+| Timeline Exchange | OpenTimelineIO / FCPXML / EDL export and guarded import preview |
 | DI | Hilt / Dagger |
 | Database | Room 2.8.4 (schema v9, migration chain 1→9) |
 | Settings | DataStore Preferences |

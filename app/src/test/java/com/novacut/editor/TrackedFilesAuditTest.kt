@@ -80,6 +80,7 @@ class TrackedFilesAuditTest {
         // GitHub blob, so they must not be swept up by the local-only *.md rule.
         val releaseContractMarkdown = setOf(
             "README.md",
+            "CHANGELOG.md",
             "docs/models.md",
             "docs/privacy-policy.md",
             "docs/play-data-safety.md",

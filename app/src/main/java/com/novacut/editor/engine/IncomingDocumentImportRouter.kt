@@ -282,16 +282,39 @@ class IncomingDocumentImportRouter @Inject constructor(
         } ?: return invalid(item, "Unknown timeline interchange format.")
         val fidelity = timelineImportEngine.roundTripFidelity(format)
         val result = timelineImportEngine.import(item.uri, format = format)
+        val report = result.fidelityReport
+        val reportIssues = report?.issues.orEmpty().map { issue ->
+            "${issue.severity.name.lowercase().replaceFirstChar { it.uppercase() }}: ${issue.message}"
+        }
+        val status = if (report?.canProceed == true) {
+            IncomingDocumentImportStatus.READY
+        } else {
+            IncomingDocumentImportStatus.BLOCKED
+        }
         return IncomingDocumentImportPreview(
             item = item,
-            status = IncomingDocumentImportStatus.BLOCKED,
-            title = "${format.displayName} import is not active yet",
-            body = "ClearCut recognized the file and checked the target parser status without mutating project state.",
+            status = status,
+            title = if (report?.canProceed == true) {
+                "${format.displayName} import preview ready"
+            } else {
+                "${format.displayName} import needs review"
+            },
+            body = "ClearCut parsed the timeline and prepared an atomic editor commit without mutating project state. " +
+                "Open an editor project to apply it after the report and any relinks are accepted.",
             details = baseDetails(item) + listOf(
                 "Expected fidelity: ${fidelity.displayName}",
                 fidelity.warningCopy,
+                "Parsed tracks: ${result.exchangeResult?.tracks?.size ?: 0}",
+                "Parsed clips: ${result.exchangeResult?.tracks.orEmpty().sumOf { it.clips.size }}",
+                "Text overlays: ${result.exchangeResult?.textOverlays?.size ?: 0}",
+                "Fidelity report: ${report?.summary ?: "unavailable"}",
+                if (result.unresolvedMediaUris.isEmpty()) {
+                    "Unresolved media: none"
+                } else {
+                    "Unresolved media: ${result.unresolvedMediaUris.size} — use Relink media before commit"
+                },
             ),
-            warnings = result.warnings.ifEmpty { listOf("${format.displayName} parser is not yet implemented.") },
+            warnings = (result.warnings + reportIssues).distinct(),
             canImportNow = false,
         )
     }

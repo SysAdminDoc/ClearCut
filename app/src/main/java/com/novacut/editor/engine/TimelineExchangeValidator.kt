@@ -137,7 +137,7 @@ class TimelineExchangeValidator @Inject constructor() {
         tracks.forEachIndexed { trackIdx, track ->
             val trackPath = "Track ${trackIdx + 1} (${track.type.name.lowercase()})"
 
-            if (track.blendMode != BlendMode.NORMAL) {
+            if (track.blendMode != BlendMode.NORMAL && format != TimelineExchangeFormat.OTIO) {
                 issues += Issue(
                     Severity.WARNING,
                     path = trackPath,
@@ -207,8 +207,8 @@ class TimelineExchangeValidator @Inject constructor() {
             issues += Issue(
                 Severity.ERROR,
                 path = format.displayName,
-                message = "Format is not yet supported for import.",
-                suggestedFix = "Re-export the timeline as OTIO from the source NLE."
+                message = "Format is not supported for import.",
+                suggestedFix = "Re-export the timeline as OTIO, FCPXML, or EDL."
             )
             return Report(format, Direction.IMPORT, issues)
         }
@@ -266,6 +266,16 @@ class TimelineExchangeValidator @Inject constructor() {
                         suggestedFix = "Use 'Relink media' to point at the source file."
                     )
                 }
+                if (clip.sourceUri != Uri.EMPTY &&
+                    clip.sourceUri.scheme?.lowercase() !in PROBEABLE_URI_SCHEMES
+                ) {
+                    issues += Issue(
+                        Severity.ERROR,
+                        path = "$trackPath → Clip ${clipIdx + 1}",
+                        message = "Media URI scheme '${clip.sourceUri.scheme ?: "<none>"}' cannot be verified.",
+                        suggestedFix = "Use 'Relink media' to choose a content:// or file:// source."
+                    )
+                }
             }
         }
 
@@ -296,7 +306,7 @@ class TimelineExchangeValidator @Inject constructor() {
             )
         }
 
-        if (clip.isCompound) {
+        if (clip.isCompound && format != TimelineExchangeFormat.OTIO) {
             issues += Issue(
                 Severity.WARNING,
                 path = clipPath,
@@ -305,7 +315,7 @@ class TimelineExchangeValidator @Inject constructor() {
             )
         }
 
-        if (clip.isReversed) {
+        if (clip.isReversed && format != TimelineExchangeFormat.OTIO) {
             issues += Issue(
                 Severity.WARNING,
                 path = clipPath,
@@ -323,7 +333,7 @@ class TimelineExchangeValidator @Inject constructor() {
             )
         }
 
-        if (clip.blendMode != BlendMode.NORMAL) {
+        if (clip.blendMode != BlendMode.NORMAL && format != TimelineExchangeFormat.OTIO) {
             issues += Issue(
                 Severity.WARNING,
                 path = clipPath,
@@ -348,7 +358,7 @@ class TimelineExchangeValidator @Inject constructor() {
             )
         }
 
-        if (clip.effects.isNotEmpty()) {
+        if (clip.effects.isNotEmpty() && format != TimelineExchangeFormat.OTIO) {
             issues += Issue(
                 Severity.INFO,
                 path = clipPath,
@@ -375,5 +385,6 @@ class TimelineExchangeValidator @Inject constructor() {
             TransitionType.FADE_BLACK,
             TransitionType.FADE_WHITE
         )
+        private val PROBEABLE_URI_SCHEMES = setOf("content", "file", "asset", "http", "https")
     }
 }
