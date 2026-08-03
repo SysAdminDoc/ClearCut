@@ -31,7 +31,6 @@ import com.novacut.editor.engine.ProjectArchive
 import com.novacut.editor.engine.ProjectDocument
 import com.novacut.editor.engine.ProjectDocumentApplicator
 import com.novacut.editor.engine.ProjectDocumentReadResult
-import com.novacut.editor.engine.ProjectPersistenceCoordinator
 import com.novacut.editor.engine.AndroidProjectDependencyProbe
 import com.novacut.editor.engine.ProjectDependencyEditorInputs
 import com.novacut.editor.engine.ProjectDependencyManifest
@@ -86,7 +85,6 @@ import com.novacut.editor.engine.attachMediaAssetIdsToTracks
 import com.novacut.editor.engine.backfillManagedMediaAssetSidecars
 import com.novacut.editor.engine.buildProjectMediaAssets
 import com.novacut.editor.engine.sanitizeFileName
-import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -97,8 +95,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -614,10 +610,7 @@ data class TimelineExchangeFeedback(
 @HiltViewModel
 class EditorViewModel @Inject constructor(
     private val videoEngine: VideoEngine,
-    private val projectDao: ProjectDao,
     private val audioEngine: AudioEngine,
-    private val autoSave: ProjectAutoSave,
-    private val projectPersistenceCoordinator: ProjectPersistenceCoordinator,
     private val aiFeatures: AiFeatures,
     private val voiceoverEngine: VoiceoverRecorderEngine,
     private val templateManager: TemplateManager,
@@ -664,6 +657,8 @@ class EditorViewModel @Inject constructor(
     private val lutRegistry: com.novacut.editor.engine.LutRegistry,
     private val exportIncidentStore: ExportIncidentStore,
     private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine,
+    private val documentCoordinator: EditorDocumentCoordinator,
+    private val projectTransferCoordinator: EditorProjectTransferCoordinator,
     @ApplicationContext private val appContext: Context,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -680,7 +675,6 @@ class EditorViewModel @Inject constructor(
     private var lastAutoSaveRunning: Boolean? = null
     private var lastAutoSaveIntervalSec: Int? = null
     private val savedStateTracker = SavedStateTracker()
-    private val projectSaveMutex = Mutex()
     private var mediaRelinkProbeJob: Job? = null
     private var captionTranslationJob: Job? = null
     private var autoEditJob: Job? = null
@@ -957,29 +951,31 @@ class EditorViewModel @Inject constructor(
 
         // Load existing project if projectId provided, then restore auto-save
         viewModelScope.launch {
-            if (projectId != null) {
-                val project = projectDao.getProject(projectId)
-                if (project != null) {
-                    _state.update { it.copy(project = project) }
-                } else {
-                    // Opening a project that no longer exists used to silently create a
-                    // blank one under the same id -- the user asked for their work and
-                    // got an empty timeline that looked like it. Report it instead and
-                    // let the caller route back to the dashboard.
-                    Log.w("EditorViewModel", "Project $projectId no longer exists; refusing to recreate it blank")
-                    _state.update { it.copy(projectNotFound = true) }
-                    recoveryOpenComplete = true
-                    autoSaveBlockedByRecovery = true
-                    showToast(text(R.string.editor_project_not_found), ToastSeverity.Error)
-                    return@launch
-                }
+            val openResult = documentCoordinator.open(
+                projectId = projectId,
+                recoveryId = autoSaveId,
+            )
+            if (openResult.projectNotFound) {
+                // Opening a project that no longer exists used to silently create a
+                // blank one under the same id -- the user asked for their work and
+                // got an empty timeline that looked like it. Report it instead and
+                // let the caller route back to the dashboard.
+                Log.w("EditorViewModel", "Project $projectId no longer exists; refusing to recreate it blank")
+                _state.update { it.copy(projectNotFound = true) }
+                recoveryOpenComplete = true
+                autoSaveBlockedByRecovery = true
+                showToast(text(R.string.editor_project_not_found), ToastSeverity.Error)
+                return@launch
+            }
+            openResult.project?.let { project ->
+                _state.update { it.copy(project = project) }
             }
 
             // Restore auto-save AFTER Room load to avoid race condition.
             // Use the schema-aware outcome path so corrupt/future files are
             // surfaced and preserved instead of being silently treated as
             // missing and overwritten by the next autosave tick.
-            handleRecoveryOpenOutcome(autoSave.loadRecoveryDataWithOutcome(autoSaveId))
+            handleRecoveryOpenOutcome(requireNotNull(openResult.recovery))
         }
 
         viewModelScope.launch {
@@ -1276,7 +1272,7 @@ class EditorViewModel @Inject constructor(
         if (_state.value.partialRestore == null) return
         val id = projectId ?: _state.value.project.id
         viewModelScope.launch {
-            when (val outcome = autoSave.loadBackupWithOutcome(id)) {
+            when (val outcome = documentCoordinator.loadBackupWithOutcome(id)) {
                 is ProjectAutoSave.LoadOutcome.Loaded -> {
                     restoreLoadedRecovery(outcome.state, outcome.document?.project)
                     if (outcome.report.isPartial) {
@@ -1379,12 +1375,12 @@ class EditorViewModel @Inject constructor(
         lastAutoSaveRunning = shouldRun
         lastAutoSaveIntervalSec = intervalSec
         if (shouldRun) {
-            autoSave.startAutoSave(
+            documentCoordinator.startAutoSave(
                 projectId ?: _state.value.project.id,
                 intervalMs = current.autoSaveIntervalSec * 1000L,
                 onSaveResult = { succeeded, request ->
                     viewModelScope.launch {
-                        projectSaveMutex.withLock {
+                        run {
                             val currentFingerprint = currentProjectFingerprint()
                             val attempt = request?.let {
                                 SaveAttempt(it.saveToken, it.documentFingerprint)
@@ -1392,7 +1388,7 @@ class EditorViewModel @Inject constructor(
                             if (succeeded && request != null && attempt != null) {
                                 try {
                                     if (currentFingerprint == request.documentFingerprint) {
-                                        projectPersistenceCoordinator.saveDatabase(
+                                        documentCoordinator.saveDatabase(
                                             ProjectDocumentApplicator.capture(
                                                 project = request.project,
                                                 state = request.state,
@@ -1437,7 +1433,7 @@ class EditorViewModel @Inject constructor(
                 )
             }
         } else {
-            autoSave.stop()
+            documentCoordinator.stopAutoSave()
         }
     }
 
@@ -2667,49 +2663,8 @@ class EditorViewModel @Inject constructor(
 
     fun estimateBackupSize() {
         viewModelScope.launch(Dispatchers.IO) {
-            val size = com.novacut.editor.engine.ProjectArchive.estimateArchiveSize(
-                appContext,
-                buildAutoSaveState(_state.value)
-            )
+            val size = projectTransferCoordinator.estimateBackupSize(buildAutoSaveState(_state.value))
             _backupEstimatedSize.value = size
-        }
-    }
-
-    private fun writeBackupToDownloads(sourceFile: File, fileName: String): String {
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            val resolver = appContext.contentResolver
-            val values = android.content.ContentValues().apply {
-                put(android.provider.MediaStore.Downloads.DISPLAY_NAME, fileName)
-                put(android.provider.MediaStore.Downloads.MIME_TYPE, "application/zip")
-                put(
-                    android.provider.MediaStore.Downloads.RELATIVE_PATH,
-                    "${android.os.Environment.DIRECTORY_DOWNLOADS}/ClearCut"
-                )
-                put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
-            }
-            val contentUri = resolver.insert(
-                android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,
-                values
-            ) ?: throw IllegalStateException("Could not create backup destination")
-            try {
-                resolver.openOutputStream(contentUri)?.use { output ->
-                    sourceFile.inputStream().use { input -> input.copyTo(output) }
-                } ?: throw IllegalStateException("Could not open backup destination")
-                values.clear()
-                values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
-                resolver.update(contentUri, values, null, null)
-                fileName
-            } catch (e: Exception) {
-                resolver.delete(contentUri, null, null)
-                throw e
-            }
-        } else {
-            val downloadsRoot = appContext.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS)
-                ?: File(appContext.filesDir, "downloads")
-            val backupDir = File(downloadsRoot, "ClearCut").apply { mkdirs() }
-            val destination = File(backupDir, fileName)
-            sourceFile.copyTo(destination, overwrite = true)
-            destination.name
         }
     }
 
@@ -2723,21 +2678,10 @@ class EditorViewModel @Inject constructor(
             try {
                 val s = _state.value
                 val fileName = "${sanitizedProjectFileStem(s.project.name)}.clearcut"
-                val savedName = withContext(Dispatchers.IO) {
-                    val tempDir = File(appContext.cacheDir, "backup_exports").apply { mkdirs() }
-                    val tempFile = File(tempDir, fileName)
-                    try {
-                        val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
-                            context = appContext,
-                            document = buildProjectDocument(s),
-                            outputFile = tempFile
-                        )
-                        if (!success) return@withContext null
-                        writeBackupToDownloads(tempFile, fileName)
-                    } finally {
-                        tempFile.delete()
-                    }
-                }
+                val savedName = projectTransferCoordinator.exportBackup(
+                    document = buildProjectDocument(s),
+                    fileName = fileName,
+                )
                 if (savedName != null) {
                     _lastBackupTime.value = System.currentTimeMillis()
                     showToast(text(R.string.vm_backup_saved_toast, savedName))
@@ -2762,16 +2706,7 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 showToast(text(R.string.vm_importing_backup_toast))
-                val targetDir = File(appContext.filesDir, "imported_${System.currentTimeMillis()}")
-                val existingProjectIds = runCatching {
-                    projectDao.getAllProjectsSnapshot().map { it.id }.toSet()
-                }.getOrDefault(emptySet())
-                val result = ProjectArchive.importArchiveWithReport(
-                    appContext,
-                    uri,
-                    targetDir,
-                    existingProjectIds = existingProjectIds
-                )
+                val result = projectTransferCoordinator.importBackup(uri)
                 val state = result.document?.state ?: result.state
                 if (state != null) {
                     saveUndoState("Import backup")
@@ -4734,16 +4669,12 @@ class EditorViewModel @Inject constructor(
             showToast(text(R.string.vm_exporting_archive_toast))
             try {
                 val s = _state.value
-                val dir = java.io.File(appContext.getExternalFilesDir(null), "archives")
-                dir.mkdirs()
-                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.clearcut")
-                val success = com.novacut.editor.engine.ProjectArchive.exportArchive(
-                    context = appContext,
+                val file = projectTransferCoordinator.exportArchive(
                     document = buildProjectDocument(s),
-                    outputFile = file
+                    projectName = s.project.name,
                 )
                 showToast(
-                    if (success) {
+                    if (file != null) {
                         text(R.string.vm_backup_saved_toast, file.name)
                     } else {
                         text(R.string.vm_backup_export_failed_toast)
@@ -5786,32 +5717,30 @@ class EditorViewModel @Inject constructor(
         applySavedStateStatus(status)
 
         viewModelScope.launch {
-            projectSaveMutex.withLock {
-                try {
-                    val result = projectPersistenceCoordinator.save(
-                        document = document,
-                        autoSaveEnabled = recoveryOpenComplete && !autoSaveBlockedByRecovery,
-                    )
-                    applySavedProjectMetadata(project)
+            try {
+                val result = documentCoordinator.save(
+                    document = document,
+                    autoSaveEnabled = recoveryOpenComplete && !autoSaveBlockedByRecovery,
+                )
+                applySavedProjectMetadata(project)
 
-                    // Persist the exact snapshot fingerprinted above. Capturing inside
-                    // the coroutine allowed a newer edit to be mislabeled as saved.
-                    if (result.succeeded) {
-                        applySavedStateStatus(
-                            savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint())
-                        )
-                    } else {
-                        applySavedStateStatus(
-                            savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
-                        )
-                    }
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.e("EditorVM", "Project save failed", e)
+                // Persist the exact snapshot fingerprinted above. Capturing inside
+                // the coroutine allowed a newer edit to be mislabeled as saved.
+                if (result.succeeded) {
+                    applySavedStateStatus(
+                        savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint())
+                    )
+                } else {
                     applySavedStateStatus(
                         savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
                     )
                 }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e("EditorVM", "Project save failed", e)
+                applySavedStateStatus(
+                    savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
+                )
             }
         }
     }
@@ -5867,7 +5796,7 @@ class EditorViewModel @Inject constructor(
     fun collectProjectInspectorData(): ProjectInspectorData {
         val s = _state.value
         val allClips = s.tracks.flatMap { it.clips }
-        val storageInfo = autoSave.getStorageInfo(s.project.id)
+        val storageInfo = documentCoordinator.getStorageInfo(s.project.id)
         val missingCount = s.media.relinkReports
             .values.count { it.state == com.novacut.editor.engine.MediaRelinkProbe.RelinkState.MISSING }
         return ProjectInspectorData(
@@ -6486,7 +6415,7 @@ class EditorViewModel @Inject constructor(
         toastJob?.cancel()
         playbackStartRecoveryJob?.cancel()
         aiToolsDelegate.cancelAiTool()
-        autoSave.stop()
+        documentCoordinator.stopAutoSave()
         voiceoverDurationJob?.cancel()
         voiceoverEngine.release()
         ttsEngine.stopPreview()
