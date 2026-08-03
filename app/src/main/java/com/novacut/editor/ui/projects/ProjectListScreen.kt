@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -136,7 +137,14 @@ fun ProjectListScreen(
             searchQuery.isNotBlank() ||
             filterMode != ProjectFilterMode.ALL
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                // The template picker is a modal surface. Keep the project
+                // controls visible behind it, but remove their semantics from
+                // the accessibility tree while the picker owns interaction.
+                .then(if (showTemplateSheet) Modifier.clearAndSetSemantics { } else Modifier)
+        ) {
             ProjectHomeHero(
                 projectCount = projectTotalCount,
                 searchQuery = searchQuery,

@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.engine.AppearanceMode
@@ -192,6 +193,7 @@ class ClearCutSmokeTest {
     }
 
     private fun AndroidComposeTestRule<*, *>.assertAccessibilityChecksPass() {
+        onRoot(useUnmergedTree = true).printToLog("CLEARCUT_ACCESSIBILITY")
         onRoot().tryPerformAccessibilityChecks()
     }
 }

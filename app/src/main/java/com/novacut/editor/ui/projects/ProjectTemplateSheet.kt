@@ -349,9 +349,6 @@ private fun UserTemplateCard(
             .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
-            .then(
-                if (template.id == "blank") Modifier.testTag(ClearCutTestTags.TEMPLATE_BLANK) else Modifier
-            )
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = templateDescription }
     ) {
@@ -449,6 +446,9 @@ private fun ProjectTemplateCard(
             .clip(RoundedCornerShape(Radius.xl))
             .background(Mocha.PanelHighest)
             .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
+            .then(
+                if (template.id == "blank") Modifier.testTag(ClearCutTestTags.TEMPLATE_BLANK) else Modifier
+            )
             .clickable(role = Role.Button, onClick = { onClick(templateName) })
             .semantics { contentDescription = templateDescription }
     ) {
