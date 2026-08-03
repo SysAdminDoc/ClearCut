@@ -13,8 +13,31 @@ data class OpenSourceLicenseNotice(
 )
 
 object OpenSourceLicenses {
-    /** Notice rows are generated from scripts/capability_registry.json. */
-    val notices: List<OpenSourceLicenseNotice> = CapabilityRegistry.notices
+    /**
+     * Runtime rows are generated from the resolved release graph and native lock.
+     * The curated registry supplies reviewed names, license text, and source-offer
+     * obligations; generated versions always win so the Settings panel cannot go
+     * stale when dependency resolution changes.
+     */
+    val notices: List<OpenSourceLicenseNotice> = run {
+        val generatedByArtifact = RuntimeOpenSourceLicensesGenerated.notices.associateBy { it.artifact }
+        val refreshedCurated = CapabilityRegistry.notices.map { curated ->
+            generatedByArtifact[curated.artifact]?.let { current ->
+                current.copy(
+                    name = curated.name,
+                    licenseName = curated.licenseName,
+                    licenseText = curated.licenseText,
+                    licenseUrl = curated.licenseUrl,
+                    projectUrl = curated.projectUrl,
+                    sourceOfferText = curated.sourceOfferText,
+                    complianceNote = curated.complianceNote,
+                )
+            } ?: curated
+        }
+        refreshedCurated + RuntimeOpenSourceLicensesGenerated.notices.filter { generated ->
+            CapabilityRegistry.notices.none { curated -> curated.artifact == generated.artifact }
+        }
+    }
 
     fun noticesForDisplay(): List<OpenSourceLicenseNotice> = notices.sortedBy { it.name.lowercase() }
 

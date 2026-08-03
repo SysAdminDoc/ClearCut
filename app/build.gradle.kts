@@ -1,6 +1,10 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import java.util.Properties
 import java.security.KeyStore
 import java.security.MessageDigest
+import java.util.Locale
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,6 +19,8 @@ fun resolveSigningSecret(vararg keys: String): String? {
         System.getenv(key)?.trim()?.takeIf { it.isNotEmpty() }
     }
 }
+
+val runtimeNoticeGeneratedDir = layout.buildDirectory.dir("generated/source/runtimeNotices")
 
 android {
     namespace = "com.novacut.editor"
@@ -131,6 +137,7 @@ android {
     }
 
     sourceSets {
+        getByName("main").java.directories.add(runtimeNoticeGeneratedDir.get().asFile.absolutePath)
         getByName("androidTest").assets.directories += "$projectDir/schemas"
     }
 
@@ -180,7 +187,320 @@ val verifyFfmpegKitAar by tasks.registering {
     }
 }
 
-tasks.named("preBuild").configure { dependsOn(verifyFfmpegKitAar) }
+data class RuntimeLicenseInfo(
+    val licenseName: String,
+    val licenseText: String,
+    val licenseUrl: String,
+    val projectUrl: String,
+)
+
+data class RuntimeLicensePolicy(
+    val groupPrefixes: List<String>,
+    val license: RuntimeLicenseInfo,
+)
+
+data class GeneratedRuntimeNotice(
+    val name: String,
+    val version: String,
+    val artifact: String,
+    val license: RuntimeLicenseInfo,
+    val sourceOfferText: String? = null,
+    val complianceNote: String? = null,
+    val origin: String,
+)
+
+val apacheLicense = RuntimeLicenseInfo(
+    licenseName = "Apache License 2.0",
+    licenseText = "Apache License 2.0. Redistribution must preserve the license and required notices; the software is provided without warranties under the Apache terms.",
+    licenseUrl = "https://www.apache.org/licenses/LICENSE-2.0.txt",
+    projectUrl = "https://www.apache.org/",
+)
+val mitLicense = RuntimeLicenseInfo(
+    licenseName = "MIT License",
+    licenseText = "MIT License. Redistribution must keep the copyright and permission notices; the software is provided without warranties.",
+    licenseUrl = "https://opensource.org/license/mit/",
+    projectUrl = "https://opensource.org/license/mit/",
+)
+val bsd2License = RuntimeLicenseInfo(
+    licenseName = "BSD 2-Clause License",
+    licenseText = "BSD 2-Clause License. Redistribution must preserve the copyright notice, conditions, and disclaimer.",
+    licenseUrl = "https://opensource.org/license/bsd-2-clause/",
+    projectUrl = "https://opensource.org/license/bsd-2-clause/",
+)
+val bsd3License = RuntimeLicenseInfo(
+    licenseName = "BSD 3-Clause License",
+    licenseText = "BSD 3-Clause License. Redistribution must preserve the copyright notice, conditions, and disclaimer.",
+    licenseUrl = "https://opensource.org/license/bsd-3-clause/",
+    projectUrl = "https://opensource.org/license/bsd-3-clause/",
+)
+val iscLicense = RuntimeLicenseInfo(
+    licenseName = "ISC License",
+    licenseText = "ISC License. Permission to use, copy, modify, and distribute is granted subject to the included copyright and disclaimer.",
+    licenseUrl = "https://opensource.org/license/isc-license-txt/",
+    projectUrl = "https://opensource.org/license/isc-license-txt/",
+)
+val lgpl3License = RuntimeLicenseInfo(
+    licenseName = "GNU Lesser General Public License Version 3",
+    licenseText = "GNU LGPL v3. Redistribution must preserve the license and corresponding notices.",
+    licenseUrl = "https://www.gnu.org/licenses/lgpl-3.0.txt",
+    projectUrl = "https://www.gnu.org/licenses/lgpl-3.0.html",
+)
+val lgpl21License = RuntimeLicenseInfo(
+    licenseName = "GNU Lesser General Public License Version 2.1 or later",
+    licenseText = "GNU LGPL v2.1 or later. Redistribution must preserve the license and corresponding notices.",
+    licenseUrl = "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt",
+    projectUrl = "https://www.gnu.org/licenses/lgpl-2.1.html",
+)
+val freetypeLicense = RuntimeLicenseInfo(
+    licenseName = "FreeType License",
+    licenseText = "FreeType License. Redistribution must preserve the license and its notices.",
+    licenseUrl = "https://freetype.org/license.html",
+    projectUrl = "https://freetype.org/",
+)
+val libpngLicense = RuntimeLicenseInfo(
+    licenseName = "libpng License",
+    licenseText = "libpng License. Redistribution must preserve the copyright notice and disclaimer.",
+    licenseUrl = "http://www.libpng.org/pub/png/src/libpng-LICENSE.txt",
+    projectUrl = "http://www.libpng.org/pub/png/libpng.html",
+)
+val llvmExceptionLicense = RuntimeLicenseInfo(
+    licenseName = "Apache License 2.0 with LLVM exception",
+    licenseText = "Apache License 2.0 with the LLVM exception. Redistribution must preserve the license and exception text.",
+    licenseUrl = "https://llvm.org/LICENSE.txt",
+    projectUrl = "https://llvm.org/",
+)
+
+fun RuntimeLicenseInfo.forProject(projectUrl: String): RuntimeLicenseInfo = copy(projectUrl = projectUrl)
+
+val runtimeLicensePolicies = listOf(
+    RuntimeLicensePolicy(listOf("com.google.protobuf"), bsd3License),
+    RuntimeLicensePolicy(listOf("com.google.code.findbugs"), bsd3License),
+    RuntimeLicensePolicy(listOf("com.microsoft.onnxruntime"), mitLicense.forProject("https://onnxruntime.ai/")),
+    RuntimeLicensePolicy(listOf("org.checkerframework"), mitLicense.forProject("https://checkerframework.org/")),
+    RuntimeLicensePolicy(listOf("androidx"), apacheLicense.forProject("https://developer.android.com/jetpack")),
+    RuntimeLicensePolicy(listOf("org.jetbrains.androidx"), apacheLicense.forProject("https://github.com/JetBrains")),
+    RuntimeLicensePolicy(listOf("org.jetbrains.compose"), apacheLicense.forProject("https://github.com/JetBrains/compose-multiplatform")),
+    RuntimeLicensePolicy(listOf("org.jetbrains.kotlinx"), apacheLicense.forProject("https://github.com/Kotlin")),
+    RuntimeLicensePolicy(listOf("org.jetbrains.kotlin"), apacheLicense.forProject("https://kotlinlang.org/")),
+    RuntimeLicensePolicy(listOf("org.jetbrains"), apacheLicense.forProject("https://github.com/JetBrains")),
+    RuntimeLicensePolicy(listOf("com.airbnb.android"), apacheLicense.forProject("https://github.com/airbnb/lottie-android")),
+    RuntimeLicensePolicy(listOf("com.arthenica"), apacheLicense.forProject("https://github.com/arthenica/ffmpeg-kit")),
+    RuntimeLicensePolicy(listOf("com.google.dagger"), apacheLicense.forProject("https://dagger.dev/")),
+    RuntimeLicensePolicy(listOf("com.google.mediapipe"), apacheLicense.forProject("https://mediapipe.dev/")),
+    RuntimeLicensePolicy(listOf("com.google.firebase"), apacheLicense.forProject("https://firebase.google.com/")),
+    RuntimeLicensePolicy(listOf("com.google.android.datatransport"), apacheLicense.forProject("https://github.com/firebase/firebase-android-sdk")),
+    RuntimeLicensePolicy(listOf("com.google.flogger"), apacheLicense.forProject("https://google.github.io/flogger/")),
+    RuntimeLicensePolicy(listOf("com.google.guava"), apacheLicense.forProject("https://github.com/google/guava")),
+    RuntimeLicensePolicy(listOf("com.google.j2objc"), apacheLicense.forProject("https://github.com/google/j2objc")),
+    RuntimeLicensePolicy(listOf("com.google.errorprone"), apacheLicense.forProject("https://errorprone.info/")),
+    RuntimeLicensePolicy(listOf("com.google"), apacheLicense.forProject("https://developers.google.com/")),
+    RuntimeLicensePolicy(listOf("com.squareup.okhttp3"), apacheLicense.forProject("https://square.github.io/okhttp/")),
+    RuntimeLicensePolicy(listOf("com.squareup.okio"), apacheLicense.forProject("https://square.github.io/okio/")),
+    RuntimeLicensePolicy(listOf("io.coil-kt.coil3"), apacheLicense.forProject("https://github.com/coil-kt/coil")),
+    RuntimeLicensePolicy(listOf("io.github.kaleyravideo"), apacheLicense.forProject("https://github.com/KaleyraVideo/AndroidDeepFilterNet")),
+    RuntimeLicensePolicy(listOf("jakarta.inject"), apacheLicense.forProject("https://github.com/jakartaee/inject")),
+    RuntimeLicensePolicy(listOf("javax.inject"), apacheLicense.forProject("https://github.com/javax-inject/javax-inject")),
+    RuntimeLicensePolicy(listOf("org.jspecify"), apacheLicense.forProject("https://jspecify.dev/")),
+)
+
+fun runtimeLicenseFor(group: String): RuntimeLicenseInfo? = runtimeLicensePolicies
+    .asSequence()
+    .filter { policy ->
+        policy.groupPrefixes.any { prefix -> group == prefix || group.startsWith("$prefix.") }
+    }
+    .maxByOrNull { policy -> policy.groupPrefixes.maxOf { it.length } }
+    ?.license
+
+fun nativeLicenseFor(expression: String): RuntimeLicenseInfo = when (expression) {
+    "Apache-2.0" -> apacheLicense
+    "Apache-2.0-with-LLVM-exception" -> llvmExceptionLicense
+    "BSD-2-Clause" -> bsd2License
+    "BSD-3-Clause" -> bsd3License
+    "FTL" -> freetypeLicense
+    "ISC" -> iscLicense
+    "LGPL-2.1-or-later" -> lgpl21License
+    "LGPL-3.0-or-later" -> lgpl3License
+    "Libpng" -> libpngLicense
+    "MIT" -> mitLicense
+    else -> error("No native notice license mapping for $expression")
+}
+
+fun String.kotlinLiteral(): String = buildString {
+    append('"')
+    for (character in this@kotlinLiteral) {
+        when (character) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\n' -> append("\\n")
+            '\r' -> append("\\r")
+            '\t' -> append("\\t")
+            else -> append(character)
+        }
+    }
+    append('"')
+}
+
+fun GeneratedRuntimeNotice.toKotlin(): String = buildString {
+    appendLine("        OpenSourceLicenseNotice(")
+    appendLine("            name = ${name.kotlinLiteral()},")
+    appendLine("            version = ${version.kotlinLiteral()},")
+    appendLine("            artifact = ${artifact.kotlinLiteral()},")
+    appendLine("            licenseName = ${license.licenseName.kotlinLiteral()},")
+    appendLine("            licenseText = ${license.licenseText.kotlinLiteral()},")
+    appendLine("            licenseUrl = ${license.licenseUrl.kotlinLiteral()},")
+    appendLine("            projectUrl = ${license.projectUrl.kotlinLiteral()},")
+    appendLine("            sourceOfferText = ${sourceOfferText?.kotlinLiteral() ?: "null"},")
+    appendLine("            complianceNote = ${complianceNote?.kotlinLiteral() ?: "null"},")
+    appendLine("        ),")
+}
+
+fun nativeProjectUrl(purl: String): String {
+    val githubPath = purl.removePrefix("pkg:github/").substringBefore('@')
+    return if (githubPath != purl && githubPath.contains('/')) {
+        "https://github.com/$githubPath"
+    } else if (purl.contains("ffmpeg")) {
+        "https://ffmpeg.org/"
+    } else {
+        "https://developer.android.com/ndk"
+    }
+}
+
+val generateRuntimeOpenSourceNotices by tasks.registering {
+    group = "verification"
+    description = "Generates a complete, resolved-runtime open-source notice inventory."
+    val registryFile = rootProject.file("scripts/capability_registry.json")
+    val nativeLockFile = rootProject.file("third_party/ffmpeg-kit-next/native-lock.json")
+    val generatedFile = runtimeNoticeGeneratedDir.map { it.file("RuntimeOpenSourceLicensesGenerated.kt") }
+    val reportFile = layout.buildDirectory.file("reports/runtime-notices/runtime-notices.json")
+    inputs.files(
+        registryFile,
+        nativeLockFile,
+        rootProject.file("gradle/libs.versions.toml"),
+        project.buildFile,
+    )
+    outputs.dir(runtimeNoticeGeneratedDir)
+    outputs.file(reportFile)
+    doLast {
+        val resolved = configurations.getByName("releaseRuntimeClasspath")
+            .incoming.resolutionResult.allComponents
+            .mapNotNull { component -> component.moduleVersion }
+            .filterNot { module -> module.group == rootProject.name && module.name == project.name }
+            .distinctBy { module -> "${module.group}:${module.name}:${module.version}" }
+            .sortedWith(compareBy({ it.group }, { it.name }, { it.version }))
+
+        val unresolvedGroups = resolved
+            .map { it.group }
+            .distinct()
+            .filter { group -> runtimeLicenseFor(group) == null }
+        require(unresolvedGroups.isEmpty()) {
+            "Runtime notice policy has no license mapping for groups: ${unresolvedGroups.joinToString(", ")}"
+        }
+
+        val registry = JsonSlurper().parse(registryFile) as Map<*, *>
+        val registryDependencies = registry["dependencies"] as? List<*> ?: error("Capability registry has no dependencies list")
+        registryDependencies.forEach { rawDependency ->
+            val dependency = rawDependency as? Map<*, *> ?: error("Capability registry dependency is not an object")
+            val notice = dependency["notice"] as? Map<*, *> ?: return@forEach
+            val coordinate = dependency["coordinate"] as? String ?: error("Notice dependency has no coordinate")
+            val coordinateParts = coordinate.split(':')
+            if (coordinateParts.size == 2) {
+                val resolvedModule = resolved.firstOrNull {
+                    it.group == coordinateParts[0] && it.name == coordinateParts[1]
+                } ?: error("Curated notice $coordinate is absent from releaseRuntimeClasspath")
+                val declaredVersion = dependency["version"] as? String ?: error("Notice dependency $coordinate has no version")
+                require(resolvedModule.version == declaredVersion) {
+                    "Curated notice $coordinate is stale: registry=$declaredVersion resolved=${resolvedModule.version}"
+                }
+                require(notice["licenseUrl"] is String && (notice["licenseUrl"] as String).isNotBlank()) {
+                    "Curated notice $coordinate has no license URL"
+                }
+            }
+        }
+
+        val runtimeNotices = resolved.map { module ->
+            val coordinate = "${module.group}:${module.name}"
+            GeneratedRuntimeNotice(
+                name = coordinate,
+                version = module.version,
+                artifact = coordinate,
+                license = requireNotNull(runtimeLicenseFor(module.group)),
+                origin = "releaseRuntimeClasspath",
+            )
+        }
+
+        val nativeLock = JsonSlurper().parse(nativeLockFile) as Map<*, *>
+        val nativeComponents = nativeLock["components"] as? List<*> ?: error("Native lock has no components list")
+        val nativeNotices = nativeComponents.map { rawComponent ->
+            val component = rawComponent as? Map<*, *> ?: error("Native lock component is not an object")
+            val name = component["name"] as? String ?: error("Native lock component has no name")
+            val version = component["version"] as? String ?: error("Native lock component $name has no version")
+            val purl = component["purl"] as? String ?: error("Native lock component $name has no purl")
+            val licenseExpression = component["license"] as? String ?: error("Native lock component $name has no license")
+            val artifact = "native:" + name.lowercase(Locale.ROOT).replace(Regex("[^a-z0-9]+"), "-").trim('-')
+            GeneratedRuntimeNotice(
+                name = name,
+                version = version,
+                artifact = artifact,
+                license = nativeLicenseFor(licenseExpression).forProject(nativeProjectUrl(purl)),
+                complianceNote = "Vendored native component recorded in third_party/ffmpeg-kit-next/native-lock.json.",
+                origin = "native-lock.json",
+            )
+        }
+
+        val notices = (runtimeNotices + nativeNotices).sortedBy { it.artifact }
+        val generatedText = buildString {
+            appendLine("package com.novacut.editor.engine")
+            appendLine()
+            appendLine("// Generated by the releaseRuntimeClasspath and native-lock notice task; do not edit.")
+            appendLine("internal object RuntimeOpenSourceLicensesGenerated {")
+            appendLine("    val notices: List<OpenSourceLicenseNotice> = listOf(")
+            notices.forEach { append(it.toKotlin()) }
+            appendLine("    )")
+            appendLine("}")
+        }
+        val generatedOutput = generatedFile.get().asFile
+        generatedOutput.parentFile.mkdirs()
+        generatedOutput.writeText(generatedText)
+
+        val reportEntries = notices.map { notice ->
+            linkedMapOf<String, Any?>(
+                "artifact" to notice.artifact,
+                "name" to notice.name,
+                "version" to notice.version,
+                "license" to notice.license.licenseName,
+                "licenseUrl" to notice.license.licenseUrl,
+                "projectUrl" to notice.license.projectUrl,
+                "origin" to notice.origin,
+            )
+        }
+        val report = linkedMapOf<String, Any?>(
+            "schemaVersion" to 1,
+            "releaseConfiguration" to "releaseRuntimeClasspath",
+            "runtimeComponentCount" to runtimeNotices.size,
+            "nativeComponentCount" to nativeNotices.size,
+            "notices" to reportEntries,
+        )
+        val reportOutput = reportFile.get().asFile
+        reportOutput.parentFile.mkdirs()
+        reportOutput.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(report)) + "\n")
+        logger.lifecycle("Runtime notice inventory generated: ${runtimeNotices.size} resolved + ${nativeNotices.size} native components")
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(verifyFfmpegKitAar)
+    dependsOn(generateRuntimeOpenSourceNotices)
+}
+
+tasks.configureEach {
+    if (name.contains("Kotlin") && name.contains("Compile")) {
+        dependsOn(generateRuntimeOpenSourceNotices)
+    }
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    source(runtimeNoticeGeneratedDir.get().asFile)
+}
 
 val generateNativeSbom by tasks.registering(Exec::class) {
     group = "verification"
@@ -308,6 +628,10 @@ $components
         }
         logger.lifecycle("Resolved SBOM written to ${output.relativeTo(rootProject.projectDir)} (${resolved.size} components)")
     }
+}
+
+verifyResolvedAdvisoryFloors.configure {
+    dependsOn(generateRuntimeOpenSourceNotices)
 }
 
 // The public-claim and repository-contract tests read files that live outside any

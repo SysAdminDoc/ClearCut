@@ -30,10 +30,26 @@ class OpenSourceLicensesTest {
 
     @Test
     fun noticeVersionsComeFromTheCapabilityRegistry() {
-        assertEquals(CapabilityRegistry.notices, OpenSourceLicenses.notices)
+        CapabilityRegistry.notices.forEach { curated ->
+            val current = OpenSourceLicenses.noticeForArtifact(curated.artifact)
+            assertNotNull(current)
+            assertEquals(curated.version, current!!.version)
+        }
         assertEquals("5.4.0", OpenSourceLicenses.noticeForArtifact("com.squareup.okhttp3:okhttp")?.version)
         assertEquals("3.3.0", OpenSourceLicenses.noticeForArtifact("io.coil-kt.coil3:coil-compose")?.version)
         assertEquals("2.60.1", OpenSourceLicenses.noticeForArtifact("com.google.dagger:hilt-android")?.version)
+    }
+
+    @Test
+    fun generatedInventoryCoversResolvedRuntimeAndVendoredNativeComponents() {
+        val generatedArtifacts = RuntimeOpenSourceLicensesGenerated.notices.map { it.artifact }
+
+        assertEquals(generatedArtifacts.size, generatedArtifacts.distinct().size)
+        assertTrue(RuntimeOpenSourceLicensesGenerated.notices.count { it.artifact.startsWith("native:") } >= 15)
+        assertTrue(RuntimeOpenSourceLicensesGenerated.notices.count { !it.artifact.startsWith("native:") } >= 200)
+        RuntimeOpenSourceLicensesGenerated.notices.forEach { generated ->
+            assertNotNull(OpenSourceLicenses.noticeForArtifact(generated.artifact))
+        }
     }
 
     @Test

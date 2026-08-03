@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Settings open-source notices now generate from the resolved release runtime graph and native lock: 240 runtime and 15 vendored native components are version-current, unmapped licenses or stale curated entries fail verification, and the reviewed FFmpeg source offer remains intact.
 - Raised compact editor actions to 48dp semantic hit targets while keeping their visual geometry, with localized labels and radio-button semantics for text and glow swatches.
 - Track-level blend modes now share an explicit capability policy: unsupported edits are rejected before mutation, and imported non-NORMAL track state is disclosed as a normal-alpha export fallback requiring consent.
 - Native SBOM verification now hashes the checked-in security patch canonically across Windows line endings while retaining byte-exact artifact and POM checksums; expiry, advisory coverage, and deterministic self-tests remain enforced.
