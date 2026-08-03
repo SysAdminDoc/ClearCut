@@ -31,6 +31,7 @@ import com.novacut.editor.engine.ProjectArchive
 import com.novacut.editor.engine.ProjectDocument
 import com.novacut.editor.engine.ProjectDocumentApplicator
 import com.novacut.editor.engine.ProjectDocumentReadResult
+import com.novacut.editor.engine.ProjectPersistenceCoordinator
 import com.novacut.editor.engine.AndroidProjectDependencyProbe
 import com.novacut.editor.engine.ProjectDependencyEditorInputs
 import com.novacut.editor.engine.ProjectDependencyManifest
@@ -85,7 +86,6 @@ import com.novacut.editor.engine.backfillManagedMediaAssetSidecars
 import com.novacut.editor.engine.buildProjectMediaAssets
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.db.ProjectDao
-import com.novacut.editor.engine.db.toProjectMediaAssetEntities
 import com.novacut.editor.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -616,6 +616,7 @@ class EditorViewModel @Inject constructor(
     private val projectDao: ProjectDao,
     private val audioEngine: AudioEngine,
     private val autoSave: ProjectAutoSave,
+    private val projectPersistenceCoordinator: ProjectPersistenceCoordinator,
     private val aiFeatures: AiFeatures,
     private val voiceoverEngine: VoiceoverRecorderEngine,
     private val templateManager: TemplateManager,
@@ -1388,9 +1389,11 @@ class EditorViewModel @Inject constructor(
                             if (succeeded && request != null && attempt != null) {
                                 try {
                                     if (currentFingerprint == request.documentFingerprint) {
-                                        projectDao.saveProjectWithMediaAssets(
-                                            request.project,
-                                            request.state.mediaAssets.toProjectMediaAssetEntities(request.project.id),
+                                        projectPersistenceCoordinator.saveDatabase(
+                                            ProjectDocumentApplicator.capture(
+                                                project = request.project,
+                                                state = request.state,
+                                            )
                                         )
                                         applySavedProjectMetadata(request.project)
                                     }
@@ -5778,17 +5781,15 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch {
             projectSaveMutex.withLock {
                 try {
-                    projectDao.saveProjectWithMediaAssets(
-                        project,
-                        document.state.mediaAssets.toProjectMediaAssetEntities(project.id),
+                    val result = projectPersistenceCoordinator.save(
+                        document = document,
+                        autoSaveEnabled = recoveryOpenComplete && !autoSaveBlockedByRecovery,
                     )
                     applySavedProjectMetadata(project)
 
                     // Persist the exact snapshot fingerprinted above. Capturing inside
                     // the coroutine allowed a newer edit to be mislabeled as saved.
-                    if (recoveryOpenComplete && !autoSaveBlockedByRecovery &&
-                        autoSave.saveNow(document)
-                    ) {
+                    if (result.succeeded) {
                         applySavedStateStatus(
                             savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint())
                         )

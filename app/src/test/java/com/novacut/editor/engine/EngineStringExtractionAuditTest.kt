@@ -66,14 +66,14 @@ class EngineStringExtractionAuditTest {
         // 2026-06-11: 142 after FFmpeg reverse-export, animated-overlay, and
         //             font-import engines landed (the cap had drifted red).
         // 2026-06-20: 161 after AiDisclosurePolicy and recent engine additions.
-        // 2026-08-02: 183 after the timeline export lifecycle boundary.
+        // 2026-08-02: 184 after the project persistence lifecycle boundary.
         // Bump intentionally when adding new engines so the
         // docs/models.md registry and the ROADMAP stay in sync. This assertion
         // is a checkpoint, not a hard cap.
         assertTrue(
             "Engine file count drifted from the audit baseline (was 161, now $count). " +
                 "If you added an engine, update docs/models.md and bump this number.",
-            count in 95..183
+            count in 95..184
         )
     }
 
