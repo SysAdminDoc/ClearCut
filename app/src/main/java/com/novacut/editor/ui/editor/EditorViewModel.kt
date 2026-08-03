@@ -66,7 +66,7 @@ import com.novacut.editor.engine.VideoMattingEngine
 import com.novacut.editor.engine.StabilizationEngine
 import com.novacut.editor.engine.StyleTransferEngine
 import com.novacut.editor.engine.SmartReframeEngine
-import com.novacut.editor.engine.TimelineExchangeEngine
+import com.novacut.editor.engine.TimelineExportCoordinator
 import com.novacut.editor.engine.TimelineExchangeValidator
 import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
@@ -84,7 +84,6 @@ import com.novacut.editor.engine.attachMediaAssetIdsToTracks
 import com.novacut.editor.engine.backfillManagedMediaAssetSidecars
 import com.novacut.editor.engine.buildProjectMediaAssets
 import com.novacut.editor.engine.sanitizeFileName
-import com.novacut.editor.engine.writeUtf8TextAtomically
 import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.engine.db.toProjectMediaAssetEntities
 import com.novacut.editor.model.*
@@ -637,8 +636,7 @@ class EditorViewModel @Inject constructor(
     private val styleTransferEngine: StyleTransferEngine,
     private val smartReframeEngine: SmartReframeEngine,
     private val editingSuggestionEngine: EditingSuggestionEngine,
-    private val timelineExchangeEngine: TimelineExchangeEngine,
-    private val timelineExchangeValidator: com.novacut.editor.engine.TimelineExchangeValidator,
+    private val timelineExportCoordinator: TimelineExportCoordinator,
     private val cutAssistantEngine: com.novacut.editor.engine.CutAssistantEngine,
     private val proxyWorkflowEngine: ProxyWorkflowEngine,
     private val multiCamEngine: MultiCamEngine,
@@ -4748,125 +4746,105 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    fun exportToOtio() {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun exportToOtio() = exportTimeline(TimelineExportCoordinator.Format.OTIO)
+
+    fun exportToFcpxml() = exportTimeline(TimelineExportCoordinator.Format.FCPXML)
+
+    private fun exportTimeline(format: TimelineExportCoordinator.Format) {
+        viewModelScope.launch {
+            val s = _state.value
             try {
-                val s = _state.value
-                val report = timelineExchangeValidator.validateExport(
-                    TimelineExchangeEngine.TimelineExchangeFormat.OTIO,
-                    s.tracks,
-                    s.textOverlays,
-                    s.exportConfig.frameRate
+                val result = timelineExportCoordinator.export(
+                    TimelineExportCoordinator.Request(
+                        format = format,
+                        tracks = s.tracks,
+                        textOverlays = s.textOverlays,
+                        projectName = s.project.name,
+                        frameRate = s.exportConfig.frameRate,
+                        outputDirectory = java.io.File(
+                            appContext.getExternalFilesDir(null),
+                            "exports",
+                        ),
+                    )
                 )
-                if (!report.canProceed) {
-                    val first = report.errors.first()
-                    withContext(Dispatchers.Main) {
-                        _state.update {
-                            it.copyMedia { media ->
-                                media.copy(
-                                    timelineExchangeFeedback = TimelineExchangeFeedback(
-                                        succeeded = false,
-                                        title = "OTIO export blocked",
-                                        body = "ClearCut found a timeline issue that would make the handoff unreliable.",
-                                        outputFileName = null,
-                                        report = report
-                                    )
-                                )
-                            }
-                        }
-                        showToast(text(R.string.vm_otio_blocked_toast, first.path, first.message))
-                    }
-                    return@launch
-                }
-                val otioJson = timelineExchangeEngine.exportToOtio(s.tracks, s.textOverlays, s.project.name)
-                val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
-                dir.mkdirs()
-                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.otio")
-                writeUtf8TextAtomically(file, otioJson)
-                withContext(Dispatchers.Main) {
-                    val tail = if (report.warnings.isNotEmpty()) " (${report.summary})" else ""
-                    if (report.issues.isNotEmpty()) {
-                        _state.update {
-                            it.copyMedia { media ->
-                                media.copy(
-                                    timelineExchangeFeedback = TimelineExchangeFeedback(
-                                        succeeded = true,
-                                        title = "OTIO exported with notes",
-                                        body = "The file was written, but the receiving editor may need manual cleanup.",
-                                        outputFileName = file.name,
-                                        report = report
-                                    )
-                                )
-                            }
-                        }
-                    }
-                    showToast(text(R.string.vm_otio_exported_toast, file.name, tail))
-                }
+                withContext(Dispatchers.Main) { publishTimelineExportResult(result) }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "OTIO export failed", e)
-                withContext(Dispatchers.Main) { showToast(text(R.string.editor_otio_export_failed_toast)) }
+                Log.e("EditorViewModel", "${format.name} export failed", e)
+                withContext(Dispatchers.Main) {
+                    showToast(
+                        text(
+                            if (format == TimelineExportCoordinator.Format.OTIO) {
+                                R.string.editor_otio_export_failed_toast
+                            } else {
+                                R.string.editor_fcpxml_export_failed_toast
+                            }
+                        )
+                    )
+                }
             }
         }
     }
-    fun exportToFcpxml() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val s = _state.value
-                val report = timelineExchangeValidator.validateExport(
-                    TimelineExchangeEngine.TimelineExchangeFormat.FCPXML,
-                    s.tracks,
-                    s.textOverlays,
-                    s.exportConfig.frameRate
+
+    private fun publishTimelineExportResult(result: TimelineExportCoordinator.Result) {
+        val outputFile = result.outputFile
+        val formatName = result.format.name
+        if (result.blocked) {
+            val first = result.report.errors.first()
+            _state.update {
+                it.copyMedia { media ->
+                    media.copy(
+                        timelineExchangeFeedback = TimelineExchangeFeedback(
+                            succeeded = false,
+                            title = "$formatName export blocked",
+                            body = "ClearCut found a timeline issue that would make the handoff unreliable.",
+                            outputFileName = null,
+                            report = result.report,
+                        )
+                    )
+                }
+            }
+            showToast(
+                text(
+                    if (result.format == TimelineExportCoordinator.Format.OTIO) {
+                        R.string.vm_otio_blocked_toast
+                    } else {
+                        R.string.vm_fcpxml_blocked_toast
+                    },
+                    first.path,
+                    first.message,
                 )
-                if (!report.canProceed) {
-                    val first = report.errors.first()
-                    withContext(Dispatchers.Main) {
-                        _state.update {
-                            it.copyMedia { media ->
-                                media.copy(
-                                    timelineExchangeFeedback = TimelineExchangeFeedback(
-                                        succeeded = false,
-                                        title = "FCPXML export blocked",
-                                        body = "ClearCut found a timeline issue that would make the handoff unreliable.",
-                                        outputFileName = null,
-                                        report = report
-                                    )
-                                )
-                            }
-                        }
-                        showToast(text(R.string.vm_fcpxml_blocked_toast, first.path, first.message))
-                    }
-                    return@launch
+            )
+            return
+        }
+
+        val file = requireNotNull(outputFile)
+        if (result.report.issues.isNotEmpty()) {
+            _state.update {
+                it.copyMedia { media ->
+                    media.copy(
+                        timelineExchangeFeedback = TimelineExchangeFeedback(
+                            succeeded = true,
+                            title = "$formatName exported with notes",
+                            body = "The file was written, but the receiving editor may need manual cleanup.",
+                            outputFileName = file.name,
+                            report = result.report,
+                        )
+                    )
                 }
-                val xml = timelineExchangeEngine.exportToFcpxml(s.tracks, s.project.name, s.exportConfig.frameRate)
-                val dir = java.io.File(appContext.getExternalFilesDir(null), "exports")
-                dir.mkdirs()
-                val file = java.io.File(dir, "${sanitizedProjectFileStem(s.project.name)}.fcpxml")
-                writeUtf8TextAtomically(file, xml)
-                withContext(Dispatchers.Main) {
-                    val tail = if (report.warnings.isNotEmpty()) " (${report.summary})" else ""
-                    if (report.issues.isNotEmpty()) {
-                        _state.update {
-                            it.copyMedia { media ->
-                                media.copy(
-                                    timelineExchangeFeedback = TimelineExchangeFeedback(
-                                        succeeded = true,
-                                        title = "FCPXML exported with notes",
-                                        body = "The file was written, but the receiving editor may need manual cleanup.",
-                                        outputFileName = file.name,
-                                        report = report
-                                    )
-                                )
-                            }
-                        }
-                    }
-                    showToast(text(R.string.vm_fcpxml_exported_toast, file.name, tail))
-                }
-            } catch (e: Exception) {
-                Log.e("EditorViewModel", "FCPXML export failed", e)
-                withContext(Dispatchers.Main) { showToast(text(R.string.editor_fcpxml_export_failed_toast)) }
             }
         }
+        val tail = if (result.report.warnings.isNotEmpty()) " (${result.report.summary})" else ""
+        showToast(
+            text(
+                if (result.format == TimelineExportCoordinator.Format.OTIO) {
+                    R.string.vm_otio_exported_toast
+                } else {
+                    R.string.vm_fcpxml_exported_toast
+                },
+                file.name,
+                tail,
+            )
+        )
     }
 
     // --- Linked A/V ---
