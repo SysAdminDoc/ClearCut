@@ -104,7 +104,9 @@ class DestructiveActionRecoverabilityTest {
     }
 
     private fun editorViewModel(): String =
-        locate("app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt").readText()
+        locate("app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt")
+            .readText()
+            .replace("\r\n", "\n")
 
     private fun undoActionBody(source: String): String {
         val start = source.indexOf("data class UndoAction(")

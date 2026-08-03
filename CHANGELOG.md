@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Editor orchestration now delegates document/recovery, archive transfer, WorkManager jobs, and preview playback sessions to fake-tested Hilt coordinators while preserving the ViewModel's state projection and cancellation behavior.
 - Separated Android backup scopes: cloud backup remains bounded to project metadata, while device transfer carries validated app-owned fonts/LUTs and excludes partial copies; archive disclosures call out external references that may need relinking.
 - Settings open-source notices now generate from the resolved release runtime graph and native lock: 240 runtime and 15 vendored native components are version-current, unmapped licenses or stale curated entries fail verification, and the reviewed FFmpeg source offer remains intact.
 - Public release copy and capability metadata now share executable claim gates, including registry evidence, dependency-missing qualifiers, optional-network disclosures, and release self-tests.

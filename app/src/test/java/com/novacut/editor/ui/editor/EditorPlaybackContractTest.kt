@@ -9,10 +9,11 @@ class EditorPlaybackContractTest {
 
     @Test
     fun `timeline rebuild selects the edit point atomically with the new composition`() {
-        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
+        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt")
+            .readText().normalizeLineEndings()
         val viewModel = locate(
             "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt"
-        ).readText()
+        ).readText().normalizeLineEndings()
         val rebuildBlock = viewModel.substring(
             viewModel.indexOf("private fun rebuildPlayerTimeline()"),
             viewModel.indexOf("private fun preloadVisibleWaveforms")
@@ -26,10 +27,14 @@ class EditorPlaybackContractTest {
 
     @Test
     fun `play reasserts the timeline edit point instead of inheriting an ended period`() {
-        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
+        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt")
+            .readText().normalizeLineEndings()
         val viewModel = locate(
             "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt"
-        ).readText()
+        ).readText().normalizeLineEndings()
+        val playbackCoordinator = locate(
+            "app/src/main/java/com/novacut/editor/ui/editor/EditorPlaybackCoordinator.kt"
+        ).readText().normalizeLineEndings()
         val playbackBlock = viewModel.substring(
             viewModel.indexOf("fun togglePlayback()"),
             viewModel.indexOf("fun toggleLoop()")
@@ -40,11 +45,12 @@ class EditorPlaybackContractTest {
         assertTrue(engine.contains("p.seekTo(positionMs.coerceIn(0L, previewCompositionPlan.durationMs))"))
         assertTrue(engine.contains("playbackSessionNeedsReset("))
         assertTrue(engine.contains("p.stop()"))
-        assertTrue(playbackBlock.contains("videoEngine.playFromTimelinePosition(playhead, restartSession)"))
-        assertTrue(playbackBlock.contains("videoEngine.isPlaybackRequested()"))
-        assertTrue(playbackBlock.contains("!videoEngine.isPlaybackEnded()"))
+        assertTrue(playbackBlock.contains("playbackCoordinator.playFromTimelinePosition(playhead, restartSession)"))
+        assertTrue(playbackBlock.contains("playbackCoordinator.isPlaybackRequested()"))
+        assertTrue(playbackBlock.contains("!playbackCoordinator.isPlaybackEnded()"))
         assertTrue(playbackBlock.contains("isPlaybackRequested = true"))
-        assertTrue(playbackBlock.contains("armPlaybackStartRecovery()"))
+        assertTrue(playbackCoordinator.contains("armPlaybackStartRecovery"))
+        assertTrue(playbackCoordinator.contains("port.playFromTimelinePosition(recoveryPositionMs, restartSession = true)"))
         assertFalse(playbackBlock.contains("it.copy(isPlaying = true)"))
     }
 
@@ -131,7 +137,8 @@ class EditorPlaybackContractTest {
 
     @Test
     fun `live preview excludes single input transition shaders`() {
-        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
+        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt")
+            .readText().normalizeLineEndings()
         assertTrue(engine.contains("if (!previewMode) {\n                clip.headTransition"))
         assertTrue(engine.contains("previewMode = true"))
         assertTrue(engine.contains("EffectBuilder.buildTransitionEffect(it)"))
@@ -139,13 +146,14 @@ class EditorPlaybackContractTest {
 
     @Test
     fun `composition preview owns gaps images and processed audio`() {
-        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
+        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt")
+            .readText().normalizeLineEndings()
         val viewModel = locate(
             "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt"
-        ).readText()
+        ).readText().normalizeLineEndings()
         val previewPanel = locate(
             "app/src/main/java/com/novacut/editor/ui/editor/PreviewPanel.kt"
-        ).readText()
+        ).readText().normalizeLineEndings()
 
         assertTrue(engine.contains("allowAudioTransmux = false"))
         assertTrue(engine.contains("addGap(durationMsToUs(compositionDurationMs))"))
@@ -160,4 +168,6 @@ class EditorPlaybackContractTest {
             .firstOrNull(File::exists)
             ?: error("$relativePath not found")
     }
+
+    private fun String.normalizeLineEndings(): String = replace("\r\n", "\n")
 }

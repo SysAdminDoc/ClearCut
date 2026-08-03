@@ -8,7 +8,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.Player
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.ai.AutoEditClip
@@ -115,9 +114,6 @@ private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
 private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
 private const val SUGGESTION_SNOOZE_STATE_KEY = "editingSuggestionSnoozeUntil"
 private const val SUGGESTION_SNOOZE_MS = 30 * 60 * 1_000L
-private const val PLAYBACK_START_RECOVERY_DELAY_MS = 3_000L
-private const val PLAYBACK_START_FAILURE_DELAY_MS = 7_000L
-private const val PREVIEW_SURFACE_RECOVERY_DELAY_MS = 250L
 
 internal fun shouldShowEditingSuggestion(
     suggestionId: String,
@@ -651,12 +647,15 @@ class EditorViewModel @Inject constructor(
     private val lutRegistry: com.novacut.editor.engine.LutRegistry,
     private val exportIncidentStore: ExportIncidentStore,
     private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine,
-    private val documentCoordinator: EditorDocumentCoordinator,
-    private val projectTransferCoordinator: EditorProjectTransferCoordinator,
-    private val backgroundJobCoordinator: EditorBackgroundJobCoordinator,
+    private val editorCoordinatorSet: EditorCoordinatorSet,
     @ApplicationContext private val appContext: Context,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val documentCoordinator get() = editorCoordinatorSet.document
+    private val projectTransferCoordinator get() = editorCoordinatorSet.projectTransfer
+    private val backgroundJobCoordinator get() = editorCoordinatorSet.backgroundJobs
+    private val playbackCoordinator get() = editorCoordinatorSet.playback
 
     private val projectId: String? = savedStateHandle["projectId"]
     private val expectRecovery: Boolean = savedStateHandle["expectRecovery"] ?: false
@@ -881,7 +880,6 @@ class EditorViewModel @Inject constructor(
     @Volatile
     private var timelineWidthPx: Float = 0f
     private val waveformLoadJobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
-    private var playbackStartRecoveryJob: Job? = null
 
     private fun visibleTimelineDurationMs(state: EditorState = _state.value): Long? {
         if (timelineWidthPx <= 0f) return null
@@ -1009,140 +1007,67 @@ class EditorViewModel @Inject constructor(
             }
         }
 
-        // Player.Listener for play state sync — tracked for cleanup
-        videoEngine.setPlayerListener(object : Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                _state.update { it.copy(isPlaying = playing) }
-                if (playing) playbackStartRecoveryJob?.cancel()
-            }
-
-            override fun onPlayWhenReadyChanged(
-                playWhenReady: Boolean,
-                reason: Int
-            ) {
-                _state.update { it.copy(isPlaybackRequested = playWhenReady) }
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED) {
-                    playbackStartRecoveryJob?.cancel()
-                    videoEngine.pause()
-                    val totalMs = _state.value.totalDurationMs
+        playbackCoordinator.start(
+            scope = viewModelScope,
+            callbacks = EditorPlaybackCoordinator.Callbacks(
+                snapshot = {
+                    val state = _state.value
+                    EditorPlaybackCoordinator.PlaybackSnapshot(
+                        playheadMs = _playheadMs.value,
+                        totalDurationMs = state.totalDurationMs,
+                        scrollOffsetMs = state.scrollOffsetMs,
+                        zoomLevel = state.zoomLevel,
+                        timelineWidthPx = timelineWidthPx,
+                        maxTimelineScrollOffsetMs = maxTimelineScrollOffset(state),
+                        isPlaybackRequested = state.isPlaybackRequested,
+                    )
+                },
+                onPlayingChanged = { playing ->
+                    _state.update { it.copy(isPlaying = playing) }
+                },
+                onPlaybackRequestedChanged = { requested ->
+                    _state.update { it.copy(isPlaybackRequested = requested) }
+                },
+                onPlaybackEnded = { totalMs ->
                     _playheadMs.value = totalMs
                     _state.update {
                         it.copy(
                             isPlaying = false,
                             isPlaybackRequested = false,
-                            playheadMs = totalMs
+                            playheadMs = totalMs,
                         )
                     }
-                }
-            }
-
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                playbackStartRecoveryJob?.cancel()
-                val resumeAfterSurfaceRecovery = _state.value.isPlaybackRequested
-                videoEngine.pause()
-                _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
-                if (isRecoverablePreviewRuntimeFailure(error)) {
-                    val currentPositionMs = _playheadMs.value
-                    val totalDurationMs = _state.value.totalDurationMs
-                    if (isPreviewStuckPlayerFailure(error) &&
-                        isAtPreviewTimelineEnd(currentPositionMs, totalDurationMs)
-                    ) {
-                        _playheadMs.value = totalDurationMs
-                        _state.update {
-                            it.copy(
-                                playheadMs = totalDurationMs,
-                                isPlaying = false,
-                                isPlaybackRequested = false
+                },
+                onSurfaceRecoveryPosition = { recoveryPositionMs ->
+                    if (recoveryPositionMs != _playheadMs.value) {
+                        _playheadMs.value = recoveryPositionMs
+                        _state.update { it.copy(playheadMs = recoveryPositionMs) }
+                    }
+                    _state.update { it.copy(isPlaybackRequested = true) }
+                },
+                onPlaybackStartFailed = {
+                    _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
+                    showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
+                },
+                onUnrecoverableError = { error ->
+                    showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
+                    Log.w("EditorViewModel", "Preview playback failed", error)
+                },
+                onFrame = { frame ->
+                    _playheadMs.value = frame.positionMs
+                    val state = _state.value
+                    val playheadDriftMs = kotlin.math.abs(frame.positionMs - state.playheadMs)
+                    if (frame.scrollOffsetMs != state.scrollOffsetMs || playheadDriftMs >= 200L) {
+                        _state.update { current ->
+                            current.copy(
+                                playheadMs = frame.positionMs,
+                                scrollOffsetMs = frame.scrollOffsetMs,
                             )
                         }
-                        Log.i(
-                            "EditorViewModel",
-                            "Treating a stuck-player signal at timeline end as normal completion"
-                        )
-                        return
                     }
-                    Log.w(
-                        "EditorViewModel",
-                        "Preview runtime stalled; resetting the player without blaming the clip",
-                        error
-                    )
-                    if (resumeAfterSurfaceRecovery) {
-                        viewModelScope.launch {
-                            delay(PREVIEW_SURFACE_RECOVERY_DELAY_MS)
-                            val livePositionMs = _playheadMs.value
-                            val recoveryPositionMs = playbackStartPosition(
-                                livePositionMs,
-                                _state.value.totalDurationMs
-                            )
-                            if (recoveryPositionMs != livePositionMs) {
-                                _playheadMs.value = recoveryPositionMs
-                                _state.update { it.copy(playheadMs = recoveryPositionMs) }
-                            }
-                            _state.update { it.copy(isPlaybackRequested = true) }
-                            videoEngine.playFromTimelinePosition(
-                                recoveryPositionMs,
-                                restartSession = true
-                            )
-                            armPlaybackStartRecovery()
-                        }
-                    }
-                    return
-                }
-                showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
-                Log.w("EditorViewModel", "Preview playback failed", error)
-            }
-        })
-
-        // Periodic playhead sync (~30fps) with smooth auto-scroll + per-clip speed tracking
-        viewModelScope.launch {
-            var frameCount = 0
-            while (isActive) {
-                delay(33)
-                val player = videoEngine.getPlayer() ?: continue
-                if (player.isPlaying) {
-                    val currentMs = videoEngine.getAbsolutePositionMs()
-                    // Fast-path: update dedicated playhead flow every frame
-                    _playheadMs.value = currentMs
-                    frameCount++
-
-                    // Compute auto-scroll every frame for smooth following
-                    val widthPx = timelineWidthPx
-                    val s = _state.value
-                    val pixelsPerMs = s.zoomLevel * 0.15f
-                    var newScroll = s.scrollOffsetMs
-                    if (widthPx > 0 && pixelsPerMs >= 0.001f) {
-                        val visibleMs = (widthPx / pixelsPerMs).toLong()
-                        val playheadRelative = currentMs - newScroll
-                        if (playheadRelative > visibleMs * 0.8f || playheadRelative < 0) {
-                            // Smooth scroll: lerp toward target instead of jumping
-                            val targetScroll = (currentMs - visibleMs / 4).coerceAtLeast(0L)
-                            newScroll = newScroll + ((targetScroll - newScroll) * 0.15f).toLong()
-                        }
-                    }
-                    newScroll = clampTimelineScrollOffset(newScroll, s)
-
-                    // Push `_state` updates only when scroll moved OR playhead has
-                    // drifted at least 200ms from the last sync. Consumers of the
-                    // flow that care about live playhead (the timeline render) read
-                    // `_playheadMs` directly — the dedicated unboxed-Long flow that
-                    // we update every tick above. The 200ms threshold still keeps
-                    // `state.playheadMs` fresh enough for user-triggered ops like
-                    // `splitClipAtPlayhead` and auto-save, while cutting state.copy
-                    // broadcasts from ~6/sec to ~5/sec during playback. Previously
-                    // a new EditorState was constructed and emitted on every 5th
-                    // tick unconditionally, invalidating every Compose subscriber.
-                    val playheadDriftMs = kotlin.math.abs(currentMs - s.playheadMs)
-                    if (newScroll != s.scrollOffsetMs || playheadDriftMs >= 200L) {
-                        _state.update { st ->
-                            st.copy(playheadMs = currentMs, scrollOffsetMs = newScroll)
-                        }
-                    }
-                }
-            }
-        }
+                },
+            ),
+        )
 
         // Apply user settings (export defaults + auto-save)
         var appliedDefaults = false
@@ -1802,9 +1727,8 @@ class EditorViewModel @Inject constructor(
     // Playback
     fun togglePlayPause() = togglePlayback()
     fun togglePlayback() {
-        if (videoEngine.isPlaybackRequested() && !videoEngine.isPlaybackEnded()) {
-            playbackStartRecoveryJob?.cancel()
-            videoEngine.pause()
+        if (playbackCoordinator.isPlaybackRequested() && !playbackCoordinator.isPlaybackEnded()) {
+            playbackCoordinator.pause()
             _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
         } else {
             val missingCount = _state.value.media.relinkReports
@@ -1829,45 +1753,13 @@ class EditorViewModel @Inject constructor(
             // CompositionPlayer owns the whole absolute timeline, including gaps on
             // one sequence while another visual or audio lane remains active.
             _state.update { it.copy(isPlaybackRequested = true) }
-            videoEngine.playFromTimelinePosition(playhead, restartSession)
-            armPlaybackStartRecovery()
-        }
-    }
-
-    private fun armPlaybackStartRecovery() {
-        playbackStartRecoveryJob?.cancel()
-        val requestedPositionMs = _playheadMs.value
-        playbackStartRecoveryJob = viewModelScope.launch {
-            delay(PLAYBACK_START_RECOVERY_DELAY_MS)
-            if (!videoEngine.isPlaybackRequested()) return@launch
-
-            val observedPositionMs = videoEngine.getAbsolutePositionMs()
-            if (hasPreviewPlaybackAdvanced(requestedPositionMs, observedPositionMs)) {
-                return@launch
-            }
-
-            val recoveryPositionMs = observedPositionMs
-            Log.w(
-                "EditorViewModel",
-                "Playback did not advance after request; resetting at $recoveryPositionMs ms"
-            )
-            videoEngine.playFromTimelinePosition(recoveryPositionMs, restartSession = true)
-            delay(PLAYBACK_START_FAILURE_DELAY_MS)
-            val recoveredPositionMs = videoEngine.getAbsolutePositionMs()
-            if (videoEngine.isPlaybackRequested() &&
-                !hasPreviewPlaybackAdvanced(recoveryPositionMs, recoveredPositionMs)
-            ) {
-                videoEngine.pause()
-                _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
-                showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
-            }
+            playbackCoordinator.playFromTimelinePosition(playhead, restartSession)
         }
     }
 
     fun toggleLoop() {
         val newLooping = !_state.value.isLooping
-        videoEngine.getPlayer()?.repeatMode = if (newLooping)
-            Player.REPEAT_MODE_ALL else Player.REPEAT_MODE_OFF
+        playbackCoordinator.setLooping(newLooping)
         _state.update { it.copy(isLooping = newLooping) }
     }
 
@@ -1896,11 +1788,11 @@ class EditorViewModel @Inject constructor(
             scrubSeekJob?.cancel()
             scrubSeekJob = viewModelScope.launch {
                 kotlinx.coroutines.delay(80)
-                videoEngine.seekTo(clamped)
+                playbackCoordinator.seekTo(clamped)
             }
             return
         }
-        videoEngine.seekTo(clamped)
+        playbackCoordinator.seekTo(clamped)
         _state.update { it.copy(playheadMs = clamped) }
         if (_state.value.panels.isOpen(PanelId.SCOPES)) updateScopeFrame()
     }
@@ -1915,15 +1807,15 @@ class EditorViewModel @Inject constructor(
     /** Enable scrubbing mode during timeline drag for smoother seeking. */
     fun beginScrub() {
         isScrubbing = true
-        videoEngine.setScrubbingMode(true)
+        playbackCoordinator.setScrubbingMode(true)
     }
     fun endScrub() {
         isScrubbing = false
         scrubSeekJob?.cancel()
         scrubSeekJob = null
-        videoEngine.setScrubbingMode(false)
+        playbackCoordinator.setScrubbingMode(false)
         val pos = _playheadMs.value
-        videoEngine.seekTo(pos)
+        playbackCoordinator.seekTo(pos)
         _state.update { it.copy(playheadMs = pos) }
     }
 
@@ -1976,16 +1868,15 @@ class EditorViewModel @Inject constructor(
     fun setTool(tool: EditorTool) {
         // Disable scrubbing mode when leaving trim tool
         if (_state.value.currentTool == EditorTool.TRIM && tool != EditorTool.TRIM) {
-            videoEngine.setScrubbingMode(false)
+            playbackCoordinator.setScrubbingMode(false)
         }
         _state.update { it.copy(currentTool = tool) }
     }
 
     // Panel mutual exclusion — atomic dismiss-and-show in single state update
     private fun pauseIfPlaying() {
-        if (videoEngine.isPlaybackRequested()) {
-            playbackStartRecoveryJob?.cancel()
-            videoEngine.pause()
+        if (playbackCoordinator.isPlaybackRequested()) {
+            playbackCoordinator.pause()
             _state.update { it.copy(isPlaying = false, isPlaybackRequested = false) }
         }
     }
@@ -4210,7 +4101,7 @@ class EditorViewModel @Inject constructor(
         // Freeze the player while the user drags so we don't rebuild it on every
         // pixel of motion. `setScrubbingMode(true)` lets ExoPlayer skip the expensive
         // seek+decode work; the actual timeline rebuild happens in endSlipEdit.
-        videoEngine.setScrubbingMode(true)
+        playbackCoordinator.setScrubbingMode(true)
     }
 
     fun endSlipEdit() = finishSlipEdit(commit = true)
@@ -4222,7 +4113,7 @@ class EditorViewModel @Inject constructor(
         isSlipEditActive = false
         val finish = finishTimelineGestureUndo("Slip edit", commit)
         slipEditStartTracks = null
-        videoEngine.setScrubbingMode(false)
+        playbackCoordinator.setScrubbingMode(false)
         if (finish.hadMutation) {
             rebuildPlayerTimeline()
             saveProject()
@@ -4234,7 +4125,7 @@ class EditorViewModel @Inject constructor(
         if (!beginTimelineGestureUndo("Slide edit")) return
         isSlideEditActive = true
         slideEditStartTracks = _state.value.tracks
-        videoEngine.setScrubbingMode(true)
+        playbackCoordinator.setScrubbingMode(true)
     }
 
     fun endSlideEdit() = finishSlideEdit(commit = true)
@@ -4246,7 +4137,7 @@ class EditorViewModel @Inject constructor(
         isSlideEditActive = false
         val finish = finishTimelineGestureUndo("Slide edit", commit)
         slideEditStartTracks = null
-        videoEngine.setScrubbingMode(false)
+        playbackCoordinator.setScrubbingMode(false)
         if (finish.hadMutation) {
             rebuildPlayerTimeline()
             saveProject()
@@ -6363,20 +6254,19 @@ class EditorViewModel @Inject constructor(
         super.onCleared()
         saveIndicatorJob?.cancel()
         toastJob?.cancel()
-        playbackStartRecoveryJob?.cancel()
+        playbackCoordinator.stop()
         aiToolsDelegate.cancelAiTool()
         documentCoordinator.stopAutoSave()
         backgroundJobCoordinator.removeObservers()
         voiceoverDurationJob?.cancel()
         voiceoverEngine.release()
         ttsEngine.stopPreview()
-        videoEngine.removePlayerListener()
         // Guarantee scrubbing-mode is reset regardless of whether a begin-X()
         // had a matching end-X(). If the activity dies mid-trim / mid-scrub (OS
         // kill, uncaught exception in the drag handler), a stale scrubbing flag
         // would otherwise persist on the singleton VideoEngine and affect the
         // next project opened in this process.
-        videoEngine.setScrubbingMode(false)
+        playbackCoordinator.setScrubbingMode(false)
         // Only reset export state if no export is actively running — the ExportService
         // observes the same state flows and needs to see the terminal state to stop itself.
         if (videoEngine.exportState.value != ExportState.EXPORTING) {
