@@ -62,6 +62,12 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_text(path: Path) -> str:
+    """Hash a checked-in text contract independently of Windows checkout EOLs."""
+    canonical = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def validate(lock: dict, root: Path = ROOT, today: dt.date | None = None) -> None:
     if lock.get("schemaVersion") != 2:
         raise ValueError("unsupported native lock schema")
@@ -97,7 +103,7 @@ def validate(lock: dict, root: Path = ROOT, today: dt.date | None = None) -> Non
     ):
         raise ValueError("native source provenance is incomplete")
     patch_path = root / source["securityPatch"]
-    if not patch_path.is_file() or sha256(patch_path) != source["securityPatchSha256"]:
+    if not patch_path.is_file() or sha256_text(patch_path) != source["securityPatchSha256"]:
         raise ValueError("native security patch SHA-256 mismatch")
 
     security = lock.get("security", {})
