@@ -34,7 +34,7 @@ class CompactControlAccessibilityContractTest {
         assertTrue(source.contains("private val glowColorOptions"))
         assertTrue(source.contains(".size(48.dp)"))
         assertTrue(source.contains("role = Role.RadioButton"))
-        assertTrue(source.contains("contentDescription = stringResource(option.labelRes)"))
+        assertTrue(source.contains("contentDescription = optionLabel"))
         assertTrue(source.contains(".size(34.dp)"))
         assertTrue(source.contains(".size(26.dp)"))
     }
