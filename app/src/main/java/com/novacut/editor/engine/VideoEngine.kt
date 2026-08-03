@@ -1231,29 +1231,25 @@ class VideoEngine @Inject constructor(
         trackedObjects: List<TrackedObject>,
         globalTransitions: List<GlobalTransition> = emptyList()
     ): TransformerExportPlan {
-        val visibleVideoTracks = tracks
-            // Media3 composites lower input IDs above later inputs. Assign the
-            // highest persisted track index first so overlays remain above base video.
-            .sortedByDescending { it.index }
-            .filter {
-                (it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY) &&
-                    it.isVisible &&
-                    it.clips.any { clip -> clip.durationMs > 0L }
-            }
+        val compositionPlan = CompositionPlanBuilder.build(
+            tracks = tracks,
+            additionalDurationsMs = listOf(
+                textOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
+                imageOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
+                lottieOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
+            ),
+        )
+        // Media3 composites lower input IDs above later inputs. The pure plan
+        // assigns the highest persisted track index first so overlays remain
+        // above base video in both preview and export.
+        val visibleVideoTracks = compositionPlan.visualTracks
         if (visibleVideoTracks.isEmpty()) {
             throw IllegalStateException("No video clips to export")
         }
-        val soloTrackIds = tracks.filter { it.isSolo }.map { it.id }.toSet()
+        val soloTrackIds = compositionPlan.soloTrackIds
         val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
 
-        val totalTimelineDurationMs = maxOf(
-            tracks.maxOfOrNull { track ->
-                track.clips.maxOfOrNull { clip -> clip.timelineEndMs } ?: 0L
-            } ?: 0L,
-            textOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
-            imageOverlays.maxOfOrNull { it.endTimeMs } ?: 0L,
-            lottieOverlays.maxOfOrNull { it.endTimeMs } ?: 0L
-        )
+        val totalTimelineDurationMs = compositionPlan.durationMs
         val reversedCount = visibleVideoTracks.sumOf { track -> track.clips.count { it.isReversed } }
         if (reversedCount > 0) {
             Log.w(TAG, "Export: $reversedCount reversed clip(s) not pre-rendered (FFmpeg unavailable or over limit)")
@@ -1302,15 +1298,17 @@ class VideoEngine @Inject constructor(
             Log.w(TAG, "Export: ${hdrOverlayDecision.disclosure}")
         }
         val preserveHdr = hdrOverlayDecision.preserveHdr
-        val composition = buildComposition(
-            allSequences,
-            audioSequences.isNotEmpty(),
-            hasEmbeddedVisualAudio,
-            targetWidth = targetW,
-            targetHeight = targetH,
-            hasMultipleVideoSequences = visualTrackSequences.size > 1,
-            preserveHdr = preserveHdr,
-            compositorLayers = visualTrackSequences.map { it.compositorLayer }
+        val composition = CompositionBuilder.build(
+            CompositionBuildRequest(
+                sequences = allSequences,
+                hasAudioTracks = audioSequences.isNotEmpty(),
+                hasEmbeddedVisualAudio = hasEmbeddedVisualAudio,
+                targetWidth = targetW,
+                targetHeight = targetH,
+                hasMultipleVideoSequences = visualTrackSequences.size > 1,
+                preserveHdr = preserveHdr,
+                compositorLayers = visualTrackSequences.map { it.compositorLayer },
+            )
         )
 
         val mimeType = if (config.transparentBackground) {
@@ -1357,13 +1355,15 @@ class VideoEngine @Inject constructor(
         if (audioSequences.isEmpty()) {
             throw IllegalStateException("No audible audio to export")
         }
-        return buildComposition(
-            sequences = audioSequences,
-            hasAudioTracks = true,
-            hasEmbeddedVisualAudio = false,
-            targetWidth = 0,
-            targetHeight = 0,
-            allowAudioTransmux = false,
+        return CompositionBuilder.build(
+            CompositionBuildRequest(
+                sequences = audioSequences,
+                hasAudioTracks = true,
+                hasEmbeddedVisualAudio = false,
+                targetWidth = 0,
+                targetHeight = 0,
+                allowAudioTransmux = false,
+            )
         )
     }
 
@@ -1377,13 +1377,15 @@ class VideoEngine @Inject constructor(
         if (audioSequences.isEmpty()) {
             throw IllegalStateException("Stem track ${track.index} produced no audible audio")
         }
-        return buildComposition(
-            sequences = audioSequences,
-            hasAudioTracks = true,
-            hasEmbeddedVisualAudio = false,
-            targetWidth = 0,
-            targetHeight = 0,
-            allowAudioTransmux = false,
+        return CompositionBuilder.build(
+            CompositionBuildRequest(
+                sequences = audioSequences,
+                hasAudioTracks = true,
+                hasEmbeddedVisualAudio = false,
+                targetWidth = 0,
+                targetHeight = 0,
+                allowAudioTransmux = false,
+            )
         )
     }
 
@@ -1919,15 +1921,17 @@ class VideoEngine @Inject constructor(
             }
             addAll(audioSequences)
         }
-        return buildComposition(
-            sequences = sequences,
-            hasAudioTracks = audioSequences.isNotEmpty(),
-            hasEmbeddedVisualAudio = visualSequences.any { it.hasEmbeddedAudio },
-            targetWidth = targetW,
-            targetHeight = targetH,
-            hasMultipleVideoSequences = visualSequences.size > 1,
-            compositorLayers = visualSequences.map { it.compositorLayer },
-            allowAudioTransmux = false,
+        return CompositionBuilder.build(
+            CompositionBuildRequest(
+                sequences = sequences,
+                hasAudioTracks = audioSequences.isNotEmpty(),
+                hasEmbeddedVisualAudio = visualSequences.any { it.hasEmbeddedAudio },
+                targetWidth = targetW,
+                targetHeight = targetH,
+                hasMultipleVideoSequences = visualSequences.size > 1,
+                compositorLayers = visualSequences.map { it.compositorLayer },
+                allowAudioTransmux = false,
+            )
         )
     }
 
@@ -2054,49 +2058,6 @@ class VideoEngine @Inject constructor(
 
     private fun isTrackAudibleForMix(track: Track, soloTrackIds: Set<String>): Boolean {
         return track.isVisible && !track.isMuted && (soloTrackIds.isEmpty() || track.id in soloTrackIds)
-    }
-
-    @androidx.annotation.OptIn(UnstableApi::class)
-    private fun buildComposition(
-        sequences: List<EditedMediaItemSequence>,
-        hasAudioTracks: Boolean,
-        hasEmbeddedVisualAudio: Boolean,
-        targetWidth: Int,
-        targetHeight: Int,
-        hasMultipleVideoSequences: Boolean = false,
-        preserveHdr: Boolean = false,
-        compositorLayers: List<ClearCutCompositorLayer> = emptyList(),
-        allowAudioTransmux: Boolean = true,
-    ): Composition {
-        val builder = Composition.Builder(sequences)
-            .setTransmuxAudio(
-                allowAudioTransmux && !hasAudioTracks &&
-                    hasEmbeddedVisualAudio && !hasMultipleVideoSequences
-            )
-        if (hasMultipleVideoSequences) {
-            builder.setVideoCompositorSettings(
-                ClearCutVideoCompositorSettings(
-                    outputWidth = targetWidth,
-                    outputHeight = targetHeight,
-                    layers = compositorLayers
-                )
-            )
-        }
-        if (preserveHdr) {
-            // HDR_MODE_KEEP_HDR preserves HDR metadata through the pipeline
-            // rather than tone-mapping to SDR. Honoured only when the source
-            // track advertises HDR and the device's encoder supports an HDR
-            // profile for the chosen codec. On non-HDR sources or devices
-            // without HDR encode support, Media3 silently falls back to SDR
-            // and the output is identical to the default path — so setting
-            // this flag is always safe.
-            try {
-                builder.setHdrMode(Composition.HDR_MODE_KEEP_HDR)
-            } catch (e: Throwable) {
-                Log.w(TAG, "setHdrMode unavailable on this Media3 build", e)
-            }
-        }
-        return builder.build()
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
