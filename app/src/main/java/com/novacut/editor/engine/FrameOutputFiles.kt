@@ -31,14 +31,24 @@ internal fun createFrameCaptureOutputFiles(
     )
 }
 
-internal fun createFreezeFrameOutputFiles(context: Context): FrameOutputFiles {
+internal fun createFreezeFrameOutputFiles(
+    context: Context,
+    extension: String = "jpg",
+): FrameOutputFiles {
     val dir = File(context.filesDir, FREEZE_FRAME_DIR_NAME).also { it.mkdirs() }
     sweepAbandonedFrameOutputPartials(dir)
     val fileId = "${System.currentTimeMillis()}_${UUID.randomUUID()}"
+    val (outputName, partialName) = freezeFrameOutputNames(fileId, extension)
     return FrameOutputFiles(
-        outputFile = File(dir, "$FREEZE_FRAME_FILE_PREFIX$fileId.jpg"),
-        partialFile = File(dir, "$FREEZE_FRAME_FILE_PREFIX$fileId.partial.jpg")
+        outputFile = File(dir, outputName),
+        partialFile = File(dir, partialName)
     )
+}
+
+internal fun freezeFrameOutputNames(fileId: String, extension: String): Pair<String, String> {
+    val safeExtension = safeFrameOutputExtension(extension)
+    return "$FREEZE_FRAME_FILE_PREFIX$fileId.$safeExtension" to
+        "$FREEZE_FRAME_FILE_PREFIX$fileId.partial.$safeExtension"
 }
 
 internal fun finalizeFrameOutputFile(partialFile: File, outputFile: File): File? {

@@ -73,6 +73,16 @@ internal fun nextSampledSpeedChangeTimeUs(
     return if (nextUs < durationUs) nextUs else C.TIME_UNSET
 }
 
+internal fun frameCaptureBitmapFormat(captureFormat: FrameCaptureFormat): Bitmap.CompressFormat =
+    if (captureFormat == FrameCaptureFormat.JPEG) {
+        Bitmap.CompressFormat.JPEG
+    } else {
+        Bitmap.CompressFormat.PNG
+    }
+
+internal fun frameCaptureQuality(captureFormat: FrameCaptureFormat): Int =
+    if (captureFormat == FrameCaptureFormat.JPEG) 95 else 100
+
 /**
  * The user-visible explanation for a reversed clip that the export pipeline
  * has consent to render forward. Keep this beside the engine limit so the
@@ -2687,13 +2697,17 @@ class VideoEngine @Inject constructor(
     }
 
     /**
-     * JPEG freeze-frame export path.
+     * Freeze-frame export path.
      *
-     * Current output is SDR JPEG, so MediaMetadataRetriever is still adequate.
+     * Current output is SDR PNG/JPEG, so MediaMetadataRetriever is still adequate.
      * Future HDR still export should use [FrameExtractionPolicy] and Media3's
      * `androidx.media3.inspector.frame.FrameExtractor`.
      */
-    fun extractFrameToFile(uri: Uri, timeMs: Long): File? {
+    fun extractFrameToFile(
+        uri: Uri,
+        timeMs: Long,
+        captureFormat: FrameCaptureFormat = FrameCaptureFormat.JPEG,
+    ): File? {
         val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(resolveMimeType(uri))
         val retriever = retrieverLease.resource
         return try {
@@ -2702,10 +2716,10 @@ class VideoEngine @Inject constructor(
                 timeMs * 1000L,
                 MediaMetadataRetriever.OPTION_CLOSEST_SYNC
             ) ?: return null
-            val outputFiles = createFreezeFrameOutputFiles(context)
+            val outputFiles = createFreezeFrameOutputFiles(context, captureFormat.extension)
             try {
                 outputFiles.partialFile.outputStream().use { out ->
-                    if (!frame.compress(Bitmap.CompressFormat.JPEG, 95, out)) {
+                    if (!frame.compress(frameCaptureBitmapFormat(captureFormat), frameCaptureQuality(captureFormat), out)) {
                         throw IllegalStateException("Freeze frame encoder returned no data")
                     }
                 }

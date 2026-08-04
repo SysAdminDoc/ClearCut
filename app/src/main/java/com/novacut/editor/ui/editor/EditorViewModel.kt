@@ -6463,11 +6463,12 @@ class EditorViewModel @Inject constructor(
 
         val relativeMs = playheadMs - clip.timelineStartMs
         val sourceTimeMs = clip.timelineOffsetToSourceMs(relativeMs)
+        val captureFormat = _state.value.exportConfig.captureFormat
 
         viewModelScope.launch {
             showToast(text(R.string.vm_extracting_frame_toast))
             val frameFile = withContext(Dispatchers.IO) {
-                videoEngine.extractFrameToFile(clip.sourceUri, sourceTimeMs)
+                videoEngine.extractFrameToFile(clip.sourceUri, sourceTimeMs, captureFormat)
             }
             if (frameFile == null) {
                 showToast(text(R.string.vm_frame_extract_failed_toast))

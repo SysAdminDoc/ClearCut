@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Freeze-frame insertion now honors the selected PNG/JPEG capture format for both bitmap encoding and output file names.
 - Video frame-rate detection now prefers camera capture metadata and falls back to the actual video track's MediaFormat frame rate, normalizing fractional rates such as 23.976/29.97/59.94 instead of silently assuming 30 fps.
 - Reversed clips now mirror timeline/source mapping in frame lookup, source-to-timeline conversion, and split boundaries, including the binary inverse used by speed curves.
 - Incoming media and document intents now resolve MIME types, provider descriptors, display names, and sizes on Dispatchers.IO with cancellable latest-intent work, keeping slow cloud-backed providers off the main thread.

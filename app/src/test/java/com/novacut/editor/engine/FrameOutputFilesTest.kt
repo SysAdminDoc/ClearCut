@@ -54,6 +54,18 @@ class FrameOutputFilesTest {
     }
 
     @Test
+    fun freezeFrameOutputNames_followRequestedFormat() {
+        assertEquals(
+            "freeze_id.png" to "freeze_id.partial.png",
+            freezeFrameOutputNames("id", "png")
+        )
+        assertEquals(
+            "freeze_id.jpg" to "freeze_id.partial.jpg",
+            freezeFrameOutputNames("id", "jpeg")
+        )
+    }
+
+    @Test
     fun frameOutputDirectoryNames_matchProviderAndBackupRules() {
         assertEquals("frame_captures", FRAME_CAPTURE_DIR_NAME)
         assertEquals("freeze_frames", FREEZE_FRAME_DIR_NAME)
