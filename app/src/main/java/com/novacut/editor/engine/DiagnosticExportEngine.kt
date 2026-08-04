@@ -23,8 +23,8 @@ import javax.inject.Singleton
  * contains:
  *
  *  - `app-info.txt`       — app version, build type, applicationId, target SDK
- *  - `device-info.txt`    — device manufacturer, model, Android version, ABIs,
- *                           Build.FINGERPRINT (redacted)
+ *  - `device-info.txt`    — device manufacturer, model, Android version, and ABIs;
+ *                           stable build fingerprints are omitted
  *  - `media-codecs.txt`   — `MediaCodecList.REGULAR_CODECS` summary: each
  *                           encoder/decoder name + MIME types, used to triage
  *                           "AV1 export fails on my device" tickets fast
@@ -51,9 +51,10 @@ import javax.inject.Singleton
  * What this engine **never** does:
  *  - Phone home, upload to any server, or open a network connection.
  *  - Include project JSON, project IDs/names, media URIs/paths, autosave
- *    snapshots, free-form export errors, captions, or transcripts. All of
- *    those can contain personal data.
- *  - Persist a ZIP outside `context.filesDir/diagnostics/` until the user
+ *    snapshots, free-form export errors by default, captions, or transcripts.
+ *    The Settings consent toggle is the only path that adds raw encoder error
+ *    text, which can contain personal data.
+ *  - Persist a ZIP outside `context.filesDir/diagnostic-shares/` until the user
  *    explicitly shares one via the system share sheet.
  *
  * Integration sketch (Settings screen, ~10 lines):
@@ -175,7 +176,7 @@ class DiagnosticExportEngine @Inject constructor(
 
     /**
      * Build the diagnostic ZIP and return the file. The file is placed under
-     * `filesDir/diagnostics/diagnostic-{timestamp}.zip`. The directory is
+     * `filesDir/diagnostic-shares/diagnostic-{timestamp}.zip`. This directory is
      * created if missing, and any older diagnostic ZIPs are pruned past the
      * [retainCount] floor so the disk footprint stays bounded.
      *
@@ -188,7 +189,7 @@ class DiagnosticExportEngine @Inject constructor(
      * @param permissionSnapshots optional runtime permission states. Used by
      *   local-network streaming diagnostics without including destination URLs.
      * @param now wall-clock-millis stamp injected for deterministic tests.
-     * @param retainCount keep at most this many ZIPs in the diagnostics dir.
+     * @param retainCount keep at most this many ZIPs in the diagnostic-shares dir.
      */
     suspend fun exportDiagnosticBundle(
         modelRegistry: List<ModelSnapshot> = emptyList(),
@@ -198,7 +199,7 @@ class DiagnosticExportEngine @Inject constructor(
         retainCount: Int = 3,
         includeRawExportErrorText: Boolean = false,
     ): File = withContext(Dispatchers.IO) {
-        val outDir = File(context.filesDir, DIAG_DIR).apply { mkdirs() }
+        val outDir = File(context.filesDir, DIAGNOSTIC_SHARE_DIR).apply { mkdirs() }
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
             .format(Date(now))
         val zipFile = File(outDir, "diagnostic-$stamp.zip")
@@ -295,11 +296,10 @@ class DiagnosticExportEngine @Inject constructor(
         appendLine("supported_abis: ${Build.SUPPORTED_ABIS.joinToString(",")}")
         appendLine("android_sdk_int: ${Build.VERSION.SDK_INT}")
         appendLine("android_release: ${Build.VERSION.RELEASE}")
-        // Fingerprint can leak build numbers / OEM identifiers, but the redaction
-        // pass for media URIs / file paths leaves it untouched because it doesn't
-        // match those patterns. It's the same level of detail Google Crash
-        // shows publicly in Play Console, so include it.
-        appendLine("fingerprint: ${Build.FINGERPRINT}")
+        // Build.FINGERPRINT can expose a stable build/OEM identifier. The
+        // version, device, and codec fields above retain the useful triage
+        // context without sharing that stable value.
+        appendLine("fingerprint: <redacted>")
     }
 
     private fun buildMediaCodecSummary(): String = buildString {
@@ -312,7 +312,10 @@ class DiagnosticExportEngine @Inject constructor(
                 appendLine("$kind\t${codec.name}\t${codec.supportedTypes.joinToString(",")}")
             }
         } catch (e: Throwable) {
-            appendLine("# Unable to enumerate codecs: ${e.javaClass.simpleName}: ${e.message}")
+            appendLine(
+                "# Unable to enumerate codecs: ${e.javaClass.simpleName}: " +
+                    redactSensitive(e.message.orEmpty())
+            )
         }
         appendLine()
         append(CodecInstanceBudget.diagnosticSummary())
@@ -326,7 +329,7 @@ class DiagnosticExportEngine @Inject constructor(
             return@buildString
         }
         for (m in models) {
-            appendLine("${m.id}\t${m.installed}\t${m.sizeBytes}\t${m.sourceUrl ?: "-"}")
+            appendLine("${m.id}\t${m.installed}\t${m.sizeBytes}\t${redactSensitive(m.sourceUrl ?: "-")}")
         }
     }
 
@@ -351,7 +354,10 @@ class DiagnosticExportEngine @Inject constructor(
             }
             process.waitFor()
         } catch (e: Throwable) {
-            appendLine("# Unable to read logcat: ${e.javaClass.simpleName}: ${e.message}")
+            appendLine(
+                "# Unable to read logcat: ${e.javaClass.simpleName}: " +
+                    redactSensitive(e.message.orEmpty())
+            )
         }
     }
 
@@ -372,6 +378,7 @@ class DiagnosticExportEngine @Inject constructor(
 
     companion object {
         const val DIAG_DIR = "diagnostics"
+        const val DIAGNOSTIC_SHARE_DIR = "diagnostic-shares"
         private const val LOGCAT_LINES = 200
 
         fun buildPermissionState(snapshots: List<PermissionSnapshot>): String = buildString {
@@ -452,7 +459,8 @@ class DiagnosticExportEngine @Inject constructor(
             Regex("""file://[^\s)"']+"""),
             Regex("""(?i)\b(?:rtmp|rtmps|srt|rist|rtsp)://[^\s)"']+"""),
             Regex("""/storage/[^\s)"']+"""),
-            Regex("""/data/data/[A-Za-z0-9._]+/files/[^\s)"']+"""),
+            Regex("""/data/(?:data|user/0|user_de/0)/[A-Za-z0-9._]+/[^\s)"']+"""),
+            Regex("""(?i)\b[A-Z]:\\[^\r\n)"']+"""),
             Regex("""https?://[^\s)"']*\?[^\s)"']+"""),
             Regex("""[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"""),
         )

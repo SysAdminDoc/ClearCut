@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -66,6 +67,20 @@ class DiagnosticExportEngineTest {
         val redacted = DiagnosticExportEngine.redactSensitive(line)
         assertFalse(redacted.contains("/data/data/"))
         assertFalse(redacted.contains("auto.json"))
+    }
+
+    @Test
+    fun redactSensitive_stripsModernPrivateAndWindowsPaths() {
+        val line =
+            "E/N: missing /data/user/0/com.novacut.editor/files/projects/private.json " +
+                "after C:\\Users\\Jane Doe\\private-video.mp4"
+        val redacted = DiagnosticExportEngine.redactSensitive(line)
+
+        assertFalse(redacted.contains("/data/user/0/"))
+        assertFalse(redacted.contains("private.json"))
+        assertFalse(redacted.contains("C:\\Users\\Jane"))
+        assertFalse(redacted.contains("private-video.mp4"))
+        assertTrue(redacted.contains("<redacted>"))
     }
 
     @Test
@@ -185,6 +200,59 @@ class DiagnosticExportBundlePrivacyTest {
 
     @get:Rule
     val temp = TemporaryFolder()
+
+    @Test
+    fun exportBundleUsesDedicatedShareDirectoryAndScrubsMetadata() = runBlocking {
+        val context = RuntimeEnvironment.getApplication().applicationContext as Context
+        val incidentStore = ExportIncidentStore.forContext(context)
+        incidentStore.clear()
+        val engine = DiagnosticExportEngine(
+            context = context,
+            crashRecordStore = CrashRecordStore(context),
+            memoryTrimBreadcrumbStore = MemoryTrimBreadcrumbStore.forContextFilesDir(context.filesDir),
+            processExitRecorder = ProcessExitRecorder(context),
+            settingsResetReportStore = SettingsResetReportStore(context),
+            exportIncidentStore = incidentStore,
+        )
+
+        val zip = engine.exportDiagnosticBundle(
+            modelRegistry = listOf(
+                DiagnosticExportEngine.ModelSnapshot(
+                    id = "test-model",
+                    installed = true,
+                    sizeBytes = 42L,
+                    sourceUrl = "https://example.invalid/model?token=private-token",
+                )
+            ),
+            now = 1_718_200_000_000,
+            retainCount = 1,
+        )
+
+        try {
+            assertEquals(DiagnosticExportEngine.DIAGNOSTIC_SHARE_DIR, zip.parentFile?.name)
+            assertEquals(
+                "diagnostic-shares/diagnostic-${zip.name.removePrefix("diagnostic-")}",
+                zip.relativeTo(context.filesDir).invariantSeparatorsPath,
+            )
+            assertFalse(File(context.filesDir, DiagnosticExportEngine.DIAG_DIR).resolve(zip.name).exists())
+
+            ZipFile(zip).use { archive ->
+                val modelRegistry = archive.getInputStream(archive.getEntry("model-registry.txt"))
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+                assertFalse(modelRegistry.contains("private-token"))
+                assertTrue(modelRegistry.contains("<redacted>"))
+
+                val deviceInfo = archive.getInputStream(archive.getEntry("device-info.txt"))
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+                assertTrue(deviceInfo.contains("fingerprint: <redacted>"))
+            }
+        } finally {
+            zip.delete()
+            incidentStore.clear()
+        }
+    }
 
     @Test
     fun writeBundleExcludesHostileIncidentContentFromEveryEntry() {

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Diagnostic ZIPs now live under a dedicated `diagnostic-shares/` FileProvider root instead of the private `diagnostics/` store; shared metadata redacts Windows/app-private paths, model URL query data, and stable build fingerprints while raw encoder errors remain explicit-consent only.
 - `ACTION_VIEW` imports now accept secondary clip-data URIs only when the intent carries a read grant; the primary data URI remains supported without one.
 - GIF and contact-sheet exports now replace the `{sizeMB}` filename token after atomic output completes, matching video and stream-copy exports.
 - Freeze-frame insertion now honors the selected PNG/JPEG capture format for both bitmap encoding and output file names.

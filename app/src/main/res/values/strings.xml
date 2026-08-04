@@ -649,7 +649,7 @@
     <string name="settings_diagnostic_timeline_shape">Include timeline shape</string>
     <string name="settings_diagnostic_timeline_shape_description">Adds counts only: track totals, clip totals, effect types, and transition types. It never includes media names, URIs, captions, or transcripts.</string>
     <string name="settings_diagnostic_export">Diagnostic ZIP</string>
-    <string name="settings_diagnostic_export_description">Saves app, device, codec, model, and redacted log details. Project names and IDs, media paths, free-form errors, captions, and transcripts are never included.</string>
+    <string name="settings_diagnostic_export_description">Saves app, device, codec, model, and redacted log details. Project names and IDs, media paths, captions, and transcripts are never included; raw encoder errors stay out unless you explicitly enable them below.</string>
     <string name="settings_diagnostic_export_action">Save ZIP</string>
     <string name="settings_diagnostic_exporting">Saving</string>
     <string name="settings_diagnostic_saved">Saved locally</string>

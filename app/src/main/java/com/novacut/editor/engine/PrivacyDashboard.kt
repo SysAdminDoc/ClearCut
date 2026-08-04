@@ -160,7 +160,7 @@ object PrivacyDashboard {
             location = StorageLocation.DEVICE_INTERNAL,
             controls = Controls(canExport = true, canDelete = true, hasOptOut = false),
             collectedBy = listOf("DiagnosticExportEngine", "ExportIncidentStore"),
-            retentionPolicy = "Private export incidents are capped to 10 records under filesDir/diagnostics/export-incidents. User-triggered diagnostic ZIPs include only bundle-pseudonymized structured summaries and are capped to the 3 most recent ZIPs.",
+            retentionPolicy = "Private export incidents are capped to 10 records under filesDir/diagnostics/export-incidents. User-triggered diagnostic ZIPs include bundle-pseudonymized structured summaries by default and are capped to the 3 most recent ZIPs; raw encoder text requires explicit Settings consent.",
             collectedByDefault = false,
             controlLocation = "Settings → Diagnostics → Export diagnostic bundle",
         ),

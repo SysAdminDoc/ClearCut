@@ -20,7 +20,7 @@ class FileProviderPathsTest {
             ProviderRoot("files-path", "freeze_frames", "freeze_frames/"),
             ProviderRoot("files-path", "internal_exports", "ClearCut/"),
             ProviderRoot("files-path", "internal_archives", "archives/"),
-            ProviderRoot("files-path", "diagnostics", "diagnostics/"),
+            ProviderRoot("files-path", "diagnostic_shares", "diagnostic-shares/"),
             ProviderRoot("files-path", "internal_templates", "templates/"),
             ProviderRoot("external-files-path", "exports", "Movies/ClearCut/"),
             ProviderRoot("external-files-path", "external_archives", "archives/"),
@@ -56,6 +56,10 @@ class FileProviderPathsTest {
             "Managed imported media should not be exposed through a FileProvider root",
             roots.any { it.tag == "files-path" && it.path.startsWith("media/") }
         )
+        assertFalse(
+            "Private diagnostic stores must not be exposed through a FileProvider root",
+            roots.any { it.tag == "files-path" && it.path == "diagnostics/" }
+        )
     }
 
     @Test
@@ -70,7 +74,7 @@ class FileProviderPathsTest {
             ProducerContract(
                 sourcePath = "src/main/java/com/novacut/editor/ui/settings/SettingsScreen.kt",
                 marker = "shareDiagnosticBundle",
-                requiredRoots = setOf(ProviderRoot("files-path", "diagnostics", "diagnostics/"))
+                requiredRoots = setOf(ProviderRoot("files-path", "diagnostic_shares", "diagnostic-shares/"))
             ),
             ProducerContract(
                 sourcePath = "src/main/java/com/novacut/editor/ui/projects/ProjectListViewModel.kt",
