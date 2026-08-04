@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Media3 export timeout cleanup now routes Transformer cancellation through an explicit termination fence before deleting output, preventing a late muxer write from recreating a partial artifact.
 - Speed-curve splits now carry their rounded boundary correction into subsequent clips, preserving the next clip and any intentional following gaps while retaining exact left/right abutment.
 - Timeline clip thumbnails now use keyed Compose lazy strips with a bounded cache window, and off-screen thumbnail/waveform surfaces pause through visibility callbacks; deterministic policy checks and the existing frame-timing scrub benchmark guard the scroll path.
 - ONNX Runtime sessions now attempt the bundled XNNPACK provider with bounded internal threading and retry on a fresh CPU session when the provider or model path cannot use it; Whisper and LaMa share the ownership-safe factory, and an instrumentation probe records native capability.

@@ -2416,13 +2416,13 @@ class VideoEngine @Inject constructor(
             }
             if (stallPolls >= stallTimeoutPolls && _exportState.value == ExportState.EXPORTING && !terminalReached) {
                 Log.w(TAG, "Export made no progress for 10 minutes — treating as a hang")
-                transformer.cancel()
+                cancelTransformerAndAwaitTermination(transformer)
                 failExport(ExportFailureCause.STALLED, "Export stalled — no progress for 10 minutes")
                 _exportState.value = ExportState.ERROR
                 _exportProgress.value = 0f
-                activeExportOutputFile = null
                 outputFile.delete()
                 runCatching { resumeFromFile?.delete() }
+                activeExportOutputFile = null
                 terminalReached = true
                 onError(Exception("Export stalled"))
             }
@@ -2453,6 +2453,17 @@ class VideoEngine @Inject constructor(
             activeExportOutputFile = null
             activeResumeSourceFile = null
         }
+    }
+
+    /**
+     * Media3's Transformer.cancel() is the termination fence for an export: it
+     * blocks until TransformerInternal has released the sample exporters and
+     * muxer. Keep output cleanup after this call because cancellation does not
+     * dispatch a listener callback that could safely own the delete.
+     */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun cancelTransformerAndAwaitTermination(transformer: Transformer) {
+        transformer.cancel()
     }
 
     private fun requireStorageImmediatelyBeforeOutput(
@@ -2486,7 +2497,7 @@ class VideoEngine @Inject constructor(
             if (_exportState.value != ExportState.EXPORTING) return null
             Log.d(TAG, "Cancelling export")
             _exportState.value = ExportState.CANCELLED
-            activeTransformer?.cancel()
+            activeTransformer?.let(::cancelTransformerAndAwaitTermination)
             activeTransformer = null
             val outputFile = activeExportOutputFile
             if (preservePartial && outputFile != null) {
@@ -2509,7 +2520,7 @@ class VideoEngine @Inject constructor(
             Log.w(TAG, "Failing export after foreground service media-processing timeout")
             failExport(ExportFailureCause.SERVICE_TIMEOUT, message)
             _exportState.value = ExportState.ERROR
-            activeTransformer?.cancel()
+            activeTransformer?.let(::cancelTransformerAndAwaitTermination)
             activeTransformer = null
             activeExportOutputFile?.delete()
             activeExportOutputFile = null
