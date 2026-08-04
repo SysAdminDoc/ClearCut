@@ -47,6 +47,7 @@ import com.novacut.editor.engine.exportUsesAudioCollection
 import com.novacut.editor.engine.exportUsesImageCollection
 import com.novacut.editor.engine.exportStorageFailureMessage
 import com.novacut.editor.engine.exportConfigFingerprint
+import com.novacut.editor.engine.finalizeFilenameSize
 import com.novacut.editor.engine.querySourceSize
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.writeFileAtomically
@@ -583,16 +584,6 @@ class ExportDelegate(
         hasTrackedObjects = state.trackedObjects.any { it.isEnabled },
     ) else null
 
-    private fun finalizeFilenameSize(outputFile: File): File {
-        if (!outputFile.name.contains("{sizeMB}")) return outputFile
-        val mb = (outputFile.length() + 524_288L) / 1_048_576L  // round to nearest MB
-        val renamedName = outputFile.name.replace("{sizeMB}", "${mb}MB")
-        val renamed = File(outputFile.parentFile, renamedName)
-        if (outputFile.renameTo(renamed)) return renamed
-        // Rename failed — fall back to the unrenamed file rather than losing it.
-        return outputFile
-    }
-
     private fun resumeEligibility(
         state: EditorState,
         config: ExportConfig = state.exportConfig,
@@ -1101,24 +1092,26 @@ class ExportDelegate(
                         onProgress = { p -> updateExport { it.copy(progress = p) } }
                     )
                     if (ok) {
+                        val finalizedSheetFile = finalizeFilenameSize(targetSheetFile)
+                        sheetFile = finalizedSheetFile
                         updateExport {
                             it.copy(
                                 state = ExportState.COMPLETE,
                                 progress = 1f,
-                                lastExportedFilePath = targetSheetFile.absolutePath
+                                lastExportedFilePath = finalizedSheetFile.absolutePath
                             )
                         }
                         recordExportHistory(
                             sourceState = currentState,
                             status = ExportHistoryStatus.COMPLETE,
                             startedAtMs = startedAtMs,
-                            outputFile = targetSheetFile,
+                            outputFile = finalizedSheetFile,
                             config = configWithChapters,
                             timelineDurationMs = totalDurationMs,
                             diagnosticSummary = "Contact sheet export completed.",
                             healthReport = healthReport
                         )
-                        showToast(appContext.getString(R.string.export_contact_sheet_toast, targetSheetFile.name))
+                        showToast(appContext.getString(R.string.export_contact_sheet_toast, finalizedSheetFile.name))
                     } else {
                         val message = "Contact sheet render failed"
                         updateExport {
@@ -1336,24 +1329,26 @@ class ExportDelegate(
                         }
                     }
 
+                    val finalizedGifFile = finalizeFilenameSize(targetGifFile)
+                    gifFile = finalizedGifFile
                     updateExport {
                         it.copy(
                             state = ExportState.COMPLETE,
                             progress = 1f,
-                            lastExportedFilePath = targetGifFile.absolutePath
+                            lastExportedFilePath = finalizedGifFile.absolutePath
                         )
                     }
                     recordExportHistory(
                         sourceState = currentState,
                         status = ExportHistoryStatus.COMPLETE,
                         startedAtMs = startedAtMs,
-                        outputFile = targetGifFile,
+                        outputFile = finalizedGifFile,
                         config = configWithChapters,
                         timelineDurationMs = totalDurationMs,
                         diagnosticSummary = "GIF export completed with $frameCount sampled frame(s).",
                         healthReport = healthReport
                     )
-                    showToast(appContext.getString(R.string.export_gif_complete_toast, targetGifFile.name))
+                    showToast(appContext.getString(R.string.export_gif_complete_toast, finalizedGifFile.name))
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     android.util.Log.d("ExportDelegate", "GIF export cancelled")
                     gifFile?.delete()

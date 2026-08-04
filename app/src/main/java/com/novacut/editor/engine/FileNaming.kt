@@ -1,5 +1,7 @@
 package com.novacut.editor.engine
 
+import java.io.File
+
 private val RESERVED_WINDOWS_FILE_NAMES = setOf(
     "CON", "PRN", "AUX", "NUL",
     "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
@@ -8,6 +10,21 @@ private val RESERVED_WINDOWS_FILE_NAMES = setOf(
 
 private val invalidFileNameChars = Regex("""[\\/:*?"<>|]""")
 private val repeatedWhitespace = Regex("""\s+""")
+private const val SIZE_MB_FILENAME_TOKEN = "{sizeMB}"
+
+/**
+ * Replace the post-export size token after an output has been fully written.
+ * Returns the original file when the token is absent or the rename fails.
+ */
+internal fun finalizeFilenameSize(outputFile: File): File {
+    if (!outputFile.name.contains(SIZE_MB_FILENAME_TOKEN)) return outputFile
+    val mb = (outputFile.length() + 524_288L) / 1_048_576L
+    val renamed = File(
+        outputFile.parentFile,
+        outputFile.name.replace(SIZE_MB_FILENAME_TOKEN, "${mb}MB")
+    )
+    return if (outputFile.renameTo(renamed)) renamed else outputFile
+}
 
 fun sanitizeFileName(
     raw: String,
