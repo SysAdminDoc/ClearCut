@@ -1,12 +1,15 @@
 package com.novacut.editor.ui.mediapicker
 
+import android.app.Activity
 import com.novacut.editor.ui.theme.ClearCutAccents
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import android.view.DragAndDropPermissions
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContract
@@ -216,8 +219,11 @@ fun MediaPickerSheet(
         }
     }
 
-    fun importDroppedMedia(uris: List<Uri>) {
-        if (uris.isEmpty() || !actionsEnabled) return
+    fun importDroppedMedia(uris: List<Uri>, dragPermissions: DragAndDropPermissions) {
+        if (uris.isEmpty() || !actionsEnabled) {
+            dragPermissions.release()
+            return
+        }
         coroutineScope.launch {
             operationState = MediaPickerOperationState(
                 title = importingBatchTitle,
@@ -244,6 +250,7 @@ fun MediaPickerSheet(
                     }
                 }
             } finally {
+                dragPermissions.release()
                 operationState = null
             }
         }
@@ -256,12 +263,26 @@ fun MediaPickerSheet(
         }
     }
 
+    fun canStartMediaDrop(event: DragAndDropEvent): Boolean {
+        val clipDescription = event.toAndroidDragEvent().clipDescription ?: return false
+        return (0 until clipDescription.mimeTypeCount).any { index ->
+            isSupportedMediaDropMimeType(clipDescription.getMimeType(index))
+        }
+    }
+
     val mediaDropTarget = remember(actionsEnabled) {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
+                val androidEvent = event.toAndroidDragEvent()
+                val dragPermissions = runCatching {
+                    context.findActivity()?.requestDragAndDropPermissions(androidEvent)
+                }.getOrNull() ?: return false
                 val uris = droppedUris(event)
-                if (uris.isEmpty() || !actionsEnabled) return false
-                importDroppedMedia(uris)
+                if (uris.isEmpty() || !actionsEnabled) {
+                    dragPermissions.release()
+                    return false
+                }
+                importDroppedMedia(uris, dragPermissions)
                 return true
             }
         }
@@ -460,7 +481,7 @@ fun MediaPickerSheet(
         modifier = modifier
             .heightIn(min = 240.dp, max = 560.dp)
             .dragAndDropTarget(
-                shouldStartDragAndDrop = { event -> actionsEnabled && droppedUris(event).isNotEmpty() },
+                shouldStartDragAndDrop = { event -> actionsEnabled && canStartMediaDrop(event) },
                 target = mediaDropTarget
             ),
         scrollable = true
@@ -607,6 +628,17 @@ fun MediaPickerSheet(
             )
         }
     }
+}
+
+private fun android.content.Context.findActivity(): Activity? {
+    var current: android.content.Context? = this
+    while (current != null) {
+        if (current is Activity) return current
+        val next = (current as? ContextWrapper)?.baseContext ?: return null
+        if (next === current) return null
+        current = next
+    }
+    return null
 }
 
 @Composable

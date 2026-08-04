@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Cross-app media-picker drops now accept MIME metadata during drag-start, request temporary URI access before ingesting content URIs, and release the grant on success, failure, or early exit.
 - Projects, templates, privacy, licenses, and settings now resolve structural colors through the semantic theme roles while preserving stable media accents; the source-policy test audits both feature trees for raw palette and hex bypasses.
 - Editor orchestration now delegates document/recovery, archive transfer, WorkManager jobs, and preview playback sessions to fake-tested Hilt coordinators while preserving the ViewModel's state projection and cancellation behavior.
 - Separated Android backup scopes: cloud backup remains bounded to project metadata, while device transfer carries validated app-owned fonts/LUTs and excludes partial copies; archive disclosures call out external references that may need relinking.
