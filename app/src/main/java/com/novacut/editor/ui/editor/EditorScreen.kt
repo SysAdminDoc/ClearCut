@@ -1136,7 +1136,8 @@ fun EditorScreen(
 
                 val shouldShowTimeline = !state.isTimelineCollapsed ||
                     isClipMode ||
-                    isTrimInteractionActive
+                    isTrimInteractionActive ||
+                    state.currentTool == EditorTool.MUTE_RANGE
 
                 Column(
                     modifier = Modifier.fillMaxWidth()
@@ -1154,6 +1155,13 @@ fun EditorScreen(
                         scrollOffsetMs = state.scrollOffsetMs,
                         selectedClipId = state.selectedClipId,
                         isTrimMode = state.currentTool == EditorTool.TRIM,
+                        selectedTimelineRange = state.selectedTimelineRange,
+                        isRangeSelectionMode = state.currentTool == EditorTool.MUTE_RANGE,
+                        onBeginRangeSelection = viewModel::beginTimelineRangeSelection,
+                        onRangeSelectionStarted = viewModel::clearTimelineRangeSelection,
+                        onRangeSelectionChanged = viewModel::updateTimelineRange,
+                        onCancelRangeSelection = { viewModel.setTool(EditorTool.NONE) },
+                        onMuteTimelineRange = viewModel::muteSelectedTimelineRange,
                         waveforms = if (viewModel.showWaveforms) state.waveforms else emptyMap(),
                         onClipSelected = viewModel::selectClip,
                         onTextOverlaySelected = viewModel::editTextOverlay,

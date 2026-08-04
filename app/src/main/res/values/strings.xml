@@ -2649,6 +2649,11 @@
     <string name="timeline_title">Timeline</string>
     <string name="timeline_mode_arrange">Arrange</string>
     <string name="timeline_mode_trim">Trim</string>
+    <string name="timeline_select_range">Select mute range</string>
+    <string name="timeline_cancel_range_selection">Cancel range selection</string>
+    <string name="timeline_mute_range">Mute selected range</string>
+    <string name="timeline_range_selection_hint">Drag across the time ruler to select the section to mute.</string>
+    <string name="timeline_range_selected_hint">Selected %1$s–%2$s. Tap Mute to silence it without splitting.</string>
     <string name="timeline_zoom_value">Zoom %1$d%%</string>
     <string name="timeline_visible_value">View %1$s</string>
     <plurals name="timeline_marker_count">
@@ -3137,6 +3142,8 @@
     <string name="vm_multi_effect_applied_toast">Applied %1$s to %2$d clips</string>
     <string name="vm_multi_speed_applied_toast">Set %1$sx speed on %2$d clips</string>
     <string name="vm_multi_volume_applied_toast">Set volume on %1$d clips</string>
+    <string name="vm_mute_range_applied_toast">Muted a range across %1$d clips</string>
+    <string name="vm_mute_range_no_audio_toast">The selected range does not contain an audio clip.</string>
     <string name="vm_multi_effects_pasted_toast">Pasted effects to %1$d clips</string>
     <string name="vm_no_captions_to_export_toast">No captions to export</string>
     <string name="vm_subtitle_exported_toast">Exported to %1$s</string>

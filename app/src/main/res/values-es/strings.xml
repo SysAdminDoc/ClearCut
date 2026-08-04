@@ -2442,6 +2442,11 @@
     <string name="timeline_title">Línea de tiempo</string>
     <string name="timeline_mode_arrange">Organizar</string>
     <string name="timeline_mode_trim">Recortar</string>
+    <string name="timeline_select_range">Seleccionar rango para silenciar</string>
+    <string name="timeline_cancel_range_selection">Cancelar selección de rango</string>
+    <string name="timeline_mute_range">Silenciar rango seleccionado</string>
+    <string name="timeline_range_selection_hint">Arrastre sobre la regla de tiempo para seleccionar la sección que desea silenciar.</string>
+    <string name="timeline_range_selected_hint">Seleccionado %1$s–%2$s. Toque Silenciar para silenciarlo sin dividir.</string>
     <string name="timeline_zoom_value">Zoom %1$d%%</string>
     <string name="timeline_visible_value">Ver %1$s</string>
     <plurals name="timeline_marker_count">
@@ -2864,6 +2869,8 @@
     <string name="vm_multi_effect_applied_toast">%1$s aplicado a %2$d clips</string>
     <string name="vm_multi_speed_applied_toast">Velocidad %1$sx aplicada a %2$d clips</string>
     <string name="vm_multi_volume_applied_toast">Volumen ajustado en %1$d clips</string>
+    <string name="vm_mute_range_applied_toast">Rango silenciado en %1$d clips</string>
+    <string name="vm_mute_range_no_audio_toast">El rango seleccionado no contiene un clip de audio.</string>
     <string name="vm_multi_effects_pasted_toast">Efectos pegados en %1$d clips</string>
     <string name="vm_no_captions_to_export_toast">No hay subtítulos para exportar</string>
     <string name="vm_subtitle_exported_toast">Exportado a %1$s</string>

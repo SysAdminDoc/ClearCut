@@ -309,10 +309,15 @@ private fun TimelineToolbarControls(
     fitZoomLevel: Float,
     canSplitAtPlayhead: Boolean,
     selectedClipId: String?,
+    selectedTimelineRange: TimelineRange?,
+    isRangeSelectionMode: Boolean,
     onZoomChanged: (Float) -> Unit,
     onScrollChanged: (Long) -> Unit,
     onSplitAtPlayhead: () -> Unit,
     onDeleteSelectedClip: () -> Unit,
+    onBeginRangeSelection: () -> Unit,
+    onCancelRangeSelection: () -> Unit,
+    onMuteTimelineRange: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -342,6 +347,28 @@ private fun TimelineToolbarControls(
             compact = compact,
             onClick = { onZoomChanged((zoomLevel * 1.33f).coerceAtMost(MAX_TIMELINE_ZOOM)) }
         )
+        TimelineToolbarButton(
+            icon = Icons.Default.SelectAll,
+            contentDescription = stringResource(
+                if (isRangeSelectionMode) {
+                    R.string.timeline_cancel_range_selection
+                } else {
+                    R.string.timeline_select_range
+                }
+            ),
+            compact = compact,
+            highlight = isRangeSelectionMode,
+            onClick = if (isRangeSelectionMode) onCancelRangeSelection else onBeginRangeSelection,
+        )
+        if (selectedTimelineRange != null) {
+            TimelineToolbarButton(
+                icon = Icons.AutoMirrored.Filled.VolumeOff,
+                contentDescription = stringResource(R.string.timeline_mute_range),
+                compact = compact,
+                highlight = true,
+                onClick = onMuteTimelineRange,
+            )
+        }
         TimelineToolbarButton(
             icon = Icons.Default.ContentCut,
             contentDescription = stringResource(R.string.cd_split_at_playhead),
@@ -389,6 +416,13 @@ fun Timeline(
     onTextOverlaySelected: (String) -> Unit = {},
     onAddTextOverlay: () -> Unit = {},
     onPlayheadMoved: (Long) -> Unit,
+    selectedTimelineRange: TimelineRange? = null,
+    isRangeSelectionMode: Boolean = false,
+    onBeginRangeSelection: () -> Unit = {},
+    onRangeSelectionStarted: () -> Unit = {},
+    onRangeSelectionChanged: (Long, Long) -> Unit = { _, _ -> },
+    onCancelRangeSelection: () -> Unit = {},
+    onMuteTimelineRange: () -> Unit = {},
     onZoomChanged: (Float) -> Unit,
     onScrollChanged: (Long) -> Unit,
     onTrimChanged: (clipId: String, newTrimStartMs: Long?, newTrimEndMs: Long?) -> Unit = { _, _, _ -> },
@@ -556,6 +590,10 @@ fun Timeline(
     val currentOnTextOverlaySelected by rememberUpdatedState(onTextOverlaySelected)
     val currentOnAddTextOverlay by rememberUpdatedState(onAddTextOverlay)
     val currentOnPlayheadMoved by rememberUpdatedState(onPlayheadMoved)
+    val currentSelectedTimelineRange by rememberUpdatedState(selectedTimelineRange)
+    val currentIsRangeSelectionMode by rememberUpdatedState(isRangeSelectionMode)
+    val currentOnRangeSelectionStarted by rememberUpdatedState(onRangeSelectionStarted)
+    val currentOnRangeSelectionChanged by rememberUpdatedState(onRangeSelectionChanged)
     val currentOnSplitAtPlayhead by rememberUpdatedState(onSplitAtPlayhead)
     val currentOnDeleteSelectedClip by rememberUpdatedState(onDeleteSelectedClip)
     val currentOnClipLongPress by rememberUpdatedState(onClipLongPress)
@@ -730,10 +768,15 @@ fun Timeline(
                         fitZoomLevel = fitZoomLevel,
                         canSplitAtPlayhead = canSplitAtPlayhead,
                         selectedClipId = selectedClipId,
+                        selectedTimelineRange = selectedTimelineRange,
+                        isRangeSelectionMode = isRangeSelectionMode,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,
                         onDeleteSelectedClip = onDeleteSelectedClip,
+                        onBeginRangeSelection = onBeginRangeSelection,
+                        onCancelRangeSelection = onCancelRangeSelection,
+                        onMuteTimelineRange = onMuteTimelineRange,
                         onMoreClick = { timelineOptionsExpanded = true },
                         modifier = Modifier
                     )
@@ -757,10 +800,15 @@ fun Timeline(
                         fitZoomLevel = fitZoomLevel,
                         canSplitAtPlayhead = canSplitAtPlayhead,
                         selectedClipId = selectedClipId,
+                        selectedTimelineRange = selectedTimelineRange,
+                        isRangeSelectionMode = isRangeSelectionMode,
                         onZoomChanged = onZoomChanged,
                         onScrollChanged = onScrollChanged,
                         onSplitAtPlayhead = onSplitAtPlayhead,
                         onDeleteSelectedClip = onDeleteSelectedClip,
+                        onBeginRangeSelection = onBeginRangeSelection,
+                        onCancelRangeSelection = onCancelRangeSelection,
+                        onMuteTimelineRange = onMuteTimelineRange,
                         onMoreClick = { timelineOptionsExpanded = true },
                     )
                 }
@@ -882,6 +930,32 @@ fun Timeline(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = chromePadding)
+                    )
+                }
+            }
+
+            if (isRangeSelectionMode) {
+                val rangeHint = selectedTimelineRange?.let { range ->
+                    stringResource(
+                        R.string.timeline_range_selected_hint,
+                        formatTimelineTime(range.startMs),
+                        formatTimelineTime(range.endMs),
+                    )
+                } ?: stringResource(R.string.timeline_range_selection_hint)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = chromePadding)
+                        .clip(RoundedCornerShape(Radius.lg))
+                        .background(ClearCutAccents.Peach.copy(alpha = 0.12f))
+                        .border(1.dp, ClearCutAccents.Peach.copy(alpha = 0.18f), RoundedCornerShape(Radius.lg))
+                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = rangeHint,
+                        color = ClearCutAccents.Peach,
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
@@ -1314,6 +1388,7 @@ fun Timeline(
                     Column {
                     // Time ruler — tap and drag to position playhead
                     var rulerDragX by remember { mutableFloatStateOf(0f) }
+                    var rangeDragStartMs by remember { mutableLongStateOf(0L) }
                     Box {
                         Canvas(
                             modifier = Modifier
@@ -1329,6 +1404,7 @@ fun Timeline(
                                 )
                                 .pointerInput(Unit) {
                                     detectTapGestures { offset ->
+                                        if (currentIsRangeSelectionMode) return@detectTapGestures
                                         // Check if tap is on a marker flag
                                         val ppm = currentZoomLevel * BASE_SCALE
                                         val flagWidthPx = 8.dp.toPx()
@@ -1352,23 +1428,41 @@ fun Timeline(
                                 .pointerInput(Unit) {
                                     detectDragGestures(
                                         onDragStart = { offset ->
-                                            rulerDragX = offset.x
-                                            lastScrubBoundaryIdx = -1
-                                            onScrubStart()
                                             val ppm = currentZoomLevel * BASE_SCALE
                                             if (ppm > 0.001f) {
-                                                val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
-                                                onPlayheadMoved(tappedMs.coerceIn(0L, currentTotalDurationMs))
+                                                val tappedMs = (currentScrollOffsetMs + (offset.x / ppm).toLong())
+                                                    .coerceIn(0L, currentTotalDurationMs)
+                                                if (currentIsRangeSelectionMode) {
+                                                    rangeDragStartMs = tappedMs
+                                                    rulerDragX = offset.x
+                                                    currentOnRangeSelectionStarted()
+                                                } else {
+                                                    rulerDragX = offset.x
+                                                    lastScrubBoundaryIdx = -1
+                                                    onScrubStart()
+                                                    onPlayheadMoved(tappedMs)
+                                                }
                                             }
                                         },
-                                        onDragEnd = { onScrubEnd() },
-                                        onDragCancel = { onScrubEnd() },
-                                        onDrag = { _, dragAmount ->
+                                        onDragEnd = {
+                                            if (!currentIsRangeSelectionMode) onScrubEnd()
+                                        },
+                                        onDragCancel = {
+                                            if (!currentIsRangeSelectionMode) onScrubEnd()
+                                        },
+                                        onDrag = { change, dragAmount ->
                                             rulerDragX += dragAmount.x
                                             val ppm = currentZoomLevel * BASE_SCALE
                                             if (ppm < 0.001f) return@detectDragGestures
                                             val posMs = currentScrollOffsetMs + (rulerDragX / ppm).toLong()
                                             val clampedMs = posMs.coerceIn(0L, currentTotalDurationMs)
+                                            if (currentIsRangeSelectionMode) {
+                                                if (clampedMs != rangeDragStartMs) {
+                                                    currentOnRangeSelectionChanged(rangeDragStartMs, clampedMs)
+                                                }
+                                                change.consume()
+                                                return@detectDragGestures
+                                            }
                                             onPlayheadMoved(clampedMs)
                                             val nearIdx = scrubBoundaries.binarySearch(clampedMs).let { idx ->
                                                 if (idx >= 0) idx
@@ -1398,6 +1492,31 @@ fun Timeline(
                                     )
                                 }
                         ) {
+                            currentSelectedTimelineRange?.let { range ->
+                                val rangeStartPx = (range.startMs - scrollOffsetMs) * pixelsPerMs
+                                val rangeEndPx = (range.endMs - scrollOffsetMs) * pixelsPerMs
+                                val left = minOf(rangeStartPx, rangeEndPx).coerceIn(0f, size.width)
+                                val right = maxOf(rangeStartPx, rangeEndPx).coerceIn(0f, size.width)
+                                if (right > left) {
+                                    drawRect(
+                                        color = ClearCutAccents.Peach.copy(alpha = 0.28f),
+                                        topLeft = Offset(left, 0f),
+                                        size = Size(right - left, size.height),
+                                    )
+                                    drawLine(
+                                        color = ClearCutAccents.Peach,
+                                        start = Offset(left, 0f),
+                                        end = Offset(left, size.height),
+                                        strokeWidth = 2.dp.toPx(),
+                                    )
+                                    drawLine(
+                                        color = ClearCutAccents.Peach,
+                                        start = Offset(right, 0f),
+                                        end = Offset(right, size.height),
+                                        strokeWidth = 2.dp.toPx(),
+                                    )
+                                }
+                            }
                             drawTimeRuler(
                                 scrollOffsetMs = scrollOffsetMs,
                                 pixelsPerMs = pixelsPerMs,

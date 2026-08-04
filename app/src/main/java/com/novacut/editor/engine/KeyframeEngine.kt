@@ -10,6 +10,72 @@ import kotlin.math.*
 object KeyframeEngine {
 
     /**
+     * Add a hard, non-destructive mute interval to a clip's volume curve.
+     *
+     * Existing volume keyframes inside the interval are removed so an older
+     * automation point cannot bring audio back before the range ends. The
+     * level at the end is sampled before removal and restored there, which
+     * makes the operation safe for clips that already have animated volume.
+     */
+    fun applyVolumeMuteRange(
+        keyframes: List<Keyframe>,
+        startOffsetMs: Long,
+        endOffsetMs: Long,
+        fallbackVolume: Float,
+    ): List<Keyframe> {
+        require(startOffsetMs >= 0L) { "Mute range start must be non-negative" }
+        require(endOffsetMs > startOffsetMs) { "Mute range end must be after its start" }
+
+        val safeFallbackVolume = fallbackVolume.coerceIn(0f, 2f)
+        val preMuteOffsetMs = (startOffsetMs - 1L).takeIf { startOffsetMs > 0L }
+        val preMuteVolume = preMuteOffsetMs?.let { offsetMs ->
+            getValueAt(keyframes, KeyframeProperty.VOLUME, offsetMs) ?: safeFallbackVolume
+        }
+        val endVolume = getValueAt(
+            keyframes,
+            KeyframeProperty.VOLUME,
+            endOffsetMs,
+        ) ?: safeFallbackVolume
+
+        val retained = keyframes.filter { keyframe ->
+            keyframe.property != KeyframeProperty.VOLUME || when {
+                keyframe.timeOffsetMs in startOffsetMs..endOffsetMs -> false
+                keyframe.timeOffsetMs == preMuteOffsetMs -> false
+                else -> true
+            }
+        }
+        val muteBoundaryKeyframes = buildList {
+            if (preMuteOffsetMs != null) {
+                add(
+                    Keyframe(
+                        timeOffsetMs = preMuteOffsetMs,
+                        property = KeyframeProperty.VOLUME,
+                        value = preMuteVolume ?: safeFallbackVolume,
+                        interpolation = KeyframeInterpolation.HOLD,
+                    )
+                )
+            }
+            add(
+                Keyframe(
+                    timeOffsetMs = startOffsetMs,
+                    property = KeyframeProperty.VOLUME,
+                    value = 0f,
+                    interpolation = KeyframeInterpolation.HOLD,
+                )
+            )
+            add(
+                Keyframe(
+                    timeOffsetMs = endOffsetMs,
+                    property = KeyframeProperty.VOLUME,
+                    value = endVolume,
+                    interpolation = KeyframeInterpolation.HOLD,
+                )
+            )
+        }
+        return (retained + muteBoundaryKeyframes).sortedBy { it.timeOffsetMs }
+    }
+
+    /**
      * Get the interpolated value for a property at a given time offset within a clip.
      * Returns null if no keyframes exist for this property.
      */
@@ -36,7 +102,10 @@ object KeyframeEngine {
         var next = relevant.last()
 
         for (i in 0 until relevant.size - 1) {
-            if (timeOffsetMs >= relevant[i].timeOffsetMs && timeOffsetMs <= relevant[i + 1].timeOffsetMs) {
+            // Treat an exact keyframe timestamp as the next keyframe's value.
+            // Including the right edge here made HOLD curves keep returning
+            // the previous value at a mute boundary (and at every other key).
+            if (timeOffsetMs >= relevant[i].timeOffsetMs && timeOffsetMs < relevant[i + 1].timeOffsetMs) {
                 prev = relevant[i]
                 next = relevant[i + 1]
                 break

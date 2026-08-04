@@ -95,6 +95,20 @@ data class TimelineMarker(
     val notes: String = ""
 )
 
+/** A half-open project-timeline interval used by range-based edit commands. */
+@Immutable
+data class TimelineRange(
+    val startMs: Long,
+    val endMs: Long,
+) {
+    init {
+        require(startMs >= 0L) { "Timeline range start must be non-negative" }
+        require(endMs > startMs) { "Timeline range end must be after its start" }
+    }
+
+    val durationMs: Long get() = endMs - startMs
+}
+
 enum class GlobalTransitionType(val displayName: String) {
     FADE_FROM_BLACK("Fade from Black"),
     FADE_TO_BLACK("Fade to Black"),

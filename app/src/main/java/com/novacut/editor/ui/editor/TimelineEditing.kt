@@ -12,11 +12,57 @@ import com.novacut.editor.model.MaskKeyframe
 import com.novacut.editor.model.MotionTrackPoint
 import com.novacut.editor.model.MotionTrackingData
 import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
+import com.novacut.editor.model.TimelineRange
 import com.novacut.editor.model.TimelineTimebase
+import com.novacut.editor.model.effectiveTimelineEndMs
+import com.novacut.editor.model.effectiveTimelineStartMs
 import kotlin.math.abs
 import kotlin.math.ceil
 
 internal const val MIN_TIMELINE_CLIP_DURATION_MS = 100L
+
+internal data class TimelineMuteResult(
+    val tracks: List<Track>,
+    val changedClipCount: Int,
+)
+
+/** Apply a project-time mute interval to the already identified audio clips. */
+internal fun muteTimelineRange(
+    tracks: List<Track>,
+    range: TimelineRange,
+    audioClipIds: Set<String>,
+): TimelineMuteResult {
+    var changedClipCount = 0
+    val updatedTracks = tracks.map { track ->
+        if (track.type !in setOf(TrackType.VIDEO, TrackType.OVERLAY, TrackType.AUDIO)) {
+            track
+        } else {
+            track.copy(clips = track.clips.map { clip ->
+                if (clip.id !in audioClipIds) return@map clip
+                val clipStartMs = track.effectiveTimelineStartMs(clip)
+                val clipEndMs = track.effectiveTimelineEndMs(clip)
+                val overlapStartMs = maxOf(range.startMs, clipStartMs)
+                val overlapEndMs = minOf(range.endMs, clipEndMs)
+                if (overlapEndMs <= overlapStartMs) return@map clip
+
+                val mutedKeyframes = KeyframeEngine.applyVolumeMuteRange(
+                    keyframes = clip.keyframes,
+                    startOffsetMs = (overlapStartMs - clipStartMs).coerceAtLeast(0L),
+                    endOffsetMs = (overlapEndMs - clipStartMs).coerceAtMost(clip.durationMs),
+                    fallbackVolume = clip.volume,
+                )
+                if (mutedKeyframes == clip.keyframes) {
+                    clip
+                } else {
+                    changedClipCount++
+                    clip.copy(keyframes = mutedKeyframes)
+                }
+            })
+        }
+    }
+    return TimelineMuteResult(updatedTracks, changedClipCount)
+}
 
 internal fun playbackStartPosition(playheadMs: Long, totalDurationMs: Long): Long {
     val clamped = playheadMs.coerceIn(0L, totalDurationMs.coerceAtLeast(0L))

@@ -4,6 +4,7 @@ import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
 import com.novacut.editor.model.AudioEffect
 import com.novacut.editor.model.AudioEffectType
+import com.novacut.editor.model.KeyframeProperty
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -86,12 +87,43 @@ class AudioRenderProcessorTest {
         assertArrayEquals(whole, chunked)
     }
 
+    @Test
+    fun volumeProcessorSilencesOnlyTheSelectedKeyframeInterval() {
+        val format = AudioProcessor.AudioFormat(1_000, 1, C.ENCODING_PCM_16BIT)
+        val keyframes = KeyframeEngine.applyVolumeMuteRange(
+            keyframes = emptyList(),
+            startOffsetMs = 2L,
+            endOffsetMs = 5L,
+            fallbackVolume = 1f,
+        )
+        assertEquals(0f, KeyframeEngine.getValueAt(keyframes, KeyframeProperty.VOLUME, 2L))
+
+        val output = process(
+            VolumeAudioProcessor(
+                volume = 1f,
+                fadeInMs = 0L,
+                fadeOutMs = 0L,
+                clipDurationMs = 8L,
+                keyframes = keyframes,
+            ),
+            format,
+            ShortArray(8) { 1_000 },
+        )
+
+        assertArrayEquals(
+            shortArrayOf(1_000, 1_000, 0, 0, 0, 1_000, 1_000, 1_000),
+            output,
+        )
+        assertTrue(keyframes.any { it.property == KeyframeProperty.VOLUME && it.value == 0f })
+    }
+
     private fun process(
         processor: AudioProcessor,
         format: AudioProcessor.AudioFormat,
         samples: ShortArray,
     ): ShortArray {
         processor.configure(format)
+        processor.flush(AudioProcessor.StreamMetadata.DEFAULT)
         val input = ByteBuffer
             .allocateDirect(samples.size * Short.SIZE_BYTES)
             .order(ByteOrder.nativeOrder())
@@ -113,6 +145,7 @@ class AudioRenderProcessorTest {
         chunkSizes: IntArray,
     ): ShortArray {
         processor.configure(format)
+        processor.flush(AudioProcessor.StreamMetadata.DEFAULT)
         val output = ArrayList<Short>(samples.size)
         var inputOffset = 0
         var chunkIndex = 0

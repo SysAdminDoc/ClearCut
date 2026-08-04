@@ -9,6 +9,7 @@ import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectKeyframe
 import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.Keyframe
+import com.novacut.editor.model.KeyframeInterpolation
 import com.novacut.editor.model.KeyframeProperty
 import com.novacut.editor.model.SpeedCurve
 import com.novacut.editor.model.SpeedPoint
@@ -25,6 +26,55 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AutoSaveStateTest {
+
+    @Test
+    fun mutedVolumeKeyframesRoundTripThroughAutosave() {
+        val state = AutoSaveState(
+            projectId = "mute-range-project",
+            tracks = listOf(
+                Track(
+                    type = TrackType.AUDIO,
+                    index = 0,
+                    clips = listOf(
+                        Clip(
+                            sourceUri = FakeUri,
+                            sourceDurationMs = 2_000L,
+                            timelineStartMs = 0L,
+                            trimStartMs = 0L,
+                            trimEndMs = 2_000L,
+                            keyframes = listOf(
+                                Keyframe(
+                                    timeOffsetMs = 499L,
+                                    property = KeyframeProperty.VOLUME,
+                                    value = 1f,
+                                    interpolation = KeyframeInterpolation.HOLD,
+                                ),
+                                Keyframe(
+                                    timeOffsetMs = 500L,
+                                    property = KeyframeProperty.VOLUME,
+                                    value = 0f,
+                                    interpolation = KeyframeInterpolation.HOLD,
+                                ),
+                                Keyframe(
+                                    timeOffsetMs = 1_000L,
+                                    property = KeyframeProperty.VOLUME,
+                                    value = 1f,
+                                    interpolation = KeyframeInterpolation.HOLD,
+                                ),
+                            ),
+                        )
+                    ),
+                )
+            ),
+        )
+
+        val restored = AutoSaveState.deserialize(state.serialize()) { FakeUri }
+        val keyframes = restored.tracks.single().clips.single().keyframes
+
+        assertEquals(state.tracks.single().clips.single().keyframes, keyframes)
+        assertEquals(KeyframeInterpolation.HOLD, keyframes[1].interpolation)
+        assertEquals(KeyframeProperty.VOLUME, keyframes[1].property)
+    }
 
     @Test
     fun exportWatermarkRoundTripsWithoutSubstitution() {

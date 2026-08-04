@@ -346,6 +346,8 @@ data class EditorState(
     val selectedClipId: String? = null,
     val selectedTrackId: String? = null,
     val playheadMs: Long = 0L,
+    /** Transient project-time selection used by range-based timeline commands. */
+    val selectedTimelineRange: TimelineRange? = null,
     val isPlaying: Boolean = false,
     val isPlaybackRequested: Boolean = false,
     val zoomLevel: Float = 1f,
@@ -530,6 +532,7 @@ enum class EditorTool(val displayName: String) {
     TRANSITION("Transition"),
     TRANSFORM("Transform"),
     CROP("Crop"),
+    MUTE_RANGE("Mute range"),
     AI("AI"),
     FREEZE_FRAME("Freeze"),
     EXPORT("Export")
@@ -1971,7 +1974,69 @@ class EditorViewModel @Inject constructor(
         if (_state.value.currentTool == EditorTool.TRIM && tool != EditorTool.TRIM) {
             playbackCoordinator.setScrubbingMode(false)
         }
-        _state.update { it.copy(currentTool = tool) }
+        _state.update {
+            it.copy(
+                currentTool = tool,
+                selectedTimelineRange = if (tool == EditorTool.MUTE_RANGE) {
+                    it.selectedTimelineRange
+                } else {
+                    null
+                },
+            )
+        }
+    }
+
+    fun beginTimelineRangeSelection() {
+        pauseIfPlaying()
+        _state.update {
+            it.copy(
+                currentTool = EditorTool.MUTE_RANGE,
+                selectedTimelineRange = null,
+            )
+        }
+    }
+
+    fun clearTimelineRangeSelection() {
+        _state.update { it.copy(selectedTimelineRange = null) }
+    }
+
+    fun updateTimelineRange(startMs: Long, endMs: Long) {
+        if (_state.value.currentTool != EditorTool.MUTE_RANGE) return
+        val start = minOf(startMs, endMs).coerceAtLeast(0L)
+        val end = maxOf(startMs, endMs).coerceAtMost(_state.value.totalDurationMs)
+        if (end <= start) return
+        _state.update {
+            it.copy(selectedTimelineRange = TimelineRange(start, end))
+        }
+    }
+
+    /** Apply the selected interval as volume keyframes without changing clip boundaries. */
+    fun muteSelectedTimelineRange() {
+        val state = _state.value
+        val range = state.selectedTimelineRange ?: return
+        val audioClipIds = state.tracks.flatMap { track ->
+            track.clips.filter { clip ->
+                track.type == TrackType.AUDIO ||
+                    (track.type == TrackType.VIDEO || track.type == TrackType.OVERLAY) && clipHasAudio(clip)
+            }
+        }.mapTo(mutableSetOf()) { it.id }
+        val result = muteTimelineRange(state.tracks, range, audioClipIds)
+        if (result.changedClipCount == 0) {
+            showToast(text(R.string.vm_mute_range_no_audio_toast), ToastSeverity.Warning)
+            return
+        }
+
+        saveUndoState("Mute range")
+        _state.update {
+            it.copy(
+                tracks = result.tracks,
+                currentTool = EditorTool.NONE,
+                selectedTimelineRange = null,
+            )
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+        showToast(text(R.string.vm_mute_range_applied_toast, result.changedClipCount))
     }
 
     // Panel mutual exclusion — atomic dismiss-and-show in single state update
