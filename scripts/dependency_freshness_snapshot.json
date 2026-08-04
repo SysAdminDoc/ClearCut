@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "reviewedOn": "2026-08-03",
+  "refreshCommand": "python scripts/refresh_dependency_freshness.py",
+  "probeCommand": "python scripts/probe_dependency_upgrade.py --dependency <key> --version <candidate>",
+  "policy": {
+    "catalogChangesRequireProbe": true,
+    "probeTasks": [
+      ":app:testQaUnitTest",
+      ":app:lintQa",
+      ":app:assembleQa"
+    ],
+    "offlineGate": "DependencyFreshnessTest and LintDetectorRatchetTest"
+  },
+  "facts": {
+    "agp_9_2_0": {
+      "version": "9.2.0",
+      "status": "stable",
+      "source": "https://developer.android.com/build/releases/agp-9-2-0-release-notes",
+      "requiresGradle": "9.4.1",
+      "note": "AGP 9.2.0 is a stable release; its release notes require Gradle 9.4.1.",
+      "reviewedOn": "2026-08-03"
+    },
+    "lifecycle_2_11_0": {
+      "version": "2.11.0",
+      "status": "stable",
+      "source": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "requiresAgp": "9.2.0",
+      "note": "Lifecycle 2.11.0 is stable and its release notes require AGP 9.2.0 for the Compose compileSdk update.",
+      "reviewedOn": "2026-08-03"
+    },
+    "room3_0_0": {
+      "version": "3.0.0",
+      "status": "stable",
+      "source": "https://developer.android.com/jetpack/androidx/releases/room3",
+      "coordinate": "androidx.room3:room3-runtime",
+      "note": "Room 3.0.0 is stable on the new androidx.room3 coordinate and is a migration, not a version-only edit to Room 2.x.",
+      "reviewedOn": "2026-08-03"
+    }
+  },
+  "dependencies": {
+    "agp": {
+      "coordinate": "com.android.tools.build:gradle",
+      "pinnedVersion": "9.1.1",
+      "latestStable": "9.3.1",
+      "source": "https://developer.android.com/build/releases/agp-9-3-0-release-notes",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "The catalog remains on AGP 9.1.1; authoritative metadata reports 9.3.1, and the wrapper/toolchain lane has not passed the candidate probe.",
+      "unblockCondition": "Update the wrapper and toolchain for 9.3.1, then run `python scripts/probe_dependency_upgrade.py --dependency agp --version 9.3.1`; keep the catalog change only if the full local probe passes.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency agp --version 9.3.1"
+      },
+      "lintReviewRequired": true
+    },
+    "kotlin": {
+      "coordinate": "org.jetbrains.kotlin:kotlin-gradle-plugin",
+      "pinnedVersion": "2.4.10",
+      "latestStable": "2.4.10",
+      "source": "https://kotlinlang.org/docs/releases.html",
+      "metadataSource": "https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-gradle-plugin/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "2.4.10",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency kotlin --version 2.4.10"
+      },
+      "lintReviewRequired": true
+    },
+    "ksp": {
+      "coordinate": "com.google.devtools.ksp:symbol-processing-gradle-plugin",
+      "pinnedVersion": "2.3.10",
+      "latestStable": "2.3.11",
+      "source": "https://github.com/google/ksp/releases",
+      "metadataSource": "https://repo1.maven.org/maven2/com/google/devtools/ksp/symbol-processing-gradle-plugin/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "The catalog pin 2.3.10 is below the 2.3.11 stable version reported by authoritative metadata; no compatibility probe has approved the change.",
+      "unblockCondition": "Run `python scripts/probe_dependency_upgrade.py --dependency ksp --version 2.3.11` and retain the new pin only after the local compatibility probe passes.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency ksp --version 2.3.11"
+      },
+      "lintReviewRequired": true
+    },
+    "composeBom": {
+      "coordinate": "androidx.compose:compose-bom",
+      "pinnedVersion": "2026.06.00",
+      "latestStable": "2026.06.01",
+      "source": "https://developer.android.com/develop/ui/compose/bom/bom-mapping",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "The catalog pin 2026.06.00 is below the 2026.06.01 stable version reported by authoritative metadata; no compatibility probe has approved the change.",
+      "unblockCondition": "Run `python scripts/probe_dependency_upgrade.py --dependency composeBom --version 2026.06.01` and retain the new pin only after the local compatibility probe passes.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency composeBom --version 2026.06.01"
+      },
+      "lintReviewRequired": true
+    },
+    "media3": {
+      "coordinate": "androidx.media3:media3-exoplayer",
+      "pinnedVersion": "1.10.1",
+      "latestStable": "1.10.1",
+      "source": "https://developer.android.com/jetpack/androidx/releases/media3",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/media3/media3-exoplayer/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "1.10.1",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency media3 --version 1.10.1"
+      }
+    },
+    "hilt": {
+      "coordinate": "com.google.dagger:hilt-android",
+      "pinnedVersion": "2.60.1",
+      "latestStable": "2.60.1",
+      "source": "https://dagger.dev/releases/",
+      "metadataSource": "https://repo1.maven.org/maven2/com/google/dagger/hilt-android/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "2.60.1",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency hilt --version 2.60.1"
+      }
+    },
+    "room": {
+      "coordinate": "androidx.room:room-runtime",
+      "pinnedVersion": "2.8.4",
+      "latestStable": "3.0.1",
+      "source": "https://developer.android.com/jetpack/androidx/releases/room3",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/room3/room3-runtime/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "migration-required",
+      "reason": "Room 3.0.1 is on the new androidx.room3 coordinate with breaking API changes; a version-only catalog edit would not be a valid migration.",
+      "unblockCondition": "Complete the Room 3 coordinate/API migration, then run `python scripts/probe_dependency_upgrade.py --dependency room --version 3.0.1` before updating the catalog.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency room --version 3.0.1"
+      },
+      "latestCoordinate": "androidx.room3:room3-runtime"
+    },
+    "coroutines": {
+      "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
+      "pinnedVersion": "1.11.0",
+      "latestStable": "1.11.0",
+      "source": "https://github.com/Kotlin/kotlinx.coroutines/releases",
+      "metadataSource": "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-android/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "1.11.0",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency coroutines --version 1.11.0"
+      }
+    },
+    "lifecycle": {
+      "coordinate": "androidx.lifecycle:lifecycle-runtime-ktx",
+      "pinnedVersion": "2.10.0",
+      "latestStable": "2.11.0",
+      "source": "https://developer.android.com/jetpack/androidx/releases/lifecycle",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/lifecycle/lifecycle-runtime-ktx/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "Lifecycle 2.11.0 is stable, but its Compose compileSdk path requires AGP 9.2.0 or newer and the candidate has not passed the local lint/build probe.",
+      "unblockCondition": "Move the AGP lane to the required version, then run `python scripts/probe_dependency_upgrade.py --dependency lifecycle --version 2.11.0` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency lifecycle --version 2.11.0"
+      },
+      "lintReviewRequired": true
+    },
+    "navigation": {
+      "coordinate": "androidx.navigation:navigation-compose",
+      "pinnedVersion": "2.9.8",
+      "latestStable": "2.9.8",
+      "source": "https://developer.android.com/jetpack/androidx/releases/navigation",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/navigation/navigation-compose/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "2.9.8",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency navigation --version 2.9.8"
+      }
+    },
+    "coil": {
+      "coordinate": "io.coil-kt.coil3:coil-compose",
+      "pinnedVersion": "3.3.0",
+      "latestStable": "3.5.0",
+      "source": "https://github.com/coil-kt/coil/releases",
+      "metadataSource": "https://repo1.maven.org/maven2/io/coil-kt/coil3/coil-compose/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "Coil 3.5.0 is stable, but this checkout has not re-run its Compose integration, media-loader, and package-size gates against the 3.x candidate.",
+      "unblockCondition": "Run `python scripts/probe_dependency_upgrade.py --dependency coil --version 3.5.0` and retain the new pin only after the local compatibility probe passes.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency coil --version 3.5.0"
+      }
+    },
+    "okhttp": {
+      "coordinate": "com.squareup.okhttp3:okhttp",
+      "pinnedVersion": "5.4.0",
+      "latestStable": "5.4.0",
+      "source": "https://square.github.io/okhttp/changelogs/changelog/",
+      "metadataSource": "https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "5.4.0",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency okhttp --version 5.4.0"
+      }
+    },
+    "lottieCompose": {
+      "coordinate": "com.airbnb.android:lottie-compose",
+      "pinnedVersion": "6.7.1",
+      "latestStable": "6.7.1",
+      "source": "https://github.com/airbnb/lottie-android/releases",
+      "metadataSource": "https://repo1.maven.org/maven2/com/airbnb/android/lottie-compose/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "6.7.1",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency lottieCompose --version 6.7.1"
+      }
+    },
+    "onnxruntime": {
+      "coordinate": "com.microsoft.onnxruntime:onnxruntime-android",
+      "pinnedVersion": "1.26.0",
+      "latestStable": "1.28.0",
+      "source": "https://github.com/microsoft/onnxruntime/releases",
+      "metadataSource": "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "ONNX Runtime 1.28.0 was evaluated on 2026-07-29: it resolves, compiles, and passes the 16 KB alignment check, but its native payload grows about 5 MB uncompressed across the four shipped ABIs and pushes the release APK past the size budget; on-device Whisper/upscale/inpaint output comparisons are still missing.",
+      "unblockCondition": "Ship per-ABI splits so the payload growth is device-scoped, then run `python scripts/probe_dependency_upgrade.py --dependency onnxruntime --version 1.28.0` and the on-device model fixtures before changing this pin.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency onnxruntime --version 1.28.0"
+      }
+    },
+    "mediapipe": {
+      "coordinate": "com.google.mediapipe:tasks-vision",
+      "pinnedVersion": "0.10.35",
+      "latestStable": "1.0.0",
+      "source": "https://github.com/google-ai-edge/mediapipe/releases",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/com/google/mediapipe/tasks-vision/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "MediaPipe 1.0.0 is a new stable artifact line; the existing 0.10.35 background-removal and face/pose sessions have not been revalidated against its graph and delegate behavior.",
+      "unblockCondition": "Run the MediaPipe session/output fixture review, then run `python scripts/probe_dependency_upgrade.py --dependency mediapipe --version 1.0.0` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency mediapipe --version 1.0.0"
+      }
+    },
+    "protobufJavalite": {
+      "coordinate": "com.google.protobuf:protobuf-javalite",
+      "pinnedVersion": "4.27.5",
+      "latestStable": "4.35.1",
+      "source": "https://github.com/protocolbuffers/protobuf/releases",
+      "metadataSource": "https://repo1.maven.org/maven2/com/google/protobuf/protobuf-javalite/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "held",
+      "reason": "The pin stays on protobuf 4.27.5 to cover MediaPipe's transitive 4.26.1 and GHSA-735f-pc8j-v9w8 without claiming that 4.35.1's gencode/runtime enforcement is compatible with MediaPipe 0.10.35 generated classes.",
+      "unblockCondition": "After MediaPipe ships a build with a protobuf floor at or above 4.35, run `python scripts/probe_dependency_upgrade.py --dependency protobufJavalite --version 4.35.1` and the generated-code tests before changing this pin.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency protobufJavalite --version 4.35.1"
+      }
+    },
+    "robolectric": {
+      "coordinate": "org.robolectric:robolectric",
+      "pinnedVersion": "4.16.1",
+      "latestStable": "4.16.1",
+      "source": "https://github.com/robolectric/robolectric/releases",
+      "metadataSource": "https://repo1.maven.org/maven2/org/robolectric/robolectric/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "baseline",
+        "version": "4.16.1",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency robolectric --version 4.16.1"
+      }
+    },
+    "androidxBenchmark": {
+      "coordinate": "androidx.benchmark:benchmark-junit4",
+      "pinnedVersion": "1.5.0-beta01",
+      "latestStable": "1.4.1",
+      "source": "https://developer.android.com/jetpack/androidx/releases/benchmark",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/benchmark/benchmark-junit4/maven-metadata.xml",
+      "reviewedOn": "2026-08-03",
+      "state": "pre-release",
+      "reason": "The catalog intentionally uses pre-release 1.5.0-beta01; stable metadata stops at 1.4.1.",
+      "unblockCondition": "Wait for the stable 1.5.x benchmark line, then run `python scripts/probe_dependency_upgrade.py --dependency androidxBenchmark --version 1.4.1` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "not-run",
+        "version": null,
+        "command": "python scripts/probe_dependency_upgrade.py --dependency androidxBenchmark --version 1.4.1"
+      }
+    }
+  }
+}

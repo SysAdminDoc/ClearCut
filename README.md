@@ -568,6 +568,21 @@ With the editor activity visible, run TTS preview, start and stop a voiceover re
 - AGP 9.1.1, Gradle 9.3.1, JDK 21
 - Android SDK 37
 
+### Dependency freshness
+
+Dependency pins stay in `gradle/libs.versions.toml`; refresh the committed
+source-backed snapshot without changing pins, then run the offline gate:
+
+```powershell
+python scripts\refresh_dependency_freshness.py
+.\gradlew.bat :app:testQaUnitTest --tests com.novacut.editor.DependencyFreshnessTest --tests com.novacut.editor.LintDetectorRatchetTest --no-daemon
+```
+
+Candidate upgrades must be staged in the catalog and pass
+`python scripts\probe_dependency_upgrade.py --dependency <key> --version <candidate>`
+before they are treated as current. See the local dependency maintenance notes
+for the full review-lane contract.
+
 ### Release Signing
 Configure via `keystore.properties`:
 ```properties

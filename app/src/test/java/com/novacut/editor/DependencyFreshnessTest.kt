@@ -1,138 +1,135 @@
 package com.novacut.editor
 
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
-import java.util.Properties
 
 /**
- * Local dependency truth gate — replaces Dependabot/CI-based policy.
+ * Offline dependency truth gate.
  *
- * Every pinned version in libs.versions.toml is either at the latest verified
- * upstream version or has an explicit hold reason in [HOLDS]. Adding a new
- * hold entry here is the single action needed to document why a dependency is
- * not at upstream latest.
+ * The version catalog is intentionally pinned and the committed snapshot is
+ * refreshed separately from authoritative Maven/release metadata. This test
+ * never needs network access: it checks that every tracked pin has provenance,
+ * a review date, and an executable compatibility path before a catalog change
+ * can be treated as current.
  *
- * Run: ./gradlew :app:testDebugUnitTest --tests com.novacut.editor.DependencyFreshnessTest
+ * Refresh: `python scripts/refresh_dependency_freshness.py`
+ * Probe: `python scripts/probe_dependency_upgrade.py --dependency <key> --version <candidate>`
  */
 class DependencyFreshnessTest {
 
-    /**
-     * Core dependency versions that this test locks. The map key is the TOML
-     * version key, the value is the expected pinned version. If the catalog
-     * drifts from these expectations the test fails, forcing the developer to
-     * update this fixture (and its hold reason, if applicable).
-     */
-    private val expectedVersions = mapOf(
-        "agp" to "9.1.1",
-        "kotlin" to "2.4.10",
-        "ksp" to "2.3.10",
-        "composeBom" to "2026.06.00",
-        "media3" to "1.10.1",
-        "hilt" to "2.60.1",
-        "room" to "2.8.4",
-        "coroutines" to "1.11.0",
-        "lifecycle" to "2.10.0",
-        "navigation" to "2.9.8",
-        "coil" to "3.3.0",
-        "okhttp" to "5.4.0",
-        "lottieCompose" to "6.7.1",
-        "onnxruntime" to "1.26.0",
-        "mediapipe" to "0.10.35",
-        "protobufJavalite" to "4.27.5",
-        "robolectric" to "4.16.1",
-        "androidxBenchmark" to "1.5.0-beta01",
-    )
-
-    /**
-     * Hold reasons for dependencies intentionally kept below upstream latest.
-     * Each entry documents why the upgrade is deferred and under what condition
-     * it can proceed.
-     *
-     * Dependencies absent from this map are assumed to be at latest verified.
-     */
-    @Suppress("unused")
-    val HOLDS = mapOf(
-        "coil" to Hold(
-            "3.3.0",
-            "Coil 3.4.0+ remains a separate Compose compatibility decision after the toolchain lane.",
-            "Upgrade after Coil 3.4.0+ passes the current Compose integration and package-size gates."
-        ),
-        "lottieCompose" to Hold(
-            "6.7.1",
-            "Lottie 7.x state-machine API blocked on Compose compatibility validation.",
-            "Upgrade when Lottie 7.x stable passes local integration tests."
-        ),
-        "onnxruntime" to Hold(
-            "1.26.0",
-            "1.28.0 was evaluated 2026-07-29: it resolves, compiles, and passes the 16 KB " +
-                "alignment check, but its native payload grows ~5 MB uncompressed across the " +
-                "four shipped ABIs and pushes the APK past the size budget. The release APK is " +
-                "already ~350 MB, and the on-device Whisper/upscale/inpaint output comparisons " +
-                "an ORT line bump needs have not been run.",
-            "Upgrade once per-ABI splits ship (so the per-device payload absorbs the growth) and " +
-                "the model output fixtures have been re-measured on device."
-        ),
-        "protobufJavalite" to Hold(
-            "4.27.5",
-            "Security constraint over MediaPipe's transitive 4.26.1 (GHSA-735f-pc8j-v9w8). " +
-                "Held on the 4.27 line: 4.28+ gencode/runtime version enforcement is not " +
-                "validated against MediaPipe 0.10.35's 4.26 generated classes.",
-            "Raise when MediaPipe ships a build whose own protobuf floor is >= 4.28."
-        ),
+    private val trackedVersionKeys = setOf(
+        "agp",
+        "kotlin",
+        "ksp",
+        "composeBom",
+        "media3",
+        "hilt",
+        "room",
+        "coroutines",
+        "lifecycle",
+        "navigation",
+        "coil",
+        "okhttp",
+        "lottieCompose",
+        "onnxruntime",
+        "mediapipe",
+        "protobufJavalite",
+        "robolectric",
+        "androidxBenchmark",
     )
 
     @Test
-    fun versionCatalogMatchesExpectedPins() {
-        val catalogVersions = parseCatalogVersions()
-        if (catalogVersions.isEmpty()) {
-            org.junit.Assume.assumeTrue(
-                "Could not read libs.versions.toml; skipping freshness check", false
-            )
-            return
-        }
-
-        val mismatches = expectedVersions.mapNotNull { (key, expected) ->
-            val actual = catalogVersions[key]
-            if (actual != expected) "$key: expected=$expected actual=$actual" else null
-        }
-
+    fun sourceBackedSnapshotMatchesThePinnedCatalog() {
+        val root = locateRepoRoot() ?: return
+        val snapshotFile = File(root, "scripts/dependency_freshness_snapshot.json")
+        assertTrue("Committed dependency freshness snapshot is missing.", snapshotFile.isFile)
+        val snapshot = JSONObject(snapshotFile.readText())
+        assertEquals(1, snapshot.getInt("schemaVersion"))
         assertTrue(
-            "Version catalog has drifted from DependencyFreshnessTest expectations. " +
-                "Update expectedVersions (and add a HOLDS entry if the version is " +
-                "intentionally held below latest). Mismatches:\n${mismatches.joinToString("\n")}",
-            mismatches.isEmpty()
+            "Refresh command must remain executable from the repository root.",
+            snapshot.getString("refreshCommand").contains("scripts/refresh_dependency_freshness.py"),
         )
+        assertTrue(
+            "Catalog changes must be gated by the local compatibility probe.",
+            snapshot.getJSONObject("policy").getBoolean("catalogChangesRequireProbe"),
+        )
+
+        val catalog = parseCatalogVersions(root)
+        val dependencies = snapshot.getJSONObject("dependencies")
+        trackedVersionKeys.forEach { key ->
+            assertTrue("Snapshot is missing tracked dependency '$key'.", dependencies.has(key))
+            val entry = dependencies.getJSONObject(key)
+            val pinned = entry.getString("pinnedVersion")
+            assertEquals("Snapshot pin for '$key' drifted from libs.versions.toml.", pinned, catalog[key])
+            assertHttpUrl(entry.getString("source"), "$key release source")
+            assertHttpUrl(entry.getString("metadataSource"), "$key metadata source")
+            assertIsoDate(entry.getString("reviewedOn"), "$key review date")
+
+            val probe = entry.getJSONObject("compatibilityProbe")
+            assertTrue(
+                "$key must name the executable compatibility probe.",
+                probe.getString("command").contains("scripts/probe_dependency_upgrade.py"),
+            )
+            if (probe.getString("status") == "passed") {
+                assertEquals(
+                    "A passing probe cannot describe a different catalog pin.",
+                    pinned,
+                    probe.getString("version"),
+                )
+            }
+            if (entry.getString("state") != "current") {
+                assertNonBlank(entry.getString("reason"), "$key hold reason")
+                assertNonBlank(entry.getString("unblockCondition"), "$key unblock condition")
+                assertTrue(
+                    "$key unblock condition must be executable, not a vague reminder.",
+                    entry.getString("unblockCondition").contains("scripts/probe_dependency_upgrade.py"),
+                )
+            }
+        }
     }
 
     @Test
-    fun holdReasonsReferenceCurrentVersions() {
-        HOLDS.forEach { (key, hold) ->
-            val expected = expectedVersions[key]
-            assertEquals(
-                "Hold for '$key' references version ${hold.pinnedVersion} but " +
-                    "expectedVersions says $expected. Update the hold entry.",
-                expected, hold.pinnedVersion
-            )
-        }
+    fun knownUpstreamReleaseFactsStaySourceBacked() {
+        val root = locateRepoRoot() ?: return
+        val facts = JSONObject(
+            File(root, "scripts/dependency_freshness_snapshot.json").readText()
+        ).getJSONObject("facts")
+
+        val agp = facts.getJSONObject("agp_9_2_0")
+        assertEquals("9.2.0", agp.getString("version"))
+        assertEquals("stable", agp.getString("status"))
+        assertEquals("9.4.1", agp.getString("requiresGradle"))
+        assertHttpUrl(agp.getString("source"), "AGP 9.2 source")
+
+        val lifecycle = facts.getJSONObject("lifecycle_2_11_0")
+        assertEquals("2.11.0", lifecycle.getString("version"))
+        assertEquals("stable", lifecycle.getString("status"))
+        assertEquals("9.2.0", lifecycle.getString("requiresAgp"))
+        assertHttpUrl(lifecycle.getString("source"), "Lifecycle 2.11 source")
+
+        val room = facts.getJSONObject("room3_0_0")
+        assertEquals("3.0.0", room.getString("version"))
+        assertEquals("stable", room.getString("status"))
+        assertEquals("androidx.room3:room3-runtime", room.getString("coordinate"))
+        assertHttpUrl(room.getString("source"), "Room 3 source")
     }
 
     @Test
-    fun allExpectedKeysExistInCatalog() {
-        val catalogVersions = parseCatalogVersions()
-        if (catalogVersions.isEmpty()) return
-
-        val missing = expectedVersions.keys.filterNot { it in catalogVersions }
+    fun everyTrackedKeyExistsInTheVersionCatalog() {
+        val root = locateRepoRoot() ?: return
+        val catalog = parseCatalogVersions(root)
+        val missing = trackedVersionKeys.filterNot { it in catalog }
         assertTrue(
-            "Expected version keys missing from libs.versions.toml: $missing",
-            missing.isEmpty()
+            "Tracked dependency keys missing from libs.versions.toml: $missing",
+            missing.isEmpty(),
         )
     }
 
-    private fun parseCatalogVersions(): Map<String, String> {
-        val repoRoot = locateRepoRoot() ?: return emptyMap()
-        val toml = File(repoRoot, "gradle/libs.versions.toml")
+    private fun parseCatalogVersions(root: File): Map<String, String> {
+        val toml = File(root, "gradle/libs.versions.toml")
         if (!toml.exists()) return emptyMap()
 
         val versions = mutableMapOf<String, String>()
@@ -157,6 +154,18 @@ class DependencyFreshnessTest {
         return versions
     }
 
+    private fun assertHttpUrl(value: String, label: String) {
+        assertTrue("$label must be an HTTPS URL.", value.startsWith("https://"))
+    }
+
+    private fun assertIsoDate(value: String, label: String) {
+        assertTrue("$label must use YYYY-MM-DD.", Regex("\\d{4}-\\d{2}-\\d{2}").matches(value))
+    }
+
+    private fun assertNonBlank(value: String, label: String) {
+        assertTrue("$label must not be blank.", value.trim().isNotEmpty())
+    }
+
     private fun locateRepoRoot(): File? {
         val userDir = System.getProperty("user.dir") ?: return null
         var dir: File? = File(userDir).absoluteFile
@@ -167,10 +176,4 @@ class DependencyFreshnessTest {
         }
         return null
     }
-
-    data class Hold(
-        val pinnedVersion: String,
-        val reason: String,
-        val upgradeWhen: String,
-    )
 }
