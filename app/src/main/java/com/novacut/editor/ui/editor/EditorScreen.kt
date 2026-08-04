@@ -54,6 +54,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.ClearCutTestTags
@@ -64,7 +65,8 @@ import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
-import androidx.activity.compose.BackHandler
+import androidx.activity.BackEventCompat
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,6 +75,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import com.novacut.editor.R
 import java.io.File
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.collect
 
 private const val EXPORT_NOTIFICATION_PERMISSION_PREFS = "export_notification_permission"
 private const val EXPORT_NOTIFICATION_PERMISSION_HANDLED = "handled"
@@ -261,6 +265,8 @@ fun EditorScreen(
     var showCompositionGuides by remember { mutableStateOf(false) }
     var isTimelineEditGestureActive by remember { mutableStateOf(false) }
     var isImmersivePreview by rememberSaveable { mutableStateOf(false) }
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+    var predictiveBackSwipeEdge by remember { mutableIntStateOf(BackEventCompat.EDGE_LEFT) }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -376,14 +382,14 @@ fun EditorScreen(
         }
     }
 
-    BackHandler(
-        enabled = isImmersivePreview ||
-            hasOpenPanel ||
-            state.currentTool != EditorTool.NONE ||
-            hasClipSelection ||
-            isClipMode ||
-            state.compoundNavDepth > 0,
-    ) {
+    val canConsumeEditorBack = isImmersivePreview ||
+        hasOpenPanel ||
+        state.currentTool != EditorTool.NONE ||
+        hasClipSelection ||
+        isClipMode ||
+        state.compoundNavDepth > 0
+
+    fun consumeEditorBack() {
         when {
             isImmersivePreview -> {
                 isImmersivePreview = false
@@ -396,8 +402,22 @@ fun EditorScreen(
             // Tier C.13 — predictive back pops one compound nesting level
             // when no other in-context action consumes the gesture. Root
             // (depth 0) falls through to the system back-to-home animation
-            // because the BackHandler's `enabled` predicate stops gating it.
+            // because the predictive handler's `enabled` predicate stops gating it.
             state.compoundNavDepth > 0 -> viewModel.exitCompoundLevel()
+        }
+    }
+
+    PredictiveBackHandler(enabled = canConsumeEditorBack) { progress ->
+        try {
+            progress.collect { event ->
+                predictiveBackProgress = event.progress.coerceIn(0f, 1f)
+                predictiveBackSwipeEdge = event.swipeEdge
+            }
+            consumeEditorBack()
+        } catch (_: CancellationException) {
+            // The gesture was cancelled before commit; editor state has not changed.
+        } finally {
+            predictiveBackProgress = 0f
         }
     }
 
@@ -506,6 +526,17 @@ fun EditorScreen(
         .fillMaxSize()
         .testTag(ClearCutTestTags.EDITOR_SCREEN)
         .background(semanticColors.surfaceBase)
+        .graphicsLayer {
+            val direction = if (predictiveBackSwipeEdge == BackEventCompat.EDGE_RIGHT) {
+                1f
+            } else {
+                -1f
+            }
+            translationX = direction * size.width * 0.06f * predictiveBackProgress
+            scaleX = 1f - predictiveBackProgress * 0.025f
+            scaleY = 1f - predictiveBackProgress * 0.025f
+            alpha = 1f - predictiveBackProgress * 0.04f
+        }
         .focusRequester(focusRequester)
         .focusable()
         .onKeyEvent { event ->

@@ -19,7 +19,8 @@ class FullscreenPreviewContractTest {
         ).readText().normalizeLineEndings()
 
         assertTrue(screen.contains("var isImmersivePreview by rememberSaveable"))
-        assertTrue(screen.contains("enabled = isImmersivePreview ||"))
+        assertTrue(screen.contains("val canConsumeEditorBack = isImmersivePreview ||"))
+        assertTrue(screen.contains("PredictiveBackHandler(enabled = canConsumeEditorBack)"))
         assertTrue(screen.contains("isImmersivePreview ->"))
         assertTrue(screen.contains("isFullscreenPreview = isImmersivePreview"))
         assertTrue(screen.contains("if (hasClips || hasOpenPanel || isImmersivePreview) Box"))

@@ -6499,7 +6499,7 @@ class EditorViewModel @Inject constructor(
     //
     // Live nav stack is held here as a mutable companion. The immutable
     // EditorState carries the depth + breadcrumb-text signals the UI reads
-    // (BackHandler predicate + CompoundNavBreadcrumb chip).
+    // (PredictiveBackHandler predicate + CompoundNavBreadcrumb chip).
 
     private val compoundNavStack = com.novacut.editor.engine.CompoundNavStack()
 

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Nested editor back navigation now uses Android's predictive-back progress with edge-aware preview motion, cancellation-safe state handling, and the existing immersive/panel/tool/selection/compound precedence.
 - Android 15+ now uses Media3's platform loudness-controller path for preview/export audio decoding, applies a guarded HDR headroom policy to HDR editor windows and preview surfaces, and restores prior display settings on exit; older Android versions remain no-op fallbacks.
 - Added an immersive fullscreen preview toggle that hides editor chrome and system bars, preserves the active Media3 surface/playback, and exits cleanly through the toggle or Back.
 - Clip transform controls now support undoable horizontal and vertical flips that persist through autosave and edit-decision JSON while sharing the preview/export Media3 matrix path.

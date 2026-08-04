@@ -40,7 +40,7 @@ import com.novacut.editor.ui.ClearCutTestTags
  * Tap-anywhere-to-exit semantics: tapping the chip pops one level via
  * [onExit]. The leading back arrow doubles as the affordance hint; the
  * Predictive-back integration lives at the EditorScreen level — gate the
- * existing `BackHandler` on `compoundNavDepth > 0` so the system back gesture
+ * `PredictiveBackHandler` on `compoundNavDepth > 0` so the system back gesture
  * also pops one level. This composable owns the visual affordance only.
  */
 @Composable
