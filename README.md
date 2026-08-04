@@ -4,9 +4,14 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.78.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.78.1-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.78.1 CFR delivery and source-cut batch exports
+
+- CFR export normalization now turns irregular VFR source cadence into the selected delivery rate before the final Media3 render.
+- Batch Export can queue independent source-file trim ranges with persisted URIs and per-item settings while retaining uniform project exports.
 
 ### v3.78.0 Nothing reports work that did not happen
 
