@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -107,6 +109,8 @@ fun PreviewPanel(
     onToggleScopes: () -> Unit = {},
     showCompositionGuides: Boolean = false,
     onToggleCompositionGuides: () -> Unit = {},
+    isFullscreenPreview: Boolean = false,
+    onToggleFullscreenPreview: () -> Unit = {},
     isSplitPreviewEnabled: Boolean = false,
     onToggleSplitPreview: () -> Unit = {},
     hasActiveEffects: Boolean = false
@@ -313,6 +317,25 @@ fun PreviewPanel(
                                     .padding(10.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
+                                ClearCutChromeIconButton(
+                                    icon = if (isFullscreenPreview) {
+                                        Icons.Default.FullscreenExit
+                                    } else {
+                                        Icons.Default.Fullscreen
+                                    },
+                                    contentDescription = stringResource(
+                                        if (isFullscreenPreview) {
+                                            R.string.preview_exit_fullscreen
+                                        } else {
+                                            R.string.preview_enter_fullscreen
+                                        }
+                                    ),
+                                    onClick = onToggleFullscreenPreview,
+                                    tint = semanticColors.subtext.copy(alpha = 0.9f),
+                                    containerColor = semanticColors.background.copy(alpha = 0.72f),
+                                    borderColor = semanticColors.cardStroke,
+                                    shape = RoundedCornerShape(Radius.md),
+                                )
                                 if (showScopesButton) {
                                     ClearCutChromeIconButton(
                                         icon = Icons.Default.Insights,

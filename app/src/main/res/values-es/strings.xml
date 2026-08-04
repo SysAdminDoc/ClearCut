@@ -676,6 +676,8 @@
     <string name="settings_off">Apagado</string>
     <string name="preview_scopes">Alcances</string>
     <string name="preview_composition_guides">Guías de composición</string>
+    <string name="preview_enter_fullscreen">Entrar en vista previa de pantalla completa</string>
+    <string name="preview_exit_fullscreen">Salir de la vista previa de pantalla completa</string>
     <string name="preview_compare">Comparación antes/después</string>
     <string name="preview_compare_original">Original</string>
     <string name="preview_compare_edited">Editado</string>

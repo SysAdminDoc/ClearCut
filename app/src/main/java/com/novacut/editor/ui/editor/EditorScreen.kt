@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -259,6 +260,7 @@ fun EditorScreen(
     var isToolPanelExpanded by remember { mutableStateOf(false) }
     var showCompositionGuides by remember { mutableStateOf(false) }
     var isTimelineEditGestureActive by remember { mutableStateOf(false) }
+    var isImmersivePreview by rememberSaveable { mutableStateOf(false) }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -372,13 +374,18 @@ fun EditorScreen(
     }
 
     BackHandler(
-        enabled = hasOpenPanel ||
+        enabled = isImmersivePreview ||
+            hasOpenPanel ||
             state.currentTool != EditorTool.NONE ||
             hasClipSelection ||
             isClipMode ||
             state.compoundNavDepth > 0,
     ) {
         when {
+            isImmersivePreview -> {
+                isImmersivePreview = false
+                showRadialMenu = false
+            }
             hasOpenPanel -> viewModel.dismissAllPanels()
             state.currentTool != EditorTool.NONE -> viewModel.setTool(EditorTool.NONE)
             state.selectedClipIds.size > 1 -> viewModel.clearMultiSelect()
@@ -390,6 +397,8 @@ fun EditorScreen(
             state.compoundNavDepth > 0 -> viewModel.exitCompoundLevel()
         }
     }
+
+    ImmersivePreviewSystemUi(isImmersive = isImmersivePreview)
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -586,8 +595,12 @@ fun EditorScreen(
         // v3.69 DESKTOP layout — fixed 260 dp left sidebar (Media Bin + quick
         // actions + v3.69 hub entry). Absent on PHONE / ONE_HANDED so the
         // existing layout is untouched when no desktop surface is present.
-        val desktopSidebarWidth = if (layoutMode == LayoutMode.DESKTOP) 260.dp else 0.dp
-        if (layoutMode == LayoutMode.DESKTOP) {
+        val desktopSidebarWidth = if (layoutMode == LayoutMode.DESKTOP && !isImmersivePreview) {
+            260.dp
+        } else {
+            0.dp
+        }
+        if (layoutMode == LayoutMode.DESKTOP && !isImmersivePreview) {
             DesktopSidebar(
                 viewModel = viewModel,
                 modifier = Modifier.align(Alignment.TopStart)
@@ -710,7 +723,11 @@ fun EditorScreen(
                 .fillMaxSize()
                 .padding(
                     start = desktopSidebarWidth,
-                    end = if (useEmbeddedExportPane) embeddedExportPaneWidth else 0.dp
+                    end = if (!isImmersivePreview && useEmbeddedExportPane) {
+                        embeddedExportPaneWidth
+                    } else {
+                        0.dp
+                    }
                 )
                 .then(if (isTutorialOpen) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
@@ -730,123 +747,125 @@ fun EditorScreen(
                 )
             }
 
-            // Compact creator bar: project identity, persistence state, history, and export.
-            EditorTopBar(
-                projectName = state.project.name,
-                onRename = viewModel::renameProject,
-                onBack = onBack,
-                onUndo = viewModel::undo,
-                onRedo = viewModel::redo,
-                canUndo = state.undoStack.isNotEmpty(),
-                canRedo = state.redoStack.isNotEmpty(),
-                selectedClipId = state.selectedClipId,
-                onDelete = viewModel::deleteSelectedClip,
-                confirmBeforeDelete = viewModel.confirmBeforeDelete,
-                onDuplicateClip = viewModel::duplicateSelectedClip,
-                onSplitClip = viewModel::splitClipAtPlayhead,
-                onAddMedia = viewModel::showMediaPicker,
-                onAddTrack = viewModel::addTrack,
-                onExport = viewModel::showExportSheet,
-                onSaveTemplate = viewModel::saveAsTemplate,
-                editorMode = state.editorMode,
-                onToggleEditorMode = viewModel::toggleEditorMode,
-                onOpenScratchpad = viewModel::showScratchpad,
-                onOpenV369Features = viewModel::showV369Features,
-                onSearch = viewModel::showCommandPalette,
-                editConfidenceStatus = editConfidenceStatus,
-                onOpenHistory = viewModel::showUndoHistory,
-                onOpenSnapshots = viewModel::showSnapshotHistory,
-                onApplyCutList = { viewModel.applyCutList(it) },
-            )
-
-            // Empty project onboarding hint
             val hasClips = state.tracks.any { it.clips.isNotEmpty() }
-            if (!hasClips && !hasOpenPanel) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
+            if (!isImmersivePreview) {
+                // Compact creator bar: project identity, persistence state, history, and export.
+                EditorTopBar(
+                    projectName = state.project.name,
+                    onRename = viewModel::renameProject,
+                    onBack = onBack,
+                    onUndo = viewModel::undo,
+                    onRedo = viewModel::redo,
+                    canUndo = state.undoStack.isNotEmpty(),
+                    canRedo = state.redoStack.isNotEmpty(),
+                    selectedClipId = state.selectedClipId,
+                    onDelete = viewModel::deleteSelectedClip,
+                    confirmBeforeDelete = viewModel.confirmBeforeDelete,
+                    onDuplicateClip = viewModel::duplicateSelectedClip,
+                    onSplitClip = viewModel::splitClipAtPlayhead,
+                    onAddMedia = viewModel::showMediaPicker,
+                    onAddTrack = viewModel::addTrack,
+                    onExport = viewModel::showExportSheet,
+                    onSaveTemplate = viewModel::saveAsTemplate,
+                    editorMode = state.editorMode,
+                    onToggleEditorMode = viewModel::toggleEditorMode,
+                    onOpenScratchpad = viewModel::showScratchpad,
+                    onOpenV369Features = viewModel::showV369Features,
+                    onSearch = viewModel::showCommandPalette,
+                    editConfidenceStatus = editConfidenceStatus,
+                    onOpenHistory = viewModel::showUndoHistory,
+                    onOpenSnapshots = viewModel::showSnapshotHistory,
+                    onApplyCutList = { viewModel.applyCutList(it) },
+                )
+
+                // Empty project onboarding hint
+                if (!hasClips && !hasOpenPanel) {
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 210.dp),
-                        colors = CardDefaults.cardColors(containerColor = semanticColors.panel),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
-                        shape = RoundedCornerShape(Radius.xxl)
+                            .weight(1f)
+                            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier.background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        semanticColors.panelHighest.copy(alpha = 0.86f),
-                                        semanticColors.panel
-                                    )
-                                )
-                            )
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 210.dp),
+                            colors = CardDefaults.cardColors(containerColor = semanticColors.panel),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
+                            shape = RoundedCornerShape(Radius.xxl)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            Box(
+                                modifier = Modifier.background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            semanticColors.panelHighest.copy(alpha = 0.86f),
+                                            semanticColors.panel
+                                        )
+                                    )
+                                )
                             ) {
-                                Surface(
-                                    color = ClearCutAccents.Sky.copy(alpha = 0.12f),
-                                    shape = RoundedCornerShape(Radius.md),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Sky.copy(alpha = 0.24f))
+                                Column(
+                                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Icon(
-                                        Icons.Default.VideoLibrary,
-                                        contentDescription = null,
-                                        tint = ClearCutAccents.Sky,
-                                        modifier = Modifier
-                                            .padding(10.dp)
-                                            .size(22.dp)
-                                    )
-                                }
-                                Spacer(Modifier.height(Spacing.sm))
-                                Text(
-                                    stringResource(R.string.editor_empty_title),
-                                    color = semanticColors.text,
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                                Spacer(Modifier.height(Spacing.xs))
-                                Text(
-                                    stringResource(R.string.editor_empty_body),
-                                    color = semanticColors.subtext,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    textAlign = TextAlign.Center,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(Modifier.height(Spacing.lg))
-                                val emptyAddMediaLabel = stringResource(R.string.editor_add_media)
-                                Row(
-                                    modifier = Modifier
-                                        .widthIn(min = 180.dp)
-                                        .height(TouchTarget.minimum)
-                                        .clip(RoundedCornerShape(Radius.md))
-                                        .background(ClearCutAccents.Sky)
-                                        .clickable(onClick = viewModel::showMediaPicker)
-                                        .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = semanticColors.background,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(Spacing.sm))
+                                    Surface(
+                                        color = ClearCutAccents.Sky.copy(alpha = 0.12f),
+                                        shape = RoundedCornerShape(Radius.md),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Sky.copy(alpha = 0.24f))
+                                    ) {
+                                        Icon(
+                                            Icons.Default.VideoLibrary,
+                                            contentDescription = null,
+                                            tint = ClearCutAccents.Sky,
+                                            modifier = Modifier
+                                                .padding(10.dp)
+                                                .size(22.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.height(Spacing.sm))
                                     Text(
-                                        text = emptyAddMediaLabel,
-                                        color = semanticColors.background,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        maxLines = 1,
+                                        stringResource(R.string.editor_empty_title),
+                                        color = semanticColors.text,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                    Spacer(Modifier.height(Spacing.xs))
+                                    Text(
+                                        stringResource(R.string.editor_empty_body),
+                                        color = semanticColors.subtext,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
+                                    Spacer(Modifier.height(Spacing.lg))
+                                    val emptyAddMediaLabel = stringResource(R.string.editor_add_media)
+                                    Row(
+                                        modifier = Modifier
+                                            .widthIn(min = 180.dp)
+                                            .height(TouchTarget.minimum)
+                                            .clip(RoundedCornerShape(Radius.md))
+                                            .background(ClearCutAccents.Sky)
+                                            .clickable(onClick = viewModel::showMediaPicker)
+                                            .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = null,
+                                            tint = semanticColors.background,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(Spacing.sm))
+                                        Text(
+                                            text = emptyAddMediaLabel,
+                                            color = semanticColors.background,
+                                            style = MaterialTheme.typography.labelLarge,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -858,16 +877,22 @@ fun EditorScreen(
             // ONLY flexible element in this column: it absorbs whatever the
             // wrap-content timeline and tool rail leave over, so the rail
             // always hugs the bottom edge with no dead panel space.
-            if (hasClips || hasOpenPanel) Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .heightIn(min = previewMinHeight)
+            if (hasClips || hasOpenPanel || isImmersivePreview) Box(
+                modifier = (if (isImmersivePreview) {
+                    Modifier.fillMaxSize()
+                } else {
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .heightIn(min = previewMinHeight)
+                })
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { offset ->
-                                radialMenuPosition = offset
-                                showRadialMenu = true
+                                if (!isImmersivePreview) {
+                                    radialMenuPosition = offset
+                                    showRadialMenu = true
+                                }
                             }
                         )
                     }
@@ -911,6 +936,11 @@ fun EditorScreen(
                     onToggleScopes = viewModel::toggleScopes,
                     showCompositionGuides = showCompositionGuides,
                     onToggleCompositionGuides = { showCompositionGuides = !showCompositionGuides },
+                    isFullscreenPreview = isImmersivePreview,
+                    onToggleFullscreenPreview = {
+                        isImmersivePreview = !isImmersivePreview
+                        showRadialMenu = false
+                    },
                     isSplitPreviewEnabled = state.isSplitPreviewEnabled,
                     onToggleSplitPreview = viewModel::toggleSplitPreview,
                     hasActiveEffects = selectedClip?.effects?.any { it.enabled } == true ||
@@ -919,7 +949,7 @@ fun EditorScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                if (showRadialMenu) {
+                if (!isImmersivePreview && showRadialMenu) {
                     RadialActionMenu(
                         position = radialMenuPosition,
                         hasClipSelected = isClipMode,
@@ -946,8 +976,9 @@ fun EditorScreen(
                 }
             }
 
-            // Multi-select action bar
-            if (state.selectedClipIds.size > 1) {
+            if (!isImmersivePreview) {
+                // Multi-select action bar
+                if (state.selectedClipIds.size > 1) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1061,20 +1092,20 @@ fun EditorScreen(
                 }
             }
 
-            if (state.compoundNavDepth > 0) {
-                CompoundNavBreadcrumb(
-                    breadcrumbText = state.compoundBreadcrumbText,
-                    onExit = viewModel::exitCompoundLevel,
-                )
-            }
+                if (state.compoundNavDepth > 0) {
+                    CompoundNavBreadcrumb(
+                        breadcrumbText = state.compoundBreadcrumbText,
+                        onExit = viewModel::exitCompoundLevel,
+                    )
+                }
 
-            val shouldShowTimeline = !state.isTimelineCollapsed ||
-                isClipMode ||
-                isTrimInteractionActive
+                val shouldShowTimeline = !state.isTimelineCollapsed ||
+                    isClipMode ||
+                    isTrimInteractionActive
 
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                 // Timeline — wraps its track stack between min/max bounds so
                 // the tool rail below stays snug against the timeline content.
                 if (shouldShowTimeline) {
@@ -1185,11 +1216,12 @@ fun EditorScreen(
                     },
                     onAction = editorOnAction
                 )
+                }
             }
         }
 
         // Bottom sheets / overlays
-        EditorPrimaryPanelHost(
+        if (!isImmersivePreview) EditorPrimaryPanelHost(
             state = state,
             viewModel = viewModel,
             selectedClip = selectedClip,
@@ -1211,7 +1243,7 @@ fun EditorScreen(
             }
         )
 
-        EditorAiPanelHost(
+        if (!isImmersivePreview) EditorAiPanelHost(
             state = state,
             viewModel = viewModel,
             whisperModelState = whisperState,
@@ -1222,7 +1254,7 @@ fun EditorScreen(
             inpaintingDownloadProgress = inpaintingProgress
         )
 
-        EditorClipAdjustmentPanelHost(
+        if (!isImmersivePreview) EditorClipAdjustmentPanelHost(
             state = state,
             viewModel = viewModel,
             selectedClip = selectedClip,
@@ -1230,7 +1262,7 @@ fun EditorScreen(
             context = context
         )
 
-        EditorUtilityPanelHost(
+        if (!isImmersivePreview) EditorUtilityPanelHost(
             state = state,
             viewModel = viewModel,
             selectedClip = selectedClip,
@@ -1256,7 +1288,7 @@ fun EditorScreen(
             onAction = editorOnAction
         )
 
-        EditorOverlayHost(
+        if (!isImmersivePreview) EditorOverlayHost(
             state = state,
             viewModel = viewModel,
             selectedClip = selectedClip,

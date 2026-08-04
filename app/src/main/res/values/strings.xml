@@ -701,6 +701,8 @@
     <!-- PreviewPanel -->
     <string name="preview_scopes">Scopes</string>
     <string name="preview_composition_guides">Composition guides</string>
+    <string name="preview_enter_fullscreen">Enter fullscreen preview</string>
+    <string name="preview_exit_fullscreen">Exit fullscreen preview</string>
     <string name="preview_compare">Before/after comparison</string>
     <string name="preview_compare_original">Original</string>
     <string name="preview_compare_edited">Edited</string>
