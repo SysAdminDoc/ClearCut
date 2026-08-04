@@ -215,6 +215,11 @@ class IncomingDocumentImportRouter @Inject constructor(
                 "Video effects: ${imported.effects.size}",
                 "Audio effects: ${imported.audioEffects.size}",
                 "Color grade: ${if (imported.colorGrade != null) "included" else "not included"}",
+                "LUT: ${when {
+                    imported.embeddedLut != null -> "embedded"
+                    imported.colorGrade?.lutPath != null -> "local reference"
+                    else -> "not included"
+                }}",
                 "Schema: v${validation.schemaVersion}",
                 "Content hash: ${validation.contentHash ?: "computed for legacy pack on export"}",
                 "Source: ${validation.provenanceSource ?: "not specified"}",
@@ -539,6 +544,7 @@ class IncomingDocumentImportRouter @Inject constructor(
             EffectShareEngine.EffectPackFailure.MISSING_CONTENT_HASH -> "Current-schema effect packs must include a content hash."
             EffectShareEngine.EffectPackFailure.HASH_MISMATCH -> "Effect pack content failed its integrity check."
             EffectShareEngine.EffectPackFailure.INVALID_ENTRY -> "Effect pack contains an unsupported or invalid effect entry."
+            EffectShareEngine.EffectPackFailure.INVALID_LUT -> "Effect pack contains a malformed or unsupported embedded LUT."
         }
     }
 

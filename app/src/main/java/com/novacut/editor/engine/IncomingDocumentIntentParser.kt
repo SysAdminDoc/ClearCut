@@ -18,7 +18,7 @@ enum class IncomingDocumentKind(
     EFFECT_PACK(
         displayName = "Effect pack",
         targetAction = "Validate for Effect Library",
-        maxBytes = 1_000_000L,
+        maxBytes = EffectShareEngine.MAX_EFFECT_SHARE_BYTES,
     ),
     STYLE_PACK(
         displayName = "Caption / text style pack",

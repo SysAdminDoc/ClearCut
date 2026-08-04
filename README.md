@@ -415,7 +415,7 @@ Planning files are local-only in the development checkout:
 ### Effect Library
 - Copy/paste effects between clips
 - Export effects to `.ncfx` file for sharing
-- Import effects from `.ncfx` with portable LUT references (filename-based, not absolute paths)
+- Import effects from `.ncfx` with bounded embedded LUT bytes (installed into app-local storage, never absolute paths)
 - Import `.ncstyle` caption/text style packs — validates schema, installs to local registry, merges into style gallery
 
 ### Project Management

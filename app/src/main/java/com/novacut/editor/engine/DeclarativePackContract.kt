@@ -210,7 +210,8 @@ object DeclarativePackContract {
                     canonicalJson(value.opt(index), excludedKeys)
                 }
             is String -> JSONObject.quote(value)
-            is Boolean, is Number -> value.toString()
+            is Boolean -> value.toString()
+            is Number -> JSONObject.numberToString(value)
             else -> JSONObject.quote(value.toString())
         }
     }

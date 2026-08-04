@@ -1,19 +1,28 @@
 package com.novacut.editor.engine
 
+import com.novacut.editor.model.ColorGrade
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class EffectShareEnginePackTest {
 
     private val engine = EffectShareEngine(RuntimeEnvironment.getApplication())
+
+    @get:Rule
+    val temp = TemporaryFolder()
 
     @Test
     fun legacyEffectPackRemainsReadableWithExplicitMigrationWarning() {
@@ -65,6 +74,60 @@ class EffectShareEnginePackTest {
         )
     }
 
+    @Test
+    fun exportAndImport_embeddedLutInstallsHashNamedCopy() = runBlocking {
+        val source = temp.newFile("cinematic.cube")
+        source.writeText(MINIMAL_CUBE, Charsets.UTF_8)
+        var exported: File? = null
+        var installed: File? = null
+        try {
+            val exportedFile = engine.exportEffects(
+                name = "Portable grade",
+                effects = emptyList(),
+                colorGrade = ColorGrade(lutPath = source.absolutePath),
+            ) ?: error("Expected effect export")
+            exported = exportedFile
+            val root = JSONObject(exportedFile.readText(Charsets.UTF_8))
+            val colorGrade = root.getJSONObject("colorGrade")
+            assertEquals(source.name, colorGrade.getString("lutFileName"))
+            assertTrue(colorGrade.getString("lutBase64").isNotBlank())
+            assertEquals(
+                "hash=${root.getString("contentHash")} actual=${DeclarativePackContract.contentHash(root)}",
+                root.getString("contentHash"),
+                DeclarativePackContract.contentHash(root),
+            )
+            val validation = engine.validateEffectsJson(root.toString())
+            assertEquals(EffectShareEngine.EffectPackFailure.NONE, validation.failure)
+
+            val imported = engine.importEffects(exportedFile) ?: error("Expected effect import")
+            val installedPath = imported.colorGrade?.lutPath ?: error("Expected imported LUT path")
+            val installedFile = File(installedPath)
+            installed = installedFile
+            assertTrue(installedFile.name.startsWith("ncfx_"))
+            assertArrayEquals(source.readBytes(), installedFile.readBytes())
+            assertTrue(imported.embeddedLut == null)
+        } finally {
+            exported?.delete()
+            installed?.delete()
+        }
+    }
+
+    @Test
+    fun currentEffectPackRejectsMalformedEmbeddedLut() {
+        val root = currentRoot().put(
+            "colorGrade",
+            JSONObject()
+                .put("lutFileName", "broken.cube")
+                .put("lutBase64", "not-base64"),
+        )
+        root.put("contentHash", DeclarativePackContract.contentHash(root))
+
+        assertEquals(
+            EffectShareEngine.EffectPackFailure.INVALID_LUT,
+            engine.validateEffectsJson(root.toString()).failure,
+        )
+    }
+
     private fun legacyRoot(): JSONObject = JSONObject().apply {
         put("name", "Legacy")
         put("version", 1)
@@ -81,5 +144,20 @@ class EffectShareEnginePackTest {
         put("provenance", JSONObject().put("source", "test export"))
         put("effects", JSONArray().put(JSONObject().put("type", "BRIGHTNESS")))
         put("contentHash", DeclarativePackContract.contentHash(this))
+    }
+
+    private companion object {
+        val MINIMAL_CUBE = """
+            TITLE "Minimal"
+            LUT_3D_SIZE 2
+            0 0 0
+            0 0 1
+            0 1 0
+            0 1 1
+            1 0 0
+            1 0 1
+            1 1 0
+            1 1 1
+        """.trimIndent()
     }
 }

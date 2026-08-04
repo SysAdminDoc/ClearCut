@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
+import android.util.Base64
 import android.util.Log
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -9,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,10 +23,25 @@ import javax.inject.Singleton
 class EffectShareEngine @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private companion object {
+    companion object {
         private const val TAG = "EffectShareEngine"
-        private const val MAX_EFFECT_SHARE_BYTES = 1_000_000L
+        /** Maximum serialized .ncfx size, including any embedded LUT payload. */
+        const val MAX_EFFECT_SHARE_BYTES = 8_000_000L
+        private const val MAX_EMBEDDED_LUT_BYTES = 5_000_000L
+        private const val MAX_EMBEDDED_LUT_BASE64_CHARS = 6_666_668
+        private val ALLOWED_LUT_EXTENSIONS = setOf("cube", "3dl")
+        private val BASE64_PATTERN = Regex("[A-Za-z0-9+/]*={0,2}")
     }
+
+    data class EmbeddedLut(
+        val fileName: String,
+        val bytes: ByteArray,
+    )
+
+    private data class EmbeddedLutParse(
+        val payload: EmbeddedLut? = null,
+        val invalid: Boolean = false,
+    )
 
     private val shareDir = File(context.filesDir, "shared_effects").also { it.mkdirs() }
 
@@ -38,6 +55,10 @@ class EffectShareEngine @Inject constructor(
         audioEffects: List<AudioEffect> = emptyList()
     ): File? = withContext(Dispatchers.IO) {
         try {
+            val embeddedLut = colorGrade
+                ?.takeIf { it.enabled }
+                ?.lutPath
+                ?.let(::readLutPayload)
             val json = JSONObject().apply {
                 put("name", name)
                 put("version", 1)
@@ -74,7 +95,10 @@ class EffectShareEngine @Inject constructor(
                         putSafeFloat("offsetR", colorGrade.offsetR)
                         putSafeFloat("offsetG", colorGrade.offsetG)
                         putSafeFloat("offsetB", colorGrade.offsetB)
-                        colorGrade.lutPath?.let { put("lutFileName", java.io.File(it).name) }
+                        embeddedLut?.let { lut ->
+                            put("lutFileName", lut.fileName)
+                            put("lutBase64", Base64.encodeToString(lut.bytes, Base64.NO_WRAP))
+                        }
                         putSafeFloat("lutIntensity", colorGrade.lutIntensity, default = 1f)
                     })
                 }
@@ -96,9 +120,14 @@ class EffectShareEngine @Inject constructor(
                 put("contentHash", DeclarativePackContract.contentHash(this))
             }
 
+            val serialized = json.toString(2)
+            if (serialized.toByteArray(Charsets.UTF_8).size.toLong() > MAX_EFFECT_SHARE_BYTES) {
+                Log.w(TAG, "Effect share exceeds ${MAX_EFFECT_SHARE_BYTES / 1_000_000}MB limit")
+                return@withContext null
+            }
             val sanitized = sanitizeFileName(name, fallback = "effects", maxLength = 50)
             val file = File(shareDir, "${sanitized}_${System.currentTimeMillis()}.ncfx")
-            writeUtf8TextAtomically(file, json.toString(2))
+            writeUtf8TextAtomically(file, serialized)
             file
         } catch (e: Exception) {
             Log.e(TAG, "Export effects failed", e)
@@ -117,6 +146,7 @@ class EffectShareEngine @Inject constructor(
         MISSING_CONTENT_HASH,
         HASH_MISMATCH,
         INVALID_ENTRY,
+        INVALID_LUT,
     }
 
     data class EffectPackValidation(
@@ -149,7 +179,7 @@ class EffectShareEngine @Inject constructor(
             val json = context.contentResolver.openInputStream(uri)?.use { stream ->
                 readUtf8WithByteLimit(stream, MAX_EFFECT_SHARE_BYTES)
             } ?: return@withContext null
-            validateEffectsJson(json).imported
+            validateEffectsJson(json).imported?.let(::installEmbeddedLut)
         } catch (e: Exception) {
             Log.e(TAG, "Import effects failed", e)
             null
@@ -162,12 +192,12 @@ class EffectShareEngine @Inject constructor(
     suspend fun importEffects(file: File): ImportedEffects? = withContext(Dispatchers.IO) {
         try {
             if (file.length() > MAX_EFFECT_SHARE_BYTES) {
-                Log.w(TAG, "Effect share file exceeds 1MB limit")
+                Log.w(TAG, "Effect share file exceeds ${MAX_EFFECT_SHARE_BYTES / 1_000_000}MB limit")
                 return@withContext null
             }
             validateEffectsJson(file.inputStream().use { input ->
                 readUtf8WithByteLimit(input, MAX_EFFECT_SHARE_BYTES)
-            }).imported
+            }).imported?.let(::installEmbeddedLut)
         } catch (e: Exception) {
             Log.e(TAG, "Import effects failed", e)
             null
@@ -242,6 +272,17 @@ class EffectShareEngine @Inject constructor(
             // Parse color grade
             var colorGrade: ColorGrade? = null
             val cg = json.optJSONObject("colorGrade")
+            val embeddedLutParse = cg?.let(::parseEmbeddedLut) ?: EmbeddedLutParse()
+            if (embeddedLutParse.invalid) {
+                return EffectPackValidation(
+                    failure = EffectPackFailure.INVALID_LUT,
+                    schemaVersion = envelope.schemaVersion,
+                    contentHash = envelope.contentHash,
+                    provenanceSource = envelope.source,
+                    warnings = listOf("Embedded LUT is malformed, oversized, or uses an unsupported format."),
+                )
+            }
+            val embeddedLut = embeddedLutParse.payload
             if (cg != null) {
                 colorGrade = ColorGrade(
                     enabled = true,
@@ -257,16 +298,19 @@ class EffectShareEngine @Inject constructor(
                     offsetR = safeFloat(cg.optDouble("offsetR", 0.0), default = 0f),
                     offsetG = safeFloat(cg.optDouble("offsetG", 0.0), default = 0f),
                     offsetB = safeFloat(cg.optDouble("offsetB", 0.0), default = 0f),
-                    // .ncfx carries only the LUT *filename*, not its bytes, so a
-                    // referenced LUT usually does not exist in luts/. Only keep the
-                    // path when the file is actually present — otherwise a filename
-                    // collision could apply an unrelated project's LUT.
-                    lutPath = cg.optString("lutFileName", "")
-                        .ifEmpty { cg.optString("lutPath", "") }
-                        .ifEmpty { null }
-                        ?.let(::normalizeImportedLutPath)
-                        ?.takeIf { it.isFile }
-                        ?.absolutePath,
+                    // Embedded LUTs are installed after validation/import. Legacy
+                    // filename-only references are accepted only when that exact
+                    // filename already exists in the app-local LUT registry.
+                    lutPath = if (embeddedLut != null) {
+                        null
+                    } else {
+                        cg.optString("lutFileName", "")
+                            .ifEmpty { cg.optString("lutPath", "") }
+                            .ifEmpty { null }
+                            ?.let(::normalizeImportedLutPath)
+                            ?.takeIf { it.isFile }
+                            ?.absolutePath
+                    },
                     lutIntensity = safeFloat(cg.optDouble("lutIntensity", 1.0), default = 1f).coerceIn(0f, 1f)
                 )
             }
@@ -318,6 +362,7 @@ class EffectShareEngine @Inject constructor(
                 effects = effects,
                 colorGrade = colorGrade,
                 audioEffects = audioEffects,
+                embeddedLut = embeddedLut,
                 schemaVersion = envelope.schemaVersion,
                 contentHash = envelope.contentHash.orEmpty(),
                 provenanceSource = envelope.source,
@@ -353,13 +398,114 @@ class EffectShareEngine @Inject constructor(
         return canonicalFile.delete()
     }
 
-    private fun normalizeImportedLutPath(rawPath: String): File? {
+    private fun readLutPayload(rawPath: String): EmbeddedLut? {
+        val source = File(rawPath)
+        val fileName = normalizeLutFileName(source.name) ?: return null
+        if (!source.isFile || source.length() <= 0L || source.length() > MAX_EMBEDDED_LUT_BYTES) return null
+        val bytes = runCatching {
+            ByteArrayOutputStream(source.length().toInt()).also { output ->
+                source.inputStream().use { input ->
+                    copyWithLimit(input, output, MAX_EMBEDDED_LUT_BYTES)
+                }
+            }.toByteArray()
+        }.getOrNull() ?: return null
+        val payload = EmbeddedLut(fileName = fileName, bytes = bytes)
+        return payload.takeIf { parseLut(source) != null }
+    }
+
+    private fun parseEmbeddedLut(colorGrade: JSONObject): EmbeddedLutParse {
+        if (!colorGrade.has("lutBase64")) return EmbeddedLutParse()
+        val rawBase64 = colorGrade.opt("lutBase64") as? String ?: return EmbeddedLutParse(invalid = true)
+        val compactBase64 = rawBase64.filterNot { it.isWhitespace() }
+        val fileName = normalizeLutFileName(colorGrade.optString("lutFileName", ""))
+            ?: return EmbeddedLutParse(invalid = true)
+        if (
+            compactBase64.isEmpty() ||
+            compactBase64.length > MAX_EMBEDDED_LUT_BASE64_CHARS ||
+            !BASE64_PATTERN.matches(compactBase64)
+        ) {
+            return EmbeddedLutParse(invalid = true)
+        }
+        val bytes = runCatching { Base64.decode(compactBase64, Base64.DEFAULT) }.getOrNull()
+            ?: return EmbeddedLutParse(invalid = true)
+        if (
+            bytes.isEmpty() ||
+            bytes.size.toLong() > MAX_EMBEDDED_LUT_BYTES ||
+            Base64.encodeToString(bytes, Base64.NO_WRAP) != compactBase64
+        ) {
+            return EmbeddedLutParse(invalid = true)
+        }
+        val payload = EmbeddedLut(fileName = fileName, bytes = bytes)
+        return if (isValidLutPayload(payload)) {
+            EmbeddedLutParse(payload = payload)
+        } else {
+            EmbeddedLutParse(invalid = true)
+        }
+    }
+
+    private fun isValidLutPayload(payload: EmbeddedLut): Boolean {
+        val extension = payload.fileName.substringAfterLast('.', "").lowercase()
+        val validationDir = File(context.cacheDir, "effect-lut-validation").also { it.mkdirs() }
+        val temporary = runCatching {
+            File.createTempFile("ncfx-lut-", ".${extension}", validationDir)
+        }.getOrNull() ?: return false
+        return try {
+            temporary.outputStream().use { it.write(payload.bytes) }
+            parseLut(temporary) != null
+        } catch (_: Exception) {
+            false
+        } finally {
+            temporary.delete()
+        }
+    }
+
+    private fun installEmbeddedLut(imported: ImportedEffects): ImportedEffects? {
+        val embeddedLut = imported.embeddedLut ?: return imported
+        val grade = imported.colorGrade ?: return null
+        val digest = DeclarativePackContract.sha256Hex(embeddedLut.bytes).take(16)
+        val targetName = sanitizeFileNamePreservingExtension(
+            raw = "ncfx_${digest}_${embeddedLut.fileName}",
+            fallbackStem = "embedded_lut",
+            maxLength = 80,
+        )
+        val lutDir = File(context.filesDir, "luts").also { it.mkdirs() }
+        val target = File(lutDir, targetName)
+        var replaced = false
+        val installed = runCatching {
+            writeFileAtomically(target, requireNonEmpty = true) { temporary ->
+                temporary.outputStream().use { it.write(embeddedLut.bytes) }
+            }
+            replaced = true
+            parseLut(target) != null
+        }.getOrDefault(false)
+        if (!installed && replaced) {
+            target.delete()
+            return null
+        }
+        if (!installed) return null
+        return imported.copy(
+            colorGrade = grade.copy(lutPath = target.absolutePath),
+            embeddedLut = null,
+        )
+    }
+
+    private fun parseLut(file: File): LutEngine.Lut3D? = when (file.extension.lowercase()) {
+        "cube" -> LutEngine.parseCube(file)
+        "3dl" -> LutEngine.parse3dl(file)
+        else -> null
+    }
+
+    private fun normalizeLutFileName(rawPath: String): String? {
         val safeName = sanitizeFileNamePreservingExtension(
             raw = File(rawPath).name,
             fallbackStem = "lut",
-            maxLength = 80
+            maxLength = 80,
         )
-        return safeName.takeIf { it.contains('.') }?.let { File(File(context.filesDir, "luts"), it) }
+        return safeName.takeIf { it.substringAfterLast('.', "").lowercase() in ALLOWED_LUT_EXTENSIONS }
+    }
+
+    private fun normalizeImportedLutPath(rawPath: String): File? {
+        return normalizeLutFileName(rawPath)?.let { File(File(context.filesDir, "luts"), it) }
     }
 
     private fun safeFloat(value: Double, default: Float): Float {
@@ -378,6 +524,7 @@ data class ImportedEffects(
     val effects: List<Effect>,
     val colorGrade: ColorGrade?,
     val audioEffects: List<AudioEffect>,
+    val embeddedLut: EffectShareEngine.EmbeddedLut? = null,
     val schemaVersion: Int = DeclarativePackContract.LEGACY_SCHEMA_VERSION,
     val contentHash: String = "",
     val provenanceSource: String? = null,

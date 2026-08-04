@@ -50,6 +50,22 @@ class DeclarativePackContractTest {
     }
 
     @Test
+    fun canonicalHashSurvivesJsonRoundTripForFloatingPointPayloads() {
+        val root = JSONObject().apply {
+            put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
+            put("packType", "effect")
+            put("provenance", JSONObject().put("source", "test"))
+            put("value", 0.0)
+        }
+        val serialized = root.toString()
+
+        assertEquals(
+            DeclarativePackContract.contentHash(root),
+            DeclarativePackContract.contentHash(JSONObject(serialized)),
+        )
+    }
+
+    @Test
     fun futureAndWrongKindSchemasAreBlocked() {
         val invalid = currentRoot().put("schemaVersion", "two")
         assertEquals(

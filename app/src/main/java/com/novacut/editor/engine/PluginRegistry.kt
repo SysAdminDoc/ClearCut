@@ -14,8 +14,8 @@ import java.util.Locale
  *
  *   - `.clearcut-template`  — project templates (existing).
  *   - `.ncfx`              — effect packs (chains of ClearCut effects,
- *                            including portable LUT references that are
- *                            filename-based not absolute-path-based).
+ *                            including bounded embedded LUT bytes when
+ *                            available, never absolute-path-based references).
  *   - `.ncstyle`           — caption + text style packs.
  *   - `.cube` / `.3dl`     — 3D LUT files (already importable via LutEngine;
  *                            promoted to first-class plugin so the share
