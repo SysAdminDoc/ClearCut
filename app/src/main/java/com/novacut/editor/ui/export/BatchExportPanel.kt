@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +51,7 @@ fun BatchExportPanel(
     queue: List<BatchExportItem>,
     onAddItem: (ExportConfig, String) -> Unit,
     onRemoveItem: (String) -> Unit,
+    onRetryItem: (String) -> Unit,
     onStartBatch: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -63,8 +65,11 @@ fun BatchExportPanel(
     val completedCount = queue.count { it.status == BatchExportStatus.COMPLETED }
     val failedCount = queue.count { it.status == BatchExportStatus.FAILED }
     val cancelledCount = queue.count { it.status == BatchExportStatus.CANCELLED }
+    val interruptedCount = queue.count { it.status == BatchExportStatus.INTERRUPTED }
+    val reviewCount = queue.count { it.status == BatchExportStatus.REVIEW_REQUIRED }
     val activeLabel = when {
         inProgressCount > 0 -> "$inProgressCount active"
+        reviewCount + interruptedCount > 0 -> "${reviewCount + interruptedCount} needs review"
         failedCount > 0 -> "$failedCount needs attention"
         completedCount > 0 -> "$completedCount done"
         else -> stringResource(R.string.batch_export_status_ready)
@@ -158,6 +163,18 @@ fun BatchExportPanel(
                     PremiumPanelPill(
                         text = "$cancelledCount cancelled",
                         accent = ClearCutAccents.Yellow
+                    )
+                }
+                if (interruptedCount > 0) {
+                    PremiumPanelPill(
+                        text = "$interruptedCount interrupted",
+                        accent = ClearCutAccents.Yellow
+                    )
+                }
+                if (reviewCount > 0) {
+                    PremiumPanelPill(
+                        text = "$reviewCount review",
+                        accent = ClearCutAccents.Red
                     )
                 }
             }
@@ -288,14 +305,15 @@ fun BatchExportPanel(
                     queue.forEach { item ->
                         BatchExportItemRow(
                             item = item,
-                            onRemove = { onRemoveItem(item.id) }
+                            onRemove = { onRemoveItem(item.id) },
+                            onRetry = { onRetryItem(item.id) },
                         )
                     }
                 }
             }
         }
 
-        if (queue.isNotEmpty()) {
+        if (queuedCount > 0) {
             Spacer(modifier = Modifier.height(12.dp))
 
             PremiumPanelCard(accent = ClearCutAccents.Green) {
@@ -321,7 +339,7 @@ fun BatchExportPanel(
                         contentDescription = stringResource(R.string.cd_batch_export)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.batch_export_export_all, queue.size))
+                    Text(text = stringResource(R.string.batch_export_export_all, queuedCount))
                 }
             }
         }
@@ -355,7 +373,8 @@ private fun UtilityExportChip(
 @Composable
 private fun BatchExportItemRow(
     item: BatchExportItem,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onRetry: () -> Unit,
 ) {
     val semanticColors = LocalClearCutColors.current
     val accent = when (item.status) {
@@ -364,6 +383,8 @@ private fun BatchExportItemRow(
         BatchExportStatus.COMPLETED -> ClearCutAccents.Green
         BatchExportStatus.FAILED -> ClearCutAccents.Red
         BatchExportStatus.CANCELLED -> ClearCutAccents.Yellow
+        BatchExportStatus.INTERRUPTED -> ClearCutAccents.Yellow
+        BatchExportStatus.REVIEW_REQUIRED -> ClearCutAccents.Red
     }
     val statusLabel = when (item.status) {
         BatchExportStatus.QUEUED -> stringResource(R.string.batch_export_status_queued)
@@ -371,8 +392,16 @@ private fun BatchExportItemRow(
         BatchExportStatus.COMPLETED -> stringResource(R.string.batch_export_done_cd)
         BatchExportStatus.FAILED -> stringResource(R.string.batch_export_failed_cd)
         BatchExportStatus.CANCELLED -> stringResource(R.string.batch_export_cancelled_cd)
+        BatchExportStatus.INTERRUPTED -> stringResource(R.string.batch_export_interrupted_cd)
+        BatchExportStatus.REVIEW_REQUIRED -> stringResource(R.string.batch_export_review_required_cd)
     }
     val removable = item.status != BatchExportStatus.IN_PROGRESS
+    val retryable = item.status in setOf(
+        BatchExportStatus.FAILED,
+        BatchExportStatus.CANCELLED,
+        BatchExportStatus.INTERRUPTED,
+        BatchExportStatus.REVIEW_REQUIRED,
+    )
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -420,6 +449,15 @@ private fun BatchExportItemRow(
                         accent = accent
                     )
 
+                    if (retryable) {
+                        PremiumPanelIconButton(
+                            icon = Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.batch_export_retry_cd),
+                            onClick = onRetry,
+                            tint = ClearCutAccents.Green,
+                        )
+                    }
+
                     if (removable) {
                         PremiumPanelIconButton(
                             icon = Icons.Default.Close,
@@ -457,6 +495,18 @@ private fun BatchExportItemRow(
                         color = semanticColors.subtext
                     )
                 }
+            }
+
+            item.errorMessage?.takeIf { it.isNotBlank() }?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (item.status == BatchExportStatus.REVIEW_REQUIRED) {
+                        ClearCutAccents.Red
+                    } else {
+                        semanticColors.subtext
+                    },
+                )
             }
         }
     }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">ClearCut</string>
     <!-- Importación de listas de cortes y marcadores -->
     <string name="cut_list_import_empty">No hay nada que importar: primero pega rangos de tiempo o marcadores</string>
@@ -887,6 +887,9 @@
     <string name="batch_export_done_cd">hecho</string>
     <string name="batch_export_failed_cd">Fallido</string>
     <string name="batch_export_cancelled_cd">Cancelado</string>
+    <string name="batch_export_interrupted_cd">Interrumpido</string>
+    <string name="batch_export_review_required_cd">Revisión necesaria</string>
+    <string name="batch_export_retry_cd">Reintentar</string>
     <string name="batch_export_suffix_audio_only">Sólo audio</string>
     <string name="batch_export_suffix_stems">Tallos</string>
     <string name="batch_export_queue_title">Cola de entrega</string>
@@ -901,6 +904,12 @@
     <string name="batch_export_status_ready">Listo</string>
     <string name="batch_export_status_queued">En cola</string>
     <string name="batch_export_status_in_progress">Exportación en curso</string>
+    <string name="batch_export_review_required_toast">Revise el elemento cambiado antes de reintentarlo</string>
+    <string name="batch_export_no_queued_items_toast">No hay elementos en cola listos para exportar</string>
+    <plurals name="batch_export_queue_limit" tools:ignore="MissingQuantity">
+        <item quantity="one">La cola por lotes está limitada a %1$d elemento</item>
+        <item quantity="other">Las colas por lotes están limitadas a %1$d elementos</item>
+    </plurals>
     <string name="state_on">encendido</string>
     <string name="state_off">Apagado</string>
     <string name="media_picker_title">Agregar medios</string>
@@ -2672,7 +2681,6 @@
     <string name="export_file_unavailable_toast">El archivo de exportación ya no está disponible</string>
     <string name="export_no_media_toast">No hay medios exportados</string>
     <string name="export_file_not_found_toast">Archivo de exportación no encontrado</string>
-    <string name="export_add_items_first_toast">Agregue elementos de exportación primero</string>
     <string name="export_batch_progress_toast">Exportando %1$s/%2$s: %3$s</string>
     <string name="export_rendering_preview_toast">Renderizando vista previa a 480p...</string>
 

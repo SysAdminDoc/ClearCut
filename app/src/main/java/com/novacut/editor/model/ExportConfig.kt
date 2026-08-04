@@ -277,11 +277,24 @@ data class BatchExportItem(
     val id: String = UUID.randomUUID().toString(),
     val config: ExportConfig,
     val outputName: String,
+    val projectId: String = "",
+    val projectFingerprint: String = "",
+    val configFingerprint: String = "",
     val status: BatchExportStatus = BatchExportStatus.QUEUED,
-    val progress: Float = 0f
+    val progress: Float = 0f,
+    val errorMessage: String? = null,
+    val createdAtEpochMs: Long = System.currentTimeMillis()
 )
 
-enum class BatchExportStatus { QUEUED, IN_PROGRESS, COMPLETED, FAILED, CANCELLED }
+enum class BatchExportStatus {
+    QUEUED,
+    IN_PROGRESS,
+    COMPLETED,
+    FAILED,
+    CANCELLED,
+    INTERRUPTED,
+    REVIEW_REQUIRED
+}
 
 /**
  * Burn-in watermark applied across every video frame during export. `null`

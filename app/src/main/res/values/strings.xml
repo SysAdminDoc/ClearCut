@@ -926,6 +926,9 @@
     <string name="batch_export_done_cd">Done</string>
     <string name="batch_export_failed_cd">Failed</string>
     <string name="batch_export_cancelled_cd">Cancelled</string>
+    <string name="batch_export_interrupted_cd">Interrupted</string>
+    <string name="batch_export_review_required_cd">Review required</string>
+    <string name="batch_export_retry_cd">Retry</string>
     <string name="batch_export_suffix_audio_only">Audio Only</string>
     <string name="batch_export_suffix_stems">Stems</string>
     <string name="batch_export_queue_title">Delivery Queue</string>
@@ -940,6 +943,12 @@
     <string name="batch_export_status_ready">Ready</string>
     <string name="batch_export_status_queued">Queued</string>
     <string name="batch_export_status_in_progress">Export in progress</string>
+    <string name="batch_export_review_required_toast">Review the changed batch item before retrying</string>
+    <string name="batch_export_no_queued_items_toast">No queued items are ready to export</string>
+    <plurals name="batch_export_queue_limit">
+        <item quantity="one">Batch queue is limited to %1$d item</item>
+        <item quantity="other">Batch queues are limited to %1$d items</item>
+    </plurals>
     <string name="state_on">On</string>
     <string name="state_off">Off</string>
 
@@ -2945,7 +2954,6 @@
     <string name="export_file_unavailable_toast">Export file no longer available</string>
     <string name="export_no_media_toast">No exported media</string>
     <string name="export_file_not_found_toast">Export file not found</string>
-    <string name="export_add_items_first_toast">Add export items first</string>
     <string name="export_batch_progress_toast">Exporting %1$s/%2$s: %3$s</string>
     <string name="export_rendering_preview_toast">Rendering preview at 480p...</string>
 

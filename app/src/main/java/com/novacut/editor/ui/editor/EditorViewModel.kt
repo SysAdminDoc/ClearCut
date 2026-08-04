@@ -751,6 +751,7 @@ class EditorViewModel @Inject constructor(
         appVersion = com.novacut.editor.ClearCutApp.VERSION,
         ffmpegEngine = ffmpegEngine,
         includeDiagnosticRawErrorText = { latestSettings?.includeDiagnosticRawErrorText == true },
+        projectFingerprint = ::currentProjectFingerprint,
     )
 
     val aiToolsDelegate = AiToolsDelegate(
@@ -1003,6 +1004,12 @@ class EditorViewModel @Inject constructor(
             // surfaced and preserved instead of being silently treated as
             // missing and overwritten by the next autosave tick.
             handleRecoveryOpenOutcome(requireNotNull(openResult.recovery))
+            exportDelegate.restoreBatchExportQueue(
+                com.novacut.editor.engine.BatchExportPlanContext(
+                    projectId = _state.value.project.id,
+                    projectFingerprint = currentProjectFingerprint(),
+                )
+            )
         }
 
         viewModelScope.launch {
@@ -2385,6 +2392,7 @@ class EditorViewModel @Inject constructor(
     fun hideBatchExport() = exportDelegate.hideBatchExport()
     fun addBatchExportItem(config: ExportConfig, name: String) = exportDelegate.addBatchExportItem(config, name)
     fun removeBatchExportItem(id: String) = exportDelegate.removeBatchExportItem(id)
+    fun retryBatchExportItem(id: String) = exportDelegate.retryBatchExportItem(id)
     fun startBatchExport() = exportDelegate.startBatchExport()
 
     // --- Effect Keyframes ---

@@ -12,6 +12,8 @@ import androidx.core.content.FileProvider
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
+import com.novacut.editor.engine.BatchExportPlanContext
+import com.novacut.editor.engine.BatchExportPlanStore
 import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
 import com.novacut.editor.engine.ExportHistoryStatus
@@ -40,6 +42,7 @@ import com.novacut.editor.engine.exportMimeTypeFor
 import com.novacut.editor.engine.exportUsesAudioCollection
 import com.novacut.editor.engine.exportUsesImageCollection
 import com.novacut.editor.engine.exportStorageFailureMessage
+import com.novacut.editor.engine.exportConfigFingerprint
 import com.novacut.editor.engine.querySourceSize
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.writeFileAtomically
@@ -57,8 +60,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
 import com.novacut.editor.engine.RedactedLog
 
@@ -86,6 +92,7 @@ class ExportDelegate(
     private val appVersion: String = "unknown",
     private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine? = null,
     private val includeDiagnosticRawErrorText: () -> Boolean = { false },
+    private val projectFingerprint: (EditorState) -> String = { "" },
 ) {
     private fun text(resId: Int, vararg args: Any): String =
         appContext.getString(resId, *args)
@@ -114,6 +121,11 @@ class ExportDelegate(
     @Volatile private var acceptedFallbackNote: String? = null
     private class NoGifFramesException : Exception()
     private val exportHistoryStore = ExportHistoryStore.forContext(appContext)
+    private val batchExportPlanStore = BatchExportPlanStore.forContext(appContext)
+    private val batchPlanWriteMutex = Mutex()
+    private val batchPlanWriteRevision = AtomicLong(0L)
+    @Volatile private var batchPlanContext: BatchExportPlanContext? = null
+    @Volatile private var batchExportJob: kotlinx.coroutines.Job? = null
 
     private inline fun updateExport(transform: (EditorExportDomainState) -> EditorExportDomainState) {
         stateFlow.update { it.copyExport(transform) }
@@ -1700,6 +1712,61 @@ class ExportDelegate(
     }
 
     // --- Batch Export ---
+    private fun currentBatchPlanContext(state: EditorState = stateFlow.value): BatchExportPlanContext {
+        return BatchExportPlanContext(
+            projectId = state.project.id,
+            projectFingerprint = projectFingerprint(state),
+        )
+    }
+
+    private fun persistBatchPlan(
+        items: List<BatchExportItem> = stateFlow.value.batchExportQueue,
+        context: BatchExportPlanContext = batchPlanContext ?: currentBatchPlanContext().also {
+            batchPlanContext = it
+        },
+    ) {
+        val revision = batchPlanWriteRevision.incrementAndGet()
+        scope.launch(Dispatchers.IO) {
+            batchPlanWriteMutex.withLock {
+                // A progress/status burst can enqueue several writes. Only the
+                // newest snapshot should reach disk; each write is still atomic.
+                if (revision != batchPlanWriteRevision.get()) return@withLock
+                runCatching { batchExportPlanStore.saveFor(context, items) }
+                    .onFailure { error ->
+                        Log.w("ExportDelegate", "Batch export plan persistence failed", error)
+                    }
+            }
+        }
+    }
+
+    private fun updateBatchQueue(
+        persist: Boolean = true,
+        transform: (List<BatchExportItem>) -> List<BatchExportItem>,
+    ) {
+        stateFlow.update { state ->
+            state.copyExport { export -> export.copy(batchQueue = transform(state.batchExportQueue)) }
+        }
+        if (persist) persistBatchPlan()
+    }
+
+    /** Restore unfinished work after the Room/autosave project is known. */
+    fun restoreBatchExportQueue(context: BatchExportPlanContext) {
+        batchPlanContext = context
+        val restored = batchExportPlanStore.readFor(context)
+        if (restored.isEmpty()) return
+        val effectiveQueue = if (stateFlow.value.batchExportQueue.isEmpty()) {
+            stateFlow.update { state ->
+                state.copyExport { export -> export.copy(batchQueue = restored) }
+            }
+            restored
+        } else {
+            stateFlow.value.batchExportQueue
+        }
+        // Persist the normalized statuses so a second restart sees the same
+        // interrupted/review-required explanation even before opening the panel.
+        persistBatchPlan(effectiveQueue, context)
+    }
+
     fun showBatchExport() {
         pauseIfPlaying()
         stateFlow.update {
@@ -1716,24 +1783,101 @@ class ExportDelegate(
     }
 
     fun addBatchExportItem(config: ExportConfig, name: String) {
-        val item = BatchExportItem(config = config, outputName = name)
-        updateExport { it.copy(batchQueue = it.batchQueue + item) }
+        if (stateFlow.value.batchExportQueue.size >= BatchExportPlanStore.MAX_ITEMS) {
+            showToast(
+                appContext.resources.getQuantityString(
+                    R.plurals.batch_export_queue_limit,
+                    BatchExportPlanStore.MAX_ITEMS,
+                    BatchExportPlanStore.MAX_ITEMS,
+                )
+            )
+            return
+        }
+        val context = batchPlanContext ?: currentBatchPlanContext().also { batchPlanContext = it }
+        val item = BatchExportItem(
+            config = config,
+            outputName = name,
+            projectId = context.projectId,
+            projectFingerprint = context.projectFingerprint,
+            configFingerprint = exportConfigFingerprint(config),
+        )
+        updateBatchQueue { queue -> queue + item }
     }
 
     fun removeBatchExportItem(id: String) {
-        updateExport { export -> export.copy(batchQueue = export.batchQueue.filter { it.id != id }) }
+        updateBatchQueue { queue -> queue.filter { it.id != id } }
+    }
+
+    /** Retry is always an explicit user action and refreshes both fingerprints. */
+    fun retryBatchExportItem(id: String) {
+        val context = currentBatchPlanContext().also { batchPlanContext = it }
+        updateBatchQueue { queue ->
+            queue.map { item ->
+                if (item.id == id && item.status in setOf(
+                        BatchExportStatus.FAILED,
+                        BatchExportStatus.CANCELLED,
+                        BatchExportStatus.INTERRUPTED,
+                        BatchExportStatus.REVIEW_REQUIRED,
+                    )
+                ) {
+                    item.copy(
+                        projectId = context.projectId,
+                        projectFingerprint = context.projectFingerprint,
+                        configFingerprint = exportConfigFingerprint(item.config),
+                        status = BatchExportStatus.QUEUED,
+                        progress = 0f,
+                        errorMessage = null,
+                    )
+                } else {
+                    item
+                }
+            }
+        }
     }
 
     fun startBatchExport() {
+        if (batchExportJob?.isActive == true) {
+            showToast(text(R.string.export_already_in_progress_toast))
+            return
+        }
+        val currentContext = currentBatchPlanContext().also { batchPlanContext = it }
+        val currentQueue = stateFlow.value.batchExportQueue
+        val staleIds = currentQueue
+            .filter { it.status == BatchExportStatus.QUEUED }
+            .filter { item ->
+                item.projectId != currentContext.projectId ||
+                    item.projectFingerprint != currentContext.projectFingerprint ||
+                    item.configFingerprint != exportConfigFingerprint(item.config)
+            }
+            .map { it.id }
+        if (staleIds.isNotEmpty()) {
+            updateBatchQueue { queue ->
+                queue.map { item ->
+                    if (item.id in staleIds) {
+                        item.copy(
+                            status = BatchExportStatus.REVIEW_REQUIRED,
+                            progress = 0f,
+                            errorMessage = "The project or export settings changed after this job was queued.",
+                        )
+                    } else {
+                        item
+                    }
+                }
+            }
+            showToast(text(R.string.batch_export_review_required_toast))
+            return
+        }
         // Snapshot the queue and per-item configs up front so UI-side config
         // changes that happen while exports are running can't corrupt the batch.
-        val queue = stateFlow.value.batchExportQueue.toList()
+        val queue = stateFlow.value.batchExportQueue
+            .filter { it.status == BatchExportStatus.QUEUED }
+            .toList()
         if (queue.isEmpty()) {
-            showToast(appContext.getString(R.string.export_add_items_first_toast))
+            showToast(text(R.string.batch_export_no_queued_items_toast))
             return
         }
         hideBatchExport()
-        scope.launch {
+        batchExportJob = scope.launch {
             val outputDir = File(
                 appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: appContext.filesDir,
                 "ClearCut"
@@ -1767,13 +1911,17 @@ class ExportDelegate(
             val originalConfig = stateFlow.value.exportConfig
             try {
                 for ((index, item) in queue.withIndex()) {
-                    stateFlow.update { s ->
-                        s.copyExport { export ->
-                            export.copy(
-                                batchQueue = s.batchExportQueue.map {
-                                    if (it.id == item.id) it.copy(status = BatchExportStatus.IN_PROGRESS) else it
-                                }
-                            )
+                    updateBatchQueue { items ->
+                        items.map {
+                            if (it.id == item.id) {
+                                it.copy(
+                                    status = BatchExportStatus.IN_PROGRESS,
+                                    progress = 0f,
+                                    errorMessage = null,
+                                )
+                            } else {
+                                it
+                            }
                         }
                     }
                     showToast(
@@ -1801,17 +1949,13 @@ class ExportDelegate(
                         stateFlow.map { it.exportProgress }
                             .distinctUntilChanged()
                             .collect { progress ->
-                            stateFlow.update { s ->
-                                s.copyExport { export ->
-                                    export.copy(
-                                        batchQueue = s.batchExportQueue.map {
-                                            if (it.id == item.id) it.copy(progress = progress) else it
-                                        }
-                                    )
+                                updateBatchQueue(persist = false) { items ->
+                                    items.map {
+                                        if (it.id == item.id) it.copy(progress = progress) else it
+                                    }
                                 }
                             }
                         }
-                    }
                     val result = try {
                         stateFlow.map { it.exportState }
                             .distinctUntilChanged()
@@ -1834,13 +1978,21 @@ class ExportDelegate(
                     // errored partway through, and "99% COMPLETED" on a job whose progress
                     // collector got cancelled before observing the final 1.0 tick.
                     val finalProgress = if (result == ExportState.COMPLETE) 1f else 0f
-                    stateFlow.update { s ->
-                        s.copyExport { export ->
-                            export.copy(
-                                batchQueue = s.batchExportQueue.map {
-                                    if (it.id == item.id) it.copy(status = newStatus, progress = finalProgress) else it
-                                }
-                            )
+                    updateBatchQueue { items ->
+                        items.map {
+                            if (it.id == item.id) {
+                                it.copy(
+                                    status = newStatus,
+                                    progress = finalProgress,
+                                    errorMessage = if (newStatus == BatchExportStatus.FAILED) {
+                                        stateFlow.value.exportErrorMessage
+                                    } else {
+                                        null
+                                    },
+                                )
+                            } else {
+                                it
+                            }
                         }
                     }
                     // Stop the batch when the user explicitly cancels — continuing onto the
@@ -1851,6 +2003,7 @@ class ExportDelegate(
                 }
             } finally {
                 updateExport { it.copy(config = originalConfig) }
+                batchExportJob = null
             }
             val finalQueue = stateFlow.value.batchExportQueue
             val completedCount = finalQueue.count { it.status == BatchExportStatus.COMPLETED }
