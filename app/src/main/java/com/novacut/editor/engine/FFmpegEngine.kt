@@ -348,6 +348,49 @@ class FFmpegEngine @Inject constructor(
     }
 
     /**
+     * Convert one embedded subtitle stream into a portable local sidecar.
+     *
+     * The stream index comes from [MediaExtractor], so the mapping is explicit
+     * and cannot accidentally export the first subtitle stream from a source
+     * that contains several languages. Only text sidecar formats are accepted;
+     * bitmap subtitles are reported as unsupported by the caller.
+     */
+    suspend fun extractSubtitleTrack(
+        inputUri: Uri,
+        trackIndex: Int,
+        format: MetadataSidecarFormat,
+        outputFile: File,
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (trackIndex < 0 || format !in setOf(MetadataSidecarFormat.VTT, MetadataSidecarFormat.SRT)) {
+            return@withContext false
+        }
+        val violation = NativeProcessingPolicy.validateVideoUri(
+            context,
+            inputUri,
+            "extractSubtitleTrack",
+        )
+        if (violation != null) return@withContext NativeProcessingPolicy.logAndReject(violation)
+        outputFile.parentFile?.mkdirs()
+        outputFile.delete()
+        val (codec, muxer) = when (format) {
+            MetadataSidecarFormat.VTT -> "webvtt" to "webvtt"
+            MetadataSidecarFormat.SRT -> "subrip" to "srt"
+            else -> return@withContext false
+        }
+        executeArguments(
+            listOf(
+                "-y",
+                "-i", ffmpegInput(inputUri),
+                "-map", "0:$trackIndex",
+                "-map_metadata", "-1",
+                "-c:s", codec,
+                "-f", muxer,
+                outputFile.absolutePath,
+            )
+        ) == 0 && outputFile.isFile && outputFile.length() > 0L
+    }
+
+    /**
      * Loudness normalization via FFmpeg loudnorm filter. The first wired path
      * uses FFmpeg's single-pass linear analysis; exact two-pass JSON analysis
      * can layer onto [execute] without changing callers.

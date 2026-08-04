@@ -304,6 +304,7 @@ Planning files are local-only in the development checkout:
 - **Gap-safe linked ripple delete** — single and multi-delete share one locked-track-aware planner that expands linked/grouped clips without compacting unrelated tracks or intentional gaps
 - **Retimed live preview** — constant-speed and ramped clips seek to the correct source frame, keep the playhead aligned, and refresh speed/volume immediately across cuts
 - **WYSIWYG overlays and recovery** — titles, stickers, and images stay visible across timeline gaps; decoder failures offer a direct Media Manager recovery path
+- **Local metadata sidecars** — Media Manager detects embedded subtitle/GPS-like tracks, exports text subtitles as VTT/SRT and NMEA/container locations as GPX/CSV, and explains unsupported telemetry without network access
 - **Slip/slide editing** — drag clip body to slide (reposition) or slip (shift source window)
 - **Magnetic snapping** — clips snap to edges, playhead, and markers (8dp threshold with diamond indicators)
 - **Clip grouping** — select multiple clips, group/ungroup, move as a unit
@@ -477,7 +478,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (90 injectable singletons across 204 files)
+├── engine/                 # Core engines (91 injectable singletons across 205 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)

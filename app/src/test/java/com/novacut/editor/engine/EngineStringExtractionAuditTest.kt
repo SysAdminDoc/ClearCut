@@ -82,13 +82,14 @@ class EngineStringExtractionAuditTest {
         // 2026-08-04: 201 after Media3 export robustness settings.
         // 2026-08-04: 202 after startup cleanup for orphaned MediaStore rows.
         // 2026-08-03: 204 after source metadata policy and muxer pass-through.
+        // 2026-08-03: 205 after local metadata sidecar export.
         // Bump intentionally when adding new engines so the
         // docs/models.md registry and the ROADMAP stay in sync. This assertion
         // is a checkpoint, not a hard cap.
         assertTrue(
             "Engine file count drifted from the audit baseline (was 161, now $count). " +
                 "If you added an engine, update docs/models.md and bump this number.",
-            count in 95..204
+            count in 95..205
         )
     }
 

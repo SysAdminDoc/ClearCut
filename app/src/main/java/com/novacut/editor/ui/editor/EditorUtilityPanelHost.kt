@@ -3,7 +3,9 @@ package com.novacut.editor.ui.editor
 import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +43,7 @@ import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
+import java.io.File
 
 @Composable
 fun BoxScope.EditorUtilityPanelHost(
@@ -258,11 +261,21 @@ fun BoxScope.EditorUtilityPanelHost(
             tracks = state.tracks,
             relinkReports = state.mediaRelinkReports,
             mediaHealthReport = state.media.healthReport,
+            metadataSidecarExport = state.media.metadataSidecarExport,
             onJumpToClip = viewModel::jumpToClip,
             onJumpToSyncFrame = viewModel::jumpToSyncFrame,
             onRelinkMedia = onRelinkMedia,
             onBulkRelinkMissing = onBulkRelinkMissing,
             onRemoveUnused = viewModel::removeUnusedMedia,
+            onExportMetadataSidecar = viewModel::exportMetadataSidecar,
+            onShareMetadataSidecar = { export ->
+                shareMetadataSidecar(
+                    context = context,
+                    export = export,
+                    onFailure = viewModel::reportMetadataSidecarShareFailure,
+                )
+            },
+            onDismissMetadataSidecarExport = viewModel::dismissMetadataSidecarExport,
             onClose = viewModel::hideMediaManager
         )
     }
@@ -619,4 +632,34 @@ fun BoxScope.EditorUtilityPanelHost(
             onClose = viewModel::hideProjectInspector
         )
     }
+}
+
+private fun shareMetadataSidecar(
+    context: Context,
+    export: MetadataSidecarExportFile,
+    onFailure: () -> Unit,
+) {
+    val file = File(export.path)
+    if (!file.isFile) {
+        onFailure()
+        return
+    }
+    runCatching {
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file,
+        )
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = export.format.mimeType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            Intent.createChooser(
+                shareIntent,
+                context.getString(R.string.media_sidecar_share_chooser),
+            )
+        )
+    }.onFailure { onFailure() }
 }

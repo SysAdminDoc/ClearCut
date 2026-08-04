@@ -80,6 +80,10 @@ import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.MediaHealth
 import com.novacut.editor.engine.MediaDiagnosticsProbe
 import com.novacut.editor.engine.MediaRelinkProbe
+import com.novacut.editor.engine.MetadataSidecarEngine
+import com.novacut.editor.engine.MetadataSidecarExportResult
+import com.novacut.editor.engine.MetadataSidecarFormat
+import com.novacut.editor.engine.MetadataSidecarTrack
 import com.novacut.editor.engine.SyncFrameDirection
 import com.novacut.editor.engine.TimelineMediaJobIdentity
 import com.novacut.editor.engine.shouldApplyMediaJobResult
@@ -644,6 +648,7 @@ class EditorViewModel @Inject constructor(
     private val mediaImportEngine: MediaImportEngine,
     private val mediaRelinkProbe: MediaRelinkProbe,
     private val mediaDiagnosticsProbe: MediaDiagnosticsProbe,
+    private val metadataSidecarEngine: MetadataSidecarEngine,
     private val overlayAssetStore: OverlayAssetStore,
     // v3.69 engines (15-feature wave)
     private val textBasedEditEngine: TextBasedEditEngine,
@@ -4557,10 +4562,81 @@ class EditorViewModel @Inject constructor(
 
     // --- Media Manager ---
     fun showMediaManager() {
+        _state.update {
+            it.copyMedia { media ->
+                media.copy(metadataSidecarExport = MetadataSidecarExportUiState())
+            }
+        }
         refreshMediaRelinkReports(openPanelOnProblems = false)
         showPanel(PanelId.MEDIA_MANAGER)
     }
     fun hideMediaManager() = hidePanel(PanelId.MEDIA_MANAGER)
+
+    fun exportMetadataSidecar(
+        uri: Uri,
+        track: MetadataSidecarTrack,
+        format: MetadataSidecarFormat,
+    ) {
+        val current = _state.value.media.metadataSidecarExport
+        if (current.isExporting) return
+        _state.update {
+            it.copyMedia { media ->
+                media.copy(
+                    metadataSidecarExport = MetadataSidecarExportUiState(isExporting = true)
+                )
+            }
+        }
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                metadataSidecarEngine.export(uri, track, format)
+            }
+            val next = when (result) {
+                is MetadataSidecarExportResult.Success -> {
+                    val file = result.file
+                    MetadataSidecarExportUiState(
+                        file = MetadataSidecarExportFile(
+                            path = file.absolutePath,
+                            fileName = file.name,
+                            sizeBytes = file.length(),
+                            format = result.format,
+                        ),
+                        message = appContext.getString(
+                            R.string.vm_metadata_sidecar_exported,
+                            file.name,
+                        ),
+                    )
+                }
+                is MetadataSidecarExportResult.Unsupported ->
+                    MetadataSidecarExportUiState(errorMessage = result.reason)
+                is MetadataSidecarExportResult.Failed ->
+                    MetadataSidecarExportUiState(errorMessage = result.reason)
+            }
+            _state.update {
+                it.copyMedia { media -> media.copy(metadataSidecarExport = next) }
+            }
+        }
+    }
+
+    fun dismissMetadataSidecarExport() {
+        _state.update {
+            it.copyMedia { media ->
+                media.copy(metadataSidecarExport = MetadataSidecarExportUiState())
+            }
+        }
+    }
+
+    fun reportMetadataSidecarShareFailure() {
+        _state.update {
+            it.copyMedia { media ->
+                media.copy(
+                    metadataSidecarExport = media.metadataSidecarExport.copy(
+                        message = null,
+                        errorMessage = appContext.getString(R.string.vm_metadata_sidecar_share_failed),
+                    )
+                )
+            }
+        }
+    }
 
     private fun refreshMediaRelinkReports(openPanelOnProblems: Boolean) {
         val tracks = _state.value.tracks

@@ -9,6 +9,7 @@ import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaDiagnostic
+import com.novacut.editor.engine.MetadataSidecarFormat
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.ai.AutoEditResult
@@ -126,12 +127,27 @@ data class PendingIngest(
     val progress: Float = 0f
 )
 
+data class MetadataSidecarExportFile(
+    val path: String,
+    val fileName: String,
+    val sizeBytes: Long,
+    val format: MetadataSidecarFormat,
+)
+
+data class MetadataSidecarExportUiState(
+    val isExporting: Boolean = false,
+    val file: MetadataSidecarExportFile? = null,
+    val message: String? = null,
+    val errorMessage: String? = null,
+)
+
 data class EditorMediaState(
     val backupImportFeedback: BackupImportFeedback? = null,
     val timelineExchangeFeedback: TimelineExchangeFeedback? = null,
     val relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport> = emptyMap(),
     val diagnostics: Map<String, MediaDiagnostic> = emptyMap(),
     val healthReport: MediaHealthReport? = null,
+    val metadataSidecarExport: MetadataSidecarExportUiState = MetadataSidecarExportUiState(),
     val pendingIngests: List<PendingIngest> = emptyList()
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.MEDIA

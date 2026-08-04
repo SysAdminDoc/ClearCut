@@ -79,6 +79,7 @@ data class MediaDiagnostic(
     val hdrFormats: Set<String> = emptySet(),
     val timestampRisk: String? = null,
     val colorRisk: String? = null,
+    val metadataSidecars: List<MetadataSidecarTrack> = emptyList(),
     val probeError: String? = null,
 ) {
     val videoTracks: List<MediaTrackDiagnostic> get() = tracks.filter { it.isVideo }
@@ -210,6 +211,16 @@ class MediaDiagnosticsProbe @Inject constructor(
             val hdrFormats = videoTracks.flatMap { it.hdrFormats }.toSet()
             val timestampRisk = tracks.mapNotNull { it.timestampRisk }.distinct().firstOrNull()
             val retrieverMetadata = readRetrieverMetadata(uri, containerMimeType)
+            val metadataSidecars = buildList {
+                tracks.mapNotNullTo(this) { track ->
+                    MetadataSidecarPolicy.classifyTrack(
+                        trackIndex = track.trackIndex,
+                        mimeType = track.mimeType,
+                        language = track.language,
+                    )
+                }
+                retrieverMetadata.location?.let { add(MetadataSidecarPolicy.containerLocation(it)) }
+            }
             val colorRisk = when {
                 videoTracks.map { it.colorStandard to it.colorTransfer }.distinct().size > 1 ->
                     "Video tracks report conflicting color metadata."
@@ -243,6 +254,7 @@ class MediaDiagnosticsProbe @Inject constructor(
                 hdrFormats = hdrFormats,
                 timestampRisk = timestampRisk,
                 colorRisk = colorRisk,
+                metadataSidecars = metadataSidecars,
                 probeError = "No readable media tracks.".takeIf { tracks.isEmpty() },
             )
         } catch (t: Throwable) {
@@ -352,6 +364,7 @@ class MediaDiagnosticsProbe @Inject constructor(
     private data class RetrieverMetadata(
         val durationMs: Long? = null,
         val rotationDegrees: Int? = null,
+        val location: GpsPoint? = null,
     )
 
     private fun readRetrieverMetadata(uri: Uri, mimeType: String?): RetrieverMetadata {
@@ -366,6 +379,11 @@ class MediaDiagnosticsProbe @Inject constructor(
                 rotationDegrees = lease.resource
                     .extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
                     ?.toIntOrNull(),
+                location = parseSourceLocation(
+                    lease.resource.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LOCATION)
+                )?.let { source ->
+                    GpsPoint(source.latitude.toDouble(), source.longitude.toDouble())
+                },
             )
         } catch (_: Exception) {
             RetrieverMetadata()

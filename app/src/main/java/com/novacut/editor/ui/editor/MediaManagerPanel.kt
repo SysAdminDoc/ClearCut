@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Link
@@ -44,6 +45,9 @@ import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.MediaColorConfidence
 import com.novacut.editor.engine.SyncFrameDirection
+import com.novacut.editor.engine.MetadataSidecarFormat
+import com.novacut.editor.engine.MetadataSidecarKind
+import com.novacut.editor.engine.MetadataSidecarTrack
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import kotlinx.coroutines.Dispatchers
@@ -73,11 +77,15 @@ fun MediaManagerPanel(
     tracks: List<Track>,
     relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
     mediaHealthReport: MediaHealthReport?,
+    metadataSidecarExport: MetadataSidecarExportUiState,
     onJumpToClip: (String) -> Unit,
     onJumpToSyncFrame: (String, SyncFrameDirection) -> Unit,
     onRelinkMedia: (Uri) -> Unit,
     onBulkRelinkMissing: () -> Unit,
     onRemoveUnused: () -> Unit,
+    onExportMetadataSidecar: (Uri, MetadataSidecarTrack, MetadataSidecarFormat) -> Unit,
+    onShareMetadataSidecar: (MetadataSidecarExportFile) -> Unit,
+    onDismissMetadataSidecarExport: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -342,6 +350,18 @@ fun MediaManagerPanel(
             }
         }
 
+        if (metadataSidecarExport.isExporting ||
+            metadataSidecarExport.file != null ||
+            metadataSidecarExport.errorMessage != null
+        ) {
+            Spacer(modifier = Modifier.height(12.dp))
+            MetadataSidecarExportCard(
+                state = metadataSidecarExport,
+                onShare = onShareMetadataSidecar,
+                onDismiss = onDismissMetadataSidecarExport,
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         PremiumPanelCard(accent = ClearCutAccents.Blue) {
@@ -397,7 +417,8 @@ fun MediaManagerPanel(
                                 asset = asset,
                                 onJumpToClip = onJumpToClip,
                                 onJumpToSyncFrame = onJumpToSyncFrame,
-                                onRelinkMedia = onRelinkMedia
+                                onRelinkMedia = onRelinkMedia,
+                                onExportMetadataSidecar = onExportMetadataSidecar,
                             )
                         }
                     }
@@ -541,11 +562,124 @@ private fun MediaManagerMessageCard(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
+private fun MetadataSidecarExportCard(
+    state: MetadataSidecarExportUiState,
+    onShare: (MetadataSidecarExportFile) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val semanticColors = LocalClearCutColors.current
+    val file = state.file
+    val accent = when {
+        state.errorMessage != null -> ClearCutAccents.Peach
+        file != null -> ClearCutAccents.Green
+        else -> ClearCutAccents.Blue
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = accent.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.media_sidecar_export_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = accent,
+                fontWeight = FontWeight.SemiBold,
+            )
+            when {
+                state.isExporting -> {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = accent,
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            text = stringResource(R.string.media_sidecar_exporting),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = semanticColors.subtext,
+                        )
+                    }
+                }
+                state.errorMessage != null -> {
+                    Text(
+                        text = state.errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = semanticColors.subtext,
+                    )
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
+                    ) {
+                        Text(text = stringResource(R.string.media_sidecar_dismiss))
+                    }
+                }
+                file != null -> {
+                    Text(
+                        text = state.message ?: stringResource(R.string.media_sidecar_export_ready),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = semanticColors.subtext,
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.media_sidecar_file_format,
+                            file.fileName,
+                            formatFileSize(file.sizeBytes),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = semanticColors.subtext,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = { onShare(file) },
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = null,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(R.string.media_sidecar_share))
+                        }
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, semanticColors.cardStroke),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext),
+                        ) {
+                            Text(text = stringResource(R.string.media_sidecar_dismiss))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
 private fun MediaAssetCard(
     asset: MediaAsset,
     onJumpToClip: (String) -> Unit,
     onJumpToSyncFrame: (String, SyncFrameDirection) -> Unit,
-    onRelinkMedia: (Uri) -> Unit
+    onRelinkMedia: (Uri) -> Unit,
+    onExportMetadataSidecar: (Uri, MetadataSidecarTrack, MetadataSidecarFormat) -> Unit,
 ) {
     val semanticColors = LocalClearCutColors.current
     val accent = when (asset.relinkState) {
@@ -660,6 +794,9 @@ private fun MediaAssetCard(
                     diagnostic = diagnostic,
                     clipId = asset.usedInClipIds.firstOrNull(),
                     onJumpToSyncFrame = onJumpToSyncFrame,
+                    onExportMetadataSidecar = { track, format ->
+                        onExportMetadataSidecar(asset.uri, track, format)
+                    },
                 )
             }
 
@@ -719,6 +856,7 @@ private fun MediaDiagnosticCard(
     diagnostic: MediaDiagnostic,
     clipId: String?,
     onJumpToSyncFrame: (String, SyncFrameDirection) -> Unit,
+    onExportMetadataSidecar: (MetadataSidecarTrack, MetadataSidecarFormat) -> Unit,
 ) {
     val semanticColors = LocalClearCutColors.current
     val colorLabel = when (diagnostic.colorConfidence) {
@@ -830,6 +968,63 @@ private fun MediaDiagnosticCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = semanticColors.subtext,
                         )
+                    }
+                }
+
+                if (diagnostic.metadataSidecars.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.media_sidecar_metadata_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = semanticColors.text,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    diagnostic.metadataSidecars.forEach { sidecar ->
+                        val kindLabel = when (sidecar.kind) {
+                            MetadataSidecarKind.GPS -> stringResource(R.string.media_sidecar_gps)
+                            MetadataSidecarKind.SUBTITLE -> stringResource(R.string.media_sidecar_subtitle)
+                            MetadataSidecarKind.OTHER -> stringResource(R.string.media_sidecar_other)
+                        }
+                        Text(
+                            text = stringResource(
+                                R.string.media_sidecar_track,
+                                kindLabel,
+                                sidecar.mimeType ?: stringResource(R.string.media_diagnostics_unknown),
+                                sidecar.language ?: stringResource(R.string.media_diagnostics_language_unknown),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = semanticColors.subtext,
+                        )
+                        if (sidecar.supportedFormats.isNotEmpty()) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                sidecar.supportedFormats
+                                    .sortedBy(MetadataSidecarFormat::ordinal)
+                                    .forEach { format ->
+                                        OutlinedButton(
+                                            onClick = { onExportMetadataSidecar(sidecar, format) },
+                                            shape = RoundedCornerShape(14.dp),
+                                            border = BorderStroke(
+                                                1.dp,
+                                                ClearCutAccents.Teal.copy(alpha = 0.25f),
+                                            ),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = ClearCutAccents.Teal,
+                                            ),
+                                        ) {
+                                            Text(text = format.name)
+                                        }
+                                    }
+                            }
+                        } else {
+                            Text(
+                                text = sidecar.unsupportedReason
+                                    ?: stringResource(R.string.media_sidecar_unsupported),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ClearCutAccents.Peach,
+                            )
+                        }
                     }
                 }
 

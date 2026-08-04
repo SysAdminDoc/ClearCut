@@ -1916,6 +1916,21 @@
     <string name="media_diagnostics_color_risk">Color risk: %1$s</string>
     <string name="media_diagnostics_previous_sync">Previous sync frame</string>
     <string name="media_diagnostics_next_sync">Next sync frame</string>
+    <string name="media_sidecar_metadata_title">Local metadata sidecars</string>
+    <string name="media_sidecar_track">%1$s · %2$s · language %3$s</string>
+    <string name="media_sidecar_gps">GPS / location</string>
+    <string name="media_sidecar_subtitle">Subtitle</string>
+    <string name="media_sidecar_other">Metadata</string>
+    <string name="media_sidecar_unsupported">No local decoder is available for this track.</string>
+    <string name="media_sidecar_export_title">Metadata sidecar</string>
+    <string name="media_sidecar_exporting">Exporting locally…</string>
+    <string name="media_sidecar_export_ready">Sidecar ready to share locally.</string>
+    <string name="media_sidecar_file_format">%1$s · %2$s</string>
+    <string name="media_sidecar_share">Share</string>
+    <string name="media_sidecar_dismiss">Dismiss</string>
+    <string name="media_sidecar_share_chooser">Share metadata sidecar</string>
+    <string name="vm_metadata_sidecar_exported">Metadata sidecar saved as %1$s.</string>
+    <string name="vm_metadata_sidecar_share_failed">The metadata sidecar could not be shared from this device.</string>
     <string name="vm_no_sync_frame_toast">No nearby sync frame was found for this clip.</string>
 
     <!-- SmartReframePanel -->

@@ -77,6 +77,11 @@ class FileProviderPathsTest {
                 requiredRoots = setOf(ProviderRoot("files-path", "diagnostic_shares", "diagnostic-shares/"))
             ),
             ProducerContract(
+                sourcePath = "src/main/java/com/novacut/editor/ui/editor/EditorUtilityPanelHost.kt",
+                marker = "shareMetadataSidecar",
+                requiredRoots = setOf(ProviderRoot("files-path", "diagnostic_shares", "diagnostic-shares/"))
+            ),
+            ProducerContract(
                 sourcePath = "src/main/java/com/novacut/editor/ui/projects/ProjectListViewModel.kt",
                 marker = "\"archives/templates\"",
                 requiredRoots = setOf(

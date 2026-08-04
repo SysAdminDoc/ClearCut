@@ -27,6 +27,7 @@ object NativeProcessingPolicy {
     const val TIMEOUT_REVERSE_MS = 600_000L
     const val TIMEOUT_ENCODE_AUDIO_MS = 120_000L
     const val TIMEOUT_INPAINT_FRAME_MS = 30_000L
+    const val TIMEOUT_METADATA_SIDECAR_MS = 120_000L
 
     private val SUPPORTED_VIDEO_MIMES = setOf(
         "video/mp4", "video/3gpp", "video/webm", "video/x-matroska",
