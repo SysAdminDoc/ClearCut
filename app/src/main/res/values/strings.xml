@@ -371,6 +371,7 @@
     <string name="editor_archive_export_failed_toast">Archive export failed. Check available storage and try again.</string>
     <string name="editor_otio_export_failed_toast">OTIO export failed. Review the timeline and try again.</string>
     <string name="editor_fcpxml_export_failed_toast">FCPXML export failed. Review the timeline and try again.</string>
+    <string name="editor_edit_decision_json_export_failed_toast">Edit-decision JSON export failed. Review the timeline and try again.</string>
     <string name="editor_auto_duck_failed_toast">Auto-duck failed. Check the voice and music tracks, then try again.</string>
     <string name="editor_multicam_sync_failed_toast">Multi-cam sync failed. Try clips with clearer audio.</string>
     <string name="editor_media_read_failed_toast">Could not read that media file. Try another source.</string>
@@ -2457,6 +2458,7 @@
     <string name="export_audio_codec">Audio Codec</string>
     <string name="export_otio">OTIO</string>
     <string name="export_fcpxml">FCPXML</string>
+    <string name="export_edit_decision_json">Edit JSON</string>
 
     <!-- SpeedCurveEditor — v3.14.0 -->
     <string name="speed_label">Speed: %1$.2fx</string>
@@ -3180,6 +3182,8 @@
     <string name="vm_otio_exported_toast">OTIO exported: %1$s%2$s</string>
     <string name="vm_fcpxml_blocked_toast">FCPXML export blocked: %1$s — %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exported: %1$s%2$s</string>
+    <string name="vm_edit_decision_json_blocked_toast">Edit-decision JSON export blocked: %1$s — %2$s</string>
+    <string name="vm_edit_decision_json_exported_toast">Edit-decision JSON exported: %1$s%2$s</string>
     <!-- Project storage -->
     <string name="settings_project_storage_title">Project Storage</string>
     <string name="settings_project_storage_media">Managed media: %1$s</string>

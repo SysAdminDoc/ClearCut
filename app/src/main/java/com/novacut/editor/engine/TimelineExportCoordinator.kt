@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
 import com.novacut.editor.model.TextOverlay
+import com.novacut.editor.model.TimelineMarker
+import com.novacut.editor.model.TimelineTimebase
 import com.novacut.editor.model.Track
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,6 +31,10 @@ class TimelineExportCoordinator @Inject constructor(
     ) {
         OTIO(TimelineExchangeEngine.TimelineExchangeFormat.OTIO, "otio"),
         FCPXML(TimelineExchangeEngine.TimelineExchangeFormat.FCPXML, "fcpxml"),
+        EDIT_DECISION_JSON(
+            TimelineExchangeEngine.TimelineExchangeFormat.EDIT_DECISION_JSON,
+            EditDecisionJsonEngine.FILE_EXTENSION,
+        ),
     }
 
     data class Request(
@@ -38,6 +44,8 @@ class TimelineExportCoordinator @Inject constructor(
         val projectName: String,
         val frameRate: Int,
         val outputDirectory: File,
+        val timelineMarkers: List<TimelineMarker> = emptyList(),
+        val timebase: TimelineTimebase = TimelineTimebase(30),
     )
 
     data class Result(
@@ -75,6 +83,13 @@ class TimelineExportCoordinator @Inject constructor(
                 tracks = request.tracks,
                 projectName = request.projectName,
                 frameRate = request.frameRate,
+            )
+            Format.EDIT_DECISION_JSON -> timelineExchangeEngine.exportToEditDecisionJson(
+                tracks = request.tracks,
+                textOverlays = request.textOverlays,
+                timelineMarkers = request.timelineMarkers,
+                projectName = request.projectName,
+                timebase = request.timebase,
             )
         }
         writeUtf8TextAtomically(outputFile, contents)

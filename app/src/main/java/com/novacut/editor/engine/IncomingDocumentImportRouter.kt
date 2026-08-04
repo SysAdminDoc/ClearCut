@@ -50,7 +50,8 @@ class IncomingDocumentImportRouter @Inject constructor(
             IncomingDocumentKind.PROJECT_ARCHIVE -> previewProjectArchive(item)
             IncomingDocumentKind.TIMELINE_OTIO,
             IncomingDocumentKind.TIMELINE_FCPXML,
-            IncomingDocumentKind.TIMELINE_EDL -> previewTimelineImport(item)
+            IncomingDocumentKind.TIMELINE_EDL,
+            IncomingDocumentKind.EDIT_DECISION_JSON -> previewTimelineImport(item)
             IncomingDocumentKind.CAPTION_SRT,
             IncomingDocumentKind.CAPTION_WEBVTT -> previewCaptionImport(item)
         }
@@ -76,6 +77,7 @@ class IncomingDocumentImportRouter @Inject constructor(
             IncomingDocumentKind.TIMELINE_OTIO,
             IncomingDocumentKind.TIMELINE_FCPXML,
             IncomingDocumentKind.TIMELINE_EDL,
+            IncomingDocumentKind.EDIT_DECISION_JSON,
             IncomingDocumentKind.CAPTION_SRT,
             IncomingDocumentKind.CAPTION_WEBVTT -> invalid(
                 item = item,
@@ -305,6 +307,7 @@ class IncomingDocumentImportRouter @Inject constructor(
             IncomingDocumentKind.TIMELINE_OTIO -> TimelineImportEngine.Format.OTIO
             IncomingDocumentKind.TIMELINE_FCPXML -> TimelineImportEngine.Format.FCPXML
             IncomingDocumentKind.TIMELINE_EDL -> TimelineImportEngine.Format.EDL
+            IncomingDocumentKind.EDIT_DECISION_JSON -> TimelineImportEngine.Format.EDIT_DECISION_JSON
             else -> null
         } ?: return invalid(item, "Unknown timeline interchange format.")
         val fidelity = timelineImportEngine.roundTripFidelity(format)
@@ -313,27 +316,40 @@ class IncomingDocumentImportRouter @Inject constructor(
         val reportIssues = report?.issues.orEmpty().map { issue ->
             "${issue.severity.name.lowercase().replaceFirstChar { it.uppercase() }}: ${issue.message}"
         }
-        val status = if (report?.canProceed == true) {
+        val schemaTooNew = result.exchangeResult?.schemaTooNew == true
+        val status = if (!schemaTooNew && report?.canProceed == true) {
             IncomingDocumentImportStatus.READY
         } else {
             IncomingDocumentImportStatus.BLOCKED
         }
+        val captionCount = result.exchangeResult?.tracks.orEmpty()
+            .sumOf { track -> track.clips.sumOf { clip -> clip.captions.size } }
         return IncomingDocumentImportPreview(
             item = item,
             status = status,
-            title = if (report?.canProceed == true) {
+            title = if (schemaTooNew) {
+                "${format.displayName} requires a newer ClearCut version"
+            } else if (report?.canProceed == true) {
                 "${format.displayName} import preview ready"
             } else {
                 "${format.displayName} import needs review"
             },
-            body = "ClearCut parsed the timeline and prepared an atomic editor commit without mutating project state. " +
-                "Open an editor project to apply it after the report and any relinks are accepted.",
+            body = if (schemaTooNew) {
+                "This edit-decision file was rejected before any timeline state was created. Export it with a compatible ClearCut schema version."
+            } else {
+                "ClearCut parsed the timeline and prepared an atomic editor commit without mutating project state. " +
+                    "Open an editor project to apply it after the report and any relinks are accepted."
+            },
             details = baseDetails(item) + listOf(
                 "Expected fidelity: ${fidelity.displayName}",
                 fidelity.warningCopy,
                 "Parsed tracks: ${result.exchangeResult?.tracks?.size ?: 0}",
                 "Parsed clips: ${result.exchangeResult?.tracks.orEmpty().sumOf { it.clips.size }}",
+                "Timeline markers: ${result.exchangeResult?.timelineMarkers?.size ?: 0}",
+                "Captions: $captionCount",
                 "Text overlays: ${result.exchangeResult?.textOverlays?.size ?: 0}",
+                result.exchangeResult?.schemaVersion?.let { "Schema version: v$it" }
+                    ?: "Schema version: unavailable",
                 "Fidelity report: ${report?.summary ?: "unavailable"}",
                 if (result.unresolvedMediaUris.isEmpty()) {
                     "Unresolved media: none"

@@ -32,7 +32,8 @@ class TimelineImportEngine @Inject constructor(
     enum class Format(val extension: String, val displayName: String) {
         FCPXML("fcpxml", "Final Cut Pro XML"),
         OTIO("otio", "OpenTimelineIO JSON"),
-        EDL("edl", "CMX 3600 EDL")
+        EDL("edl", "CMX 3600 EDL"),
+        EDIT_DECISION_JSON(EditDecisionJsonEngine.FILE_EXTENSION, "ClearCut edit-decision JSON"),
     }
 
     data class ImportResult(
@@ -51,7 +52,9 @@ class TimelineImportEngine @Inject constructor(
                 (exchangeResult != null && fidelityReport?.canProceed == true)
 
         val readyForAtomicCommit: Boolean
-            get() = exchangeResult != null && fidelityReport?.canProceed == true
+            get() = exchangeResult != null &&
+                !exchangeResult.schemaTooNew &&
+                fidelityReport?.canProceed == true
 
         fun toProjectDocument(targetProject: Project, playheadMs: Long = 0L): ProjectDocument? {
             if (!readyForAtomicCommit) return null
@@ -72,6 +75,7 @@ class TimelineImportEngine @Inject constructor(
         Format.FCPXML -> RoundTripFidelity.GOOD
         Format.OTIO -> RoundTripFidelity.EXCELLENT
         Format.EDL -> RoundTripFidelity.LIMITED
+        Format.EDIT_DECISION_JSON -> RoundTripFidelity.EXCELLENT
     }
 
     enum class RoundTripFidelity(val displayName: String, val warningCopy: String) {
@@ -113,6 +117,7 @@ class TimelineImportEngine @Inject constructor(
             Format.OTIO -> timelineExchangeEngine.importFromOtio(raw, uriParser)
             Format.FCPXML -> timelineExchangeEngine.importFromFcpxml(raw, uriParser)
             Format.EDL -> timelineExchangeEngine.importFromEdl(raw, TimelineTimebase(30), uriParser)
+            Format.EDIT_DECISION_JSON -> timelineExchangeEngine.importFromEditDecisionJson(raw, uriParser)
         }
         val relocated = applyRelocations(parsed, mediaRelocation)
         val relinkReports = if (probeMedia) {
@@ -197,11 +202,13 @@ class TimelineImportEngine @Inject constructor(
         Format.OTIO -> TimelineExchangeFormat.OTIO
         Format.FCPXML -> TimelineExchangeFormat.FCPXML
         Format.EDL -> TimelineExchangeFormat.EDL_CMX3600
+        Format.EDIT_DECISION_JSON -> TimelineExchangeFormat.EDIT_DECISION_JSON
     }
 
     private val Format.maxBytes: Long
         get() = when (this) {
             Format.OTIO, Format.FCPXML -> 25_000_000L
             Format.EDL -> 5_000_000L
+            Format.EDIT_DECISION_JSON -> 25_000_000L
         }
 }

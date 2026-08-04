@@ -356,6 +356,7 @@
     <string name="editor_archive_export_failed_toast">La exportación del archivo falló. Revise el espacio disponible e inténtelo de nuevo.</string>
     <string name="editor_otio_export_failed_toast">La exportación OTIO falló. Revise la línea de tiempo e inténtelo de nuevo.</string>
     <string name="editor_fcpxml_export_failed_toast">La exportación FCPXML falló. Revise la línea de tiempo e inténtelo de nuevo.</string>
+    <string name="editor_edit_decision_json_export_failed_toast">La exportación JSON de decisiones de edición falló. Revise la línea de tiempo e inténtelo de nuevo.</string>
     <string name="editor_auto_duck_failed_toast">Auto-duck falló. Revise las pistas de voz y música e inténtelo de nuevo.</string>
     <string name="editor_multicam_sync_failed_toast">La sincronización multicámara falló. Pruebe clips con audio más claro.</string>
     <string name="editor_media_read_failed_toast">No se pudo leer ese archivo multimedia. Pruebe otra fuente.</string>
@@ -2292,6 +2293,7 @@
     <string name="export_audio_codec">Códec de audio</string>
     <string name="export_otio">OTIO</string>
     <string name="export_fcpxml">FCPXML</string>
+    <string name="export_edit_decision_json">JSON de edición</string>
     <string name="speed_label">Velocidad: %1$.2fx</string>
     <string name="template_import">Importar plantilla</string>
     <string name="snapshot_default_prefix">Instantánea</string>
@@ -2907,6 +2909,8 @@
     <string name="vm_otio_exported_toast">OTIO exportado: %1$s%2$s</string>
     <string name="vm_fcpxml_blocked_toast">Exportación FCPXML bloqueada: %1$s — %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exportado: %1$s%2$s</string>
+    <string name="vm_edit_decision_json_blocked_toast">Exportación JSON de decisiones bloqueada: %1$s — %2$s</string>
+    <string name="vm_edit_decision_json_exported_toast">JSON de decisiones exportado: %1$s%2$s</string>
     <!-- Project storage -->
     <string name="settings_project_storage_title">Almacenamiento del proyecto</string>
     <string name="settings_project_storage_media">Medios gestionados: %1$s</string>

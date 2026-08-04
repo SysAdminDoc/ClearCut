@@ -214,6 +214,10 @@ class IncomingDocumentIntentParserTest {
             IncomingDocumentIntentParser.classify("handoff.edl", "text/plain")
         )
         assertEquals(
+            IncomingDocumentKind.EDIT_DECISION_JSON,
+            IncomingDocumentIntentParser.classify("portable.clearcut-edl.json", "application/json")
+        )
+        assertEquals(
             IncomingDocumentKind.PROJECT_ARCHIVE,
             IncomingDocumentIntentParser.classify("project.zip", "application/zip")
         )

@@ -4,6 +4,7 @@ import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.TextOverlay
+import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.model.Track
 import org.json.JSONObject
 
@@ -89,6 +90,7 @@ object ProjectDocumentApplicator {
         project: Project,
         tracks: List<Track>,
         textOverlays: List<TextOverlay> = emptyList(),
+        timelineMarkers: List<TimelineMarker> = emptyList(),
         playheadMs: Long = 0L,
     ): ProjectDocument = capture(
         project = project,
@@ -96,6 +98,7 @@ object ProjectDocumentApplicator {
             projectId = project.id,
             tracks = tracks,
             textOverlays = textOverlays,
+            timelineMarkers = timelineMarkers,
             playheadMs = playheadMs,
         ),
     )

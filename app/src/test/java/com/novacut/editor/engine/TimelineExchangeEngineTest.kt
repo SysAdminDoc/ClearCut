@@ -3,10 +3,13 @@ package com.novacut.editor.engine
 import android.net.Uri
 import android.net.TestUri
 import com.novacut.editor.model.BlendMode
+import com.novacut.editor.model.Caption
+import com.novacut.editor.model.CaptionStyleType
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.TextOverlay
+import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.model.TimelineTimebase
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
@@ -203,6 +206,94 @@ class TimelineExchangeEngineTest {
         assertEquals("M&M <draft>", clip.name)
         assertEquals("file:///media/M%26M%20%3Cdraft%3E.mp4", clip.sourceUri.toString())
         assertTrue(kotlin.math.abs(clip.timelineStartMs - 1_000L) <= 34L)
+    }
+
+    @Test
+    fun editDecisionJsonRoundTripMapsClipsMarkersCaptionsAndTimebase() {
+        val source = clip(
+            id = "decision-clip",
+            uri = "file:///media/decision.mp4",
+            durationMs = 4_000L,
+            timelineStartMs = 750L,
+            name = "Decision shot",
+        ).copy(
+            trimStartMs = 500L,
+            trimEndMs = 3_500L,
+            captions = listOf(
+                Caption(
+                    id = "caption",
+                    text = "Keep this line",
+                    startTimeMs = 600L,
+                    endTimeMs = 1_200L,
+                    style = com.novacut.editor.model.CaptionStyle(type = CaptionStyleType.KARAOKE),
+                )
+            ),
+        )
+        val marker = TimelineMarker(
+            id = "marker",
+            timeMs = 1_000L,
+            label = "Hook",
+        )
+        val json = engine.exportToEditDecisionJson(
+            tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(source))),
+            textOverlays = listOf(TextOverlay(id = "title", text = "Review")),
+            timelineMarkers = listOf(marker),
+            projectName = "Portable decisions",
+            timebase = TimelineTimebase.NTSC_29_97,
+        )
+
+        val root = JSONObject(json)
+        assertEquals("com.clearcut.edit-decision", root.getString("schema"))
+        assertEquals(1, root.getInt("schemaVersion"))
+        assertEquals(30_000, root.getJSONObject("project").getInt("frameRateNumerator"))
+        assertEquals("decision-clip", root.getJSONArray("tracks")
+            .getJSONObject(0).getJSONArray("clips").getJSONObject(0).getString("id"))
+
+        val imported = engine.importFromEditDecisionJson(json, ::testUri)
+
+        assertTrue(imported.warnings.isEmpty())
+        assertEquals(1, imported.tracks.single().clips.size)
+        assertEquals("decision-clip", imported.tracks.single().clips.single().id)
+        assertEquals(750L, imported.tracks.single().clips.single().timelineStartMs)
+        assertEquals("Keep this line", imported.tracks.single().clips.single().captions.single().text)
+        assertEquals(CaptionStyleType.KARAOKE, imported.tracks.single().clips.single().captions.single().style.type)
+        assertEquals(listOf(marker), imported.timelineMarkers)
+        assertEquals("Review", imported.textOverlays.single().text)
+    }
+
+    @Test
+    fun editDecisionJsonRejectsSchemaThatIsNewerThanTheSupportedVersion() {
+        val future = JSONObject()
+            .put("schema", "com.clearcut.edit-decision")
+            .put("schemaVersion", 2)
+            .put("tracks", org.json.JSONArray().put(JSONObject().put("type", "VIDEO")))
+
+        val result = engine.importFromEditDecisionJson(future.toString(), ::testUri)
+
+        assertTrue(result.schemaTooNew)
+        assertEquals(2, result.schemaVersion)
+        assertTrue(result.tracks.isEmpty())
+        assertTrue(result.warnings.single().contains("newer"))
+    }
+
+    @Test
+    fun editDecisionJsonReportsUnprobeableSourceForRelinkPreview() {
+        val result = engine.importFromEditDecisionJson(
+            engine.exportToEditDecisionJson(
+                tracks = listOf(
+                    Track(
+                        type = TrackType.VIDEO,
+                        index = 0,
+                        clips = listOf(clip("hostile", "javascript:alert('x')", 1_000L)),
+                    )
+                ),
+                projectName = "Relink",
+            ),
+            ::testUri,
+        )
+
+        assertEquals(listOf("javascript:alert('x')"), result.unresolvedMediaUris)
+        assertTrue(result.warnings.any { it.contains("relink", ignoreCase = true) })
     }
 
     @Test

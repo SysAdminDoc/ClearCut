@@ -406,7 +406,8 @@ Planning files are local-only in the development checkout:
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously
 - Background export with progress notification, ETA display, and cancel
-- **Timeline interchange** — OTIO (OpenTimelineIO), FCPXML, and EDL export for desktop NLE handoff; incoming files show a guarded fidelity/media-relink preview before one atomic editor commit
+- **Timeline interchange** — OTIO (OpenTimelineIO), FCPXML, EDL, and portable edit-decision JSON export for desktop/local-tool handoff; incoming files show a guarded fidelity/media-relink preview before one atomic editor commit
+- **Portable edit-decision JSON** — `.clearcut-edl.json` uses schema `com.clearcut.edit-decision` v1 with millisecond `tracks[].clips[]` source/range decisions, `markers[]`, caption timing under each clip, optional text overlays, and project timebase metadata. `source` values are URI strings (`content://`, `file://`, `asset://`, `http://`, or `https://`). Newer schema versions are rejected before parsing; missing media and mapped clips/markers/captions are shown in the non-mutating preview.
 - EDL export (CMX 3600) with sanitized reel names and proper timecodes
 - Chapter markers and subtitle export (SRT, VTT with word-level cues, ASS/SSA with full styling)
 - **Burned-in subtitle rendering** — Canvas-based with ASS/SSA file generation for FFmpeg integration
@@ -478,7 +479,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (91 injectable singletons across 205 files)
+├── engine/                 # Core engines (91 injectable singletons across 206 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)

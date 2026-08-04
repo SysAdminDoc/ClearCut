@@ -3,6 +3,8 @@ package com.novacut.editor.engine
 import android.net.TestUri
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.TextOverlay
+import com.novacut.editor.model.TimelineMarker
+import com.novacut.editor.model.TimelineTimebase
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.runBlocking
@@ -67,6 +69,34 @@ class TimelineExportCoordinatorTest {
             assertFalse(result.succeeded)
             assertTrue(result.report.errors.isNotEmpty())
             assertFalse(outputDirectory.resolve("blocked.fcpxml").exists())
+        } finally {
+            outputDirectory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun editDecisionJsonExportWritesPortableSchemaAndMarkers() = runBlocking {
+        val outputDirectory = Files.createTempDirectory("clearcut-edit-decision-export-").toFile()
+        try {
+            val result = coordinator.export(
+                TimelineExportCoordinator.Request(
+                    format = TimelineExportCoordinator.Format.EDIT_DECISION_JSON,
+                    tracks = listOf(videoTrack()),
+                    textOverlays = emptyList(),
+                    projectName = "Portable decisions",
+                    frameRate = 30,
+                    outputDirectory = outputDirectory,
+                    timelineMarkers = listOf(TimelineMarker(id = "marker", timeMs = 250L)),
+                    timebase = TimelineTimebase.NTSC_29_97,
+                )
+            )
+
+            assertFalse(result.blocked)
+            assertTrue(result.succeeded)
+            val file = result.outputFile ?: error("successful export did not return a file")
+            assertEquals("Portable decisions.clearcut-edl.json", file.name)
+            assertTrue(file.readText().contains("\"schema\": \"com.clearcut.edit-decision\""))
+            assertTrue(file.readText().contains("\"timeMs\": 250"))
         } finally {
             outputDirectory.deleteRecursively()
         }

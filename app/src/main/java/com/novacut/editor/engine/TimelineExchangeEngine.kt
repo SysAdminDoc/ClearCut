@@ -12,7 +12,8 @@ import javax.inject.Singleton
 import kotlin.math.roundToLong
 
 /**
- * Timeline interchange engine for OTIO, FCPXML, EDL, and AAF formats.
+ * Timeline interchange engine for OTIO, FCPXML, EDL, portable edit-decision
+ * JSON, and AAF formats.
  *
  * Enables export handoff from ClearCut projects to desktop NLEs:
  * - OpenTimelineIO (OTIO): Universal interchange format by Pixar/ASWF
@@ -45,6 +46,12 @@ class TimelineExchangeEngine @Inject constructor(
         OTIO("OpenTimelineIO", ".otio", canImport = true, canExport = true),
         FCPXML("Final Cut Pro XML", ".fcpxml", canImport = true, canExport = true),
         EDL_CMX3600("EDL (CMX 3600)", ".edl", canImport = true, canExport = true),
+        EDIT_DECISION_JSON(
+            "ClearCut edit-decision JSON",
+            ".${EditDecisionJsonEngine.FILE_EXTENSION}",
+            canImport = true,
+            canExport = true,
+        ),
         AAF("Advanced Authoring Format", ".aaf", canImport = false, canExport = false)
     }
 
@@ -61,6 +68,9 @@ class TimelineExchangeEngine @Inject constructor(
         val warnings: List<String>,
         val unresolvedMediaUris: List<String> = emptyList(),
         val droppedEffects: Int = 0,
+        val timelineMarkers: List<TimelineMarker> = emptyList(),
+        val schemaVersion: Int? = null,
+        val schemaTooNew: Boolean = false,
     ) {
         /** Convert the parsed interchange result into the canonical save boundary. */
         fun toProjectDocument(project: Project, playheadMs: Long = 0L): ProjectDocument =
@@ -68,6 +78,7 @@ class TimelineExchangeEngine @Inject constructor(
                 project = project,
                 tracks = tracks,
                 textOverlays = textOverlays,
+                timelineMarkers = timelineMarkers,
                 playheadMs = playheadMs,
             )
     }
@@ -431,6 +442,29 @@ class TimelineExchangeEngine @Inject constructor(
      * @return ExchangeResult with imported tracks, text overlays, and any warnings.
      */
     fun importFromOtio(json: String): ExchangeResult = importFromOtio(json, android.net.Uri::parse)
+
+    fun exportToEditDecisionJson(
+        tracks: List<Track>,
+        textOverlays: List<TextOverlay> = emptyList(),
+        timelineMarkers: List<TimelineMarker> = emptyList(),
+        projectName: String = "ClearCut Project",
+        timebase: TimelineTimebase = TimelineTimebase(30),
+    ): String = EditDecisionJsonEngine.export(
+        tracks = tracks,
+        textOverlays = textOverlays,
+        timelineMarkers = timelineMarkers,
+        projectName = projectName,
+        timebase = timebase,
+    )
+
+    fun importFromEditDecisionJson(json: String): ExchangeResult =
+        importFromEditDecisionJson(json, android.net.Uri::parse)
+
+    /** Pure parser seam used by JVM contract tests and media-linker adapters. */
+    internal fun importFromEditDecisionJson(
+        json: String,
+        uriParser: (String) -> android.net.Uri?,
+    ): ExchangeResult = EditDecisionJsonEngine.import(json, uriParser)
 
     /** Pure parser seam used by JVM contract tests and media-linker adapters. */
     internal fun importFromOtio(

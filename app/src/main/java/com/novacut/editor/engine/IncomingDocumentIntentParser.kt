@@ -60,6 +60,11 @@ enum class IncomingDocumentKind(
         targetAction = "Review timeline-import status",
         maxBytes = 5_000_000L,
     ),
+    EDIT_DECISION_JSON(
+        displayName = "ClearCut edit-decision JSON",
+        targetAction = "Review portable edit decisions before applying",
+        maxBytes = 25_000_000L,
+    ),
     CAPTION_SRT(
         displayName = "SubRip captions (.srt)",
         targetAction = "Review and import into the Caption Editor",
@@ -186,6 +191,7 @@ internal object IncomingDocumentIntentParser {
             lower.endsWith(".otio") -> IncomingDocumentKind.TIMELINE_OTIO
             lower.endsWith(".fcpxml") -> IncomingDocumentKind.TIMELINE_FCPXML
             lower.endsWith(".edl") -> IncomingDocumentKind.TIMELINE_EDL
+            lower.endsWith(".${EditDecisionJsonEngine.FILE_EXTENSION}") -> IncomingDocumentKind.EDIT_DECISION_JSON
             lower.endsWith(".srt") -> IncomingDocumentKind.CAPTION_SRT
             lower.endsWith(".vtt") -> IncomingDocumentKind.CAPTION_WEBVTT
             else -> null

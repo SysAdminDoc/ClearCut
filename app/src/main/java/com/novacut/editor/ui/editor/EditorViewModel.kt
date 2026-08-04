@@ -4957,6 +4957,8 @@ class EditorViewModel @Inject constructor(
 
     fun exportToFcpxml() = exportTimeline(TimelineExportCoordinator.Format.FCPXML)
 
+    fun exportToEditDecisionJson() = exportTimeline(TimelineExportCoordinator.Format.EDIT_DECISION_JSON)
+
     private fun exportTimeline(format: TimelineExportCoordinator.Format) {
         viewModelScope.launch {
             val s = _state.value
@@ -4972,6 +4974,8 @@ class EditorViewModel @Inject constructor(
                             appContext.getExternalFilesDir(null),
                             "exports",
                         ),
+                        timelineMarkers = s.timelineMarkers,
+                        timebase = s.project.timelineTimebase,
                     )
                 )
                 withContext(Dispatchers.Main) { publishTimelineExportResult(result) }
@@ -4980,10 +4984,11 @@ class EditorViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     showToast(
                         text(
-                            if (format == TimelineExportCoordinator.Format.OTIO) {
-                                R.string.editor_otio_export_failed_toast
-                            } else {
-                                R.string.editor_fcpxml_export_failed_toast
+                            when (format) {
+                                TimelineExportCoordinator.Format.OTIO -> R.string.editor_otio_export_failed_toast
+                                TimelineExportCoordinator.Format.FCPXML -> R.string.editor_fcpxml_export_failed_toast
+                                TimelineExportCoordinator.Format.EDIT_DECISION_JSON ->
+                                    R.string.editor_edit_decision_json_export_failed_toast
                             }
                         )
                     )
@@ -5012,10 +5017,11 @@ class EditorViewModel @Inject constructor(
             }
             showToast(
                 text(
-                    if (result.format == TimelineExportCoordinator.Format.OTIO) {
-                        R.string.vm_otio_blocked_toast
-                    } else {
-                        R.string.vm_fcpxml_blocked_toast
+                    when (result.format) {
+                        TimelineExportCoordinator.Format.OTIO -> R.string.vm_otio_blocked_toast
+                        TimelineExportCoordinator.Format.FCPXML -> R.string.vm_fcpxml_blocked_toast
+                        TimelineExportCoordinator.Format.EDIT_DECISION_JSON ->
+                            R.string.vm_edit_decision_json_blocked_toast
                     },
                     first.path,
                     first.message,
@@ -5043,10 +5049,11 @@ class EditorViewModel @Inject constructor(
         val tail = if (result.report.warnings.isNotEmpty()) " (${result.report.summary})" else ""
         showToast(
             text(
-                if (result.format == TimelineExportCoordinator.Format.OTIO) {
-                    R.string.vm_otio_exported_toast
-                } else {
-                    R.string.vm_fcpxml_exported_toast
+                when (result.format) {
+                    TimelineExportCoordinator.Format.OTIO -> R.string.vm_otio_exported_toast
+                    TimelineExportCoordinator.Format.FCPXML -> R.string.vm_fcpxml_exported_toast
+                    TimelineExportCoordinator.Format.EDIT_DECISION_JSON ->
+                        R.string.vm_edit_decision_json_exported_toast
                 },
                 file.name,
                 tail,

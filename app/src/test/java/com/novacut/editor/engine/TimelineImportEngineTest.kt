@@ -101,6 +101,68 @@ class TimelineImportEngineTest {
         )
     }
 
+    @Test
+    fun editDecisionPreviewIsNonMutatingAndCommitMapsMarkersAndCaptions() = runBlocking {
+        val source = testUri("file:///media/source.mp4")
+        val clip = Clip(
+            id = "portable-clip",
+            sourceUri = source,
+            sourceDurationMs = 2_000L,
+            timelineStartMs = 250L,
+            trimEndMs = 2_000L,
+            captions = listOf(
+                com.novacut.editor.model.Caption(
+                    id = "portable-caption",
+                    text = "Portable caption",
+                    startTimeMs = 20L,
+                    endTimeMs = 400L,
+                )
+            ),
+        )
+        val marker = com.novacut.editor.model.TimelineMarker(id = "portable-marker", timeMs = 500L)
+        val original = Project(id = "target", name = "Unchanged")
+        val json = exchange.exportToEditDecisionJson(
+            tracks = listOf(Track(type = TrackType.VIDEO, index = 0, clips = listOf(clip))),
+            timelineMarkers = listOf(marker),
+            projectName = "Portable",
+            timebase = TimelineTimebase(30),
+        )
+
+        val preview = importer.importText(
+            raw = json,
+            format = TimelineImportEngine.Format.EDIT_DECISION_JSON,
+            probeMedia = false,
+            uriParser = ::testUri,
+        )
+
+        assertTrue(preview.readyForAtomicCommit)
+        assertEquals("target", original.id)
+        assertEquals("Unchanged", original.name)
+        val document = importer.commit(original, preview, playheadMs = 125L)
+        assertEquals("Unchanged", original.name)
+        assertEquals(listOf(marker), document?.state?.timelineMarkers)
+        assertEquals("Portable caption", document?.state?.tracks?.single()?.clips?.single()?.captions?.single()?.text)
+    }
+
+    @Test
+    fun editDecisionPreviewRejectsFutureSchemaBeforeAtomicCommit() = runBlocking {
+        val future = org.json.JSONObject()
+            .put("schema", "com.clearcut.edit-decision")
+            .put("schemaVersion", 99)
+            .put("tracks", org.json.JSONArray())
+
+        val result = importer.importText(
+            raw = future.toString(),
+            format = TimelineImportEngine.Format.EDIT_DECISION_JSON,
+            probeMedia = false,
+            uriParser = ::testUri,
+        )
+
+        assertFalse(result.readyForAtomicCommit)
+        assertTrue(result.exchangeResult?.schemaTooNew == true)
+        assertEquals(null, importer.commit(Project(id = "target"), result))
+    }
+
     private fun testUri(raw: String): Uri {
         val scheme = raw.substringBefore(':', missingDelimiterValue = "")
         return TestUri(raw = raw, schemeValue = scheme, segment = raw.substringAfterLast('/'))
