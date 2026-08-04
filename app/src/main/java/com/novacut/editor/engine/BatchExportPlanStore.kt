@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.net.toUri
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.BatchExportItem
+import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
@@ -13,6 +14,7 @@ import com.novacut.editor.model.PlatformPreset
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SubtitleFormat
 import com.novacut.editor.model.TimelineExportRange
+import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.AudioCodec
 import com.novacut.editor.model.Watermark
@@ -28,6 +30,7 @@ private const val BATCH_PLAN_SCHEMA_VERSION = 1
 private const val DEFAULT_MAX_BATCH_ITEMS = 32
 private const val MAX_BATCH_PLAN_BYTES = 256L * 1024L
 private const val MAX_TEXT_LENGTH = 512
+private const val MAX_URI_LENGTH = 16_384
 private const val MAX_FINGERPRINT_LENGTH = 128
 private const val MAX_CHAPTERS = 500
 
@@ -177,6 +180,17 @@ private fun itemToJson(item: BatchExportItem): JSONObject = JSONObject().apply {
     item.errorMessage?.take(MAX_TEXT_LENGTH)?.let { put("errorMessage", it) }
     put("createdAtEpochMs", item.createdAtEpochMs.coerceAtLeast(0L))
     put("config", exportConfigToJson(item.config))
+    item.sourceRange?.let { source ->
+        put("sourceRange", JSONObject().apply {
+            put("clipId", source.clipId.take(MAX_TEXT_LENGTH))
+            put("sourceUri", source.sourceUri.toString().take(MAX_URI_LENGTH))
+            put("sourceDurationMs", source.sourceDurationMs.coerceAtLeast(1L))
+            put("startMs", source.startMs.coerceAtLeast(0L))
+            put("endMs", source.endMs.coerceAtLeast(0L))
+            put("displayName", source.displayName.take(MAX_TEXT_LENGTH))
+            put("trackType", source.trackType.name)
+        })
+    }
 }
 
 private fun parseItem(json: JSONObject?): BatchExportItem? {
@@ -186,6 +200,11 @@ private fun parseItem(json: JSONObject?): BatchExportItem? {
     val outputName = json.optString("outputName").take(MAX_TEXT_LENGTH).takeIf { it.isNotBlank() } ?: return null
     val status = runCatching { BatchExportStatus.valueOf(json.optString("status")) }.getOrNull() ?: return null
     val config = exportConfigFromJson(json.optJSONObject("config")) ?: return null
+    val sourceRange = if (json.has("sourceRange") && !json.isNull("sourceRange")) {
+        parseSourceRange(json.optJSONObject("sourceRange")) ?: return null
+    } else {
+        null
+    }
     return BatchExportItem(
         id = id,
         config = config,
@@ -197,8 +216,30 @@ private fun parseItem(json: JSONObject?): BatchExportItem? {
         progress = json.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f),
         errorMessage = json.optString("errorMessage").take(MAX_TEXT_LENGTH).takeIf { it.isNotBlank() },
         createdAtEpochMs = json.optLong("createdAtEpochMs").coerceAtLeast(0L),
+        sourceRange = sourceRange,
     )
 }
+
+private fun parseSourceRange(json: JSONObject?): BatchExportSourceRange? = runCatching {
+    if (json == null) return@runCatching null
+    val clipId = json.optString("clipId").take(MAX_TEXT_LENGTH).takeIf { it.isNotBlank() }
+        ?: return@runCatching null
+    val uriText = json.optString("sourceUri")
+        .takeIf { it.isNotBlank() && it.length <= MAX_URI_LENGTH }
+        ?: return@runCatching null
+    val displayName = json.optString("displayName").take(MAX_TEXT_LENGTH)
+        .takeIf { it.isNotBlank() }
+        ?: return@runCatching null
+    BatchExportSourceRange(
+        clipId = clipId,
+        sourceUri = uriText.toUri(),
+        sourceDurationMs = json.optLong("sourceDurationMs"),
+        startMs = json.optLong("startMs"),
+        endMs = json.optLong("endMs"),
+        displayName = displayName,
+        trackType = enumOrDefault(json.optString("trackType"), TrackType.VIDEO),
+    )
+}.getOrNull()
 
 private fun exportConfigToJson(config: ExportConfig): JSONObject = JSONObject().apply {
     put("resolution", config.resolution.name)

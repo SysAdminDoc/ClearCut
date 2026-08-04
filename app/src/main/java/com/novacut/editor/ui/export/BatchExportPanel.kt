@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.BatchExportItem
+import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.PlatformPreset
@@ -50,7 +51,10 @@ import com.novacut.editor.ui.editor.PremiumPanelPill
 @Composable
 fun BatchExportPanel(
     queue: List<BatchExportItem>,
+    defaultConfig: ExportConfig,
+    sourceCuts: List<BatchExportSourceRange>,
     onAddItem: (ExportConfig, String) -> Unit,
+    onAddSourceCut: (ExportConfig, BatchExportSourceRange) -> Unit,
     onRemoveItem: (String) -> Unit,
     onRetryItem: (String) -> Unit,
     onStartBatch: () -> Unit,
@@ -188,6 +192,41 @@ fun BatchExportPanel(
 
         if (showPresetPicker) {
             Spacer(modifier = Modifier.height(12.dp))
+
+            if (sourceCuts.isNotEmpty()) {
+                PremiumPanelCard(accent = ClearCutAccents.Mauve) {
+                    Text(
+                        text = stringResource(R.string.batch_export_source_cuts_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = semanticColors.text
+                    )
+                    Text(
+                        text = stringResource(R.string.batch_export_source_cuts_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = semanticColors.subtext
+                    )
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        sourceCuts.forEach { source ->
+                            UtilityExportChip(
+                                label = stringResource(
+                                    R.string.batch_export_source_cut_label,
+                                    source.displayName,
+                                    formatBatchCutTime(source.startMs),
+                                    formatBatchCutTime(source.endMs),
+                                ),
+                                accent = ClearCutAccents.Mauve,
+                                onClick = { onAddSourceCut(defaultConfig, source) },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             PremiumPanelCard(accent = ClearCutAccents.Blue) {
                 Text(
@@ -442,6 +481,18 @@ private fun BatchExportItemRow(
                         style = MaterialTheme.typography.bodySmall,
                         color = semanticColors.subtext
                     )
+                    item.sourceRange?.let { source ->
+                        Text(
+                            text = stringResource(
+                                R.string.batch_export_source_cut_label,
+                                source.displayName,
+                                formatBatchCutTime(source.startMs),
+                                formatBatchCutTime(source.endMs),
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ClearCutAccents.Mauve,
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -547,4 +598,12 @@ private fun ExportConfig.describeForQueue(): String = buildString {
             }
         }
     }
+}
+
+private fun formatBatchCutTime(timeMs: Long): String {
+    val safeMs = timeMs.coerceAtLeast(0L)
+    val totalSeconds = safeMs / 1_000L
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return "%d:%02d".format(minutes, seconds)
 }

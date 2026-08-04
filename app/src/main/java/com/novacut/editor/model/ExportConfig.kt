@@ -1,5 +1,6 @@
 package com.novacut.editor.model
 
+import android.net.Uri
 import androidx.compose.runtime.Immutable
 import java.util.UUID
 
@@ -275,6 +276,62 @@ enum class FrameCaptureFormat(val extension: String, val displayName: String) {
     JPEG("jpg", "JPEG (smaller)")
 }
 
+/**
+ * A source-file cut that can be exported independently from the project
+ * timeline. The bounds are source-media milliseconds, not timeline frames.
+ */
+@Immutable
+data class BatchExportSourceRange(
+    val clipId: String,
+    val sourceUri: Uri,
+    val sourceDurationMs: Long,
+    val startMs: Long,
+    val endMs: Long,
+    val displayName: String,
+    val trackType: TrackType = TrackType.VIDEO,
+) {
+    init {
+        require(clipId.isNotBlank()) { "clipId must not be blank" }
+        require(sourceDurationMs > 0L) { "sourceDurationMs must be positive" }
+        require(startMs >= 0L) { "startMs must be non-negative" }
+        require(endMs > startMs) { "endMs must follow startMs" }
+        require(endMs <= sourceDurationMs) { "endMs cannot exceed sourceDurationMs" }
+        require(displayName.isNotBlank()) { "displayName must not be blank" }
+    }
+
+    val durationMs: Long get() = endMs - startMs
+
+    fun toClip(id: String): Clip = Clip(
+        id = id,
+        sourceUri = sourceUri,
+        sourceDurationMs = sourceDurationMs,
+        timelineStartMs = 0L,
+        trimStartMs = startMs,
+        trimEndMs = endMs,
+        name = displayName,
+    )
+
+    companion object {
+        fun fromClip(clip: Clip, trackType: TrackType): BatchExportSourceRange? {
+            val startMs = clip.trimStartMs.coerceAtLeast(0L)
+            val endMs = clip.trimEndMs.coerceAtMost(clip.sourceDurationMs)
+            if (clip.id.isBlank() || clip.sourceDurationMs <= 0L || endMs <= startMs) return null
+            val displayName = clip.name?.takeIf { it.isNotBlank() }
+                ?: clip.sourceUri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
+                ?: "Clip"
+            return BatchExportSourceRange(
+                clipId = clip.id,
+                sourceUri = clip.sourceUri,
+                sourceDurationMs = clip.sourceDurationMs,
+                startMs = startMs,
+                endMs = endMs,
+                displayName = displayName,
+                trackType = trackType,
+            )
+        }
+    }
+}
+
 @Immutable
 data class BatchExportItem(
     val id: String = UUID.randomUUID().toString(),
@@ -286,7 +343,9 @@ data class BatchExportItem(
     val status: BatchExportStatus = BatchExportStatus.QUEUED,
     val progress: Float = 0f,
     val errorMessage: String? = null,
-    val createdAtEpochMs: Long = System.currentTimeMillis()
+    val createdAtEpochMs: Long = System.currentTimeMillis(),
+    /** Null keeps the historical uniform-project batch behavior. */
+    val sourceRange: BatchExportSourceRange? = null,
 )
 
 enum class BatchExportStatus {

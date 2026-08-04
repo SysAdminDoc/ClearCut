@@ -35,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.novacut.editor.R
+import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlayType
 import com.novacut.editor.model.TrackType
@@ -315,9 +316,20 @@ fun BoxScope.EditorUtilityPanelHost(
         visible = state.panels.isOpen(PanelId.BATCH_EXPORT),
         modifier = Modifier.align(Alignment.BottomCenter)
     ) {
+        val batchSourceCuts = state.tracks
+            .filter { track -> track.type == TrackType.VIDEO || track.type == TrackType.OVERLAY }
+            .sortedBy { track -> track.index }
+            .flatMap { track ->
+                track.clips
+                    .sortedBy { clip -> clip.timelineStartMs }
+                    .mapNotNull { clip -> BatchExportSourceRange.fromClip(clip, track.type) }
+            }
         BatchExportPanel(
             queue = state.batchExportQueue,
+            defaultConfig = state.exportConfig,
+            sourceCuts = batchSourceCuts,
             onAddItem = viewModel::addBatchExportItem,
+            onAddSourceCut = viewModel::addBatchExportSourceCut,
             onRemoveItem = viewModel::removeBatchExportItem,
             onRetryItem = viewModel::retryBatchExportItem,
             onStartBatch = viewModel::startBatchExport,

@@ -964,6 +964,9 @@
     <string name="batch_export_queue_title">Delivery Queue</string>
     <string name="batch_export_queue_description">Build a stack of exports for different platforms and let ClearCut run them back-to-back.</string>
     <string name="batch_export_add_targets_description">Tap any preset to add it to the queue, then keep stacking utility exports for audio-only or stems if you need them.</string>
+    <string name="batch_export_source_cuts_title">Source-file cuts</string>
+    <string name="batch_export_source_cuts_description">Queue an existing timeline clip as an independent source range. Each cut exports its own file with the current delivery settings.</string>
+    <string name="batch_export_source_cut_label">%1$s • %2$s–%3$s</string>
     <string name="batch_export_queued_title">Queued Exports</string>
     <string name="batch_export_queued_description">Review the stack, remove anything you no longer need, and launch the batch when it looks right.</string>
     <string name="batch_export_empty_title">Nothing queued yet</string>

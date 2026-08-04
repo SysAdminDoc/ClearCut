@@ -2476,6 +2476,10 @@ class EditorViewModel @Inject constructor(
     fun showBatchExport() = exportDelegate.showBatchExport()
     fun hideBatchExport() = exportDelegate.hideBatchExport()
     fun addBatchExportItem(config: ExportConfig, name: String) = exportDelegate.addBatchExportItem(config, name)
+    fun addBatchExportSourceCut(
+        config: ExportConfig,
+        sourceRange: com.novacut.editor.model.BatchExportSourceRange,
+    ) = exportDelegate.addBatchExportSourceCut(config, sourceRange)
     fun removeBatchExportItem(id: String) = exportDelegate.removeBatchExportItem(id)
     fun retryBatchExportItem(id: String) = exportDelegate.retryBatchExportItem(id)
     fun startBatchExport() = exportDelegate.startBatchExport()

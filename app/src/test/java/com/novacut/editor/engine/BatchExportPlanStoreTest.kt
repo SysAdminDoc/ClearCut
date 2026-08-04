@@ -1,7 +1,9 @@
 package com.novacut.editor.engine
 
+import android.net.Uri
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.BatchExportItem
+import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
@@ -11,9 +13,12 @@ import com.novacut.editor.model.TimelineExportRange
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.nio.file.Files
 
+@RunWith(RobolectricTestRunner::class)
 class BatchExportPlanStoreTest {
 
     @Test
@@ -49,6 +54,14 @@ class BatchExportPlanStoreTest {
                 progress = 0.42f,
                 errorMessage = "Encoder failed",
                 createdAtEpochMs = 42L,
+                sourceRange = BatchExportSourceRange(
+                    clipId = "source-clip",
+                    sourceUri = Uri.parse("content://media/video/42"),
+                    sourceDurationMs = 20_000L,
+                    startMs = 1_000L,
+                    endMs = 8_000L,
+                    displayName = "Phone cut",
+                ),
             )
             val completed = failed.copy(id = "completed-item", status = BatchExportStatus.COMPLETED)
 
@@ -62,6 +75,7 @@ class BatchExportPlanStoreTest {
             assertEquals(failed.status, restored.single().status)
             assertEquals(failed.errorMessage, restored.single().errorMessage)
             assertEquals(failed.createdAtEpochMs, restored.single().createdAtEpochMs)
+            assertEquals(failed.sourceRange, restored.single().sourceRange)
         } finally {
             dir.deleteRecursively()
         }

@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added a CFR export toggle that normalizes VFR visual clips through the bundled FFmpeg cadence pass before Media3 rendering, persists in batch plans, discloses the rendered-only path in the export UI, and verifies constant sample intervals on an Android 16 device.
+- Batch export can now queue each existing source clip's trim range as an independent output with its own persisted source URI/range, while uniform project exports remain available.
 - Added a timeline range-selection tool that mutes audio non-destructively with volume keyframes across preview/export, preserving clip boundaries and autosave/undo behavior.
 - Nested editor back navigation now uses Android's predictive-back progress with edge-aware preview motion, cancellation-safe state handling, and the existing immersive/panel/tool/selection/compound precedence.
 - Android 15+ now uses Media3's platform loudness-controller path for preview/export audio decoding, applies a guarded HDR headroom policy to HDR editor windows and preview surfaces, and restores prior display settings on exit; older Android versions remain no-op fallbacks.

@@ -53,9 +53,11 @@ import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.writeFileAtomically
 import com.novacut.editor.engine.writeUtf8TextAtomically
 import com.novacut.editor.model.BatchExportItem
+import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -685,9 +687,13 @@ class ExportDelegate(
         }
     }
 
-    fun startExport(outputDir: File, preferredOutputName: String? = null) {
-        val currentState = stateFlow.value
-        if (currentState.exportState == ExportState.EXPORTING) {
+    fun startExport(
+        outputDir: File,
+        preferredOutputName: String? = null,
+        currentStateOverride: EditorState? = null,
+    ) {
+        val currentState = currentStateOverride ?: stateFlow.value
+        if (stateFlow.value.exportState == ExportState.EXPORTING) {
             showToast(appContext.getString(R.string.export_already_in_progress_toast))
             return
         }
@@ -2114,6 +2120,76 @@ class ExportDelegate(
         updateBatchQueue { queue -> queue + item }
     }
 
+    /** Queue one source-file cut while retaining the current export settings. */
+    fun addBatchExportSourceCut(config: ExportConfig, sourceRange: BatchExportSourceRange) {
+        if (stateFlow.value.batchExportQueue.size >= BatchExportPlanStore.MAX_ITEMS) {
+            showToast(
+                appContext.resources.getQuantityString(
+                    R.plurals.batch_export_queue_limit,
+                    BatchExportPlanStore.MAX_ITEMS,
+                    BatchExportPlanStore.MAX_ITEMS,
+                )
+            )
+            return
+        }
+        val context = batchPlanContext ?: currentBatchPlanContext().also { batchPlanContext = it }
+        // The source range is the cut boundary for this item. A project-level
+        // timeline range would otherwise be applied a second time to the
+        // isolated one-clip export state.
+        val itemConfig = config.copy(timelineRange = null)
+        val item = BatchExportItem(
+            config = itemConfig,
+            outputName = sourceRange.displayName,
+            projectId = context.projectId,
+            projectFingerprint = context.projectFingerprint,
+            configFingerprint = exportConfigFingerprint(itemConfig),
+            sourceRange = sourceRange,
+        )
+        updateBatchQueue { queue -> queue + item }
+    }
+
+    private fun batchExportState(
+        baseState: EditorState,
+        item: BatchExportItem,
+    ): EditorState {
+        val sourceRange = item.sourceRange ?: return baseState.copyExport { export ->
+            export.copy(
+                config = item.config,
+                state = ExportState.IDLE,
+                progress = 0f,
+                errorMessage = null,
+                pendingConfirmation = null,
+            )
+        }
+        val sourceClip = sourceRange.toClip("batch-${item.id}-${sourceRange.clipId}")
+        val sourceTrack = Track(
+            id = "batch-${item.id}-track",
+            type = sourceRange.trackType,
+            index = 0,
+            clips = listOf(sourceClip),
+        )
+        return baseState.copy(
+            tracks = listOf(sourceTrack),
+            selectedClipId = sourceClip.id,
+            selectedTrackId = sourceTrack.id,
+            selectedClipIds = setOf(sourceClip.id),
+            totalDurationMs = sourceClip.durationMs,
+            textOverlays = emptyList(),
+            imageOverlays = emptyList(),
+            timelineMarkers = emptyList(),
+            globalTransitions = emptyList(),
+            trackedObjects = emptyList(),
+        ).copyExport { export ->
+            export.copy(
+                config = item.config.copy(timelineRange = null),
+                state = ExportState.IDLE,
+                progress = 0f,
+                errorMessage = null,
+                pendingConfirmation = null,
+            )
+        }
+    }
+
     fun removeBatchExportItem(id: String) {
         updateBatchQueue { queue -> queue.filter { it.id != id } }
     }
@@ -2193,14 +2269,16 @@ class ExportDelegate(
                 "ClearCut"
             ).apply { mkdirs() }
             val batchState = stateFlow.value
-            val durationMs = batchState.tracks.flatMap { it.clips }
-                .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+            val itemStates = queue.associateWith { item -> batchExportState(batchState, item) }
             val storageCheck = ExportStoragePolicy.checkBatch(
                 requests = queue.map { item ->
+                    val itemState = requireNotNull(itemStates[item])
+                    val durationMs = itemState.tracks.flatMap { it.clips }
+                        .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
                     ExportStoragePolicy.request(
                         durationMs,
                         item.config,
-                        batchState.tracks,
+                        itemState.tracks,
                         sourceSizeBytes = { clip -> querySourceSize(appContext, clip.sourceUri).takeIf { it > 0L } },
                     )
                 },
@@ -2247,14 +2325,19 @@ class ExportDelegate(
                     // the wait loop below immediately sees the previous item's COMPLETE/ERROR
                     // state and advances before the new export has started, causing two items
                     // to export concurrently and the batch queue to report incorrect statuses.
+                    val itemState = requireNotNull(itemStates[item])
                     updateExport {
                         it.copy(
-                            config = item.config,
+                            config = itemState.exportConfig,
                             state = ExportState.IDLE,
                             progress = 0f
                         )
                     }
-                    startExport(outputDir, item.outputName)
+                    startExport(
+                        outputDir = outputDir,
+                        preferredOutputName = item.outputName,
+                        currentStateOverride = itemState,
+                    )
                     val progressJob = scope.launch {
                         stateFlow.map { it.exportProgress }
                             .distinctUntilChanged()

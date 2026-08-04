@@ -925,6 +925,9 @@
     <string name="batch_export_queue_title">Cola de entrega</string>
     <string name="batch_export_queue_description">Cree una pila de exportaciones para diferentes plataformas y deje que ClearCut las ejecute consecutivamente.</string>
     <string name="batch_export_add_targets_description">Toque cualquier ajuste preestablecido para agregarlo a la cola, luego siga acumulando exportaciones de utilidades para solo audio o temas si los necesita.</string>
+    <string name="batch_export_source_cuts_title">Cortes de archivos fuente</string>
+    <string name="batch_export_source_cuts_description">Ponga en cola un clip existente de la línea de tiempo como un intervalo de fuente independiente. Cada corte exporta su propio archivo con los ajustes de entrega actuales.</string>
+    <string name="batch_export_source_cut_label">%1$s • %2$s–%3$s</string>
     <string name="batch_export_queued_title">Exportaciones en cola</string>
     <string name="batch_export_queued_description">Revise la pila, elimine todo lo que ya no necesite y ejecute el lote cuando parezca correcto.</string>
     <string name="batch_export_empty_title">Nada en cola todavía</string>
