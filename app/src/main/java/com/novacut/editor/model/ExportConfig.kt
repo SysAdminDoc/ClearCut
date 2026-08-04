@@ -48,7 +48,13 @@ data class ExportConfig(
     // attempts direct MediaExtractor/MediaMuxer copy for untouched single-source
     // trims, then safely falls back to Transformer when the timeline is not
     // eligible or the device muxer rejects the source.
-    val allowStreamCopy: Boolean = true
+    val allowStreamCopy: Boolean = true,
+    // Source creation time and orientation are carried into rendered MP4s by
+    // default. Scrubbing explicitly removes source metadata from the render;
+    // the two opt-in flags below are ignored while scrubbing is enabled.
+    val scrubMetadata: Boolean = false,
+    val preserveSourceLocationMetadata: Boolean = false,
+    val preserveSourceStreamMetadata: Boolean = false
 ) {
     init {
         require(videoBitrate > 0) { "Bitrate must be positive" }

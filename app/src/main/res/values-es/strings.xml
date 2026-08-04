@@ -75,6 +75,12 @@
     <string name="export_hdr_preserve_overlays_disabled">No disponible con superposiciones de texto, imagen o marca de agua. La exportación usará la ruta de superposición SDR para evitar errores de color HDR.</string>
     <string name="export_fast_trim">Recorte rápido cuando sea posible</string>
     <string name="export_fast_trim_description">Utilice la copia continua para recortes intactos de una sola fuente y recurra a un renderizado completo cuando las ediciones lo requieran.</string>
+    <string name="export_scrub_metadata">Limpiar metadatos de origen</string>
+    <string name="export_scrub_metadata_description">Elimina del archivo renderizado las marcas de tiempo, la orientación, la ubicación y las etiquetas de flujo del origen.</string>
+    <string name="export_preserve_location_metadata">Conservar ubicación de origen</string>
+    <string name="export_preserve_location_metadata_description">Permite incluir las coordenadas GPS incrustadas en el MP4. La limpieza tiene prioridad.</string>
+    <string name="export_preserve_stream_metadata">Conservar etiquetas de flujo</string>
+    <string name="export_preserve_stream_metadata_description">Permite incluir el título, artista, idioma y etiquetas de pista del origen en un bloque de metadatos MP4 con espacio de nombres.</string>
     <string name="export_timeline_range">Rango de la línea de tiempo</string>
     <string name="export_timeline_range_description">Exporte solo una sección cuantificada por fotogramas para revisiones, avances o entregas parciales. El proyecto permanece sin cambios.</string>
     <string name="export_range_whole_timeline">Línea de tiempo completa</string>

@@ -473,6 +473,11 @@ class ExportDelegate(
         val engine = streamCopyEngine ?: return false
         if (!config.allowStreamCopy) return false
         if (resumeFromFile != null) return false
+        // Stream-copy retains source metadata verbatim and cannot honor the
+        // explicit scrub or opt-in metadata policy. Force the Transformer so
+        // the same filtered muxer contract applies to every requested field.
+        if (config.scrubMetadata) return false
+        if (config.preserveSourceLocationMetadata || config.preserveSourceStreamMetadata) return false
         // A selected range must flow through the Transformer so every track,
         // overlay, caption, and effect is rebased consistently. Stream-copy
         // only understands the untouched single-source trim contract.

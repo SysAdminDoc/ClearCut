@@ -23,8 +23,10 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.GifBox
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LayersClear
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.Warning
@@ -1193,6 +1195,46 @@ fun ExportSheet(
                     onCheckedChange = { onConfigChanged(config.copy(allowStreamCopy = it)) },
                     accent = ClearCutAccents.Green
                 )
+
+                ExportToggleRow(
+                    icon = Icons.Default.PrivacyTip,
+                    title = stringResource(R.string.export_scrub_metadata),
+                    description = stringResource(R.string.export_scrub_metadata_description),
+                    checked = config.scrubMetadata,
+                    onCheckedChange = { scrub ->
+                        onConfigChanged(
+                            config.copy(
+                                scrubMetadata = scrub,
+                                preserveSourceLocationMetadata = if (scrub) false else config.preserveSourceLocationMetadata,
+                                preserveSourceStreamMetadata = if (scrub) false else config.preserveSourceStreamMetadata,
+                            )
+                        )
+                    },
+                    accent = ClearCutAccents.Red
+                )
+
+                if (!config.scrubMetadata) {
+                    ExportToggleRow(
+                        icon = Icons.Default.PrivacyTip,
+                        title = stringResource(R.string.export_preserve_location_metadata),
+                        description = stringResource(R.string.export_preserve_location_metadata_description),
+                        checked = config.preserveSourceLocationMetadata,
+                        onCheckedChange = { enabled ->
+                            onConfigChanged(config.copy(preserveSourceLocationMetadata = enabled))
+                        },
+                        accent = ClearCutAccents.Yellow
+                    )
+                    ExportToggleRow(
+                        icon = Icons.Default.Info,
+                        title = stringResource(R.string.export_preserve_stream_metadata),
+                        description = stringResource(R.string.export_preserve_stream_metadata_description),
+                        checked = config.preserveSourceStreamMetadata,
+                        onCheckedChange = { enabled ->
+                            onConfigChanged(config.copy(preserveSourceStreamMetadata = enabled))
+                        },
+                        accent = ClearCutAccents.Blue
+                    )
+                }
 
                 ExportChoiceGroup(
                     title = stringResource(R.string.export_quality),

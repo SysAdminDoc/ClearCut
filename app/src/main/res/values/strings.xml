@@ -78,6 +78,12 @@
     <string name="export_hdr_preserve_overlays_disabled">Unavailable with text, image, or watermark overlays. Export will use the SDR overlay path to prevent HDR color errors.</string>
     <string name="export_fast_trim">Fast Trim When Possible</string>
     <string name="export_fast_trim_description">Use stream-copy for untouched single-source trims and fall back to a full render when edits require it.</string>
+    <string name="export_scrub_metadata">Scrub source metadata</string>
+    <string name="export_scrub_metadata_description">Remove source timestamps, orientation, location, and stream tags from the rendered file.</string>
+    <string name="export_preserve_location_metadata">Preserve source location</string>
+    <string name="export_preserve_location_metadata_description">Opt in to carrying embedded GPS coordinates into the MP4. Scrubbing overrides this.</string>
+    <string name="export_preserve_stream_metadata">Preserve source stream tags</string>
+    <string name="export_preserve_stream_metadata_description">Opt in to carrying source title, artist, language, and track tags in a namespaced MP4 metadata block.</string>
     <string name="export_timeline_range">Timeline Range</string>
     <string name="export_timeline_range_description">Export only a frame-quantized section for reviews, previews, or partial deliverables. The project stays unchanged.</string>
     <string name="export_range_whole_timeline">Whole timeline</string>

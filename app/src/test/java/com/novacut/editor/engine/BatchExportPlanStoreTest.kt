@@ -33,6 +33,9 @@ class BatchExportPlanStoreTest {
                 contactSheetColumns = 6,
                 timelineRange = TimelineExportRange(30L, 180L),
                 filenameTemplate = "{name}-square",
+                scrubMetadata = true,
+                preserveSourceLocationMetadata = true,
+                preserveSourceStreamMetadata = true,
             )
             val failed = BatchExportItem(
                 id = "failed-item",

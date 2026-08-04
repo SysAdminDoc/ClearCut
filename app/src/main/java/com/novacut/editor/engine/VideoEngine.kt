@@ -627,6 +627,7 @@ class VideoEngine @Inject constructor(
                     "editList=${trimOptimizationDecision.mp4EditListTrimEligible} " +
                     "reason=${trimOptimizationDecision.reason}",
             )
+            val sourceMetadataEntries = sourceMetadataEntries(tracks, config)
             val processedTracks = preRenderReversedClips(tracks, reversedTempFiles, onProgress)
             ensureExportActive("reversed-clip pre-render")
 
@@ -658,6 +659,7 @@ class VideoEngine @Inject constructor(
                 resumeFromFile = resumeFromFile,
                 trimOptimizationEnabled = transformerPlan.trimOptimizationEnabled,
                 mp4EditListTrimEnabled = transformerPlan.mp4EditListTrimEnabled,
+                metadataEntries = sourceMetadataEntries,
                 onProgress = onProgress,
                 onComplete = {
                     reversedTempFiles.forEach { it.delete() }
@@ -738,6 +740,7 @@ class VideoEngine @Inject constructor(
         try {
             val processedTracks = preRenderReversedClips(tracks, reversedTempFiles, onProgress)
             ensureExportActive("reversed-clip pre-render")
+            val sourceMetadataEntries = sourceMetadataEntries(tracks, config)
             val composition = buildAudioOnlyComposition(processedTracks, totalDurationMs)
             startTransformerWithPolling(
                 composition = composition,
@@ -753,6 +756,7 @@ class VideoEngine @Inject constructor(
                     sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                 ),
                 expectedDurationMs = totalDurationMs,
+                metadataEntries = sourceMetadataEntries,
                 onProgress = onProgress,
                 onComplete = { reversedTempFiles.forEach { it.delete() }; onComplete() },
                 onError = { e -> reversedTempFiles.forEach { it.delete() }; onError(e) },
@@ -809,6 +813,7 @@ class VideoEngine @Inject constructor(
         try {
             val processedTracks = preRenderReversedClips(tracks, reversedTempFiles, onProgress)
             ensureExportActive("reversed-clip pre-render")
+            val sourceMetadataEntries = sourceMetadataEntries(tracks, config)
             val processedStems = buildAudioMixdownTracks(processedTracks)
                 .filter { it.id in stemTracks.map { s -> s.id }.toSet() }
                 .sortedBy { it.index }
@@ -831,6 +836,7 @@ class VideoEngine @Inject constructor(
                         sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                     ),
                     expectedDurationMs = totalDurationMs,
+                    metadataEntries = sourceMetadataEntries,
                     onProgress = { p ->
                         val base = index.toFloat() / processedStems.size
                         onProgress(base + p / processedStems.size)
@@ -1080,6 +1086,7 @@ class VideoEngine @Inject constructor(
         return try {
             withContext(Dispatchers.IO) { tempDir.mkdirs() }
             val outputsByName = mutableMapOf<String, File>()
+            val sourceMetadataEntries = sourceMetadataEntries(tracks, config)
 
             for (execution in plan.runs.sortedBy { it.index }) {
                 ensureExportActive("mixed run ${execution.index}")
@@ -1145,6 +1152,7 @@ class VideoEngine @Inject constructor(
                                 sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                             ),
                             expectedDurationMs = execution.run.durationMs,
+                            metadataEntries = sourceMetadataEntries,
                             onProgress = { progress ->
                                 publishMixedProgress(completedWeight, stepWeight, progress)
                             },
@@ -2263,6 +2271,22 @@ class VideoEngine @Inject constructor(
         return track.isVisible && !track.isMuted && (soloTrackIds.isEmpty() || track.id in soloTrackIds)
     }
 
+    private suspend fun sourceMetadataEntries(
+        tracks: List<Track>,
+        config: ExportConfig,
+    ): List<androidx.media3.common.Metadata.Entry> {
+        return withContext(Dispatchers.IO) {
+            if (config.scrubMetadata) return@withContext emptyList()
+            val sourceMetadata = SourceMetadataProbe(context).probe(tracks)
+            SourceMetadataPolicy.entriesFor(
+                metadata = sourceMetadata,
+                scrubMetadata = config.scrubMetadata,
+                preserveLocation = config.preserveSourceLocationMetadata,
+                preserveStreamTags = config.preserveSourceStreamMetadata,
+            )
+        }
+    }
+
     @androidx.annotation.OptIn(UnstableApi::class)
     private suspend fun startTransformerWithPolling(
         composition: Composition,
@@ -2278,6 +2302,7 @@ class VideoEngine @Inject constructor(
         resumeFromFile: File? = null,
         trimOptimizationEnabled: Boolean = false,
         mp4EditListTrimEnabled: Boolean = false,
+        metadataEntries: List<androidx.media3.common.Metadata.Entry> = emptyList(),
     ) {
         withContext(Dispatchers.Main) {
             // Cancelled before the transformer was built: starting it anyway
@@ -2313,6 +2338,12 @@ class VideoEngine @Inject constructor(
             if (trimOptimizationEnabled && mp4EditListTrimEnabled) {
                 transformerBuilder.experimentalSetMp4EditListTrimEnabled(true)
             }
+            transformerBuilder.setMuxerFactory(
+                MetadataPreservingMuxerFactory(
+                    delegate = DefaultMuxer.Factory(),
+                    entries = metadataEntries,
+                )
+            )
             val transformer = transformerBuilder.build()
 
             val listener = object : Transformer.Listener {

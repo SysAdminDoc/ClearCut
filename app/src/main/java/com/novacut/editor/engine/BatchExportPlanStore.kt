@@ -253,6 +253,9 @@ private fun exportConfigToJson(config: ExportConfig): JSONObject = JSONObject().
     put("writeAiUseSidecar", config.writeAiUseSidecar)
     put("hdr10PlusMetadata", config.hdr10PlusMetadata)
     put("allowStreamCopy", config.allowStreamCopy)
+    put("scrubMetadata", config.scrubMetadata)
+    put("preserveSourceLocationMetadata", config.preserveSourceLocationMetadata)
+    put("preserveSourceStreamMetadata", config.preserveSourceStreamMetadata)
 }
 
 private fun exportConfigFromJson(json: JSONObject?): ExportConfig? {
@@ -323,6 +326,9 @@ private fun exportConfigFromJson(json: JSONObject?): ExportConfig? {
             writeAiUseSidecar = json.optBoolean("writeAiUseSidecar", true),
             hdr10PlusMetadata = json.optBoolean("hdr10PlusMetadata", false),
             allowStreamCopy = json.optBoolean("allowStreamCopy", true),
+            scrubMetadata = json.optBoolean("scrubMetadata", false),
+            preserveSourceLocationMetadata = json.optBoolean("preserveSourceLocationMetadata", false),
+            preserveSourceStreamMetadata = json.optBoolean("preserveSourceStreamMetadata", false),
         )
     }.getOrNull()
 }
