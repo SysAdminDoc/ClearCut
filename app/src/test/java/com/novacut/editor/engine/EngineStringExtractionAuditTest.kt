@@ -77,13 +77,14 @@ class EngineStringExtractionAuditTest {
         // 2026-08-04: 196 after guarded SRT/WebVTT caption import.
         // 2026-08-04: 197 after frame-quantized timeline range export.
         // 2026-08-04: 198 after constrained Media3 export resume support.
+        // 2026-08-04: 199 after shared ONNX Runtime XNNPACK session ownership.
         // Bump intentionally when adding new engines so the
         // docs/models.md registry and the ROADMAP stay in sync. This assertion
         // is a checkpoint, not a hard cap.
         assertTrue(
             "Engine file count drifted from the audit baseline (was 161, now $count). " +
                 "If you added an engine, update docs/models.md and bump this number.",
-            count in 95..198
+            count in 95..199
         )
     }
 

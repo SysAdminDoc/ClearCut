@@ -12,6 +12,7 @@ import ai.onnxruntime.OrtSession
 import com.novacut.editor.engine.AudioDecodeBudget
 import com.novacut.editor.engine.CodecInstanceBudget
 import com.novacut.editor.engine.ModelDownloadManager
+import com.novacut.editor.engine.OnnxSessionFactory
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -274,23 +275,19 @@ class WhisperEngine @Inject constructor(
 
         // Create ONNX sessions
         val env = ortEnv ?: OrtEnvironment.getEnvironment().also { ortEnv = it }
-        val sessionOpts = OrtSession.SessionOptions().apply {
-            setIntraOpNumThreads(4)
-        }
-
-        var encoderSession: OrtSession? = null
-        var decoderSession: OrtSession? = null
+        var encoderHandle: OnnxSessionFactory.SessionHandle? = null
+        var decoderHandle: OnnxSessionFactory.SessionHandle? = null
 
         try {
             try {
-                encoderSession = env.createSession(encoderFile.absolutePath, sessionOpts)
-                decoderSession = env.createSession(decoderFile.absolutePath, sessionOpts)
+                encoderHandle = OnnxSessionFactory.createSession(env, encoderFile.absolutePath)
+                decoderHandle = OnnxSessionFactory.createSession(env, decoderFile.absolutePath)
             } catch (e: Exception) {
                 Log.e("WhisperEngine", "Failed to create ONNX sessions (model may be corrupt)", e)
-                sessionOpts.close()
                 return@withContext emptyList()
             }
-            sessionOpts.close()
+            val encoderSession = requireNotNull(encoderHandle).session
+            val decoderSession = requireNotNull(decoderHandle).session
 
             for (chunk in 0 until numChunks) {
                 // Long inputs mean many 30s chunks — honor cancellation per chunk.
@@ -321,8 +318,11 @@ class WhisperEngine @Inject constructor(
                 onProgress(0.20f + 0.3f * (chunk + 1f) / numChunks)
             }
         } finally {
-            encoderSession?.close()
-            decoderSession?.close()
+            try {
+                encoderHandle?.close()
+            } finally {
+                decoderHandle?.close()
+            }
         }
 
         onProgress(1f)

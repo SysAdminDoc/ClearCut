@@ -2,7 +2,6 @@ package com.novacut.editor.engine
 
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
-import ai.onnxruntime.OrtSession
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -285,22 +284,15 @@ class InpaintingEngine @Inject constructor(
         return try {
             // ONNX Runtime inference for LaMa-Dilated
             val env = OrtEnvironment.getEnvironment()
-            val sessionOptions = OrtSession.SessionOptions().apply {
-                // NNAPI EP intentionally not added: NNAPI is deprecated as of Android 15
-                // (API 35) per https://developer.android.com/ndk/guides/neuralnetworks/migration-guide
-                // and Play Store may surface warnings on its use. We rely on the default CPU EP,
-                // which is correct and portable. Future vendor-specific acceleration (Qualcomm QNN,
-                // CoreML) and the TFLite path (LiteRT CompiledModel API) are tracked under
-                // ROADMAP.md R6.2 and require explicit per-EP capability probing before adding.
-            }
-            var session: OrtSession? = null
+            var sessionHandle: OnnxSessionFactory.SessionHandle? = null
             var inputBitmap: Bitmap? = null
             var maskBitmap: Bitmap? = null
             var imageTensor: OnnxTensor? = null
             var maskTensor: OnnxTensor? = null
             try {
                 val modelPath = File(context.filesDir, "models/inpainting/$MODEL_FILENAME").absolutePath
-                session = env.createSession(modelPath, sessionOptions)
+                sessionHandle = OnnxSessionFactory.createSession(env, modelPath)
+                val session = requireNotNull(sessionHandle).session
 
                 // Preprocess: resize to 512x512, normalize to [0,1]
                 inputBitmap = Bitmap.createScaledBitmap(bitmap, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, true)
@@ -338,8 +330,7 @@ class InpaintingEngine @Inject constructor(
             } finally {
                 imageTensor?.close()
                 maskTensor?.close()
-                session?.close()
-                sessionOptions.close()
+                sessionHandle?.close()
                 if (inputBitmap != null && inputBitmap !== bitmap) inputBitmap.recycle()
                 if (maskBitmap != null && maskBitmap !== mask) maskBitmap.recycle()
             }

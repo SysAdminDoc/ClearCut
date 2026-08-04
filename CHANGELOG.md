@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- ONNX Runtime sessions now attempt the bundled XNNPACK provider with bounded internal threading and retry on a fresh CPU session when the provider or model path cannot use it; Whisper and LaMa share the ownership-safe factory, and an instrumentation probe records native capability.
 - Replaced hard-coded dependency freshness claims with a committed source-backed snapshot and offline provenance gate; refresh reads authoritative Maven metadata, AGP/Lifecycle/Room release facts are recorded explicitly, and catalog changes require a passing local QA compatibility probe.
 - Added conservative Media3 export resume support for single, gap-free A/V MP4 timelines: eligible cancellations retain a partial, Resume writes to a distinct destination and verifies completion before cleanup, while changed or failed resumes clean artifacts and fall back to Restart.
 - Added frame-quantized export ranges with Set Start/Set End/Clear controls; exports rebase media, effects, captions, overlays, transitions, chapters, audio gaps, and tracked state without mutating the project, and history records the resolved bounds.
