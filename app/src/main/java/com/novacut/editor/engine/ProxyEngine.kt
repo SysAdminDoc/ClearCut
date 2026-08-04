@@ -143,6 +143,7 @@ class ProxyEngine @Inject constructor(
                 // HALF = 540p, QUARTER = 270p, EIGHTH = 135p (based on 1080p source)
                 val targetHeight = (1080 * resolution.scale).toInt().coerceAtLeast(120)
                 val presentation = Presentation.createForHeight(targetHeight)
+                    .copyWithUnsetSideRoundedTo(Media3ExportRobustnessPolicy.ENCODER_DIMENSION_DIVISOR)
 
                 val editedItem = EditedMediaItem.Builder(mediaItem)
                     .setEffects(Effects(emptyList(), listOf(presentation)))

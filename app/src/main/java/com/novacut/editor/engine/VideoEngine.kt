@@ -1291,6 +1291,12 @@ class VideoEngine @Inject constructor(
         return resolveMimeType(clip.sourceUri)
     }
 
+    private fun encoderSafeOutputDimensions(config: ExportConfig): Pair<Int, Int> {
+        val (width, height) = config.resolution.forAspect(config.aspectRatio)
+        val safe = Media3ExportRobustnessPolicy.encoderSafeDimensions(width, height)
+        return safe.width to safe.height
+    }
+
     private fun evaluateTrimOptimization(
         tracks: List<Track>,
         config: ExportConfig,
@@ -1303,7 +1309,7 @@ class VideoEngine @Inject constructor(
         resumeRequested: Boolean,
     ): Media3TrimOptimizationPolicy.Decision {
         val inputMimeType = resolveTrimOptimizationInputMimeType(tracks)
-        val (outputWidth, outputHeight) = config.resolution.forAspect(config.aspectRatio)
+        val (outputWidth, outputHeight) = encoderSafeOutputDimensions(config)
 
         fun evaluateWith(inputFormat: Media3TrimOptimizationPolicy.InputFormat?) =
             Media3TrimOptimizationPolicy.evaluate(
@@ -1405,7 +1411,7 @@ class VideoEngine @Inject constructor(
             throw IllegalStateException("No video clips to export")
         }
         val soloTrackIds = compositionPlan.soloTrackIds
-        val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
+        val (targetW, targetH) = encoderSafeOutputDimensions(config)
 
         val totalTimelineDurationMs = durationOverrideMs?.coerceAtLeast(0L)
             ?: compositionPlan.durationMs
@@ -1694,6 +1700,7 @@ class VideoEngine @Inject constructor(
         previewMode: Boolean = false,
     ): EditedMediaItem {
         val mediaItem = buildMediaItemForClip(clip, clip.sourceUri)
+        val safeDimensions = Media3ExportRobustnessPolicy.encoderSafeDimensions(targetW, targetH)
         val linkedAudioTrackPresent = clip.linkedClipId?.let { linkedId ->
             tracks.any { track ->
                 track.type == TrackType.AUDIO && track.clips.any { it.id == linkedId }
@@ -1813,7 +1820,7 @@ class VideoEngine @Inject constructor(
                             overlay = overlay,
                             relStartMs = relStart,
                             relEndMs = relEnd,
-                            outputFrameWidth = targetW,
+                            outputFrameWidth = safeDimensions.width,
                         )?.let { add(it) }
                     } else {
                         ExportImageOverlay.create(
@@ -1821,7 +1828,7 @@ class VideoEngine @Inject constructor(
                             overlay = overlay,
                             relStartMs = relStart,
                             relEndMs = relEnd,
-                            outputFrameWidth = targetW,
+                            outputFrameWidth = safeDimensions.width,
                         )?.let { add(it) }
                     }
                 }
@@ -1829,7 +1836,7 @@ class VideoEngine @Inject constructor(
                     ExportWatermarkOverlay.create(
                         context = context,
                         watermark = watermark,
-                        outputFrameWidth = targetW
+                        outputFrameWidth = safeDimensions.width
                     )?.let { add(it) }
                 }
             }
@@ -1881,7 +1888,13 @@ class VideoEngine @Inject constructor(
             } else {
                 add(FrameDropEffect.createDefaultFrameDropEffect(config.frameRate.toFloat()))
             }
-            add(Presentation.createForWidthAndHeight(targetW, targetH, Presentation.LAYOUT_SCALE_TO_FIT))
+            add(
+                Presentation.createForWidthAndHeight(
+                    safeDimensions.width,
+                    safeDimensions.height,
+                    Presentation.LAYOUT_SCALE_TO_FIT,
+                )
+            )
         }
 
         val audioProcessors = buildAudioProcessors(
@@ -1897,12 +1910,27 @@ class VideoEngine @Inject constructor(
             // the retained duration makes any non-zero trim start invalid.
             .setDurationUs(durationMsToUs(clip.sourceDurationMs.coerceAtLeast(1L)))
 
-        applyClipSpeed(itemBuilder, clip)
+        applyClipSpeed(itemBuilder, clip, config.frameRate)
         return itemBuilder.build()
     }
 
-    private fun applyClipSpeed(itemBuilder: EditedMediaItem.Builder, clip: Clip) {
-        if (clip.speedCurve != null && clip.speedCurve.points.size >= 2) {
+    private fun applyClipSpeed(
+        itemBuilder: EditedMediaItem.Builder,
+        clip: Clip,
+        outputFrameRate: Int? = null,
+    ) {
+        val hasSpeedCurve = clip.speedCurve != null && clip.speedCurve.points.size >= 2
+        val hasConstantSpeedChange = clip.speed != 1.0f
+        outputFrameRate?.let { frameRate ->
+            Media3ExportRobustnessPolicy
+                .speedFrameRateCap(
+                    outputFrameRate = frameRate,
+                    speedChanged = hasSpeedCurve || hasConstantSpeedChange,
+                )
+                ?.let(itemBuilder::setFrameRate)
+        }
+
+        if (hasSpeedCurve) {
             val curve = clip.speedCurve
             val clipDurMs = clip.trimEndMs - clip.trimStartMs
             itemBuilder.setSpeed(object : androidx.media3.common.audio.SpeedProvider {
@@ -2035,7 +2063,7 @@ class VideoEngine @Inject constructor(
     ): Composition {
         val compositionDurationMs = plan.durationMs.coerceAtLeast(1L)
         val previewConfig = config.copy(resolution = Resolution.HD_720P)
-        val (targetW, targetH) = previewConfig.resolution.forAspect(previewConfig.aspectRatio)
+        val (targetW, targetH) = encoderSafeOutputDimensions(previewConfig)
         val resolvedTracks = tracks.map { track ->
             track.copy(
                 clips = track.clips
@@ -2255,6 +2283,7 @@ class VideoEngine @Inject constructor(
                 .setAudioMimeType(MimeTypes.AUDIO_AAC)
                 .setEncoderFactory(
                     DefaultEncoderFactory.Builder(context)
+                        .setEnableCodecDbLite(true)
                         .setRequestedVideoEncoderSettings(
                             VideoEncoderSettings.Builder()
                                 .setBitrate(config.videoBitrate)
