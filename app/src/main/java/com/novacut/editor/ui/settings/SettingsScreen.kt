@@ -64,7 +64,7 @@ import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.ClearCutTestTags
-import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutFilterChip
@@ -172,7 +172,7 @@ fun SettingsScreen(
         settingsResetNotice?.let {
             SettingsFeedbackBanner(
                 message = stringResource(R.string.settings_reset_notice_message),
-                accentOverride = Mocha.Peach,
+                accentOverride = ClearCutAccents.Peach,
                 iconOverride = Icons.Default.Info,
                 onDismiss = viewModel::dismissSettingsResetNotice
             )
@@ -195,7 +195,7 @@ fun SettingsScreen(
         ) {
             SettingsDropdown(
                 icon = Icons.Default.Movie,
-                accent = Mocha.Rosewater,
+                accent = ClearCutAccents.Rosewater,
                 label = stringResource(R.string.settings_default_resolution),
                 description = stringResource(R.string.settings_default_resolution_description),
                 value = settings.defaultResolution.label,
@@ -204,7 +204,7 @@ fun SettingsScreen(
             )
             SettingsDropdown(
                 icon = Icons.Default.Schedule,
-                accent = Mocha.Sapphire,
+                accent = ClearCutAccents.Sapphire,
                 label = stringResource(R.string.settings_default_frame_rate),
                 description = stringResource(R.string.settings_default_frame_rate_description),
                 value = "${settings.defaultFrameRate}fps",
@@ -213,7 +213,7 @@ fun SettingsScreen(
             )
             SettingsDropdown(
                 icon = Icons.Default.CropSquare,
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 label = stringResource(R.string.settings_default_aspect_ratio),
                 description = stringResource(R.string.settings_default_aspect_ratio_description),
                 value = settings.defaultAspectRatio.label,
@@ -222,7 +222,7 @@ fun SettingsScreen(
             )
             SettingsDropdown(
                 icon = Icons.Default.Memory,
-                accent = Mocha.Peach,
+                accent = ClearCutAccents.Peach,
                 label = stringResource(R.string.settings_default_codec),
                 description = stringResource(R.string.settings_default_codec_description),
                 value = listOf("H.264", "H.265 (HEVC)", "AV1", "VP9")[
@@ -233,7 +233,7 @@ fun SettingsScreen(
             )
             SettingsTile(
                 icon = Icons.Default.Palette,
-                accent = Mocha.Teal,
+                accent = ClearCutAccents.Teal,
                 label = stringResource(R.string.settings_project_color_policy),
                 description = stringResource(R.string.settings_project_color_policy_description)
             ) {
@@ -243,11 +243,11 @@ fun SettingsScreen(
                 ) {
                     SettingsStatusBadge(
                         text = projectColorPolicy.workingColorSpace.displayName,
-                        accent = Mocha.Teal
+                        accent = ClearCutAccents.Teal
                     )
                     SettingsStatusBadge(
                         text = projectColorPolicy.displayTransform.displayName,
-                        accent = Mocha.Sapphire
+                        accent = ClearCutAccents.Sapphire
                     )
                 }
             }
@@ -271,7 +271,7 @@ fun SettingsScreen(
         ) {
             SettingsToggle(
                 icon = Icons.Default.Save,
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 label = stringResource(R.string.settings_auto_save),
                 description = stringResource(R.string.settings_auto_save_description),
                 checked = settings.autoSaveEnabled,
@@ -280,7 +280,7 @@ fun SettingsScreen(
             if (settings.autoSaveEnabled) {
                 SettingsSlider(
                     icon = Icons.Default.Schedule,
-                    accent = Mocha.Sapphire,
+                    accent = ClearCutAccents.Sapphire,
                     label = stringResource(R.string.settings_auto_save_interval),
                     description = stringResource(R.string.settings_auto_save_description),
                     value = settings.autoSaveIntervalSec.toFloat(),
@@ -291,7 +291,7 @@ fun SettingsScreen(
             }
             SettingsDropdown(
                 icon = Icons.Default.Tune,
-                accent = Mocha.Sky,
+                accent = ClearCutAccents.Sky,
                 label = stringResource(R.string.settings_proxy_resolution),
                 description = stringResource(R.string.settings_proxy_resolution_description),
                 value = settings.proxyResolution.label,
@@ -300,7 +300,7 @@ fun SettingsScreen(
             )
             SettingsSwitch(
                 icon = Icons.Default.Layers,
-                accent = Mocha.Blue,
+                accent = ClearCutAccents.Blue,
                 label = stringResource(R.string.settings_enable_proxy),
                 description = stringResource(R.string.settings_enable_proxy_description),
                 checked = settings.proxyEnabled,
@@ -308,7 +308,7 @@ fun SettingsScreen(
             )
             SettingsSwitch(
                 icon = Icons.Default.GraphicEq,
-                accent = Mocha.Green,
+                accent = ClearCutAccents.Green,
                 label = stringResource(R.string.settings_show_waveforms),
                 description = stringResource(R.string.settings_show_waveforms_desc),
                 checked = settings.showWaveforms,
@@ -316,7 +316,7 @@ fun SettingsScreen(
             )
             SettingsSwitch(
                 icon = Icons.Default.MusicNote,
-                accent = Mocha.Green,
+                accent = ClearCutAccents.Green,
                 label = stringResource(R.string.settings_snap_beat),
                 description = stringResource(R.string.settings_snap_beat_desc),
                 checked = settings.snapToBeat,
@@ -324,7 +324,7 @@ fun SettingsScreen(
             )
             SettingsSwitch(
                 icon = Icons.Default.Bookmark,
-                accent = Mocha.Yellow,
+                accent = ClearCutAccents.Yellow,
                 label = stringResource(R.string.settings_snap_markers),
                 description = stringResource(R.string.settings_snap_markers_desc),
                 checked = settings.snapToMarker,
@@ -332,7 +332,7 @@ fun SettingsScreen(
             )
             SettingsChoiceHeader(
                 icon = Icons.Default.ViewStream,
-                accent = Mocha.Teal,
+                accent = ClearCutAccents.Teal,
                 label = stringResource(R.string.settings_default_track_height),
                 description = stringResource(R.string.settings_default_track_height_description)
             )
@@ -348,7 +348,7 @@ fun SettingsScreen(
                         selected = settings.defaultTrackHeight == height,
                         onClick = { viewModel.setDefaultTrackHeight(height) },
                         text = "${height}dp",
-                        accent = Mocha.Teal,
+                        accent = ClearCutAccents.Teal,
                         icon = if (settings.defaultTrackHeight == height) Icons.Default.Check else null
                     )
                 }
@@ -367,7 +367,7 @@ fun SettingsScreen(
             ) {
                 SettingsSwitch(
                     icon = Icons.Default.Wifi,
-                    accent = Mocha.Sapphire,
+                    accent = ClearCutAccents.Sapphire,
                     label = stringResource(R.string.settings_ai_wifi_only),
                     description = stringResource(R.string.settings_ai_wifi_only_description),
                     checked = settings.aiModelWifiOnly,
@@ -375,7 +375,7 @@ fun SettingsScreen(
                 )
                 SettingsSwitch(
                     icon = Icons.Default.PrivacyTip,
-                    accent = Mocha.Green,
+                    accent = ClearCutAccents.Green,
                     label = stringResource(R.string.settings_mediapipe_consent),
                     description = stringResource(R.string.settings_mediapipe_consent_description),
                     checked = settings.mediaPipeConsentVersion >=
@@ -389,7 +389,7 @@ fun SettingsScreen(
                 )
                 SettingsAiModelRow(
                     icon = Icons.Default.RecordVoiceOver,
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     label = stringResource(R.string.settings_whisper_model),
                     description = stringResource(R.string.ai_whisper_description),
                     stateLabel = whisperModelState.displayLabel(),
@@ -415,7 +415,7 @@ fun SettingsScreen(
                 )
                 SettingsAiModelRow(
                     icon = Icons.Default.PersonOff,
-                    accent = Mocha.Green,
+                    accent = ClearCutAccents.Green,
                     label = stringResource(R.string.settings_segmentation_model),
                     description = stringResource(R.string.ai_segmentation_description),
                     stateLabel = segmentationModelState.displayLabel(),
@@ -441,13 +441,13 @@ fun SettingsScreen(
                 )
                 SettingsTile(
                     icon = Icons.Default.Mic,
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     label = stringResource(R.string.settings_piper_model),
                     description = stringResource(R.string.settings_piper_system_voice_description)
                 ) {
                     SettingsStatusBadge(
                         text = stringResource(R.string.settings_piper_system_voice_status),
-                        accent = Mocha.Peach
+                        accent = ClearCutAccents.Peach
                     )
                 }
             }
@@ -463,7 +463,7 @@ fun SettingsScreen(
         ) {
             SettingsTile(
                 icon = Icons.Default.Storage,
-                accent = Mocha.Peach,
+                accent = ClearCutAccents.Peach,
                 label = stringResource(R.string.settings_project_storage_title),
                 description = stringResource(
                     R.string.settings_project_storage_proxy,
@@ -472,13 +472,13 @@ fun SettingsScreen(
             ) {
                 SettingsStatusBadge(
                     text = formatStorageBytes(projectStorage.totalBytes),
-                    accent = if (projectStorage.totalBytes > 0L) Mocha.Peach else Mocha.Overlay0
+                    accent = if (projectStorage.totalBytes > 0L) ClearCutAccents.Peach else LocalClearCutColors.current.overlay
                 )
             }
             if (projectStorage.proxyCacheBytes > 0L) {
                 SettingsActionRow(
                     icon = Icons.Default.DeleteSweep,
-                    accent = Mocha.Peach,
+                    accent = ClearCutAccents.Peach,
                     label = stringResource(R.string.settings_clear_proxy_cache),
                     description = formatStorageBytes(projectStorage.proxyCacheBytes),
                     actionLabel = if (projectStorage.isClearingProxies) "…" else stringResource(R.string.settings_clear_proxy_cache),
@@ -499,7 +499,7 @@ fun SettingsScreen(
             val appearanceModes = AppearanceMode.entries
             SettingsDropdown(
                 icon = Icons.Default.Contrast,
-                accent = Mocha.Sky,
+                accent = ClearCutAccents.Sky,
                 label = stringResource(R.string.settings_appearance_mode),
                 description = stringResource(R.string.settings_appearance_mode_description),
                 value = settings.appearanceMode.displayLabel(),
@@ -515,7 +515,7 @@ fun SettingsScreen(
         ) {
             SettingsDropdown(
                 icon = Icons.Default.Tune,
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 label = stringResource(R.string.settings_default_mode),
                 description = stringResource(R.string.settings_default_mode_description),
                 value = settings.editorMode,
@@ -524,7 +524,7 @@ fun SettingsScreen(
             )
             SettingsToggle(
                 icon = Icons.Default.TouchApp,
-                accent = Mocha.Sapphire,
+                accent = ClearCutAccents.Sapphire,
                 label = stringResource(R.string.settings_haptic_feedback),
                 description = stringResource(R.string.settings_haptic_desc),
                 checked = settings.hapticEnabled,
@@ -532,7 +532,7 @@ fun SettingsScreen(
             )
             SettingsSwitch(
                 icon = Icons.Default.Delete,
-                accent = Mocha.Red,
+                accent = ClearCutAccents.Red,
                 label = stringResource(R.string.settings_confirm_delete),
                 description = stringResource(R.string.settings_confirm_delete_desc),
                 checked = settings.confirmBeforeDelete,
@@ -540,7 +540,7 @@ fun SettingsScreen(
             )
             SettingsChoiceHeader(
                 icon = Icons.Default.PhotoLibrary,
-                accent = Mocha.Peach,
+                accent = ClearCutAccents.Peach,
                 label = stringResource(R.string.settings_thumbnail_cache),
                 description = stringResource(R.string.settings_thumbnail_cache_description)
             )
@@ -561,14 +561,14 @@ fun SettingsScreen(
                             else viewModel.setThumbnailCacheSize(size)
                         },
                         text = label,
-                        accent = Mocha.Peach,
+                        accent = ClearCutAccents.Peach,
                         icon = if (settings.thumbnailCacheSizeMb == size) Icons.Default.Check else null
                     )
                 }
             }
             SettingsChoiceHeader(
                 icon = Icons.Default.HighQuality,
-                accent = Mocha.Yellow,
+                accent = ClearCutAccents.Yellow,
                 label = stringResource(R.string.settings_export_quality),
                 description = stringResource(R.string.settings_export_quality_description)
             )
@@ -589,7 +589,7 @@ fun SettingsScreen(
                         selected = settings.defaultExportQuality == key,
                         onClick = { viewModel.setDefaultExportQuality(key) },
                         text = label,
-                        accent = Mocha.Yellow,
+                        accent = ClearCutAccents.Yellow,
                         icon = if (settings.defaultExportQuality == key) Icons.Default.Check else null
                     )
                 }
@@ -604,14 +604,14 @@ fun SettingsScreen(
         ) {
             SettingsTile(
                 icon = Icons.Default.School,
-                accent = Mocha.Sapphire,
+                accent = ClearCutAccents.Sapphire,
                 label = stringResource(R.string.settings_reset_tutorial),
                 description = stringResource(R.string.settings_reset_tutorial_row_description),
                 onClick = { showResetConfirm = true }
             ) {
                 ClearCutMetricPill(
                     text = stringResource(R.string.settings_reset_tutorial_action),
-                    accent = Mocha.Sapphire
+                    accent = ClearCutAccents.Sapphire
                 )
             }
         }
@@ -632,7 +632,7 @@ fun SettingsScreen(
         ) {
             SettingsSwitch(
                 icon = Icons.Default.ViewStream,
-                accent = Mocha.Teal,
+                accent = ClearCutAccents.Teal,
                 label = stringResource(R.string.settings_diagnostic_timeline_shape),
                 description = stringResource(R.string.settings_diagnostic_timeline_shape_description),
                 checked = settings.includeDiagnosticTimelineShape,
@@ -640,7 +640,7 @@ fun SettingsScreen(
             )
             SettingsSwitch(
                 icon = Icons.Default.BugReport,
-                accent = Mocha.Peach,
+                accent = ClearCutAccents.Peach,
                 label = stringResource(R.string.settings_diagnostic_raw_error_text),
                 description = stringResource(R.string.settings_diagnostic_raw_error_text_description),
                 checked = settings.includeDiagnosticRawErrorText,
@@ -668,7 +668,7 @@ fun SettingsScreen(
         ) {
             SettingsActionRow(
                 icon = Icons.Default.Shield,
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 label = stringResource(R.string.settings_privacy_open_label),
                 description = stringResource(R.string.settings_privacy_open_description),
                 actionLabel = stringResource(R.string.settings_privacy_open_action),
@@ -684,7 +684,7 @@ fun SettingsScreen(
         ) {
             SettingsActionRow(
                 icon = Icons.Default.Info,
-                accent = Mocha.Teal,
+                accent = ClearCutAccents.Teal,
                 label = stringResource(R.string.settings_open_source_licenses),
                 description = stringResource(R.string.settings_open_source_licenses_description),
                 actionLabel = stringResource(R.string.settings_open_source_licenses_action),
@@ -702,7 +702,7 @@ fun SettingsScreen(
             ) {
                 SettingsSwitch(
                     icon = Icons.Default.SystemUpdate,
-                    accent = Mocha.Sky,
+                    accent = ClearCutAccents.Sky,
                     label = stringResource(R.string.settings_update_check_label),
                     description = stringResource(R.string.settings_update_check_description),
                     checked = settings.updateCheckEnabled,
@@ -712,7 +712,7 @@ fun SettingsScreen(
                     if (updateCheck.updateAvailable) {
                         SettingsActionRow(
                             icon = Icons.Default.NewReleases,
-                            accent = Mocha.Green,
+                            accent = ClearCutAccents.Green,
                             label = stringResource(
                                 R.string.settings_update_available_label,
                                 updateCheck.latestVersion.orEmpty()
@@ -725,7 +725,7 @@ fun SettingsScreen(
                     } else {
                         SettingsActionRow(
                             icon = Icons.Default.SystemUpdate,
-                            accent = Mocha.Sky,
+                            accent = ClearCutAccents.Sky,
                             label = stringResource(R.string.settings_update_check_now_label),
                             description = stringResource(R.string.settings_update_check_now_description),
                             actionLabel = if (updateCheck.isChecking) {
@@ -746,9 +746,9 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_about),
             description = stringResource(R.string.settings_about_description)
         ) {
-            SettingsInfo(Icons.Default.Info, stringResource(R.string.settings_version), ClearCutApp.VERSION, Mocha.Sapphire)
-            SettingsInfo(Icons.Default.Movie, stringResource(R.string.settings_engine), stringResource(R.string.settings_engine_value), Mocha.Peach)
-            SettingsInfo(Icons.Default.AutoAwesome, stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value), Mocha.Mauve)
+            SettingsInfo(Icons.Default.Info, stringResource(R.string.settings_version), ClearCutApp.VERSION, ClearCutAccents.Sapphire)
+            SettingsInfo(Icons.Default.Movie, stringResource(R.string.settings_engine), stringResource(R.string.settings_engine_value), ClearCutAccents.Peach)
+            SettingsInfo(Icons.Default.AutoAwesome, stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value), ClearCutAccents.Mauve)
         }
 
         Spacer(Modifier.height(Spacing.xxl))
@@ -778,7 +778,7 @@ fun SettingsScreen(
             ) {
                 androidx.compose.material3.Surface(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(Radius.xxl),
-                    color = Mocha.PanelHighest,
+                    color = LocalClearCutColors.current.panelHighest,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 640.dp)
@@ -836,7 +836,7 @@ fun SettingsScreen(
             ) {
                 androidx.compose.material3.Surface(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(Radius.xxl),
-                    color = Mocha.PanelHighest,
+                    color = LocalClearCutColors.current.panelHighest,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 640.dp)
@@ -879,20 +879,20 @@ private fun ResetTutorialConfirmDialog(
         icon = {
             ClearCutDialogIcon(
                 icon = Icons.Default.School,
-                accent = Mocha.Sapphire
+                accent = ClearCutAccents.Sapphire
             )
         },
         title = {
             Text(
                 text = stringResource(R.string.settings_reset_tutorial_confirm_title),
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.titleLarge
             )
         },
         text = {
             Text(
                 text = stringResource(R.string.settings_reset_tutorial_confirm),
-                color = Mocha.Subtext0,
+                color = LocalClearCutColors.current.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -909,9 +909,9 @@ private fun ResetTutorialConfirmDialog(
                 onClick = onDismissRequest
             )
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0,
+        containerColor = LocalClearCutColors.current.panelHighest,
+        titleContentColor = LocalClearCutColors.current.text,
+        textContentColor = LocalClearCutColors.current.subtext,
         shape = RoundedCornerShape(Radius.xxl)
     )
 }
@@ -937,20 +937,20 @@ private fun SettingsAiModelRemovalConfirmDialog(
         icon = {
             ClearCutDialogIcon(
                 icon = Icons.Default.Delete,
-                accent = Mocha.Red
+                accent = ClearCutAccents.Red
             )
         },
         title = {
             Text(
                 text = title,
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.titleLarge
             )
         },
         text = {
             Text(
                 text = body,
-                color = Mocha.Subtext0,
+                color = LocalClearCutColors.current.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -959,7 +959,7 @@ private fun SettingsAiModelRemovalConfirmDialog(
                 text = stringResource(R.string.ai_model_remove_confirm),
                 onClick = onConfirm,
                 icon = Icons.Default.Delete,
-                contentColor = Mocha.Red
+                contentColor = ClearCutAccents.Red
             )
         },
         dismissButton = {
@@ -968,9 +968,9 @@ private fun SettingsAiModelRemovalConfirmDialog(
                 onClick = onDismissRequest
             )
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0,
+        containerColor = LocalClearCutColors.current.panelHighest,
+        titleContentColor = LocalClearCutColors.current.text,
+        textContentColor = LocalClearCutColors.current.subtext,
         shape = RoundedCornerShape(Radius.xxl)
     )
 }
@@ -988,7 +988,7 @@ private fun SettingsHero(
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         ClearCutHeroCard(
-            accent = Mocha.Sapphire,
+            accent = ClearCutAccents.Sapphire,
             shape = RoundedCornerShape(Radius.xxl)
         ) {
             Row(
@@ -1005,7 +1005,7 @@ private fun SettingsHero(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.settings_title),
-                        color = Mocha.Text,
+                        color = LocalClearCutColors.current.text,
                         style = MaterialTheme.typography.headlineLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -1013,7 +1013,7 @@ private fun SettingsHero(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         stringResource(R.string.settings_subtitle),
-                        color = Mocha.Subtext0,
+                        color = LocalClearCutColors.current.subtext,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
@@ -1029,7 +1029,7 @@ private fun SettingsHero(
                     SettingsOverviewStat(
                         label = stringResource(R.string.settings_editor),
                         value = settings.editorMode,
-                        accent = Mocha.Sky,
+                        accent = ClearCutAccents.Sky,
                         modifier = Modifier.width(132.dp)
                     )
                 }
@@ -1037,7 +1037,7 @@ private fun SettingsHero(
                     SettingsOverviewStat(
                         label = stringResource(R.string.settings_auto_save),
                         value = if (settings.autoSaveEnabled) "${settings.autoSaveIntervalSec}s" else stringResource(R.string.settings_off),
-                        accent = Mocha.Green,
+                        accent = ClearCutAccents.Green,
                         modifier = Modifier.width(132.dp)
                     )
                 }
@@ -1045,7 +1045,7 @@ private fun SettingsHero(
                     SettingsOverviewStat(
                         label = stringResource(R.string.settings_ai_models),
                         value = stringResource(R.string.manage),
-                        accent = Mocha.Peach,
+                        accent = ClearCutAccents.Peach,
                         modifier = Modifier
                             .width(132.dp)
                             .clickable(role = Role.Button, onClick = onManageAiModels)
@@ -1084,7 +1084,7 @@ private fun SettingsOverviewStat(
             )
             Text(
                 text = value,
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1102,7 +1102,7 @@ private fun SettingsFeedbackBanner(
     onDismiss: () -> Unit
 ) {
     val colors = LocalClearCutColors.current
-    val accent = accentOverride ?: if (isError) Mocha.Red else Mocha.Green
+    val accent = accentOverride ?: if (isError) ClearCutAccents.Red else ClearCutAccents.Green
     val icon = iconOverride ?: if (isError) Icons.Default.Error else Icons.Default.CheckCircle
     Surface(
         modifier = Modifier
@@ -1130,7 +1130,7 @@ private fun SettingsFeedbackBanner(
             SettingsTileIcon(icon = icon, accent = accent)
             Text(
                 text = message,
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
                 maxLines = 3,
@@ -1153,7 +1153,7 @@ private fun SettingsDiagnosticExportRow(
 ) {
     SettingsTile(
         icon = Icons.Default.ReportProblem,
-        accent = Mocha.Sapphire,
+        accent = ClearCutAccents.Sapphire,
         label = stringResource(R.string.settings_diagnostic_export),
         description = stringResource(R.string.settings_diagnostic_export_description)
     ) {
@@ -1169,19 +1169,19 @@ private fun SettingsDiagnosticExportRow(
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            color = Mocha.Sapphire,
+                            color = ClearCutAccents.Sapphire,
                             strokeWidth = 2.dp
                         )
                         SettingsStatusBadge(
                             text = stringResource(R.string.settings_diagnostic_exporting),
-                            accent = Mocha.Sapphire
+                            accent = ClearCutAccents.Sapphire
                         )
                     }
                 }
                 state.bundle != null -> {
                     SettingsStatusBadge(
                         text = stringResource(R.string.settings_diagnostic_saved),
-                        accent = Mocha.Green
+                        accent = ClearCutAccents.Green
                     )
                     Text(
                         text = stringResource(
@@ -1189,7 +1189,7 @@ private fun SettingsDiagnosticExportRow(
                             state.bundle.fileName,
                             formatStorageBytes(state.bundle.sizeBytes)
                         ),
-                        color = Mocha.Subtext0,
+                        color = LocalClearCutColors.current.subtext,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.widthIn(max = 190.dp),
                         maxLines = 2,
@@ -1203,14 +1203,14 @@ private fun SettingsDiagnosticExportRow(
                             text = stringResource(R.string.settings_diagnostic_share),
                             onClick = { onShare(state.bundle) },
                             icon = Icons.Default.Share,
-                            contentColor = Mocha.Green
+                            contentColor = ClearCutAccents.Green
                         )
                         ClearCutSecondaryButton(
                             text = stringResource(R.string.settings_diagnostic_rebuild),
                             onClick = onExport,
                             icon = Icons.Default.Refresh,
                             enabled = !state.isExporting,
-                            contentColor = Mocha.Sapphire
+                            contentColor = ClearCutAccents.Sapphire
                         )
                     }
                 }
@@ -1219,7 +1219,7 @@ private fun SettingsDiagnosticExportRow(
                         text = stringResource(R.string.settings_diagnostic_export_action),
                         onClick = onExport,
                         icon = Icons.Default.Save,
-                        contentColor = Mocha.Sapphire
+                        contentColor = ClearCutAccents.Sapphire
                     )
                 }
             }
@@ -1270,7 +1270,7 @@ private fun SettingsNotificationPermissionRow(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
             contentDescription = stringResource(R.string.settings_export_notifications_open),
-            tint = Mocha.Subtext0,
+            tint = LocalClearCutColors.current.subtext,
             modifier = Modifier.size(18.dp)
         )
     }
@@ -1284,17 +1284,17 @@ private enum class NotificationPermissionSettingsStatus(
     Enabled(
         badgeResId = R.string.settings_export_notifications_enabled,
         descriptionResId = R.string.settings_export_notifications_enabled_description,
-        accent = Mocha.Green
+        accent = ClearCutAccents.Green
     ),
     Off(
         badgeResId = R.string.settings_export_notifications_off,
         descriptionResId = R.string.settings_export_notifications_off_description,
-        accent = Mocha.Yellow
+        accent = ClearCutAccents.Yellow
     ),
     NotRequired(
         badgeResId = R.string.settings_export_notifications_not_required,
         descriptionResId = R.string.settings_export_notifications_not_required_description,
-        accent = Mocha.Sapphire
+        accent = ClearCutAccents.Sapphire
     )
 }
 
@@ -1318,7 +1318,7 @@ private fun SettingsStorageOverview(
 ) {
     SettingsTile(
         icon = Icons.Default.Storage,
-        accent = Mocha.Rosewater,
+        accent = ClearCutAccents.Rosewater,
         label = stringResource(R.string.settings_ai_storage_title),
         description = stringResource(
             R.string.settings_ai_storage_description,
@@ -1328,7 +1328,7 @@ private fun SettingsStorageOverview(
     ) {
         SettingsStatusBadge(
             text = formatStorageBytes(totalBytes),
-            accent = if (totalBytes > 0L) Mocha.Rosewater else Mocha.Overlay0
+            accent = if (totalBytes > 0L) ClearCutAccents.Rosewater else LocalClearCutColors.current.overlay
         )
     }
 }
@@ -1402,10 +1402,10 @@ private fun SettingsAiModelRow(
                 SettingsStatusBadge(
                     text = stateLabel,
                     accent = when {
-                        canRemove -> Mocha.Green
-                        isError -> Mocha.Red
-                        isBusy -> Mocha.Sapphire
-                        else -> Mocha.Overlay1
+                        canRemove -> ClearCutAccents.Green
+                        isError -> ClearCutAccents.Red
+                        isBusy -> ClearCutAccents.Sapphire
+                        else -> LocalClearCutColors.current.overlayStrong
                     }
                 )
             }
@@ -1413,7 +1413,7 @@ private fun SettingsAiModelRow(
                 text = actionLabel,
                 onClick = onAction,
                 enabled = !isBusy,
-                contentColor = if (canRemove) Mocha.Red else accent,
+                contentColor = if (canRemove) ClearCutAccents.Red else accent,
                 icon = actionIcon
             )
         }
@@ -1558,7 +1558,7 @@ private fun SettingsDropdown(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = Mocha.Rosewater,
+                                tint = ClearCutAccents.Rosewater,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1613,9 +1613,9 @@ private fun SettingsSlider(
     // is the key on remember so external changes still propagate.
     var localValue by remember(value) { mutableStateOf(value) }
     Surface(
-        color = Mocha.PanelHighest,
+        color = LocalClearCutColors.current.panelHighest,
         shape = RoundedCornerShape(Radius.md),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStroke.copy(alpha = 0.9f))
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
             Row(
@@ -1631,7 +1631,7 @@ private fun SettingsSlider(
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             label,
-                            color = Mocha.Text,
+                            color = LocalClearCutColors.current.text,
                             style = MaterialTheme.typography.titleSmall,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -1639,7 +1639,7 @@ private fun SettingsSlider(
                         description?.let {
                             Text(
                                 it,
-                                color = Mocha.Subtext0,
+                                color = LocalClearCutColors.current.subtext,
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis
@@ -1665,7 +1665,7 @@ private fun SettingsSlider(
                 colors = SliderDefaults.colors(
                     thumbColor = accent,
                     activeTrackColor = accent,
-                    inactiveTrackColor = Mocha.Surface1
+                    inactiveTrackColor = LocalClearCutColors.current.surface
                 )
             )
         }
@@ -1686,7 +1686,7 @@ private fun SettingsInfo(
     ) {
         Text(
             text = value,
-            color = Mocha.Subtext0,
+            color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -1745,14 +1745,14 @@ private fun SettingsChoiceHeader(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 label,
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 description,
-                color = Mocha.Subtext0,
+                color = LocalClearCutColors.current.subtext,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
@@ -1787,9 +1787,9 @@ private fun SettingsSwitchTile(
             modifier = Modifier.clearAndSetSemantics { },
             colors = SwitchDefaults.colors(
                 checkedTrackColor = accent.copy(alpha = 0.8f),
-                checkedThumbColor = Mocha.Crust,
-                uncheckedTrackColor = Mocha.Surface1,
-                uncheckedThumbColor = Mocha.Subtext0
+                checkedThumbColor = LocalClearCutColors.current.onAccent,
+                uncheckedTrackColor = LocalClearCutColors.current.surface,
+                uncheckedThumbColor = LocalClearCutColors.current.subtext
             )
         )
     }

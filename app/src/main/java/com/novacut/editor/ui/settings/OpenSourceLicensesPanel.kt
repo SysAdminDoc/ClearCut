@@ -29,7 +29,8 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.OpenSourceLicenseNotice
 import com.novacut.editor.engine.OpenSourceLicenses
-import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 
 @Composable
@@ -55,14 +56,14 @@ private fun Header(count: Int) {
     Column {
         Text(
             text = stringResource(R.string.opensource_licenses_title),
-            color = Mocha.Text,
+            color = LocalClearCutColors.current.text,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.opensource_licenses_subtitle, count),
-            color = Mocha.Subtext0,
+            color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.bodyMedium,
         )
     }
@@ -73,14 +74,14 @@ private fun NoticeCard(notice: OpenSourceLicenseNotice) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .border(BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.55f)), RoundedCornerShape(Radius.lg))
-            .background(Mocha.PanelHighest.copy(alpha = 0.55f), RoundedCornerShape(Radius.lg))
+            .border(BorderStroke(1.dp, LocalClearCutColors.current.cardStrokeStrong.copy(alpha = 0.55f)), RoundedCornerShape(Radius.lg))
+            .background(LocalClearCutColors.current.panelHighest.copy(alpha = 0.55f), RoundedCornerShape(Radius.lg))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         Text(
             text = "${notice.name} ${notice.version}",
-            color = Mocha.Text,
+            color = LocalClearCutColors.current.text,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -88,44 +89,44 @@ private fun NoticeCard(notice: OpenSourceLicenseNotice) {
             icon = Icons.Default.Code,
             label = stringResource(R.string.opensource_licenses_artifact_label),
             value = notice.artifact,
-            accent = Mocha.Sapphire,
+            accent = ClearCutAccents.Sapphire,
         )
         MetaLine(
             icon = Icons.Default.Description,
             label = stringResource(R.string.opensource_licenses_license_label),
             value = notice.licenseName,
-            accent = Mocha.Mauve,
+            accent = ClearCutAccents.Mauve,
         )
         Text(
             text = notice.licenseText,
-            color = Mocha.Subtext0,
+            color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.bodySmall,
         )
         notice.complianceNote?.let {
             MetaBlock(
                 label = stringResource(R.string.opensource_licenses_notice_label),
                 value = it,
-                accent = Mocha.Peach,
+                accent = ClearCutAccents.Peach,
             )
         }
         notice.sourceOfferText?.let {
             MetaBlock(
                 label = stringResource(R.string.opensource_licenses_source_offer_label),
                 value = it,
-                accent = Mocha.Green,
+                accent = ClearCutAccents.Green,
             )
         }
         MetaLine(
             icon = Icons.Default.Link,
             label = stringResource(R.string.opensource_licenses_project_label),
             value = notice.projectUrl,
-            accent = Mocha.Teal,
+            accent = ClearCutAccents.Teal,
         )
         MetaLine(
             icon = Icons.Default.Description,
             label = stringResource(R.string.opensource_licenses_full_text_label),
             value = notice.licenseUrl,
-            accent = Mocha.Sky,
+            accent = ClearCutAccents.Sky,
         )
     }
 }
@@ -155,7 +156,7 @@ private fun MetaLine(
             )
             Text(
                 text = value,
-                color = Mocha.Subtext0,
+                color = LocalClearCutColors.current.subtext,
                 style = MaterialTheme.typography.labelSmall,
             )
         }
@@ -177,7 +178,7 @@ private fun MetaBlock(
         )
         Text(
             text = value,
-            color = Mocha.Subtext0,
+            color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.bodySmall,
         )
     }

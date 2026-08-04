@@ -29,7 +29,8 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.UserTemplate
 import com.novacut.editor.model.*
 import com.novacut.editor.ui.ClearCutTestTags
-import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutMetricPill
@@ -53,62 +54,62 @@ data class ProjectTemplateUI(
 val projectTemplates = listOf(
     ProjectTemplateUI(
         id = "blank", nameResId = R.string.template_blank_name, descriptionResId = R.string.template_blank_desc,
-        category = TemplateCategory.BLANK, icon = Icons.Default.Add, accentColor = Mocha.Subtext0,
+        category = TemplateCategory.BLANK, icon = Icons.Default.Add, accentColor = ClearCutAccents.Neutral,
         aspectRatio = AspectRatio.RATIO_16_9, tracks = listOf(TrackType.VIDEO, TrackType.AUDIO),
         suggestedDurationResId = R.string.template_blank_duration
     ),
     ProjectTemplateUI(
         id = "vlog", nameResId = R.string.template_vlog_name, descriptionResId = R.string.template_vlog_desc,
-        category = TemplateCategory.VLOG, icon = Icons.Default.Videocam, accentColor = Mocha.Mauve,
+        category = TemplateCategory.VLOG, icon = Icons.Default.Videocam, accentColor = ClearCutAccents.Mauve,
         aspectRatio = AspectRatio.RATIO_16_9,
         tracks = listOf(TrackType.VIDEO, TrackType.VIDEO, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_vlog_duration
     ),
     ProjectTemplateUI(
         id = "tutorial", nameResId = R.string.template_tutorial_name, descriptionResId = R.string.template_tutorial_desc,
-        category = TemplateCategory.TUTORIAL, icon = Icons.Default.School, accentColor = Mocha.Blue,
+        category = TemplateCategory.TUTORIAL, icon = Icons.Default.School, accentColor = ClearCutAccents.Blue,
         aspectRatio = AspectRatio.RATIO_16_9,
         tracks = listOf(TrackType.VIDEO, TrackType.OVERLAY, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_tutorial_duration
     ),
     ProjectTemplateUI(
         id = "short_tiktok", nameResId = R.string.template_short_tiktok_name, descriptionResId = R.string.template_short_tiktok_desc,
-        category = TemplateCategory.SHORT_FORM, icon = Icons.Default.PhoneAndroid, accentColor = Mocha.Red,
+        category = TemplateCategory.SHORT_FORM, icon = Icons.Default.PhoneAndroid, accentColor = ClearCutAccents.Red,
         aspectRatio = AspectRatio.RATIO_9_16,
         tracks = listOf(TrackType.VIDEO, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_short_tiktok_duration
     ),
     ProjectTemplateUI(
         id = "short_reel", nameResId = R.string.template_reel_name, descriptionResId = R.string.template_reel_desc,
-        category = TemplateCategory.SHORT_FORM, icon = Icons.Default.CameraRoll, accentColor = Mocha.Peach,
+        category = TemplateCategory.SHORT_FORM, icon = Icons.Default.CameraRoll, accentColor = ClearCutAccents.Peach,
         aspectRatio = AspectRatio.RATIO_9_16,
         tracks = listOf(TrackType.VIDEO, TrackType.AUDIO, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_reel_duration
     ),
     ProjectTemplateUI(
         id = "cinematic", nameResId = R.string.template_cinematic_name, descriptionResId = R.string.template_cinematic_desc,
-        category = TemplateCategory.CINEMATIC, icon = Icons.Default.Movie, accentColor = Mocha.Yellow,
+        category = TemplateCategory.CINEMATIC, icon = Icons.Default.Movie, accentColor = ClearCutAccents.Yellow,
         aspectRatio = AspectRatio.RATIO_21_9,
         tracks = listOf(TrackType.VIDEO, TrackType.VIDEO, TrackType.AUDIO, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_cinematic_duration
     ),
     ProjectTemplateUI(
         id = "slideshow", nameResId = R.string.template_slideshow_name, descriptionResId = R.string.template_slideshow_desc,
-        category = TemplateCategory.SLIDESHOW, icon = Icons.Default.PhotoLibrary, accentColor = Mocha.Green,
+        category = TemplateCategory.SLIDESHOW, icon = Icons.Default.PhotoLibrary, accentColor = ClearCutAccents.Green,
         aspectRatio = AspectRatio.RATIO_16_9,
         tracks = listOf(TrackType.VIDEO, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_slideshow_duration
     ),
     ProjectTemplateUI(
         id = "promo", nameResId = R.string.template_promo_name, descriptionResId = R.string.template_promo_desc,
-        category = TemplateCategory.PROMO, icon = Icons.Default.Campaign, accentColor = Mocha.Teal,
+        category = TemplateCategory.PROMO, icon = Icons.Default.Campaign, accentColor = ClearCutAccents.Teal,
         aspectRatio = AspectRatio.RATIO_16_9,
         tracks = listOf(TrackType.VIDEO, TrackType.OVERLAY, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_promo_duration
     ),
     ProjectTemplateUI(
         id = "square_social", nameResId = R.string.template_square_name, descriptionResId = R.string.template_square_desc,
-        category = TemplateCategory.PROMO, icon = Icons.Default.CropSquare, accentColor = Mocha.Blue,
+        category = TemplateCategory.PROMO, icon = Icons.Default.CropSquare, accentColor = ClearCutAccents.Blue,
         aspectRatio = AspectRatio.RATIO_1_1,
         tracks = listOf(TrackType.VIDEO, TrackType.AUDIO, TrackType.TEXT),
         suggestedDurationResId = R.string.template_square_duration
@@ -136,7 +137,7 @@ fun ProjectTemplateSheet(
             .testTag(ClearCutTestTags.TEMPLATE_SHEET)
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .background(Mocha.Panel, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
+            .background(LocalClearCutColors.current.panel, RoundedCornerShape(topStart = Radius.xxl, topEnd = Radius.xxl))
             .padding(horizontal = Spacing.lg, vertical = 14.dp)
     ) {
         Box(
@@ -145,7 +146,7 @@ fun ProjectTemplateSheet(
                 .width(36.dp)
                 .height(3.dp)
                 .clip(RoundedCornerShape(Radius.sm))
-                .background(Mocha.Surface2.copy(alpha = 0.55f))
+                .background(LocalClearCutColors.current.surfaceHigh.copy(alpha = 0.55f))
         )
 
         Spacer(Modifier.height(14.dp))
@@ -158,7 +159,7 @@ fun ProjectTemplateSheet(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.template_new_project),
-                    color = Mocha.Text,
+                    color = LocalClearCutColors.current.text,
                     style = MaterialTheme.typography.titleLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -166,7 +167,7 @@ fun ProjectTemplateSheet(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.template_headline),
-                    color = Mocha.Rosewater,
+                    color = ClearCutAccents.Rosewater,
                     style = MaterialTheme.typography.headlineMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -182,7 +183,7 @@ fun ProjectTemplateSheet(
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.template_subtitle),
-            color = Mocha.Subtext0,
+            color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis
@@ -196,13 +197,13 @@ fun ProjectTemplateSheet(
         ) {
             ClearCutMetricPill(
                 text = stringResource(R.string.projects_templates_count, projectTemplates.size),
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 icon = Icons.Default.DashboardCustomize
             )
             if (userTemplates.isNotEmpty()) {
                 ClearCutMetricPill(
                     text = stringResource(R.string.template_saved_count, userTemplates.size),
-                    accent = Mocha.Sapphire,
+                    accent = ClearCutAccents.Sapphire,
                     icon = Icons.Default.BookmarkAdded
                 )
             }
@@ -213,9 +214,9 @@ fun ProjectTemplateSheet(
         Surface(
             onClick = onImportTemplate,
             modifier = Modifier.fillMaxWidth(),
-            color = Mocha.PanelHighest,
+            color = LocalClearCutColors.current.panelHighest,
             shape = RoundedCornerShape(Radius.xl),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
+            border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStrokeStrong)
         ) {
             Row(
                 modifier = Modifier
@@ -227,13 +228,13 @@ fun ProjectTemplateSheet(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(RoundedCornerShape(Radius.md))
-                        .background(Mocha.Sapphire.copy(alpha = 0.14f)),
+                        .background(ClearCutAccents.Sapphire.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.FileOpen,
                         contentDescription = null,
-                        tint = Mocha.Sapphire,
+                        tint = ClearCutAccents.Sapphire,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -243,7 +244,7 @@ fun ProjectTemplateSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.template_import),
-                        color = Mocha.Text,
+                        color = LocalClearCutColors.current.text,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -251,7 +252,7 @@ fun ProjectTemplateSheet(
                     Spacer(Modifier.height(2.dp))
                     Text(
                         stringResource(R.string.template_import_description),
-                        color = Mocha.Subtext0,
+                        color = LocalClearCutColors.current.subtext,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -347,8 +348,8 @@ private fun UserTemplateCard(
         modifier = Modifier
             .height(176.dp)
             .clip(RoundedCornerShape(Radius.xl))
-            .background(Mocha.PanelHighest)
-            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
+            .background(LocalClearCutColors.current.panelHighest)
+            .border(1.dp, LocalClearCutColors.current.cardStrokeStrong, RoundedCornerShape(Radius.xl))
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = templateDescription }
     ) {
@@ -358,7 +359,7 @@ private fun UserTemplateCard(
                 .height(74.dp)
                 .background(
                     Brush.verticalGradient(
-                        listOf(Mocha.Mauve.copy(alpha = 0.24f), Color.Transparent)
+                        listOf(ClearCutAccents.Mauve.copy(alpha = 0.24f), Color.Transparent)
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -366,7 +367,7 @@ private fun UserTemplateCard(
             Icon(
                 Icons.Default.Bookmark,
                 null,
-                tint = Mocha.Mauve,
+                tint = ClearCutAccents.Mauve,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -381,7 +382,7 @@ private fun UserTemplateCard(
             ) {
                 Text(
                     template.name,
-                    color = Mocha.Text,
+                    color = LocalClearCutColors.current.text,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -391,13 +392,13 @@ private fun UserTemplateCard(
                     TemplateActionButton(
                         icon = Icons.Default.Share,
                         contentDescription = stringResource(R.string.template_share_cd_format, template.name),
-                        tint = Mocha.Blue,
+                        tint = ClearCutAccents.Blue,
                         onClick = onShare
                     )
                     TemplateActionButton(
                         icon = Icons.Default.Delete,
                         contentDescription = stringResource(R.string.template_delete_cd_format, template.name),
-                        tint = Mocha.Red,
+                        tint = ClearCutAccents.Red,
                         onClick = onDelete
                     )
                 }
@@ -405,7 +406,7 @@ private fun UserTemplateCard(
             Text(
                 if (template.textOverlayCount > 0) stringResource(R.string.template_tracks_texts_format, template.trackTypes.size, template.textOverlayCount)
                 else stringResource(R.string.template_tracks_format, template.trackTypes.size),
-                color = Mocha.Subtext0,
+                color = LocalClearCutColors.current.subtext,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1
             )
@@ -413,11 +414,11 @@ private fun UserTemplateCard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                TemplateBadge(text = template.aspectRatio.label, accent = Mocha.Mauve)
+                TemplateBadge(text = template.aspectRatio.label, accent = ClearCutAccents.Mauve)
                 if (template.compatibility.slotCount > 0) {
                     TemplateBadge(
                         text = stringResource(R.string.template_slots_format, template.compatibility.slotCount),
-                        accent = Mocha.Sapphire
+                        accent = ClearCutAccents.Sapphire
                     )
                 }
             }
@@ -444,8 +445,8 @@ private fun ProjectTemplateCard(
         modifier = Modifier
             .height(184.dp)
             .clip(RoundedCornerShape(Radius.xl))
-            .background(Mocha.PanelHighest)
-            .border(1.dp, Mocha.CardStrokeStrong, RoundedCornerShape(Radius.xl))
+            .background(LocalClearCutColors.current.panelHighest)
+            .border(1.dp, LocalClearCutColors.current.cardStrokeStrong, RoundedCornerShape(Radius.xl))
             .then(
                 if (template.id == "blank") Modifier.testTag(ClearCutTestTags.TEMPLATE_BLANK) else Modifier
             )
@@ -474,7 +475,7 @@ private fun ProjectTemplateCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(Radius.md))
-                        .background(Color.Black.copy(alpha = 0.12f)),
+                        .background(LocalClearCutColors.current.canvas.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -489,7 +490,7 @@ private fun ProjectTemplateCard(
                     color = template.accentColor,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.16f), RoundedCornerShape(10.dp))
+                        .background(LocalClearCutColors.current.canvas.copy(alpha = 0.16f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 8.dp, vertical = 5.dp)
                 )
             }
@@ -504,13 +505,13 @@ private fun ProjectTemplateCard(
             Column {
                 Text(
                     templateName,
-                    color = Mocha.Text,
+                    color = LocalClearCutColors.current.text,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(template.descriptionResId),
-                    color = Mocha.Subtext0,
+                    color = LocalClearCutColors.current.subtext,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -521,8 +522,8 @@ private fun ProjectTemplateCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 TemplateBadge(text = category, accent = template.accentColor)
-                TemplateBadge(text = stringResource(template.suggestedDurationResId), accent = Mocha.Subtext0)
-                TemplateBadge(text = stringResource(R.string.template_tracks_format, template.tracks.size), accent = Mocha.Subtext0)
+                TemplateBadge(text = stringResource(template.suggestedDurationResId), accent = LocalClearCutColors.current.subtext)
+                TemplateBadge(text = stringResource(R.string.template_tracks_format, template.tracks.size), accent = LocalClearCutColors.current.subtext)
             }
         }
     }
@@ -565,9 +566,9 @@ private fun TemplateSectionHeader(
 private fun EmptyTemplateStateCard() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.PanelHighest,
+        color = LocalClearCutColors.current.panelHighest,
         shape = RoundedCornerShape(Radius.xl),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStrokeStrong)
+        border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStrokeStrong)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
@@ -575,12 +576,12 @@ private fun EmptyTemplateStateCard() {
         ) {
             Text(
                 text = stringResource(R.string.template_saved_empty_title),
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.titleSmall
             )
             Text(
                 text = stringResource(R.string.template_saved_empty_body),
-                color = Mocha.Subtext0,
+                color = LocalClearCutColors.current.subtext,
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -598,20 +599,20 @@ private fun DeleteUserTemplateDialog(
         icon = {
             ClearCutDialogIcon(
                 icon = Icons.Default.Delete,
-                accent = Mocha.Red
+                accent = ClearCutAccents.Red
             )
         },
         title = {
             Text(
                 text = stringResource(R.string.template_delete_confirm_title),
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.titleLarge
             )
         },
         text = {
             Text(
                 text = stringResource(R.string.template_delete_confirm_body, templateName),
-                color = Mocha.Subtext0,
+                color = LocalClearCutColors.current.subtext,
                 style = MaterialTheme.typography.bodyMedium
             )
         },
@@ -620,7 +621,7 @@ private fun DeleteUserTemplateDialog(
                 text = stringResource(R.string.template_delete_confirm_action),
                 onClick = onConfirm,
                 icon = Icons.Default.Delete,
-                contentColor = Mocha.Red
+                contentColor = ClearCutAccents.Red
             )
         },
         dismissButton = {
@@ -629,9 +630,9 @@ private fun DeleteUserTemplateDialog(
                 onClick = onDismissRequest
             )
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0,
+        containerColor = LocalClearCutColors.current.panelHighest,
+        titleContentColor = LocalClearCutColors.current.text,
+        textContentColor = LocalClearCutColors.current.subtext,
         shape = RoundedCornerShape(Radius.xxl)
     )
 }

@@ -10,11 +10,17 @@ class SemanticThemeSourcePolicyTest {
     @Test
     fun featureSurfacesDoNotBypassSemanticOrApprovedAccentTokens() {
         val root = locateRepoRoot()
-        val sourceRoots = listOf("editor", "export", "mediapicker").map { area ->
+        val sourceRoots = listOf("editor", "export", "mediapicker", "projects", "settings").map { area ->
             File(root, "app/src/main/java/com/novacut/editor/ui/$area")
         }
         val files = sourceRoots.flatMap { directory ->
             directory.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        }
+        val rawColorFiles = listOf("projects", "settings").flatMap { area ->
+            File(root, "app/src/main/java/com/novacut/editor/ui/$area")
+                .walkTopDown()
+                .filter { it.isFile && it.extension == "kt" }
+                .toList()
         }
 
         assertTrue("Expected feature source files to audit.", files.isNotEmpty())
@@ -28,6 +34,17 @@ class SemanticThemeSourcePolicyTest {
                     match.groupValues[1] in APPROVED_ACCENT_NAMES,
                 )
             }
+        }
+        rawColorFiles.forEach { file ->
+            val allowedRawColors = CONTENT_DRIVEN_COLOR_ALLOWLIST[file.name].orEmpty()
+            val violations = RAW_COLOR_LITERAL.findAll(file.readText())
+                .map { it.value }
+                .filterNot { it in allowedRawColors }
+                .toList()
+            assertTrue(
+                "${file.relativeTo(root)} contains non-content-driven raw color literals: $violations",
+                violations.isEmpty(),
+            )
         }
     }
 
@@ -45,8 +62,11 @@ class SemanticThemeSourcePolicyTest {
     private companion object {
         const val RAW_MOCHA_IMPORT = "import com.novacut.editor.ui.theme.Mocha"
         val APPROVED_ACCENT = Regex("ClearCutAccents\\.([A-Za-z0-9_]+)")
+        val RAW_COLOR_LITERAL = Regex("Color\\(0x[0-9A-Fa-f]+\\)")
+        /** Exact exceptions for content-derived colors, kept empty until one is justified. */
+        val CONTENT_DRIVEN_COLOR_ALLOWLIST = emptyMap<String, Set<String>>()
         val APPROVED_ACCENT_NAMES = setOf(
-            "Lavender", "Blue", "Sapphire", "Sky", "Teal", "Green", "Yellow",
+            "Neutral", "Lavender", "Blue", "Sapphire", "Sky", "Teal", "Green", "Yellow",
             "Peach", "Maroon", "Red", "Mauve", "Pink", "Flamingo", "Rosewater",
         )
     }

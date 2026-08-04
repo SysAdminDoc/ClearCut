@@ -62,6 +62,8 @@ object Mocha {
  * [LocalClearCutColors] so High Contrast Dark can strengthen them.
  */
 object ClearCutAccents {
+    /** Stable neutral accent for content that is defined outside composition. */
+    val Neutral = Mocha.Subtext0
     val Lavender = Mocha.Lavender
     val Blue = Mocha.Blue
     val Sapphire = Mocha.Sapphire

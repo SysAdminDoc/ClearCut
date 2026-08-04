@@ -59,7 +59,7 @@ import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.editor.PremiumSnackbarHost
 import com.novacut.editor.ui.editor.ToastSeverity
 import com.novacut.editor.ui.editor.inferSeverity
-import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutFilterChip
@@ -277,7 +277,7 @@ fun ProjectListScreen(
                     trailing = {
                         ClearCutMetricPill(
                             text = sortLabel,
-                            accent = Mocha.Sapphire,
+                            accent = ClearCutAccents.Sapphire,
                             icon = Icons.Default.FilterList
                         )
                     }
@@ -345,11 +345,11 @@ fun ProjectListScreen(
                 if (confirmEmptyTrash) {
                     AlertDialog(
                         onDismissRequest = { confirmEmptyTrash = false },
-                        icon = { ClearCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
+                        icon = { ClearCutDialogIcon(icon = Icons.Default.DeleteForever, accent = ClearCutAccents.Red) },
                         title = {
                             Text(
                                 text = stringResource(R.string.trash_empty_confirm_title),
-                                color = Mocha.Text,
+                                color = LocalClearCutColors.current.text,
                                 style = MaterialTheme.typography.titleLarge
                             )
                         },
@@ -360,7 +360,7 @@ fun ProjectListScreen(
                                     trashed.size,
                                     trashed.size
                                 ),
-                                color = Mocha.Subtext0,
+                                color = LocalClearCutColors.current.subtext,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         },
@@ -372,7 +372,7 @@ fun ProjectListScreen(
                                     confirmEmptyTrash = false
                                 },
                                 icon = Icons.Default.DeleteForever,
-                                contentColor = Mocha.Red
+                                contentColor = ClearCutAccents.Red
                             )
                         },
                         dismissButton = {
@@ -381,9 +381,9 @@ fun ProjectListScreen(
                                 onClick = { confirmEmptyTrash = false }
                             )
                         },
-                        containerColor = Mocha.PanelHighest,
-                        titleContentColor = Mocha.Text,
-                        textContentColor = Mocha.Subtext0,
+                        containerColor = LocalClearCutColors.current.panelHighest,
+                        titleContentColor = LocalClearCutColors.current.text,
+                        textContentColor = LocalClearCutColors.current.subtext,
                         shape = RoundedCornerShape(Radius.xxl)
                     )
                 }
@@ -391,18 +391,18 @@ fun ProjectListScreen(
                 pendingDeleteForever?.let { doomed ->
                     AlertDialog(
                         onDismissRequest = { pendingDeleteForever = null },
-                        icon = { ClearCutDialogIcon(icon = Icons.Default.DeleteForever, accent = Mocha.Red) },
+                        icon = { ClearCutDialogIcon(icon = Icons.Default.DeleteForever, accent = ClearCutAccents.Red) },
                         title = {
                             Text(
                                 text = stringResource(R.string.trash_delete_forever_title),
-                                color = Mocha.Text,
+                                color = LocalClearCutColors.current.text,
                                 style = MaterialTheme.typography.titleLarge
                             )
                         },
                         text = {
                             Text(
                                 text = stringResource(R.string.trash_delete_forever_message, doomed.name),
-                                color = Mocha.Subtext0,
+                                color = LocalClearCutColors.current.subtext,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         },
@@ -414,7 +414,7 @@ fun ProjectListScreen(
                                     pendingDeleteForever = null
                                 },
                                 icon = Icons.Default.DeleteForever,
-                                contentColor = Mocha.Red
+                                contentColor = ClearCutAccents.Red
                             )
                         },
                         dismissButton = {
@@ -423,9 +423,9 @@ fun ProjectListScreen(
                                 onClick = { pendingDeleteForever = null }
                             )
                         },
-                        containerColor = Mocha.PanelHighest,
-                        titleContentColor = Mocha.Text,
-                        textContentColor = Mocha.Subtext0,
+                        containerColor = LocalClearCutColors.current.panelHighest,
+                        titleContentColor = LocalClearCutColors.current.text,
+                        textContentColor = LocalClearCutColors.current.subtext,
                         shape = RoundedCornerShape(Radius.xxl)
                     )
                 }
@@ -496,9 +496,9 @@ private fun IncomingDocumentImportDialog(
 ) {
     val accent = when (preview.status) {
         IncomingDocumentImportStatus.READY,
-        IncomingDocumentImportStatus.IMPORTED -> Mocha.Green
-        IncomingDocumentImportStatus.BLOCKED -> Mocha.Yellow
-        IncomingDocumentImportStatus.INVALID -> Mocha.Red
+        IncomingDocumentImportStatus.IMPORTED -> ClearCutAccents.Green
+        IncomingDocumentImportStatus.BLOCKED -> ClearCutAccents.Yellow
+        IncomingDocumentImportStatus.INVALID -> ClearCutAccents.Red
     }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -516,7 +516,7 @@ private fun IncomingDocumentImportDialog(
         title = {
             Text(
                 text = preview.title,
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.titleLarge
             )
         },
@@ -524,14 +524,14 @@ private fun IncomingDocumentImportDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     text = preview.body,
-                    color = Mocha.Subtext0,
+                    color = LocalClearCutColors.current.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 preview.details.forEach { detail ->
-                    DocumentReportLine(text = detail, color = Mocha.Text)
+                    DocumentReportLine(text = detail, color = LocalClearCutColors.current.text)
                 }
                 preview.warnings.forEach { warning ->
-                    DocumentReportLine(text = warning, color = Mocha.Yellow)
+                    DocumentReportLine(text = warning, color = ClearCutAccents.Yellow)
                 }
             }
         },
@@ -547,9 +547,9 @@ private fun IncomingDocumentImportDialog(
                 Text(stringResource(R.string.close))
             }
         },
-        containerColor = Mocha.PanelHighest,
-        titleContentColor = Mocha.Text,
-        textContentColor = Mocha.Subtext0
+        containerColor = LocalClearCutColors.current.panelHighest,
+        titleContentColor = LocalClearCutColors.current.text,
+        textContentColor = LocalClearCutColors.current.subtext
     )
 }
 
@@ -597,7 +597,7 @@ private fun ProjectHomeHero(
     ClearCutHeroCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(bottomStart = Radius.xl, bottomEnd = Radius.xl),
-        accent = Mocha.Sky
+        accent = ClearCutAccents.Sky
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -605,7 +605,7 @@ private fun ProjectHomeHero(
         ) {
             ClearCutMetricPill(
                 text = "${stringResource(R.string.projects_app_title)} · $projectCount",
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 icon = Icons.Default.Movie
             )
             Spacer(modifier = Modifier.weight(1f))
@@ -644,7 +644,7 @@ private fun ProjectHomeHero(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = stringResource(R.string.projects_search),
-                        tint = Mocha.Subtext0,
+                        tint = LocalClearCutColors.current.subtext,
                         modifier = Modifier.size(20.dp)
                     )
                 },
@@ -663,17 +663,17 @@ private fun ProjectHomeHero(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(Radius.lg),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.92f),
-                    unfocusedContainerColor = Mocha.PanelRaised.copy(alpha = 0.82f),
-                    focusedBorderColor = Mocha.Mauve.copy(alpha = 0.55f),
-                    unfocusedBorderColor = Mocha.CardStroke,
-                    cursorColor = Mocha.Rosewater,
-                    focusedTextColor = Mocha.Text,
-                    unfocusedTextColor = Mocha.Text,
-                    focusedPlaceholderColor = Mocha.Overlay1,
-                    unfocusedPlaceholderColor = Mocha.Overlay1
+                    focusedContainerColor = LocalClearCutColors.current.panelRaised.copy(alpha = 0.92f),
+                    unfocusedContainerColor = LocalClearCutColors.current.panelRaised.copy(alpha = 0.82f),
+                    focusedBorderColor = ClearCutAccents.Mauve.copy(alpha = 0.55f),
+                    unfocusedBorderColor = LocalClearCutColors.current.cardStroke,
+                    cursorColor = ClearCutAccents.Rosewater,
+                    focusedTextColor = LocalClearCutColors.current.text,
+                    unfocusedTextColor = LocalClearCutColors.current.text,
+                    focusedPlaceholderColor = LocalClearCutColors.current.overlayStrong,
+                    unfocusedPlaceholderColor = LocalClearCutColors.current.overlayStrong
                 ),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = Mocha.Text)
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = LocalClearCutColors.current.text)
             )
         }
 
@@ -684,7 +684,7 @@ private fun ProjectHomeHero(
                         onClick = { onSortModeChanged(mode) },
                         text = mode.localizedLabel(),
                         selected = sortMode == mode,
-                        accent = Mocha.Rosewater,
+                        accent = ClearCutAccents.Rosewater,
                         icon = if (sortMode == mode) Icons.Default.Check else null
                     )
                 }
@@ -719,7 +719,7 @@ private fun ProjectHomeReadinessRow(
                     value = mediaHealthValue,
                     body = stringResource(R.string.projects_media_health_body),
                     icon = Icons.Default.Verified,
-                    accent = Mocha.Green,
+                    accent = ClearCutAccents.Green,
                     modifier = Modifier.fillMaxWidth()
                 )
                 ProjectReadinessCard(
@@ -732,7 +732,7 @@ private fun ProjectHomeReadinessRow(
                     ),
                     body = stringResource(R.string.projects_render_ready_body, projectTemplates.size + savedTemplateCount),
                     icon = Icons.Default.Speed,
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -743,7 +743,7 @@ private fun ProjectHomeReadinessRow(
                     value = mediaHealthValue,
                     body = stringResource(R.string.projects_media_health_body),
                     icon = Icons.Default.Verified,
-                    accent = Mocha.Green,
+                    accent = ClearCutAccents.Green,
                     modifier = Modifier.weight(1f)
                 )
                 ProjectReadinessCard(
@@ -756,7 +756,7 @@ private fun ProjectHomeReadinessRow(
                     ),
                     body = stringResource(R.string.projects_render_ready_body, projectTemplates.size + savedTemplateCount),
                     icon = Icons.Default.Speed,
-                    accent = Mocha.Mauve,
+                    accent = ClearCutAccents.Mauve,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -844,7 +844,7 @@ private fun ProjectOperationCard(
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
         color = colors.panelHighest,
         shape = RoundedCornerShape(Radius.lg),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.26f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.26f))
     ) {
         Column(
             modifier = Modifier.padding(Spacing.md),
@@ -856,12 +856,12 @@ private fun ProjectOperationCard(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
                 Surface(
-                    color = Mocha.Mauve.copy(alpha = 0.14f),
+                    color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
                     shape = RoundedCornerShape(Radius.lg),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Mauve.copy(alpha = 0.22f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f))
                 ) {
                     CircularProgressIndicator(
-                        color = Mocha.Mauve,
+                        color = ClearCutAccents.Mauve,
                         strokeWidth = 2.dp,
                         modifier = Modifier
                             .padding(10.dp)
@@ -886,8 +886,8 @@ private fun ProjectOperationCard(
                     .fillMaxWidth()
                     .height(5.dp)
                     .clip(RoundedCornerShape(Radius.sm)),
-                color = Mocha.Mauve,
-                trackColor = Mocha.Surface1
+                color = ClearCutAccents.Mauve,
+                trackColor = LocalClearCutColors.current.surface
             )
         }
     }
@@ -909,7 +909,7 @@ private fun ProjectFilterChipsRow(
                 onClick = { onFilterModeChanged(mode) },
                 text = mode.localizedLabel(),
                 selected = filterMode == mode,
-                accent = Mocha.Mauve,
+                accent = ClearCutAccents.Mauve,
                 icon = if (filterMode == mode) Icons.Default.Check else null
             )
         }
@@ -931,8 +931,8 @@ private fun ProjectEmptyState(
     val hasActiveFilter = filterMode != ProjectFilterMode.ALL
     val isConstrainedEmpty = hasAnyProjects && (hasActiveSearch || hasActiveFilter)
     val colors = LocalClearCutColors.current
-    val accent = if (isConstrainedEmpty) Mocha.Sapphire else Mocha.Mauve
-    val iconTint = if (isConstrainedEmpty) Mocha.Sapphire else Mocha.Rosewater
+    val accent = if (isConstrainedEmpty) ClearCutAccents.Sapphire else ClearCutAccents.Mauve
+    val iconTint = if (isConstrainedEmpty) ClearCutAccents.Sapphire else ClearCutAccents.Rosewater
     val title = projectEmptyStateTitle(
         isConstrainedEmpty = isConstrainedEmpty,
         hasActiveSearch = hasActiveSearch,
@@ -1101,7 +1101,7 @@ private fun ProjectActionRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(secondaryTestTag?.let { Modifier.testTag(it) } ?: Modifier),
-                    contentColor = Mocha.Text,
+                    contentColor = LocalClearCutColors.current.text,
                     enabled = enabled
                 )
             }
@@ -1123,7 +1123,7 @@ private fun ProjectActionRow(
                     modifier = Modifier
                         .weight(1f)
                         .then(secondaryTestTag?.let { Modifier.testTag(it) } ?: Modifier),
-                    contentColor = Mocha.Text,
+                    contentColor = LocalClearCutColors.current.text,
                     enabled = enabled
                 )
             }
@@ -1166,8 +1166,8 @@ private fun ProjectCard(
         backgroundContent = {
             val color by animateColorAsState(
                 if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
-                    Mocha.Red.copy(alpha = 0.24f)
-                else Mocha.Panel.copy(alpha = 0.45f),
+                    ClearCutAccents.Red.copy(alpha = 0.24f)
+                else LocalClearCutColors.current.panel.copy(alpha = 0.45f),
                 label = "swipeBg"
             )
             Box(
@@ -1184,13 +1184,13 @@ private fun ProjectCard(
                 ) {
                     Text(
                         text = stringResource(R.string.projects_delete),
-                        color = Mocha.Red,
+                        color = ClearCutAccents.Red,
                         style = MaterialTheme.typography.labelLarge
                     )
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = stringResource(R.string.projects_delete_cd),
-                        tint = Mocha.Red
+                        tint = ClearCutAccents.Red
                     )
                 }
             }
@@ -1205,8 +1205,8 @@ private fun ProjectCard(
                 .semantics {
                     contentDescription = projectCardDescription
                 },
-            colors = CardDefaults.cardColors(containerColor = Mocha.Panel),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f)),
+            colors = CardDefaults.cardColors(containerColor = LocalClearCutColors.current.panel),
+            border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStroke.copy(alpha = 0.9f)),
             shape = RoundedCornerShape(Radius.lg)
         ) {
             BoxWithConstraints(
@@ -1214,8 +1214,8 @@ private fun ProjectCard(
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                Mocha.PanelHighest.copy(alpha = 0.72f),
-                                Mocha.Panel.copy(alpha = 0.98f)
+                                LocalClearCutColors.current.panelHighest.copy(alpha = 0.72f),
+                                LocalClearCutColors.current.panel.copy(alpha = 0.98f)
                             )
                         )
                     )
@@ -1239,7 +1239,7 @@ private fun ProjectCard(
                     ) {
                         Text(
                             project.name,
-                            color = Mocha.Text,
+                            color = LocalClearCutColors.current.text,
                             style = if (compactCard) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -1249,26 +1249,26 @@ private fun ProjectCard(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            ProjectMetadataChip(text = project.resolution.label, accent = Mocha.Rosewater)
-                            ProjectMetadataChip(text = project.timelineTimebase.frameRateLabel, accent = Mocha.Mauve)
-                            ProjectMetadataChip(text = projectDuration, accent = Mocha.Sapphire)
+                            ProjectMetadataChip(text = project.resolution.label, accent = ClearCutAccents.Rosewater)
+                            ProjectMetadataChip(text = project.timelineTimebase.frameRateLabel, accent = ClearCutAccents.Mauve)
+                            ProjectMetadataChip(text = projectDuration, accent = ClearCutAccents.Sapphire)
                             if (project.templateId != null) {
                                 ProjectMetadataChip(
                                     text = stringResource(R.string.projects_template_badge),
-                                    accent = Mocha.Green
+                                    accent = ClearCutAccents.Green
                                 )
                             }
                             if (project.proxyEnabled) {
                                 ProjectMetadataChip(
                                     text = stringResource(R.string.projects_proxy_badge),
-                                    accent = Mocha.Teal
+                                    accent = ClearCutAccents.Teal
                                 )
                             }
                         }
 
                         Text(
                             text = stringResource(R.string.projects_updated, updatedLabel),
-                            color = Mocha.Subtext0,
+                            color = LocalClearCutColors.current.subtext,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -1283,15 +1283,15 @@ private fun ProjectCard(
                         DropdownMenu(
                             expanded = showOverflowMenu,
                             onDismissRequest = { showOverflowMenu = false },
-                            containerColor = Mocha.PanelHighest
+                            containerColor = LocalClearCutColors.current.panelHighest
                         ) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.projects_rename), color = Mocha.Text) },
+                                text = { Text(stringResource(R.string.projects_rename), color = LocalClearCutColors.current.text) },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Edit,
                                         contentDescription = stringResource(R.string.projects_rename),
-                                        tint = Mocha.Subtext0,
+                                        tint = LocalClearCutColors.current.subtext,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 },
@@ -1301,12 +1301,12 @@ private fun ProjectCard(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.projects_duplicate), color = Mocha.Text) },
+                                text = { Text(stringResource(R.string.projects_duplicate), color = LocalClearCutColors.current.text) },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.ContentCopy,
                                         contentDescription = stringResource(R.string.cd_duplicate_project),
-                                        tint = Mocha.Subtext0,
+                                        tint = LocalClearCutColors.current.subtext,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 },
@@ -1316,12 +1316,12 @@ private fun ProjectCard(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.projects_delete), color = Mocha.Red) },
+                                text = { Text(stringResource(R.string.projects_delete), color = ClearCutAccents.Red) },
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Delete,
                                         contentDescription = stringResource(R.string.cd_delete_project),
-                                        tint = Mocha.Red,
+                                        tint = ClearCutAccents.Red,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 },
@@ -1337,7 +1337,7 @@ private fun ProjectCard(
                         Icon(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
-                            tint = Mocha.Overlay1,
+                            tint = LocalClearCutColors.current.overlayStrong,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -1352,20 +1352,20 @@ private fun ProjectCard(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.Delete,
-                    accent = Mocha.Red
+                    accent = ClearCutAccents.Red
                 )
             },
             title = {
                 Text(
                     text = stringResource(R.string.projects_delete_title),
-                    color = Mocha.Text,
+                    color = LocalClearCutColors.current.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
             text = {
                 Text(
                     text = stringResource(R.string.projects_delete_message, project.name),
-                    color = Mocha.Subtext0,
+                    color = LocalClearCutColors.current.subtext,
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -1377,7 +1377,7 @@ private fun ProjectCard(
                         showDeleteConfirm = false
                     },
                     icon = Icons.Default.Delete,
-                    contentColor = Mocha.Red
+                    contentColor = ClearCutAccents.Red
                 )
             },
             dismissButton = {
@@ -1386,9 +1386,9 @@ private fun ProjectCard(
                     onClick = { showDeleteConfirm = false }
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = LocalClearCutColors.current.panelHighest,
+            titleContentColor = LocalClearCutColors.current.text,
+            textContentColor = LocalClearCutColors.current.subtext,
             shape = RoundedCornerShape(Radius.xl)
         )
     }
@@ -1407,13 +1407,13 @@ private fun ProjectCard(
             icon = {
                 ClearCutDialogIcon(
                     icon = Icons.Default.Edit,
-                    accent = Mocha.Rosewater
+                    accent = ClearCutAccents.Rosewater
                 )
             },
             title = {
                 Text(
                     text = stringResource(R.string.projects_rename_title),
-                    color = Mocha.Text,
+                    color = LocalClearCutColors.current.text,
                     style = MaterialTheme.typography.titleLarge
                 )
             },
@@ -1437,7 +1437,7 @@ private fun ProjectCard(
                     placeholder = {
                         Text(
                             text = stringResource(R.string.projects_rename_hint),
-                            color = Mocha.Overlay1
+                            color = LocalClearCutColors.current.overlayStrong
                         )
                     },
                     supportingText = {
@@ -1460,15 +1460,15 @@ private fun ProjectCard(
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Mocha.Text,
-                        unfocusedTextColor = Mocha.Text,
-                        errorTextColor = Mocha.Text,
-                        cursorColor = Mocha.Rosewater,
-                        focusedBorderColor = Mocha.Mauve,
-                        unfocusedBorderColor = Mocha.CardStroke,
-                        errorBorderColor = Mocha.Red,
-                        focusedContainerColor = Mocha.PanelRaised,
-                        unfocusedContainerColor = Mocha.PanelRaised
+                        focusedTextColor = LocalClearCutColors.current.text,
+                        unfocusedTextColor = LocalClearCutColors.current.text,
+                        errorTextColor = LocalClearCutColors.current.text,
+                        cursorColor = ClearCutAccents.Rosewater,
+                        focusedBorderColor = ClearCutAccents.Mauve,
+                        unfocusedBorderColor = LocalClearCutColors.current.cardStroke,
+                        errorBorderColor = ClearCutAccents.Red,
+                        focusedContainerColor = LocalClearCutColors.current.panelRaised,
+                        unfocusedContainerColor = LocalClearCutColors.current.panelRaised
                     )
                 )
             },
@@ -1489,9 +1489,9 @@ private fun ProjectCard(
                     onClick = { showRenameDialog = false }
                 )
             },
-            containerColor = Mocha.PanelHighest,
-            titleContentColor = Mocha.Text,
-            textContentColor = Mocha.Subtext0,
+            containerColor = LocalClearCutColors.current.panelHighest,
+            titleContentColor = LocalClearCutColors.current.text,
+            textContentColor = LocalClearCutColors.current.subtext,
             shape = RoundedCornerShape(Radius.xl)
         )
     }
@@ -1511,8 +1511,8 @@ private fun ProjectThumbnail(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Mocha.Mauve.copy(alpha = 0.26f),
-                        Mocha.PanelHighest
+                        ClearCutAccents.Mauve.copy(alpha = 0.26f),
+                        LocalClearCutColors.current.panelHighest
                     )
                 )
             )
@@ -1531,7 +1531,7 @@ private fun ProjectThumbnail(
             Icon(
                 imageVector = Icons.Default.Movie,
                 contentDescription = stringResource(R.string.cd_movie_placeholder),
-                tint = Mocha.Rosewater,
+                tint = ClearCutAccents.Rosewater,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(if (size < 90.dp) 24.dp else 28.dp)
@@ -1539,7 +1539,7 @@ private fun ProjectThumbnail(
         }
 
         Surface(
-            color = Mocha.Midnight.copy(alpha = 0.78f),
+            color = LocalClearCutColors.current.background.copy(alpha = 0.78f),
             shape = RoundedCornerShape(Radius.sm),
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -1547,7 +1547,7 @@ private fun ProjectThumbnail(
         ) {
             Text(
                 text = project.aspectRatio.label,
-                color = Mocha.Text,
+                color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(
                     horizontal = if (size < 90.dp) 6.dp else 8.dp,
@@ -1590,9 +1590,9 @@ private fun TrashSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onToggle),
-        color = Mocha.Panel,
+        color = LocalClearCutColors.current.panel,
         shape = RoundedCornerShape(Radius.lg),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.9f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStroke.copy(alpha = 0.9f))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm),
@@ -1600,14 +1600,14 @@ private fun TrashSectionHeader(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             Surface(
-                color = Mocha.Red.copy(alpha = 0.12f),
+                color = ClearCutAccents.Red.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(Radius.lg),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.22f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.22f))
             ) {
                 Icon(
                     imageVector = Icons.Default.DeleteSweep,
                     contentDescription = null,
-                    tint = Mocha.Red,
+                    tint = ClearCutAccents.Red,
                     modifier = Modifier
                         .padding(Spacing.sm)
                         .size(18.dp)
@@ -1619,12 +1619,12 @@ private fun TrashSectionHeader(
             ) {
                 Text(
                     text = stringResource(R.string.trash_title),
-                    color = Mocha.Text,
+                    color = LocalClearCutColors.current.text,
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
                     text = pluralStringResource(R.plurals.trash_kept_summary, count, count),
-                    color = Mocha.Subtext0,
+                    color = LocalClearCutColors.current.subtext,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1635,8 +1635,8 @@ private fun TrashSectionHeader(
                     onClick = onEmptyTrash,
                     shape = RoundedCornerShape(Radius.md),
                     colors = ButtonDefaults.textButtonColors(
-                        contentColor = Mocha.Red,
-                        containerColor = Mocha.Red.copy(alpha = 0.08f)
+                        contentColor = ClearCutAccents.Red,
+                        containerColor = ClearCutAccents.Red.copy(alpha = 0.08f)
                     )
                 ) {
                     Text(stringResource(R.string.trash_empty_button), style = MaterialTheme.typography.labelMedium)
@@ -1649,7 +1649,7 @@ private fun TrashSectionHeader(
                 } else {
                     stringResource(R.string.trash_expand_cd)
                 },
-                tint = Mocha.Subtext0,
+                tint = LocalClearCutColors.current.subtext,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -1707,9 +1707,9 @@ private fun TrashedProjectCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Mocha.Panel.copy(alpha = 0.72f),
+        color = LocalClearCutColors.current.panel.copy(alpha = 0.72f),
         shape = RoundedCornerShape(Radius.lg),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.CardStroke.copy(alpha = 0.72f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStroke.copy(alpha = 0.72f))
     ) {
         Row(
             modifier = Modifier
@@ -1719,14 +1719,14 @@ private fun TrashedProjectCard(
             horizontalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
             Surface(
-                color = Mocha.Red.copy(alpha = 0.10f),
+                color = ClearCutAccents.Red.copy(alpha = 0.10f),
                 shape = RoundedCornerShape(Radius.md),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Mocha.Red.copy(alpha = 0.18f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.18f))
             ) {
                 Icon(
                     imageVector = Icons.Default.DeleteOutline,
                     contentDescription = null,
-                    tint = Mocha.Red,
+                    tint = ClearCutAccents.Red,
                     modifier = Modifier
                         .padding(Spacing.sm)
                         .size(18.dp)
@@ -1738,7 +1738,7 @@ private fun TrashedProjectCard(
             ) {
                 Text(
                     text = project.name,
-                    color = Mocha.Text,
+                    color = LocalClearCutColors.current.text,
                     style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1748,7 +1748,7 @@ private fun TrashedProjectCard(
                     val daysLeft = (30 - daysAgo).coerceAtLeast(0)
                     Text(
                         text = pluralStringResource(R.plurals.trash_auto_delete_in, daysLeft, daysLeft),
-                        color = Mocha.Overlay1,
+                        color = LocalClearCutColors.current.overlayStrong,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -1758,17 +1758,17 @@ private fun TrashedProjectCard(
                     icon = Icons.Default.RestoreFromTrash,
                     contentDescription = stringResource(R.string.trash_restore_cd),
                     onClick = onRestore,
-                    tint = Mocha.Green,
-                    containerColor = Mocha.Green.copy(alpha = 0.08f),
-                    borderColor = Mocha.Green.copy(alpha = 0.18f)
+                    tint = ClearCutAccents.Green,
+                    containerColor = ClearCutAccents.Green.copy(alpha = 0.08f),
+                    borderColor = ClearCutAccents.Green.copy(alpha = 0.18f)
                 )
                 ClearCutChromeIconButton(
                     icon = Icons.Default.DeleteForever,
                     contentDescription = stringResource(R.string.trash_delete_forever_cd),
                     onClick = onDeleteForever,
-                    tint = Mocha.Red,
-                    containerColor = Mocha.Red.copy(alpha = 0.08f),
-                    borderColor = Mocha.Red.copy(alpha = 0.18f)
+                    tint = ClearCutAccents.Red,
+                    containerColor = ClearCutAccents.Red.copy(alpha = 0.08f),
+                    borderColor = ClearCutAccents.Red.copy(alpha = 0.18f)
                 )
             }
         }

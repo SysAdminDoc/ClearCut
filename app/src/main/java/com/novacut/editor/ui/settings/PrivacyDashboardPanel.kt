@@ -33,7 +33,8 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.PrivacyDashboard
 import com.novacut.editor.engine.PrivacyDashboard.DashboardEntry
 import com.novacut.editor.engine.PrivacyDashboard.Section
-import com.novacut.editor.ui.theme.Mocha
+import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 
 /**
@@ -84,14 +85,14 @@ private fun Header() {
     Column {
         Text(
             text = stringResource(R.string.privacy_dashboard_title),
-            color = Mocha.Text,
+            color = LocalClearCutColors.current.text,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.privacy_dashboard_subtitle),
-            color = Mocha.Subtext0,
+            color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.bodyMedium,
         )
     }
@@ -102,17 +103,17 @@ private fun SectionHeader(section: Section) {
     val (icon, accent, labelRes) = when (section) {
         Section.CLOUD_AND_TELEMETRY -> Triple(
             Icons.Default.Cloud,
-            Mocha.Peach,
+            ClearCutAccents.Peach,
             R.string.privacy_dashboard_section_cloud,
         )
         Section.ON_DEVICE_COLLECTED -> Triple(
             Icons.Default.Computer,
-            Mocha.Sky,
+            ClearCutAccents.Sky,
             R.string.privacy_dashboard_section_on_device,
         )
         Section.ON_DEVICE_OPT_IN -> Triple(
             Icons.Default.LockOpen,
-            Mocha.Green,
+            ClearCutAccents.Green,
             R.string.privacy_dashboard_section_opt_in,
         )
     }
@@ -127,7 +128,7 @@ private fun SectionHeader(section: Section) {
         )
         Text(
             text = stringResource(labelRes),
-            color = Mocha.Text,
+            color = LocalClearCutColors.current.text,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -141,14 +142,14 @@ private fun EntryCard(entry: DashboardEntry, actions: List<PrivacyDashboardActio
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(Radius.lg))
-            .border(BorderStroke(1.dp, Mocha.CardStrokeStrong.copy(alpha = 0.55f)), RoundedCornerShape(Radius.lg))
-            .background(Mocha.PanelHighest.copy(alpha = 0.55f))
+            .border(BorderStroke(1.dp, LocalClearCutColors.current.cardStrokeStrong.copy(alpha = 0.55f)), RoundedCornerShape(Radius.lg))
+            .background(LocalClearCutColors.current.panelHighest.copy(alpha = 0.55f))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = entry.category.displayName,
-            color = Mocha.Text,
+            color = LocalClearCutColors.current.text,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
         )
@@ -168,14 +169,14 @@ private fun EntryCard(entry: DashboardEntry, actions: List<PrivacyDashboardActio
         MetaLine(
             label = stringResource(R.string.privacy_dashboard_controls_label),
             value = PrivacyDashboard.controlSummary(entry),
-            accent = Mocha.Mauve,
+            accent = ClearCutAccents.Mauve,
         )
         if (actions.isEmpty()) {
             // No affordance is rendered here, so say where the control is.
             MetaLine(
                 label = stringResource(R.string.privacy_dashboard_managed_in_label),
                 value = entry.controlLocation,
-                accent = Mocha.Peach,
+                accent = ClearCutAccents.Peach,
             )
         } else {
             Row(
@@ -185,7 +186,7 @@ private fun EntryCard(entry: DashboardEntry, actions: List<PrivacyDashboardActio
                 actions.forEach { action ->
                     Text(
                         text = action.label,
-                        color = Mocha.Sky,
+                        color = ClearCutAccents.Sky,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier
@@ -200,24 +201,24 @@ private fun EntryCard(entry: DashboardEntry, actions: List<PrivacyDashboardActio
 }
 
 @Composable
-private fun MetaLine(label: String, value: String, accent: Color = Mocha.Subtext1) {
+private fun MetaLine(label: String, value: String, accent: Color = Color.Unspecified) {
     Row(verticalAlignment = Alignment.Top) {
         Text(
             text = "$label · ",
-            color = accent,
+            color = if (accent == Color.Unspecified) LocalClearCutColors.current.subtextStrong else accent,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
             text = value,
-            color = Mocha.Subtext0,
+            color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.labelSmall,
         )
     }
 }
 
 private fun sectionAccent(section: Section): Color = when (section) {
-    Section.CLOUD_AND_TELEMETRY -> Mocha.Peach
-    Section.ON_DEVICE_COLLECTED -> Mocha.Sky
-    Section.ON_DEVICE_OPT_IN -> Mocha.Green
+    Section.CLOUD_AND_TELEMETRY -> ClearCutAccents.Peach
+    Section.ON_DEVICE_COLLECTED -> ClearCutAccents.Sky
+    Section.ON_DEVICE_OPT_IN -> ClearCutAccents.Green
 }
