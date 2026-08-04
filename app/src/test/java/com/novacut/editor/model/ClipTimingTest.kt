@@ -43,6 +43,21 @@ class ClipTimingTest {
     }
 
     @Test
+    fun `reversed clips map timeline positions from the trimmed source end`() {
+        val clip = clip().copy(
+            trimStartMs = 200L,
+            trimEndMs = 800L,
+            isReversed = true,
+        )
+
+        assertEquals(800L, clip.timelineOffsetToSourceMs(0L))
+        assertEquals(500L, clip.timelineOffsetToSourceMs(300L))
+        assertEquals(200L, clip.timelineOffsetToSourceMs(600L))
+        assertEquals(0L, clip.sourceTimeToTimelineOffsetMs(800L))
+        assertEquals(600L, clip.sourceTimeToTimelineOffsetMs(200L))
+    }
+
+    @Test
     fun `eased speed ramp duration integrates wall clock curve`() {
         val clip = clip(speedCurve = SpeedCurve.rampUp(from = 0.5f, to = 2f))
 

@@ -914,6 +914,25 @@ class TimelineEditingTest {
     }
 
     @Test
+    fun `reversed split uses the mirrored source boundary`() {
+        val reversed = clip("reversed", 1_000L, 100L, 900L, 1_000L).copy(isReversed = true)
+
+        val split = splitTimelineClip(
+            clip = reversed,
+            playheadMs = 1_300L,
+            newClipId = "right",
+            newLinkedClipId = null,
+            rightGroupId = null,
+            idFactory = { "generated" }
+        ) ?: error("expected split")
+
+        assertEquals(600L, split.sourceSplitMs)
+        assertEquals(600L, split.left.trimEndMs)
+        assertEquals(600L, split.right.trimStartMs)
+        assertEquals(split.left.timelineEndMs, split.right.timelineStartMs)
+    }
+
+    @Test
     fun `split preserves absolute animation and caption timing with fresh right-side identities`() {
         val sourceClip = clip("source", 1_000L, 0L, 1_000L, 1_000L).copy(
             groupId = "left-group",

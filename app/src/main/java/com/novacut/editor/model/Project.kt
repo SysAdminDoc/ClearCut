@@ -268,10 +268,11 @@ data class Clip(
      * Map a timeline-relative offset (0..durationMs) back to a source offset
      * (trimStartMs..trimEndMs). Inverse of the forward time mapping used by
      * `durationMs`. For a clip with no speedCurve this is just
-     * `trimStartMs + timelineOffsetMs * speed`. With a speedCurve it walks
-     * the trim range in small source-time steps and accumulates timeline
-     * time (dt_timeline = dt_source / speed(t)), stopping when the running
-     * timeline time passes the target.
+     * `trimStartMs + timelineOffsetMs * speed`, mirrored from `trimEndMs` for
+     * reversed playback. With a speedCurve it walks the trim range in small
+     * source-time steps and accumulates timeline time (dt_timeline =
+     * dt_source / speed(t)), stopping when the running timeline time passes
+     * the target.
      *
      * Used by thumbnail/frame extraction (contact sheet, GIF export, preview
      * scrubbing) so the frame grabbed for timeline position T comes from the
@@ -287,7 +288,11 @@ data class Clip(
         if (curve == null || curve.points.size < 2) {
             val safeSpeed = finitePositiveSpeed(speed)
             val sourceDelta = (clamped.toDouble() * safeSpeed).toLong()
-            return (trimStartMs + sourceDelta).coerceIn(trimStartMs, trimEndMs)
+            return if (isReversed) {
+                (trimEndMs - sourceDelta).coerceIn(trimStartMs, trimEndMs)
+            } else {
+                (trimStartMs + sourceDelta).coerceIn(trimStartMs, trimEndMs)
+            }
         }
 
         // Numerical reverse-lookup on the speed curve. 256 linear samples
@@ -308,12 +313,20 @@ data class Clip(
                 val remaining = target - accumulatedTimeline
                 val fraction = (remaining / dtTimeline).coerceIn(0.0, 1.0)
                 sourceCursor = i * stepSourceMs + fraction * stepSourceMs
-                return (trimStartMs + sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+                return if (isReversed) {
+                    (trimEndMs - sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+                } else {
+                    (trimStartMs + sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+                }
             }
             accumulatedTimeline += dtTimeline
             sourceCursor = (i + 1) * stepSourceMs
         }
-        return (trimStartMs + sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+        return if (isReversed) {
+            (trimEndMs - sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+        } else {
+            (trimStartMs + sourceCursor.toLong()).coerceIn(trimStartMs, trimEndMs)
+        }
     }
 
     fun sourceTimeToTimelineOffsetMs(sourceTimeMs: Long, includeBoundaries: Boolean = true): Long? {
@@ -321,8 +334,13 @@ data class Clip(
         if (duration <= 0L) return null
         if (sourceTimeMs < trimStartMs || sourceTimeMs > trimEndMs) return null
         if (!includeBoundaries && (sourceTimeMs <= trimStartMs || sourceTimeMs >= trimEndMs)) return null
-        if (sourceTimeMs == trimStartMs) return 0L.takeIf { includeBoundaries }
-        if (sourceTimeMs == trimEndMs) return duration.takeIf { includeBoundaries }
+        if (!isReversed) {
+            if (sourceTimeMs == trimStartMs) return 0L.takeIf { includeBoundaries }
+            if (sourceTimeMs == trimEndMs) return duration.takeIf { includeBoundaries }
+        } else {
+            if (sourceTimeMs == trimEndMs) return 0L.takeIf { includeBoundaries }
+            if (sourceTimeMs == trimStartMs) return duration.takeIf { includeBoundaries }
+        }
 
         val lowerBound = if (includeBoundaries) 0L else 1L
         val upperBound = if (includeBoundaries) duration else duration - 1L
@@ -330,7 +348,12 @@ data class Clip(
 
         val curve = speedCurve
         if (curve == null || curve.points.size < 2) {
-            val offset = ((sourceTimeMs - trimStartMs).toDouble() / finitePositiveSpeed(speed)).toLong()
+            val sourceDelta = if (isReversed) {
+                trimEndMs - sourceTimeMs
+            } else {
+                sourceTimeMs - trimStartMs
+            }
+            val offset = (sourceDelta.toDouble() / finitePositiveSpeed(speed)).toLong()
             return offset.coerceIn(lowerBound, upperBound)
         }
 
@@ -340,7 +363,12 @@ data class Clip(
         while (low <= high) {
             val mid = low + (high - low) / 2L
             val mappedSourceMs = timelineOffsetToSourceMs(mid)
-            if (mappedSourceMs < sourceTimeMs) {
+            val needsLaterTimelinePosition = if (isReversed) {
+                mappedSourceMs > sourceTimeMs
+            } else {
+                mappedSourceMs < sourceTimeMs
+            }
+            if (needsLaterTimelinePosition) {
                 low = mid + 1L
             } else {
                 best = mid
