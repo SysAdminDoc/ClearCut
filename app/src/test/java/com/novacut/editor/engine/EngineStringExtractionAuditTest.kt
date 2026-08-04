@@ -74,13 +74,14 @@ class EngineStringExtractionAuditTest {
         // 2026-08-03: 193 after the multi-asset sequence ordering policy.
         // 2026-08-03: 194 after the streaming GIF encoder.
         // 2026-08-04: 195 after the persistent batch export plan store.
+        // 2026-08-04: 196 after guarded SRT/WebVTT caption import.
         // Bump intentionally when adding new engines so the
         // docs/models.md registry and the ROADMAP stay in sync. This assertion
         // is a checkpoint, not a hard cap.
         assertTrue(
             "Engine file count drifted from the audit baseline (was 161, now $count). " +
                 "If you added an engine, update docs/models.md and bump this number.",
-            count in 95..195
+            count in 95..196
         )
     }
 

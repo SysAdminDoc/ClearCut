@@ -47,7 +47,11 @@ class IncomingMediaManifestTest {
             "application/zip",
             "application/xml",
             "text/xml",
-            "text/plain"
+            "text/plain",
+            "text/vtt",
+            "text/x-subrip",
+            "application/x-subrip",
+            "text/srt"
         )
 
         val viewFilter = filters.firstOrNull { element ->

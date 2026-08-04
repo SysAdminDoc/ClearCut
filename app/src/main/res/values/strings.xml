@@ -1484,6 +1484,30 @@
     <string name="caption_panel_subtitle">Write, time, and style captions that feel polished instead of bolted onto the cut.</string>
     <string name="caption_system_title">Caption system</string>
     <string name="caption_system_description">Manage timing, coverage, and default styling for every subtitle block on the selected clip.</string>
+    <string name="caption_import_cd">Import SRT or WebVTT captions</string>
+    <string name="caption_import_title">Review caption import</string>
+    <string name="caption_import_description">Nothing changes until you apply this bounded preview to the selected clip.</string>
+    <string name="caption_import_format">Format: %1$s</string>
+    <string name="caption_import_encoding">Encoding: %1$s</string>
+    <string name="caption_import_cues">Cues: %1$d</string>
+    <string name="caption_import_duration">Duration: %1$s</string>
+    <string name="caption_import_language">Language guess: %1$s (%2$d%% confidence)</string>
+    <string name="caption_import_overlaps">Overlaps: %1$d</string>
+    <string name="caption_import_invalid_cues">Invalid cues: %1$d</string>
+    <string name="caption_import_mapping">Mapping: subtracts the selected clip timeline offset and clips to the clip duration.</string>
+    <string name="caption_import_apply">Apply captions</string>
+    <string name="caption_import_select_clip">Select a clip before importing captions.</string>
+    <string name="caption_import_unsupported">Choose an SRT or WebVTT file from a content provider.</string>
+    <string name="caption_import_invalid">This caption preview is not valid and cannot be applied.</string>
+    <string name="caption_import_no_cues_in_clip">No imported cues intersect the selected clip.</string>
+    <plurals name="caption_import_applied">
+        <item quantity="one">Imported %1$d caption.</item>
+        <item quantity="other">Imported %1$d captions.</item>
+    </plurals>
+    <plurals name="caption_import_applied_partial">
+        <item quantity="one">Imported %1$d caption; %2$d cue(s) were clipped or outside the selected clip.</item>
+        <item quantity="other">Imported %1$d captions; %2$d cue(s) were clipped or outside the selected clip.</item>
+    </plurals>
     <plurals name="caption_total_count">
         <item quantity="one">%1$d total</item>
         <item quantity="other">%1$d total</item>

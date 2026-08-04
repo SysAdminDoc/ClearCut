@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileOpen
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -24,6 +26,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,12 +47,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
+import com.novacut.editor.engine.CaptionImportEngine
 import com.novacut.editor.engine.CaptionTranslationEngine.EditorRow
 import com.novacut.editor.engine.CaptionTranslationEngine.LanguagePairQuality
 import com.novacut.editor.model.Caption
 import com.novacut.editor.model.CaptionStyle
 import com.novacut.editor.model.CaptionStyleType
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -61,6 +66,10 @@ fun CaptionEditorPanel(
     onUpdateCaption: (Caption) -> Unit,
     onDeleteCaption: (String) -> Unit,
     onGenerateAutoCaption: () -> Unit,
+    onImportCaptions: () -> Unit = {},
+    captionImportPreview: CaptionImportEngine.Preview? = null,
+    onApplyCaptionImport: () -> Unit = {},
+    onDismissCaptionImport: () -> Unit = {},
     translationRows: List<EditorRow> = emptyList(),
     translationSourceLang: String = "en",
     translationTargetLang: String? = null,
@@ -109,6 +118,12 @@ fun CaptionEditorPanel(
         modifier = modifier,
         scrollable = true,
         headerActions = {
+            PremiumPanelIconButton(
+                icon = Icons.Default.FileOpen,
+                contentDescription = stringResource(R.string.caption_import_cd),
+                onClick = onImportCaptions,
+                tint = ClearCutAccents.Blue
+            )
             PremiumPanelIconButton(
                 icon = Icons.Default.AutoAwesome,
                 contentDescription = stringResource(R.string.cd_caption_auto),
@@ -401,6 +416,94 @@ fun CaptionEditorPanel(
                 )
             }
         }
+    }
+
+    captionImportPreview?.let { preview ->
+        CaptionImportPreviewDialog(
+            preview = preview,
+            onApply = onApplyCaptionImport,
+            onDismiss = onDismissCaptionImport,
+        )
+    }
+}
+
+@Composable
+private fun CaptionImportPreviewDialog(
+    preview: CaptionImportEngine.Preview,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val semanticColors = LocalClearCutColors.current
+    val confidence = (preview.languageConfidence * 100f).roundToInt()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.caption_import_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = if (preview.failure == null) {
+                        stringResource(R.string.caption_import_description)
+                    } else {
+                        stringResource(R.string.caption_import_invalid)
+                    },
+                    color = semanticColors.subtext,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(stringResource(R.string.caption_import_format, preview.format.displayName))
+                Text(stringResource(R.string.caption_import_encoding, preview.encoding?.displayName ?: "unknown"))
+                Text(stringResource(R.string.caption_import_cues, preview.cues.size))
+                Text(stringResource(R.string.caption_import_duration, formatCaptionImportDuration(preview.durationMs)))
+                Text(stringResource(R.string.caption_import_language, preview.language, confidence))
+                Text(stringResource(R.string.caption_import_overlaps, preview.overlapCount))
+                Text(stringResource(R.string.caption_import_invalid_cues, preview.invalidCueCount))
+                Text(
+                    text = stringResource(R.string.caption_import_mapping),
+                    color = semanticColors.subtext,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                preview.failure?.let { failure ->
+                    Text(
+                        text = failure.displayName,
+                        color = ClearCutAccents.Red,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                preview.warnings.forEach { warning ->
+                    Text(
+                        text = warning,
+                        color = ClearCutAccents.Yellow,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (preview.isValid) {
+                TextButton(onClick = onApply) {
+                    Text(stringResource(R.string.caption_import_apply))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.close))
+            }
+        },
+        containerColor = semanticColors.panelHighest,
+        titleContentColor = semanticColors.text,
+        textContentColor = semanticColors.subtext,
+    )
+}
+
+private fun formatCaptionImportDuration(durationMs: Long): String {
+    val totalSeconds = durationMs / 1_000L
+    val hours = totalSeconds / 3_600L
+    val minutes = (totalSeconds % 3_600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0L) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(minutes, seconds)
     }
 }
 

@@ -81,7 +81,7 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
             <!-- Non-media document receiver for ClearCut-owned plugin,
-                 template, LUT, archive, and timeline-interchange files.
+                 template, LUT, archive, timeline-interchange, and caption files.
                  Kept to explicit MIME families plus content:// VIEW grants;
                  MainActivity still validates extension, size, and parser
                  status before showing a preview/report. -->
@@ -106,6 +106,18 @@
                 <data
                     android:scheme="content"
                     android:mimeType="text/plain" />
+                <data
+                    android:scheme="content"
+                    android:mimeType="text/vtt" />
+                <data
+                    android:scheme="content"
+                    android:mimeType="text/x-subrip" />
+                <data
+                    android:scheme="content"
+                    android:mimeType="application/x-subrip" />
+                <data
+                    android:scheme="content"
+                    android:mimeType="text/srt" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -116,6 +128,10 @@
                 <data android:mimeType="application/xml" />
                 <data android:mimeType="text/xml" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="text/vtt" />
+                <data android:mimeType="text/x-subrip" />
+                <data android:mimeType="application/x-subrip" />
+                <data android:mimeType="text/srt" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
@@ -126,6 +142,10 @@
                 <data android:mimeType="application/xml" />
                 <data android:mimeType="text/xml" />
                 <data android:mimeType="text/plain" />
+                <data android:mimeType="text/vtt" />
+                <data android:mimeType="text/x-subrip" />
+                <data android:mimeType="application/x-subrip" />
+                <data android:mimeType="text/srt" />
             </intent-filter>
             <!-- Image share target: bring a sticker / overlay candidate in
                  from another app. `content://` only so a malicious third

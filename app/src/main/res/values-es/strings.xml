@@ -1407,6 +1407,30 @@
     <string name="caption_panel_subtitle">Escribe, sincroniza y aplica estilo a subtítulos pulidos que se integren en el corte.</string>
     <string name="caption_system_title">Sistema de subtítulos</string>
     <string name="caption_system_description">Administra el tiempo, la cobertura y el estilo predeterminado de cada bloque de subtítulos del clip seleccionado.</string>
+    <string name="caption_import_cd">Importar subtítulos SRT o WebVTT</string>
+    <string name="caption_import_title">Revisar importación de subtítulos</string>
+    <string name="caption_import_description">Nada cambia hasta aplicar esta vista previa acotada al clip seleccionado.</string>
+    <string name="caption_import_format">Formato: %1$s</string>
+    <string name="caption_import_encoding">Codificación: %1$s</string>
+    <string name="caption_import_cues">Líneas: %1$d</string>
+    <string name="caption_import_duration">Duración: %1$s</string>
+    <string name="caption_import_language">Idioma estimado: %1$s (%2$d%% de confianza)</string>
+    <string name="caption_import_overlaps">Solapamientos: %1$d</string>
+    <string name="caption_import_invalid_cues">Líneas no válidas: %1$d</string>
+    <string name="caption_import_mapping">Mapeo: resta el desplazamiento del clip seleccionado y recorta a su duración.</string>
+    <string name="caption_import_apply">Aplicar subtítulos</string>
+    <string name="caption_import_select_clip">Selecciona un clip antes de importar subtítulos.</string>
+    <string name="caption_import_unsupported">Elige un archivo SRT o WebVTT de un proveedor de contenido.</string>
+    <string name="caption_import_invalid">Esta vista previa de subtítulos no es válida y no se puede aplicar.</string>
+    <string name="caption_import_no_cues_in_clip">Ninguna línea importada intersecta el clip seleccionado.</string>
+    <plurals name="caption_import_applied" tools:ignore="MissingQuantity">
+        <item quantity="one">Se importó %1$d subtítulo.</item>
+        <item quantity="other">Se importaron %1$d subtítulos.</item>
+    </plurals>
+    <plurals name="caption_import_applied_partial" tools:ignore="MissingQuantity">
+        <item quantity="one">Se importó %1$d subtítulo; %2$d línea(s) se recortaron o quedaron fuera del clip seleccionado.</item>
+        <item quantity="other">Se importaron %1$d subtítulos; %2$d línea(s) se recortaron o quedaron fuera del clip seleccionado.</item>
+    </plurals>
     <plurals name="caption_total_count">
         <item quantity="one">%1$d en total</item>
         <item quantity="other">%1$d en total</item>

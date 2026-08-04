@@ -5,6 +5,7 @@ import android.net.Uri
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,6 +25,7 @@ data class IncomingDocumentImportPreview(
     val details: List<String> = emptyList(),
     val warnings: List<String> = emptyList(),
     val canImportNow: Boolean = false,
+    val captionImport: CaptionImportEngine.Preview? = null,
 )
 
 @Singleton
@@ -49,6 +51,8 @@ class IncomingDocumentImportRouter @Inject constructor(
             IncomingDocumentKind.TIMELINE_OTIO,
             IncomingDocumentKind.TIMELINE_FCPXML,
             IncomingDocumentKind.TIMELINE_EDL -> previewTimelineImport(item)
+            IncomingDocumentKind.CAPTION_SRT,
+            IncomingDocumentKind.CAPTION_WEBVTT -> previewCaptionImport(item)
         }
     }
 
@@ -71,7 +75,9 @@ class IncomingDocumentImportRouter @Inject constructor(
             IncomingDocumentKind.PROJECT_ARCHIVE,
             IncomingDocumentKind.TIMELINE_OTIO,
             IncomingDocumentKind.TIMELINE_FCPXML,
-            IncomingDocumentKind.TIMELINE_EDL -> invalid(
+            IncomingDocumentKind.TIMELINE_EDL,
+            IncomingDocumentKind.CAPTION_SRT,
+            IncomingDocumentKind.CAPTION_WEBVTT -> invalid(
                 item = item,
                 body = "${item.kind.displayName} files cannot be installed from the Projects screen. " +
                     "${item.kind.targetAction}.",
@@ -335,6 +341,41 @@ class IncomingDocumentImportRouter @Inject constructor(
         )
     }
 
+    private fun previewCaptionImport(item: IncomingDocumentItem): IncomingDocumentImportPreview {
+        val format = CaptionImportEngine.formatFor(item.kind)
+            ?: return invalid(item, "Unsupported caption format.")
+        val bytes = readBytes(item)
+            ?: return invalid(
+                item,
+                "ClearCut could not read this caption file within its bounded import limit.",
+            )
+        val analysis = CaptionImportEngine.analyze(bytes, format)
+        val details = baseDetails(item) + captionDetails(analysis)
+        val failure = analysis.failure
+        if (failure != null) {
+            return IncomingDocumentImportPreview(
+                item = item,
+                status = IncomingDocumentImportStatus.INVALID,
+                title = "Caption import blocked",
+                body = captionFailureMessage(failure),
+                details = details,
+                warnings = analysis.warnings + "No project data was changed.",
+                canImportNow = false,
+                captionImport = analysis,
+            )
+        }
+        return IncomingDocumentImportPreview(
+            item = item,
+            status = IncomingDocumentImportStatus.READY,
+            title = "Caption preview ready",
+            body = "Preview is non-mutating. Open Caption Editor on a selected clip to apply this import as one undoable edit.",
+            details = details + "Time mapping: source timestamps are offset by the selected clip's timeline start and clipped to that clip.",
+            warnings = analysis.warnings + "No project data was changed during preview.",
+            canImportNow = false,
+            captionImport = analysis,
+        )
+    }
+
     private fun validateReadable(item: IncomingDocumentItem): IncomingDocumentImportPreview? {
         if (item.uri.scheme != "content") {
             return invalid(item, "Only content:// document grants are accepted.")
@@ -376,6 +417,51 @@ class IncomingDocumentImportRouter @Inject constructor(
             }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun readBytes(item: IncomingDocumentItem): ByteArray? {
+        return try {
+            context.contentResolver.openInputStream(item.uri)?.use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(DEFAULT_READ_BUFFER_BYTES)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    output.write(buffer, 0, count)
+                    if (output.size().toLong() > item.kind.maxBytes) return null
+                }
+                output.toByteArray()
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun captionDetails(analysis: CaptionImportEngine.Preview): List<String> {
+        val encoding = analysis.encoding?.displayName ?: "unknown"
+        val confidence = "%.0f%%".format(java.util.Locale.US, analysis.languageConfidence * 100f)
+        return listOf(
+            "Format: ${analysis.format.displayName}",
+            "Encoding: $encoding",
+            "Cues: ${analysis.cues.size}",
+            "Duration: ${formatDuration(analysis.durationMs)}",
+            "Language guess: ${analysis.language} ($confidence confidence)",
+            "Overlaps: ${analysis.overlapCount}",
+            "Invalid cues: ${analysis.invalidCueCount}",
+        )
+    }
+
+    private fun captionFailureMessage(failure: CaptionImportEngine.Failure): String {
+        return when (failure) {
+            CaptionImportEngine.Failure.OVERSIZED -> "Caption file is larger than ClearCut's bounded import limit."
+            CaptionImportEngine.Failure.EMPTY -> "Caption file is empty."
+            CaptionImportEngine.Failure.BINARY -> "This file contains binary content and is not a text caption file."
+            CaptionImportEngine.Failure.UNSUPPORTED_ENCODING -> "Caption encoding is unsupported or malformed. Use UTF-8 or UTF-16 text."
+            CaptionImportEngine.Failure.INVALID_HEADER -> "WebVTT files must begin with a valid WEBVTT header."
+            CaptionImportEngine.Failure.INVALID_CUES -> "One or more caption cues are invalid; the file was not imported."
+            CaptionImportEngine.Failure.EXCESSIVE_CUES -> "Caption file contains more cues than ClearCut allows in one import."
+            CaptionImportEngine.Failure.NO_CUES -> "No valid caption cues were found."
         }
     }
 
@@ -475,5 +561,21 @@ class IncomingDocumentImportRouter @Inject constructor(
         val mib = kib / 1024.0
         if (mib < 1024.0) return "%.1f MB".format(mib)
         return "%.2f GB".format(mib / 1024.0)
+    }
+
+    private fun formatDuration(durationMs: Long): String {
+        val totalSeconds = durationMs / 1_000L
+        val hours = totalSeconds / 3_600L
+        val minutes = (totalSeconds % 3_600L) / 60L
+        val seconds = totalSeconds % 60L
+        return if (hours > 0L) {
+            "%d:%02d:%02d".format(hours, minutes, seconds)
+        } else {
+            "%d:%02d".format(minutes, seconds)
+        }
+    }
+
+    private companion object {
+        const val DEFAULT_READ_BUFFER_BYTES = 16 * 1024
     }
 }

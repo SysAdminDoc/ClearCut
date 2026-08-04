@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bounded SRT/WebVTT caption import with encoding, language-confidence, overlap, invalid-cue, and size diagnostics; accepted previews apply offset-aware captions to the selected clip as one undoable edit.
 - Batch export plans now persist atomically with bounded, versioned JSON; interrupted work restores as explicit `INTERRUPTED` items, changed project/config fingerprints require review, and completed jobs remain in export history.
 - GIF export now streams sampled frames into its atomic output, recycles each frame immediately, derives the logical canvas from source geometry, and uses a bounded primitive LZW table with streaming sub-blocks.
 - Added an isolated `qa` Android build with a separate application ID, bundled timeline fixture, deterministic Compose tags, and on-device coverage for import, trim, split, delete, undo/redo, relaunch persistence, and scoped cleanup.

@@ -1,6 +1,8 @@
 package com.novacut.editor.ui.editor
 
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -20,6 +22,12 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
     playheadMs: Long,
     context: Context
 ) {
+    val captionImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let(viewModel::previewCaptionImport)
+    }
+
     BottomSheetSlot(
         visible = state.panels.isOpen(PanelId.TRANSFORM),
         modifier = Modifier.align(Alignment.BottomCenter)
@@ -355,6 +363,14 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
             onUpdateCaption = viewModel::updateCaption,
             onDeleteCaption = viewModel::removeCaption,
             onGenerateAutoCaption = viewModel::generateAutoCaption,
+            onImportCaptions = {
+                captionImportLauncher.launch(
+                    arrayOf("text/plain", "text/vtt", "text/x-subrip", "application/x-subrip", "application/octet-stream")
+                )
+            },
+            captionImportPreview = state.captionImportPreview,
+            onApplyCaptionImport = viewModel::applyCaptionImport,
+            onDismissCaptionImport = viewModel::dismissCaptionImportPreview,
             translationRows = state.captionTranslationRows,
             translationSourceLang = state.captionTranslationSourceLang,
             translationTargetLang = state.captionTranslationTargetLang,

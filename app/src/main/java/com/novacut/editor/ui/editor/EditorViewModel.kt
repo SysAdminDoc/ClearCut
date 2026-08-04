@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
@@ -40,6 +41,10 @@ import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.SpeakerSwitchPlanner
 import com.novacut.editor.engine.SubtitleExporter
+import com.novacut.editor.engine.CaptionImportEngine
+import com.novacut.editor.engine.IncomingDocumentImportRouter
+import com.novacut.editor.engine.IncomingDocumentIntentParser
+import com.novacut.editor.engine.IncomingDocumentItem
 import com.novacut.editor.engine.TextBasedEditEngine
 import com.novacut.editor.engine.AutoChapterEngine
 import com.novacut.editor.engine.TalkingHeadFramingEngine
@@ -89,6 +94,7 @@ import com.novacut.editor.engine.attachMediaAssetIdsToTracks
 import com.novacut.editor.engine.backfillManagedMediaAssetSidecars
 import com.novacut.editor.engine.buildProjectMediaAssets
 import com.novacut.editor.engine.sanitizeFileName
+import com.novacut.editor.engine.resolveMediaDisplayName
 import com.novacut.editor.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -470,6 +476,7 @@ data class EditorState(
     val captionTranslationVariant: com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant
         get() = caption.variant
     val captionTranslationUnavailable: Boolean get() = caption.translationUnavailable
+    val captionImportPreview: CaptionImportEngine.Preview? get() = caption.captionImportPreview
 }
 
 /**
@@ -611,6 +618,7 @@ class EditorViewModel @Inject constructor(
     private val aiFeatures: AiFeatures,
     private val voiceoverEngine: VoiceoverRecorderEngine,
     private val templateManager: TemplateManager,
+    private val incomingDocumentImportRouter: IncomingDocumentImportRouter,
     private val proxyEngine: ProxyEngine,
     private val settingsRepo: SettingsRepository,
     private val ttsEngine: com.novacut.editor.engine.TtsEngine,
@@ -2444,6 +2452,136 @@ class EditorViewModel @Inject constructor(
         saveUndoState("Remove caption")
         updateSelectedClip { it.copy(captions = it.captions.filter { c -> c.id != captionId }) }
         saveProject()
+    }
+
+    /** Open a bounded, non-mutating SRT/WebVTT preview for the selected clip. */
+    fun previewCaptionImport(uri: Uri) {
+        if (_state.value.selectedClipId == null) {
+            showToast(text(R.string.caption_import_select_clip), ToastSeverity.Warning)
+            return
+        }
+        viewModelScope.launch {
+            val preview = withContext(Dispatchers.IO) {
+                captionImportItem(uri)?.let { item ->
+                    incomingDocumentImportRouter.preview(item)
+                }
+            }
+            val analysis = preview?.captionImport
+            if (analysis == null) {
+                showToast(
+                    preview?.body ?: text(R.string.caption_import_unsupported),
+                    ToastSeverity.Error,
+                )
+                return@launch
+            }
+            _state.update {
+                it.copyCaption { caption -> caption.copy(captionImportPreview = analysis) }
+            }
+        }
+    }
+
+    /** Apply the accepted preview as one undoable edit to the selected clip. */
+    fun applyCaptionImport() {
+        val preview = _state.value.captionImportPreview ?: return
+        val clip = getSelectedClip()
+        if (clip == null) {
+            dismissCaptionImportPreview()
+            showToast(text(R.string.caption_import_select_clip), ToastSeverity.Warning)
+            return
+        }
+        if (!preview.isValid) {
+            showToast(text(R.string.caption_import_invalid), ToastSeverity.Error)
+            return
+        }
+        val mapping = CaptionImportEngine.mapToClip(
+            preview = preview,
+            clipDurationMs = clip.durationMs,
+            targetOffsetMs = clip.timelineStartMs,
+        )
+        if (mapping.captions.isEmpty()) {
+            dismissCaptionImportPreview()
+            showToast(text(R.string.caption_import_no_cues_in_clip), ToastSeverity.Warning)
+            return
+        }
+        saveUndoState("Import captions")
+        updateSelectedClip { selected ->
+            selected.copy(
+                captions = (selected.captions + mapping.captions)
+                    .sortedWith(compareBy<Caption> { it.startTimeMs }.thenBy { it.endTimeMs }),
+            )
+        }
+        dismissCaptionImportPreview()
+        saveProject()
+        if (mapping.clippedCueCount > 0 || mapping.skippedCueCount > 0) {
+            showToast(
+                appContext.resources.getQuantityString(
+                    R.plurals.caption_import_applied_partial,
+                    mapping.captions.size,
+                    mapping.captions.size,
+                    mapping.clippedCueCount + mapping.skippedCueCount,
+                ),
+                ToastSeverity.Warning,
+            )
+        } else {
+            showToast(
+                appContext.resources.getQuantityString(
+                    R.plurals.caption_import_applied,
+                    mapping.captions.size,
+                    mapping.captions.size,
+                )
+            )
+        }
+    }
+
+    fun dismissCaptionImportPreview() {
+        _state.update {
+            it.copyCaption { caption -> caption.copy(captionImportPreview = null) }
+        }
+    }
+
+    private fun captionImportItem(uri: Uri): IncomingDocumentItem? {
+        if (uri.scheme != "content") return null
+        val displayName = resolveMediaDisplayName(appContext, uri)
+            ?.substringAfterLast('/')
+            ?.substringAfterLast('\\')
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: uri.lastPathSegment
+                ?.substringAfterLast('/')
+                ?.substringAfterLast('\\')
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+            ?: return null
+        val mimeType = runCatching { appContext.contentResolver.getType(uri) }.getOrNull()
+        val kind = IncomingDocumentIntentParser.classify(displayName, mimeType)
+            ?.takeIf {
+                it == com.novacut.editor.engine.IncomingDocumentKind.CAPTION_SRT ||
+                    it == com.novacut.editor.engine.IncomingDocumentKind.CAPTION_WEBVTT
+            }
+            ?: return null
+        val sizeBytes = runCatching {
+            appContext.contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.SIZE),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val index = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (index >= 0 && !cursor.isNull(index)) cursor.getLong(index) else null
+                } else {
+                    null
+                }
+            }
+        }.getOrNull()
+        return IncomingDocumentItem(
+            uri = uri,
+            kind = kind,
+            displayName = displayName,
+            mimeType = mimeType,
+            sizeBytes = sizeBytes,
+        )
     }
 
     // --- Project Snapshots ---

@@ -59,6 +59,16 @@ enum class IncomingDocumentKind(
         displayName = "CMX 3600 EDL",
         targetAction = "Review timeline-import status",
         maxBytes = 5_000_000L,
+    ),
+    CAPTION_SRT(
+        displayName = "SubRip captions (.srt)",
+        targetAction = "Review and import into the Caption Editor",
+        maxBytes = CaptionImportEngine.MAX_BYTES,
+    ),
+    CAPTION_WEBVTT(
+        displayName = "WebVTT captions (.vtt)",
+        targetAction = "Review and import into the Caption Editor",
+        maxBytes = CaptionImportEngine.MAX_BYTES,
     );
 
     companion object {
@@ -96,6 +106,10 @@ internal object IncomingDocumentIntentParser {
         "application/xml",
         "text/xml",
         "text/plain",
+        "text/vtt",
+        "text/x-subrip",
+        "application/x-subrip",
+        "text/srt",
     )
 
     fun parse(
@@ -173,6 +187,8 @@ internal object IncomingDocumentIntentParser {
             lower.endsWith(".otio") -> IncomingDocumentKind.TIMELINE_OTIO
             lower.endsWith(".fcpxml") -> IncomingDocumentKind.TIMELINE_FCPXML
             lower.endsWith(".edl") -> IncomingDocumentKind.TIMELINE_EDL
+            lower.endsWith(".srt") -> IncomingDocumentKind.CAPTION_SRT
+            lower.endsWith(".vtt") -> IncomingDocumentKind.CAPTION_WEBVTT
             else -> null
         }?.takeIf { mimeType == null || mimeType in documentMimeTypes }
     }

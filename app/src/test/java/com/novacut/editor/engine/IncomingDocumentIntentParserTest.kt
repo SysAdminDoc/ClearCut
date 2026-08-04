@@ -65,11 +65,12 @@ class IncomingDocumentIntentParserTest {
         val template = contentUri("intro.clearcut-template")
         val archive = contentUri("project.clearcut")
         val otio = contentUri("cut.otio")
+        val captions = contentUri("captions.srt")
 
         val parsed = IncomingDocumentIntentParser.parse(
             action = Intent.ACTION_SEND_MULTIPLE,
             dataUri = null,
-            streamUris = listOf(template, archive),
+            streamUris = listOf(template, archive, captions),
             clipDataUris = listOf(archive, otio),
             intentMimeType = "application/octet-stream",
             hasReadGrant = true,
@@ -77,6 +78,7 @@ class IncomingDocumentIntentParserTest {
                 when (uri.toString()) {
                     template.toString() -> metadata("intro.clearcut-template", "application/octet-stream", 400L)
                     archive.toString() -> metadata("project.clearcut", "application/octet-stream", 2_000L)
+                    captions.toString() -> metadata("captions.srt", "application/octet-stream", 2_000L)
                     else -> metadata("cut.otio", "application/json", 2_000L)
                 }
             }
@@ -86,6 +88,7 @@ class IncomingDocumentIntentParserTest {
             parsed,
             template.toString() to IncomingDocumentKind.TEMPLATE,
             archive.toString() to IncomingDocumentKind.PROJECT_ARCHIVE,
+            captions.toString() to IncomingDocumentKind.CAPTION_SRT,
             otio.toString() to IncomingDocumentKind.TIMELINE_OTIO
         )
     }
@@ -179,6 +182,14 @@ class IncomingDocumentIntentParserTest {
         assertEquals(
             IncomingDocumentKind.STYLE_PACK,
             IncomingDocumentIntentParser.classify("captions.ncstyle", "application/octet-stream")
+        )
+        assertEquals(
+            IncomingDocumentKind.CAPTION_SRT,
+            IncomingDocumentIntentParser.classify("captions.srt", "text/plain")
+        )
+        assertEquals(
+            IncomingDocumentKind.CAPTION_WEBVTT,
+            IncomingDocumentIntentParser.classify("captions.vtt", "text/vtt")
         )
     }
 

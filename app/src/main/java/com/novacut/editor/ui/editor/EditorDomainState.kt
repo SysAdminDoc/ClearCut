@@ -3,6 +3,7 @@ package com.novacut.editor.ui.editor
 import com.novacut.editor.engine.AiToolRequirements
 import com.novacut.editor.engine.AiUsageLedger
 import com.novacut.editor.engine.CaptionTranslationEngine
+import com.novacut.editor.engine.CaptionImportEngine
 import com.novacut.editor.engine.CutAssistantEngine
 import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.MediaRelinkProbe
@@ -49,6 +50,7 @@ data class EditorCaptionState(
     val targetLang: String? = null,
     val quality: CaptionTranslationEngine.LanguagePairQuality? = null,
     val variant: CaptionTranslationEngine.ModelVariant = CaptionTranslationEngine.ModelVariant.NLLB_600M,
+    val captionImportPreview: CaptionImportEngine.Preview? = null,
     // True when the user requested a translation but no translation model is
     // installed, so the panel shows "model required" instead of untranslated
     // rows presented as a translation.
