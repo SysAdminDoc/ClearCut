@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Release R8 rules now retain only exact `Class.forName` probes and Room's generated database constructor while delegating Hilt, WorkManager, Media3, Compose, Coil, DataStore, OkHttp, ONNX Runtime, MediaPipe, and Lottie to their consumer rules; the minified release produced retraceable mapping/usage reports, passed native alignment checks, and reduced each APK split by 4.88 MB against the recorded baseline.
 - Startup now removes only stale, app-owned pending MediaStore rows from ClearCut public output directories, recovering invisible artifacts left by a killed export or archive save.
 - Media3 export timeout cleanup now routes Transformer cancellation through an explicit termination fence before deleting output, preventing a late muxer write from recreating a partial artifact.
 - Speed-curve splits now carry their rounded boundary correction into subsequent clips, preserving the next clip and any intentional following gaps while retaining exact left/right abutment.
