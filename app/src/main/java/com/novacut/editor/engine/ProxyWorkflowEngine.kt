@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.novacut.editor.model.ProxyResolution
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,7 @@ class ProxyWorkflowEngine @Inject constructor(
 
     data class MediaEntry(
         val originalUri: Uri,
+        val mediaVersion: String = originalUri.toString(),
         val proxyUri: Uri? = null,
         val thumbnailStripPath: String? = null,
         val originalWidth: Int = 0,
@@ -58,9 +60,16 @@ class ProxyWorkflowEngine @Inject constructor(
     /**
      * Register a new media source. Starts thumbnail extraction immediately.
      */
-    suspend fun registerMedia(clipId: String, uri: Uri, width: Int, height: Int) {
+    suspend fun registerMedia(
+        clipId: String,
+        uri: Uri,
+        width: Int,
+        height: Int,
+        mediaVersion: String = uri.toString(),
+    ) {
         _entries.update { current -> current + (clipId to MediaEntry(
             originalUri = uri,
+            mediaVersion = mediaVersion,
             originalWidth = width,
             originalHeight = height
         )) }
@@ -90,39 +99,71 @@ class ProxyWorkflowEngine @Inject constructor(
     ) = withContext(Dispatchers.IO) {
         generationMutex.withLock {
             _isGenerating.value = true
-            val needsProxy = _entries.value.filter { !it.value.proxyGenerated && it.value.originalHeight > 1080 }
-            if (needsProxy.isEmpty()) {
-                onProgress(1f)
-                _isGenerating.value = false
-                return@withLock
-            }
-            var completed = 0
-
-            for ((clipId, entry) in needsProxy) {
-                // Check cancellation before each potentially multi-minute proxy job so
-                // WorkManager can stop the worker promptly without force-killing the process.
-                ensureActive()
-                try {
-                    _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = true)) }
-
-                    // Use QUARTER resolution (540p from 4K) for proxy editing
-                    val proxyUri = proxyEngine.generateProxy(
-                        entry.originalUri,
-                        ProxyResolution.QUARTER
-                    ) { /* per-clip progress */ }
-
-                    _entries.update { current -> current + (clipId to entry.copy(
-                        proxyUri = proxyUri,
-                        proxyGenerated = proxyUri != null,
-                        proxyGenerating = false
-                    )) }
-                } catch (e: Exception) {
-                    _entries.update { current -> current + (clipId to entry.copy(proxyGenerating = false)) }
+            try {
+                val needsProxy = _entries.value.filter { !it.value.proxyGenerated && it.value.originalHeight > 1080 }
+                if (needsProxy.isEmpty()) {
+                    onProgress(1f)
+                    return@withLock
                 }
-                completed++
-                onProgress(completed.toFloat() / needsProxy.size)
+                var completed = 0
+
+                for ((clipId, entry) in needsProxy) {
+                    // Check cancellation before each potentially multi-minute proxy job so
+                    // WorkManager can stop the worker promptly without force-killing the process.
+                    ensureActive()
+                    val expectedVersion = entry.mediaVersion
+                    val currentEntry = _entries.value[clipId]
+                    if (!shouldApplyProxyResult(expectedVersion, currentEntry?.mediaVersion)) {
+                        completed++
+                        onProgress(completed.toFloat() / needsProxy.size)
+                        continue
+                    }
+                    try {
+                        _entries.update { current ->
+                            val liveEntry = current[clipId]
+                            if (liveEntry == null || !shouldApplyProxyResult(expectedVersion, liveEntry.mediaVersion)) {
+                                current
+                            } else {
+                                current + (clipId to liveEntry.copy(proxyGenerating = true))
+                            }
+                        }
+
+                        // Use QUARTER resolution (540p from 4K) for proxy editing
+                        val proxyUri = proxyEngine.generateProxy(
+                            entry.originalUri,
+                            ProxyResolution.QUARTER
+                        ) { /* per-clip progress */ }
+
+                        _entries.update { current ->
+                            val liveEntry = current[clipId]
+                            if (liveEntry == null || !shouldApplyProxyResult(expectedVersion, liveEntry.mediaVersion)) {
+                                current
+                            } else {
+                                current + (clipId to liveEntry.copy(
+                                    proxyUri = proxyUri,
+                                    proxyGenerated = proxyUri != null,
+                                    proxyGenerating = false
+                                ))
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        _entries.update { current ->
+                            val liveEntry = current[clipId]
+                            if (liveEntry == null || !shouldApplyProxyResult(expectedVersion, liveEntry.mediaVersion)) {
+                                current
+                            } else {
+                                current + (clipId to liveEntry.copy(proxyGenerating = false))
+                            }
+                        }
+                    }
+                    completed++
+                    onProgress(completed.toFloat() / needsProxy.size)
+                }
+            } finally {
+                _isGenerating.value = false
             }
-            _isGenerating.value = false
         }
     }
 

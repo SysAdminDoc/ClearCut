@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Waveform and proxy jobs now bind results to clip timeline identities, discard stale completions after edits, and requeue current waveform work when the timeline changes during extraction.
 - Media health now reports container, codec, track-language, HDR/color, timestamp, and sync-frame diagnostics, with previous/next sync-frame navigation and export preflight risk disclosure.
 - GIF export now requests aspect-preserving frames at the configured maximum width, prefers base VIDEO tracks over overlays, and maps palette overflow to the nearest available color.
 - Cross-app media-picker drops now accept MIME metadata during drag-start, request temporary URI access before ingesting content URIs, and release the grant on success, failure, or early exit.

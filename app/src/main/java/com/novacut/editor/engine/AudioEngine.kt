@@ -5,6 +5,7 @@ import android.media.*
 import android.net.Uri
 import android.util.LruCache
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -226,6 +227,8 @@ class AudioEngine @Inject constructor(
             waveformCache.put(cacheKey, result)
             writeDiskCache(cacheKey, result)
             result
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Waveform extraction failed for ${uri.redacted()}", e)
             // Use `boundedSampleCount` -- matching the other early-return paths in this

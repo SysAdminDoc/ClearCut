@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -75,6 +76,9 @@ import com.novacut.editor.engine.MediaHealth
 import com.novacut.editor.engine.MediaDiagnosticsProbe
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.SyncFrameDirection
+import com.novacut.editor.engine.TimelineMediaJobIdentity
+import com.novacut.editor.engine.shouldApplyMediaJobResult
+import com.novacut.editor.engine.timelineMediaJobIdentity
 import com.novacut.editor.engine.OverlayAssetImportResult
 import com.novacut.editor.engine.OverlayAssetStore
 import com.novacut.editor.engine.ProjectMediaAsset
@@ -92,6 +96,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -790,10 +795,23 @@ class EditorViewModel @Inject constructor(
         previousFrameTimeMs = ::previousProjectFrameTimeMs,
         recalculateDuration = ::recalculateDuration,
         onClipAdded = { clipId, uri ->
+            val mediaVersion = _state.value.tracks
+                .asSequence()
+                .flatMap { it.clips.asSequence() }
+                .firstOrNull { it.id == clipId }
+                ?.timelineMediaJobIdentity()
+                ?.version
+                ?: "$clipId|$uri"
             viewModelScope.launch(Dispatchers.IO) {
                 val (w, h) = videoEngine.getVideoResolution(uri)
                 if (w > 0 && h > 0) {
-                    proxyWorkflowEngine.registerMedia(clipId, uri, w, h)
+                    proxyWorkflowEngine.registerMedia(
+                        clipId = clipId,
+                        uri = uri,
+                        width = w,
+                        height = h,
+                        mediaVersion = mediaVersion,
+                    )
                     if (h > 1080) enqueueProxyGeneration()
                 }
             }
@@ -882,7 +900,20 @@ class EditorViewModel @Inject constructor(
     // Stored outside EditorState to avoid recomposition on every resize
     @Volatile
     private var timelineWidthPx: Float = 0f
-    private val waveformLoadJobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
+    private data class WaveformLoadHandle(
+        val identity: TimelineMediaJobIdentity,
+        var job: Job? = null,
+    )
+
+    private data class ProxyGenerationRequest(
+        val identity: TimelineMediaJobIdentity,
+        val sourceUri: Uri,
+        val resolution: ProxyResolution,
+    )
+
+    private val waveformLoadJobs = java.util.concurrent.ConcurrentHashMap<String, WaveformLoadHandle>()
+    private val loadedWaveformIdentities = java.util.concurrent.ConcurrentHashMap<String, TimelineMediaJobIdentity>()
+    private var proxyGenerationJob: Job? = null
 
     private fun visibleTimelineDurationMs(state: EditorState = _state.value): Long? {
         if (timelineWidthPx <= 0f) return null
@@ -1391,7 +1422,7 @@ class EditorViewModel @Inject constructor(
                 clip.timelineStartMs <= loadWindow.last && clip.timelineEndMs >= loadWindow.first
             }
             .forEach { clip ->
-                enqueueWaveformLoad(clip.id, clip.sourceUri)
+                enqueueWaveformLoad(clip)
             }
     }
 
@@ -1410,43 +1441,79 @@ class EditorViewModel @Inject constructor(
         return startMs..endMs
     }
 
-    private fun enqueueWaveformLoad(clipId: String, sourceUri: Uri) {
-        if (_state.value.waveforms.containsKey(clipId)) return
-        if (waveformLoadJobs[clipId]?.isActive == true) return
+    private fun enqueueWaveformLoad(clip: Clip) {
+        val clipId = clip.id
+        val identity = clip.timelineMediaJobIdentity()
+        val currentClip = _state.value.tracks
+            .asSequence()
+            .flatMap { it.clips.asSequence() }
+            .firstOrNull { it.id == clipId }
+        if (!shouldApplyMediaJobResult(identity, currentClip?.timelineMediaJobIdentity())) return
 
-        waveformLoadJobs[clipId] = viewModelScope.launch {
+        val loadedIdentity = loadedWaveformIdentities[clipId]
+        if (_state.value.waveforms.containsKey(clipId) && loadedIdentity == identity) return
+        if (_state.value.waveforms.containsKey(clipId) && loadedIdentity != identity) {
+            _state.update { state ->
+                if (state.waveforms.containsKey(clipId)) {
+                    state.copy(waveforms = state.waveforms - clipId)
+                } else {
+                    state
+                }
+            }
+            loadedWaveformIdentities.remove(clipId)
+        }
+
+        val existing = waveformLoadJobs[clipId]
+        if (existing?.identity == identity && existing.job?.isActive == true) return
+        existing?.job?.cancel()
+
+        val handle = WaveformLoadHandle(identity)
+        waveformLoadJobs[clipId] = handle
+        handle.job = viewModelScope.launch {
             try {
-                val waveform = audioEngine.extractWaveform(sourceUri).toList()
+                val waveform = audioEngine.extractWaveform(identity.sourceUri.toUri()).toList()
                 var shouldRefreshSuggestion = false
+                var accepted = false
                 _state.update { state ->
-                    val clipStillExists = state.tracks.any { track ->
-                        track.clips.any { clip -> clip.id == clipId }
-                    }
-                    if (!clipStillExists || state.waveforms.containsKey(clipId)) {
+                    val currentIdentity = state.tracks
+                        .asSequence()
+                        .flatMap { it.clips.asSequence() }
+                        .firstOrNull { it.id == clipId }
+                        ?.timelineMediaJobIdentity()
+                    if (!shouldApplyMediaJobResult(identity, currentIdentity) ||
+                        state.waveforms.containsKey(clipId) && loadedWaveformIdentities[clipId] == identity
+                    ) {
                         state
                     } else {
+                        accepted = true
                         shouldRefreshSuggestion = state.selectedClipId == clipId
+                        loadedWaveformIdentities[clipId] = identity
                         state.copy(waveforms = state.waveforms + (clipId to waveform))
                     }
                 }
-                if (shouldRefreshSuggestion) {
+                if (accepted && shouldRefreshSuggestion) {
                     generateAiSuggestion(clipId)
+                } else if (!accepted && waveformLoadJobs[clipId] === handle) {
+                    // The timeline changed while extraction was in flight. Queue the
+                    // current identity immediately so a trim/relink does not wait for
+                    // another viewport event to recover its waveform.
+                    preloadVisibleWaveforms(_state.value)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w("EditorViewModel", "Waveform extraction failed for $clipId", e)
             } finally {
-                waveformLoadJobs.remove(clipId)
+                waveformLoadJobs.remove(clipId, handle)
             }
         }
     }
 
     private fun cancelWaveformLoads(clipIds: Set<String>? = null) {
-        val iterator = waveformLoadJobs.iterator()
-        while (iterator.hasNext()) {
-            val (clipId, job) = iterator.next()
+        waveformLoadJobs.forEach { (clipId, handle) ->
             if (clipIds == null || clipId in clipIds) {
-                job.cancel()
-                iterator.remove()
+                handle.job?.cancel()
+                waveformLoadJobs.remove(clipId, handle)
             }
         }
     }
@@ -2444,6 +2511,8 @@ class EditorViewModel @Inject constructor(
         if (enabled) {
             generateProxiesForAllClips()
         } else {
+            proxyGenerationJob?.cancel()
+            proxyGenerationJob = null
             proxyEngine.clearProxies()
             _state.update { state ->
                 state.copy(tracks = state.tracks.map { track ->
@@ -2457,34 +2526,72 @@ class EditorViewModel @Inject constructor(
     }
 
     private fun generateProxiesForAllClips() {
-        val clips = _state.value.tracks.flatMap { it.clips }
-        if (clips.isEmpty()) {
+        val requests = _state.value.tracks
+            .flatMap { it.clips }
+            .associate { clip ->
+                clip.id to ProxyGenerationRequest(
+                    identity = clip.timelineMediaJobIdentity(),
+                    sourceUri = clip.sourceUri,
+                    resolution = _state.value.proxySettings.resolution,
+                )
+            }
+        if (requests.isEmpty()) {
             showToast(text(R.string.vm_no_clips_for_proxy_toast))
             return
         }
-        showToast(text(R.string.vm_generating_proxies_toast, clips.size))
-        viewModelScope.launch {
+        showToast(text(R.string.vm_generating_proxies_toast, requests.size))
+        proxyGenerationJob?.cancel()
+        lateinit var thisJob: Job
+        thisJob = viewModelScope.launch {
             var generated = 0
-            for (clip in clips) {
-                if (!proxyEngine.hasProxy(clip.sourceUri)) {
-                    proxyEngine.generateProxy(
-                        clip.sourceUri,
-                        _state.value.proxySettings.resolution
-                    )
-                    generated++
+            try {
+                for (request in requests.values) {
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    val currentClip = _state.value.tracks
+                        .asSequence()
+                        .flatMap { it.clips.asSequence() }
+                        .firstOrNull { it.id == request.identity.clipId }
+                    if (!_state.value.proxySettings.enabled ||
+                        !shouldApplyMediaJobResult(request.identity, currentClip?.timelineMediaJobIdentity())
+                    ) {
+                        continue
+                    }
+                    if (!proxyEngine.hasProxy(request.sourceUri)) {
+                        val proxyUri = proxyEngine.generateProxy(
+                            request.sourceUri,
+                            request.resolution,
+                        )
+                        if (proxyUri != null) generated++
+                    }
                 }
+                _state.update { state ->
+                    if (!state.proxySettings.enabled) {
+                        state
+                    } else {
+                        state.copy(tracks = state.tracks.map { track ->
+                            track.copy(clips = track.clips.map { clip ->
+                                val request = requests[clip.id]
+                                if (request != null &&
+                                    shouldApplyMediaJobResult(request.identity, clip.timelineMediaJobIdentity())
+                                ) {
+                                    clip.copy(proxyUri = proxyEngine.getProxyUri(request.sourceUri))
+                                } else {
+                                    clip
+                                }
+                            })
+                        })
+                    }
+                }
+                rebuildPlayerTimeline()
+                saveProject()
+                showToast(text(R.string.vm_proxy_enabled_toast, generated))
+            } catch (e: CancellationException) {
+                throw e
+            } finally {
+                if (proxyGenerationJob === thisJob) proxyGenerationJob = null
             }
-            _state.update { state ->
-                state.copy(tracks = state.tracks.map { track ->
-                    track.copy(clips = track.clips.map { clip ->
-                        clip.copy(proxyUri = proxyEngine.getProxyUri(clip.sourceUri))
-                    })
-                })
-            }
-            rebuildPlayerTimeline()
-            saveProject()
-            showToast(text(R.string.vm_proxy_enabled_toast, generated))
         }
+        proxyGenerationJob = thisJob
     }
 
     // --- Render Preview + Smart Render (delegated) ---
@@ -2935,8 +3042,10 @@ class EditorViewModel @Inject constructor(
         }
         val s = _state.value
         val clip = s.tracks.flatMap { it.clips }.firstOrNull { it.id == clipId } ?: return
-        if (clipHasAudio(clip) && !s.waveforms.containsKey(clip.id)) {
-            enqueueWaveformLoad(clip.id, clip.sourceUri)
+        if (clipHasAudio(clip) &&
+            (!s.waveforms.containsKey(clip.id) || loadedWaveformIdentities[clip.id] != clip.timelineMediaJobIdentity())
+        ) {
+            enqueueWaveformLoad(clip)
         }
         val engineSuggestion = editingSuggestionEngine.analyze(
             tracks = s.tracks,
@@ -6324,6 +6433,8 @@ class EditorViewModel @Inject constructor(
             videoEngine.resetExportState()
         }
         cancelWaveformLoads()
+        proxyGenerationJob?.cancel()
+        proxyGenerationJob = null
         audioEngine.clearWaveformCache()
         // DON'T call videoEngine.release() or ttsEngine.release() — they're @Singletons
     }
