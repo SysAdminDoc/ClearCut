@@ -8,6 +8,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -27,6 +31,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onVisibilityChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -70,6 +75,42 @@ private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
 // which maintains its own copy so the VM logic doesn't have a cross-file dependency.
 private const val MIN_TIMELINE_ZOOM = 0.01f
 private const val MAX_TIMELINE_ZOOM = 10f
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TimelineThumbnailStrip(
+    clipId: String,
+    quantizedZoom: Float,
+    clipWidthPx: Float,
+    thumbnails: List<Bitmap>,
+    cacheWindow: LazyLayoutCacheWindow,
+) {
+    val density = LocalDensity.current
+    val listState = rememberLazyListState(cacheWindow = cacheWindow)
+    val thumbnailWidth = with(density) {
+        (clipWidthPx / thumbnails.size.coerceAtLeast(1)).coerceAtLeast(1f).toDp()
+    }
+
+    LazyRow(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        userScrollEnabled = false,
+    ) {
+        itemsIndexed(
+            items = thumbnails,
+            key = { index, _ -> "${clipId}_${quantizedZoom}_$index" },
+        ) { _, bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = stringResource(R.string.cd_clip_thumbnail),
+                modifier = Modifier
+                    .width(thumbnailWidth)
+                    .fillMaxHeight(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            )
+        }
+    }
+}
 
 // Allocation-free clip lookup for drag handlers — they fire per pointer event
 // (~60-120Hz), where the previous flatMap built a throwaway list each event.
@@ -532,6 +573,12 @@ fun Timeline(
             )
         )
     }
+    val thumbnailCacheWindow = remember {
+        LazyLayoutCacheWindow(
+            ahead = TimelineScrollPerformancePolicy.CACHE_WINDOW_AHEAD_DP.dp,
+            behind = TimelineScrollPerformancePolicy.CACHE_WINDOW_BEHIND_DP.dp,
+        )
+    }
     // 8dp snap threshold in px — constant for the lifetime of the density scope.
     val snapThresholdPx = with(density) { 8.dp.toPx() }
     val currentIsTrimMode by rememberUpdatedState(isTrimMode)
@@ -541,7 +588,7 @@ fun Timeline(
     val quantizedZoom = (zoomLevel * 4).toInt() / 4f // quantize to 0.25 steps
     val thumbnailSemaphore = remember { kotlinx.coroutines.sync.Semaphore(3) }
     val thumbnailPreloadPaddingMs = remember(visibleDurationMs) {
-        (visibleDurationMs / 2).coerceAtLeast(2_000L)
+        TimelineScrollPerformancePolicy.thumbnailPreloadPaddingMs(visibleDurationMs)
     }
     val thumbnailVisibleStartMs = (scrollOffsetMs - thumbnailPreloadPaddingMs).coerceAtLeast(0L)
     val thumbnailVisibleEndMs = scrollOffsetMs + visibleDurationMs + thumbnailPreloadPaddingMs
@@ -1643,6 +1690,7 @@ fun Timeline(
                                     // values that actually drive the gradient lets Compose reuse the same
                                     // Brush instance until selection or track-color state changes.
                                     val isClipMissing = clip.id in missingClipIds
+                                    var isClipContentVisible by remember(clip.id) { mutableStateOf(true) }
                                     val clipBackgroundBrush = remember(isSelected, isMultiSelected, isClipMissing, clipColor) {
                                         Brush.horizontalGradient(
                                             when {
@@ -1702,6 +1750,9 @@ fun Timeline(
                                                 customActions = clipCustomActions
                                             }
                                             .onFocusChanged { isKeyboardFocused = it.isFocused }
+                                            .onVisibilityChanged(minFractionVisible = 0f) { isVisible ->
+                                                isClipContentVisible = isVisible
+                                            }
                                             .onPreviewKeyEvent { event ->
                                                 if (event.type != KeyEventType.KeyDown) {
                                                     false
@@ -1869,29 +1920,30 @@ fun Timeline(
                                             )
                                         }
                                         // Thumbnail strip for video tracks
-                                        if (track.type == TrackType.VIDEO) {
+                                        if (
+                                            TimelineScrollPerformancePolicy.shouldRenderExpensiveContent(
+                                                isClipContentVisible
+                                            ) && track.type == TrackType.VIDEO
+                                        ) {
                                             val key = "${clip.id}_${quantizedZoom}"
                                             val thumbs = thumbnails[key]
                                             if (thumbs != null && thumbs.isNotEmpty()) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxSize()
-                                                ) {
-                                                    thumbs.forEach { bitmap ->
-                                                        Image(
-                                                            bitmap = bitmap.asImageBitmap(),
-                                                            contentDescription = stringResource(R.string.cd_clip_thumbnail),
-                                                            modifier = Modifier
-                                                                .weight(1f)
-                                                                .fillMaxHeight(),
-                                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                                                        )
-                                                    }
-                                                }
+                                                TimelineThumbnailStrip(
+                                                    clipId = clip.id,
+                                                    quantizedZoom = quantizedZoom,
+                                                    clipWidthPx = clipWidthPx,
+                                                    thumbnails = thumbs,
+                                                    cacheWindow = thumbnailCacheWindow,
+                                                )
                                             }
                                         }
 
                                         // Audio waveform + volume envelope
-                                        if (track.type == TrackType.AUDIO) {
+                                        if (
+                                            TimelineScrollPerformancePolicy.shouldRenderExpensiveContent(
+                                                isClipContentVisible
+                                            ) && track.type == TrackType.AUDIO
+                                        ) {
                                             val waveform = waveforms[clip.id]
                                             // Sort is O(n log n); Timeline recomposes ~30 Hz during
                                             // playback. Key on clip.keyframes (identity-stable
