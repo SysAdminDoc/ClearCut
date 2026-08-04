@@ -12,7 +12,6 @@ data class ExportConfig(
     val audioCodec: AudioCodec = AudioCodec.AAC,
     val audioBitrate: Int = 256_000,
     val aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
-    val bitrateMode: BitrateMode = BitrateMode.VBR,
     val platformPreset: PlatformPreset? = null,
     val exportAudioOnly: Boolean = false,
     val exportStemsOnly: Boolean = false,
@@ -206,12 +205,6 @@ enum class ExportQuality(val label: String) {
     LOW("Small File"),
     MEDIUM("Balanced"),
     HIGH("Best Quality")
-}
-
-enum class BitrateMode(val label: String) {
-    CBR("Constant"),
-    VBR("Variable"),
-    CQ("Constant Quality")
 }
 
 enum class PlatformPreset(

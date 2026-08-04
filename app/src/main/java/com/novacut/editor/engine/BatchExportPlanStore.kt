@@ -5,7 +5,6 @@ import androidx.core.net.toUri
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.BatchExportStatus
-import com.novacut.editor.model.BitrateMode
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ExportQuality
@@ -209,7 +208,6 @@ private fun exportConfigToJson(config: ExportConfig): JSONObject = JSONObject().
     put("audioCodec", config.audioCodec.name)
     put("audioBitrate", config.audioBitrate)
     put("aspectRatio", config.aspectRatio.name)
-    put("bitrateMode", config.bitrateMode.name)
     config.platformPreset?.let { put("platformPreset", it.name) }
     put("exportAudioOnly", config.exportAudioOnly)
     put("exportStemsOnly", config.exportStemsOnly)
@@ -301,7 +299,6 @@ private fun exportConfigFromJson(json: JSONObject?): ExportConfig? {
             audioCodec = enumOrDefault(json.optString("audioCodec"), AudioCodec.AAC),
             audioBitrate = json.optInt("audioBitrate", 256_000).coerceAtLeast(1),
             aspectRatio = enumOrDefault(json.optString("aspectRatio"), AspectRatio.RATIO_16_9),
-            bitrateMode = enumOrDefault(json.optString("bitrateMode"), BitrateMode.VBR),
             platformPreset = enumOrNull<PlatformPreset>(json.optString("platformPreset")),
             exportAudioOnly = json.optBoolean("exportAudioOnly", false),
             exportStemsOnly = json.optBoolean("exportStemsOnly", false),
