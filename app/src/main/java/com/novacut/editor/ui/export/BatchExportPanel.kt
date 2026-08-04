@@ -539,6 +539,12 @@ private fun ExportConfig.describeForQueue(): String = buildString {
             append(aspectRatio.label)
             append(" • ")
             append(codec.label)
+            append(" • ")
+            append(stringResource(R.string.export_fps_value, frameRate))
+            if (forceConstantFrameRate) {
+                append(" • ")
+                append(stringResource(R.string.export_constant_frame_rate_pill))
+            }
         }
     }
 }

@@ -150,6 +150,11 @@ class Media3TrimOptimizationPolicyTest {
             config = ExportConfig(timelineRange = TimelineExportRange(0L, 1L)),
             inputMimeType = "video/mp4",
         )
+        val constantFrameRate = Media3TrimOptimizationPolicy.evaluate(
+            tracks = listOf(videoTrack(clip(trimStartMs = 1_000L, trimEndMs = 9_000L))),
+            config = ExportConfig(forceConstantFrameRate = true),
+            inputMimeType = "video/mp4",
+        )
         val resume = Media3TrimOptimizationPolicy.evaluate(
             tracks = listOf(videoTrack(clip(trimStartMs = 1_000L, trimEndMs = 9_000L))),
             config = ExportConfig(),
@@ -159,6 +164,7 @@ class Media3TrimOptimizationPolicyTest {
 
         assertEquals(Media3TrimOptimizationPolicy.Reason.OVERLAYS_OR_AUTOMATION, overlay.reason)
         assertEquals(Media3TrimOptimizationPolicy.Reason.SPECIAL_EXPORT, special.reason)
+        assertEquals(Media3TrimOptimizationPolicy.Reason.SPECIAL_EXPORT, constantFrameRate.reason)
         assertEquals(Media3TrimOptimizationPolicy.Reason.RESUME_REQUESTED, resume.reason)
     }
 

@@ -695,7 +695,7 @@ class VideoEngine @Inject constructor(
         _exportFailureCause.value = null
         _exportWarningMessage.value = null
 
-        val reversedTempFiles = mutableListOf<File>()
+        val preRenderTempFiles = mutableListOf<File>()
         try {
             val trimOptimizationDecision = evaluateTrimOptimization(
                 tracks = tracks,
@@ -715,8 +715,18 @@ class VideoEngine @Inject constructor(
                     "reason=${trimOptimizationDecision.reason}",
             )
             val sourceMetadataEntries = sourceMetadataEntries(tracks, config)
-            val processedTracks = preRenderReversedClips(tracks, reversedTempFiles, onProgress)
-            ensureExportActive("reversed-clip pre-render")
+            val reversedTracks = preRenderReversedClips(tracks, preRenderTempFiles, onProgress)
+            val processedTracks = if (config.forceConstantFrameRate) {
+                preRenderConstantFrameRateClips(
+                    tracks = reversedTracks,
+                    frameRate = config.frameRate,
+                    tempFiles = preRenderTempFiles,
+                    onProgress = { progress -> onProgress(0.1f + progress * 0.1f) },
+                )
+            } else {
+                reversedTracks
+            }
+            ensureExportActive("video pre-render")
 
             val transformerPlan = buildTransformerExportPlan(
                 tracks = processedTracks,
@@ -749,11 +759,11 @@ class VideoEngine @Inject constructor(
                 metadataEntries = sourceMetadataEntries,
                 onProgress = onProgress,
                 onComplete = {
-                    reversedTempFiles.forEach { it.delete() }
+                    preRenderTempFiles.forEach { it.delete() }
                     onComplete()
                 },
                 onError = { e ->
-                    reversedTempFiles.forEach { it.delete() }
+                    preRenderTempFiles.forEach { it.delete() }
                     onError(e)
                 }
             )
@@ -764,7 +774,7 @@ class VideoEngine @Inject constructor(
             // error — don't invoke onError; rethrow so the launching coroutine
             // finishes as cancelled (ExportDelegate handles this contract).
             Log.d(TAG, "Export cancelled during setup", e)
-            reversedTempFiles.forEach { it.delete() }
+            preRenderTempFiles.forEach { it.delete() }
             if (_exportState.value == ExportState.EXPORTING) {
                 _exportState.value = ExportState.CANCELLED
             }
@@ -779,7 +789,7 @@ class VideoEngine @Inject constructor(
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Export setup failed", e)
-            reversedTempFiles.forEach { it.delete() }
+            preRenderTempFiles.forEach { it.delete() }
             failExport(ExportFailureCause.SETUP_FAILED, e.message ?: "Export setup failed")
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
@@ -1102,6 +1112,74 @@ class VideoEngine @Inject constructor(
         }
     }
 
+    private suspend fun preRenderConstantFrameRateClips(
+        tracks: List<Track>,
+        frameRate: Int,
+        tempFiles: MutableList<File>,
+        onProgress: (Float) -> Unit,
+    ): List<Track> {
+        val visualClips = tracks.flatMap { track ->
+            if (track.type == TrackType.VIDEO || track.type == TrackType.OVERLAY) {
+                track.clips
+                    .filterNot { clip -> isImageUri(clip.sourceUri) }
+                    .map { track to it }
+            } else {
+                emptyList()
+            }
+        }
+        if (visualClips.isEmpty()) return tracks
+        if (!ffmpegEngine.isAvailable()) {
+            throw ExportStageException(
+                stage = "cfr-normalize",
+                subjectId = null,
+                message = "Constant frame-rate export requires the bundled frame-normalization backend.",
+            )
+        }
+
+        val clipReplacements = mutableMapOf<String, Clip>()
+        for ((index, pair) in visualClips.withIndex()) {
+            ensureExportActive("constant frame-rate pre-render")
+            val (_, clip) = pair
+            val tempFile = File(context.cacheDir, "cfr_${clip.id}_${System.nanoTime()}.mp4")
+            tempFiles.add(tempFile)
+            val success = ffmpegEngine.normalizeVideoFrameRate(
+                inputUri = clip.sourceUri,
+                outputFile = tempFile,
+                frameRate = frameRate,
+                onProgress = { progress ->
+                    val base = index.toFloat() / visualClips.size
+                    val weight = 1f / visualClips.size
+                    onProgress(base + progress * weight)
+                },
+            )
+            if (!success || !tempFile.isFile || tempFile.length() <= 0L) {
+                throw ExportStageException(
+                    stage = "cfr-normalize",
+                    subjectId = clip.id,
+                    message = "Constant frame-rate normalization failed for clip ${clip.id}.",
+                )
+            }
+            val normalizedDurationMs = getVideoDuration(Uri.fromFile(tempFile))
+                .takeIf { it > 0L }
+                ?: clip.sourceDurationMs
+            val safeTrimStartMs = clip.trimStartMs.coerceIn(0L, (normalizedDurationMs - 1L).coerceAtLeast(0L))
+            val safeTrimEndMs = clip.trimEndMs.coerceIn(
+                (safeTrimStartMs + 1L).coerceAtMost(normalizedDurationMs),
+                normalizedDurationMs.coerceAtLeast(safeTrimStartMs + 1L),
+            )
+            clipReplacements[clip.id] = clip.copy(
+                sourceUri = Uri.fromFile(tempFile),
+                sourceDurationMs = normalizedDurationMs,
+                trimStartMs = safeTrimStartMs,
+                trimEndMs = safeTrimEndMs,
+            )
+        }
+
+        return tracks.map { track ->
+            track.copy(clips = track.clips.map { clip -> clipReplacements[clip.id] ?: clip })
+        }
+    }
+
     @androidx.annotation.OptIn(UnstableApi::class)
     suspend fun exportMixed(
         plan: MixedRenderComposer.CompositionPlan,
@@ -1117,6 +1195,10 @@ class VideoEngine @Inject constructor(
         onError: (Exception) -> Unit = {}
     ): Boolean {
         if (plan.benefit != MixedRenderComposer.Benefit.Mixed || !plan.needsConcat) return false
+        if (config.forceConstantFrameRate) {
+            Log.d(TAG, "Mixed export skipped: constant frame rate requires one rendered cadence")
+            return false
+        }
         if (tracks.any { it.timelineOffsetMs != 0L }) {
             Log.d(TAG, "Mixed export skipped: per-track timeline offsets require full Transformer composition")
             return false
@@ -2031,7 +2113,12 @@ class VideoEngine @Inject constructor(
             // the retained duration makes any non-zero trim start invalid.
             .setDurationUs(durationMsToUs(clip.sourceDurationMs.coerceAtLeast(1L)))
 
-        applyClipSpeed(itemBuilder, clip, config.frameRate)
+        applyClipSpeed(
+            itemBuilder = itemBuilder,
+            clip = clip,
+            outputFrameRate = config.frameRate,
+            forceConstantFrameRate = config.forceConstantFrameRate,
+        )
         return itemBuilder.build()
     }
 
@@ -2039,6 +2126,7 @@ class VideoEngine @Inject constructor(
         itemBuilder: EditedMediaItem.Builder,
         clip: Clip,
         outputFrameRate: Int? = null,
+        forceConstantFrameRate: Boolean = false,
     ) {
         val hasSpeedCurve = clip.speedCurve != null && clip.speedCurve.points.size >= 2
         val hasConstantSpeedChange = clip.speed != 1.0f
@@ -2047,6 +2135,7 @@ class VideoEngine @Inject constructor(
                 .speedFrameRateCap(
                     outputFrameRate = frameRate,
                     speedChanged = hasSpeedCurve || hasConstantSpeedChange,
+                    forceConstantFrameRate = forceConstantFrameRate,
                 )
                 ?.let(itemBuilder::setFrameRate)
         }

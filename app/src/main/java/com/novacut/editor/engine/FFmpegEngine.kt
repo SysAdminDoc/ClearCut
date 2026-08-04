@@ -263,6 +263,47 @@ class FFmpegEngine @Inject constructor(
     }
 
     /**
+     * Materialize a constant-cadence intermediate for Media3 Transformer.
+     *
+     * Media3's public frame-rate effect drops frames but does not duplicate a
+     * sparse input frame. The `fps` filter is therefore required before the
+     * final Transformer pass when the user explicitly requests CFR. This file
+     * is an intermediate: Transformer still owns the final resolution, codec,
+     * overlays, metadata policy, and muxing decisions.
+     */
+    suspend fun normalizeVideoFrameRate(
+        inputUri: Uri,
+        outputFile: File,
+        frameRate: Int,
+        onProgress: (Float) -> Unit = {},
+    ): Boolean = withContext(Dispatchers.IO) {
+        val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "normalizeVideoFrameRate")
+        if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
+        val encoder = preferredIntermediateEncoder()
+        val safeFrameRate = frameRate.coerceIn(1, 240)
+        outputFile.parentFile?.mkdirs()
+        executeArguments(
+            listOf(
+                "-y",
+                "-i", ffmpegInput(inputUri),
+                "-map", "0:v:0",
+                "-map", "0:a:0?",
+                "-vf", "fps=$safeFrameRate",
+                "-fps_mode", "cfr",
+                "-c:v", encoder.ffmpegName,
+                *intermediateQualityArgs(encoder).toTypedArray(),
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac",
+                "-b:a", "192k",
+                "-map_metadata", "-1",
+                "-shortest",
+                outputFile.absolutePath,
+            ),
+            onProgress = onProgress,
+        ) == 0 && outputFile.isFile && outputFile.length() > 0L
+    }
+
+    /**
      * Extract audio from an Android Uri to raw signed 16-bit little-endian PCM.
      */
     suspend fun extractAudioToPcm16le(

@@ -73,6 +73,9 @@
     <string name="export_hdr_preserve_description">Mantenga los metadatos de color HDR cuando tanto la fuente como el codificador seleccionado los admitan.</string>
     <string name="export_hdr_preserve_disabled">Requiere HEVC, AV1 o VP9. Las exportaciones H.264 son DEG.</string>
     <string name="export_hdr_preserve_overlays_disabled">No disponible con superposiciones de texto, imagen o marca de agua. La exportación usará la ruta de superposición SDR para evitar errores de color HDR.</string>
+    <string name="export_constant_frame_rate">Velocidad de fotogramas constante</string>
+    <string name="export_constant_frame_rate_description">Normaliza el material con velocidad variable a la velocidad seleccionada para mejorar la compatibilidad de edición y entrega. Requiere una exportación renderizada.</string>
+    <string name="export_constant_frame_rate_pill">CFR normalizado</string>
     <string name="export_fast_trim">Recorte rápido cuando sea posible</string>
     <string name="export_fast_trim_description">Utilice la copia continua para recortes intactos de una sola fuente y recurra a un renderizado completo cuando las ediciones lo requieran.</string>
     <string name="export_scrub_metadata">Limpiar metadatos de origen</string>

@@ -629,6 +629,9 @@ fun ExportSheet(
                             }
                             else -> {
                                 ExportPill(stringResource(R.string.export_fps_value, config.frameRate), ClearCutAccents.Mauve)
+                                if (config.forceConstantFrameRate) {
+                                    ExportPill(stringResource(R.string.export_constant_frame_rate_pill), ClearCutAccents.Mauve)
+                                }
                                 ExportPill(config.codec.label, ClearCutAccents.Sapphire)
                                 ExportPill(localizedExportQuality(config.quality), ClearCutAccents.Teal)
                             }
@@ -1197,6 +1200,17 @@ fun ExportSheet(
                 }
 
                 ExportToggleRow(
+                    icon = Icons.Default.Speed,
+                    title = stringResource(R.string.export_constant_frame_rate),
+                    description = stringResource(R.string.export_constant_frame_rate_description),
+                    checked = config.forceConstantFrameRate,
+                    onCheckedChange = { enabled ->
+                        onConfigChanged(config.copy(forceConstantFrameRate = enabled))
+                    },
+                    accent = ClearCutAccents.Mauve
+                )
+
+                ExportToggleRow(
                     icon = Icons.Default.GraphicEq,
                     title = stringResource(R.string.export_hdr_preserve),
                     description = stringResource(
@@ -1221,7 +1235,8 @@ fun ExportSheet(
                     icon = Icons.Default.Speed,
                     title = stringResource(R.string.export_fast_trim),
                     description = stringResource(R.string.export_fast_trim_description),
-                    checked = config.allowStreamCopy,
+                    checked = config.allowStreamCopy && !config.forceConstantFrameRate,
+                    enabled = !config.forceConstantFrameRate,
                     onCheckedChange = { onConfigChanged(config.copy(allowStreamCopy = it)) },
                     accent = ClearCutAccents.Green
                 )

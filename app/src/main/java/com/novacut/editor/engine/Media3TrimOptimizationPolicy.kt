@@ -100,7 +100,8 @@ object Media3TrimOptimizationPolicy {
             config.transparentBackground || config.timelineRange != null ||
             config.subtitleFormat != null || config.burnSubtitles ||
             config.watermark != null || config.chapters.isNotEmpty() ||
-            config.includeChapterMarkers || config.hdr10PlusMetadata
+            config.includeChapterMarkers || config.hdr10PlusMetadata ||
+            config.forceConstantFrameRate
         ) {
             return Decision(false, Reason.SPECIAL_EXPORT)
         }

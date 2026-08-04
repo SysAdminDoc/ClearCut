@@ -10,6 +10,9 @@ internal object Media3ExportRobustnessPolicy {
     /** Avoid turning a speed-ramped 30/60 fps timeline into an unbounded frame stream. */
     const val MAX_SPEED_OUTPUT_FRAME_RATE = 60
 
+    /** Batch/imported configurations may request up to the editor's 240 fps ceiling. */
+    const val MAX_CONSTANT_OUTPUT_FRAME_RATE = 240
+
     data class Dimensions(val width: Int, val height: Int)
 
     /**
@@ -27,12 +30,21 @@ internal object Media3ExportRobustnessPolicy {
     )
 
     /**
-     * Returns the maximum output rate for a speed-processed item, or null when Media3's
-     * speed path is not active and no per-item cap should be written.
+     * Returns the per-item output target for speed-processed or explicit CFR items.
+     * Ordinary exports remain untouched and receive no per-item cap.
      */
-    fun speedFrameRateCap(outputFrameRate: Int, speedChanged: Boolean): Int? {
-        if (!speedChanged) return null
-        return outputFrameRate.coerceIn(1, MAX_SPEED_OUTPUT_FRAME_RATE)
+    fun speedFrameRateCap(
+        outputFrameRate: Int,
+        speedChanged: Boolean,
+        forceConstantFrameRate: Boolean = false,
+    ): Int? {
+        if (!speedChanged && !forceConstantFrameRate) return null
+        val maximum = if (forceConstantFrameRate) {
+            MAX_CONSTANT_OUTPUT_FRAME_RATE
+        } else {
+            MAX_SPEED_OUTPUT_FRAME_RATE
+        }
+        return outputFrameRate.coerceIn(1, maximum)
     }
 
     private fun roundToMultiple(value: Int, divisor: Int): Int {

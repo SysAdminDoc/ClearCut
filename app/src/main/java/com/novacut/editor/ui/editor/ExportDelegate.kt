@@ -487,6 +487,10 @@ class ExportDelegate(
     ): Boolean {
         val engine = streamCopyEngine ?: return false
         if (!config.allowStreamCopy) return false
+        // A copied packet stream preserves the source cadence. CFR requests
+        // must take the rendered/pre-normalized path so the selected target is
+        // actually present in the output samples.
+        if (config.forceConstantFrameRate) return false
         if (resumeFromFile != null) return false
         // Stream-copy retains source metadata verbatim and cannot honor the
         // explicit scrub or opt-in metadata policy. Force the Transformer so

@@ -25,6 +25,7 @@ class BatchExportPlanStoreTest {
             val config = ExportConfig(
                 resolution = Resolution.HD_720P,
                 frameRate = 24,
+                forceConstantFrameRate = true,
                 quality = ExportQuality.MEDIUM,
                 aspectRatio = AspectRatio.RATIO_1_1,
                 includeChapterMarkers = true,

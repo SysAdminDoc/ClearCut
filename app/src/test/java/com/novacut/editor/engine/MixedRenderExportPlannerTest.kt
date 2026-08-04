@@ -97,6 +97,34 @@ class MixedRenderExportPlannerTest {
     }
 
     @Test
+    fun buildPlan_constantFrameRate_rejectsCopyAndRenderMix() {
+        val tracks = listOf(
+            videoTrack(
+                baseClip(id = "a", startMs = 0L),
+                baseClip(id = "b", startMs = 1_000L).copy(
+                    effects = listOf(Effect(type = EffectType.BRIGHTNESS))
+                ),
+            )
+        )
+
+        assertEquals(
+            "constant frame rate requested",
+            MixedRenderExportPlanner.rejectionReason(
+                tracks = tracks,
+                config = ExportConfig(forceConstantFrameRate = true),
+            )
+        )
+        assertNull(
+            MixedRenderExportPlanner.buildPlan(
+                tracks = tracks,
+                config = ExportConfig(forceConstantFrameRate = true),
+                finalOutputName = "demo.mp4",
+                projectStem = "demo",
+            )
+        )
+    }
+
+    @Test
     fun buildPlan_nonVideoExportShape_rejectsMixedPlan() {
         val tracks = listOf(
             videoTrack(

@@ -32,12 +32,33 @@ class Media3ExportRobustnessPolicyTest {
     }
 
     @Test
+    fun constantFrameRateForcesTheSelectedTargetWithoutSpeedChanges() {
+        assertEquals(
+            24,
+            Media3ExportRobustnessPolicy.speedFrameRateCap(
+                outputFrameRate = 24,
+                speedChanged = false,
+                forceConstantFrameRate = true,
+            )
+        )
+        assertEquals(
+            Media3ExportRobustnessPolicy.MAX_CONSTANT_OUTPUT_FRAME_RATE,
+            Media3ExportRobustnessPolicy.speedFrameRateCap(
+                outputFrameRate = 300,
+                speedChanged = false,
+                forceConstantFrameRate = true,
+            )
+        )
+    }
+
+    @Test
     fun media3HooksAreConnectedToReleaseAndProxyPaths() {
         val videoEngine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
         val proxyEngine = locate("app/src/main/java/com/novacut/editor/engine/ProxyEngine.kt").readText()
 
         assertTrue(videoEngine.contains(".setEnableCodecDbLite(true)"))
         assertTrue(videoEngine.contains("speedFrameRateCap("))
+        assertTrue(videoEngine.contains("forceConstantFrameRate = config.forceConstantFrameRate"))
         assertTrue(videoEngine.contains("encoderSafeOutputDimensions(config)"))
         assertTrue(
             proxyEngine.contains(

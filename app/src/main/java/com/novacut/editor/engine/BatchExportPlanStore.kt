@@ -203,6 +203,7 @@ private fun parseItem(json: JSONObject?): BatchExportItem? {
 private fun exportConfigToJson(config: ExportConfig): JSONObject = JSONObject().apply {
     put("resolution", config.resolution.name)
     put("frameRate", config.frameRate)
+    if (config.forceConstantFrameRate) put("forceConstantFrameRate", true)
     put("codec", config.codec.name)
     put("quality", config.quality.name)
     put("audioCodec", config.audioCodec.name)
@@ -294,6 +295,7 @@ private fun exportConfigFromJson(json: JSONObject?): ExportConfig? {
         ExportConfig(
             resolution = enumOrDefault(json.optString("resolution"), Resolution.FHD_1080P),
             frameRate = json.optInt("frameRate", 30).coerceIn(1, 240),
+            forceConstantFrameRate = json.optBoolean("forceConstantFrameRate", false),
             codec = enumOrDefault(json.optString("codec"), VideoCodec.H264),
             quality = enumOrDefault(json.optString("quality"), ExportQuality.HIGH),
             audioCodec = enumOrDefault(json.optString("audioCodec"), AudioCodec.AAC),

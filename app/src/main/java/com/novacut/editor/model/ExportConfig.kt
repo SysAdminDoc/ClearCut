@@ -7,6 +7,8 @@ import java.util.UUID
 data class ExportConfig(
     val resolution: Resolution = Resolution.FHD_1080P,
     val frameRate: Int = 30,
+    /** Normalize variable-frame-rate sources to the selected output cadence. */
+    val forceConstantFrameRate: Boolean = false,
     val codec: VideoCodec = VideoCodec.H264,
     val quality: ExportQuality = ExportQuality.HIGH,
     val audioCodec: AudioCodec = AudioCodec.AAC,

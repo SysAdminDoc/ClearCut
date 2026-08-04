@@ -24,6 +24,7 @@ object MixedRenderExportPlanner {
         hasLottieOverlays: Boolean = false,
         hasTrackedObjects: Boolean = false,
     ): String? {
+        if (config.forceConstantFrameRate) return "constant frame rate requested"
         if (!config.allowStreamCopy) return "stream-copy disabled"
         if (tracks.any { it.timelineOffsetMs != 0L }) return "per-track timeline offset present"
         if (config.scrubMetadata) return "metadata scrub requested"
