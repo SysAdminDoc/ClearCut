@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Speed-curve splits now carry their rounded boundary correction into subsequent clips, preserving the next clip and any intentional following gaps while retaining exact left/right abutment.
 - Timeline clip thumbnails now use keyed Compose lazy strips with a bounded cache window, and off-screen thumbnail/waveform surfaces pause through visibility callbacks; deterministic policy checks and the existing frame-timing scrub benchmark guard the scroll path.
 - ONNX Runtime sessions now attempt the bundled XNNPACK provider with bounded internal threading and retry on a fresh CPU session when the provider or model path cannot use it; Whisper and LaMa share the ownership-safe factory, and an instrumentation probe records native capability.
 - Pure single-asset MP4 trims now opt Media3 into GOP trim optimization and MP4 edit-list trimming when no timeline, audio, visual, overlay, or speed edits are present; ineligible edits retain the full Transformer path, and the existing output verification remains mandatory.

@@ -688,6 +688,7 @@ class ClipEditingDelegate(
 
         stateFlow.update { s ->
             val tracks = s.tracks.map { track ->
+                val boundaryCorrections = mutableListOf<Pair<String, Long>>()
                 val updatedClips = buildList {
                     track.clips.forEach { clip ->
                         val newId = newIdsByOldId[clip.id]
@@ -715,11 +716,19 @@ class ClipEditingDelegate(
                             if (split == null) add(clip) else {
                                 add(split.left)
                                 add(split.right)
+                                boundaryCorrections += split.right.id to
+                                    (split.right.timelineEndMs - clip.timelineEndMs)
                             }
                         }
                     }
                 }
-                track.copy(clips = updatedClips)
+                boundaryCorrections.fold(track.copy(clips = updatedClips)) { currentTrack, (rightId, correctionMs) ->
+                    shiftFollowingClipsPreservingGaps(
+                        track = currentTrack,
+                        afterClipId = rightId,
+                        correctionMs = correctionMs,
+                    )
+                }
             }
             val selectedClipId = fallbackSelectedId?.let { originalId ->
                 (newIdsByOldId[originalId] ?: originalId)

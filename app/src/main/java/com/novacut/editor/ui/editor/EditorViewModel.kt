@@ -3829,6 +3829,7 @@ class EditorViewModel @Inject constructor(
 
         _state.update { s ->
             val tracks = s.tracks.map { track ->
+                val boundaryCorrections = mutableListOf<Pair<String, Long>>()
                 track.copy(clips = buildList {
                     track.clips.forEach { clip ->
                         val newId = newIdsByOldId[clip.id]
@@ -3852,10 +3853,20 @@ class EditorViewModel @Inject constructor(
                             if (split == null) add(clip) else {
                                 add(split.left)
                                 add(split.right)
+                                boundaryCorrections += split.right.id to
+                                    (split.right.timelineEndMs - clip.timelineEndMs)
                             }
                         }
                     }
-                })
+                }).let { updatedTrack ->
+                    boundaryCorrections.fold(updatedTrack) { currentTrack, (rightId, correctionMs) ->
+                        shiftFollowingClipsPreservingGaps(
+                            track = currentTrack,
+                            afterClipId = rightId,
+                            correctionMs = correctionMs,
+                        )
+                    }
+                }
             }
             val waveforms = newIdsByOldId.entries.fold(s.waveforms) { acc, (oldId, newId) ->
                 acc[oldId]?.let { waveform -> acc + (newId to waveform) } ?: acc

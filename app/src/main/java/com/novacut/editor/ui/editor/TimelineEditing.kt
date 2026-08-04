@@ -451,6 +451,31 @@ internal fun splitTimelineClip(
     return TimelineClipSplit(left, right, timelineOffsetMs, sourceSplitMs)
 }
 
+/**
+ * Keep the gap after a split clip stable when its retimed halves round to a
+ * slightly different total duration than the original clip. The right half
+ * itself stays fixed; every later clip moves by the same correction so the
+ * next-clip boundary and all following intentional gaps remain intact.
+ */
+internal fun shiftFollowingClipsPreservingGaps(
+    track: Track,
+    afterClipId: String,
+    correctionMs: Long,
+): Track {
+    if (correctionMs == 0L) return track
+    val rightClipIndex = track.clips.indexOfFirst { it.id == afterClipId }
+    if (rightClipIndex < 0 || rightClipIndex == track.clips.lastIndex) return track
+    return track.copy(
+        clips = track.clips.mapIndexed { index, clip ->
+            if (index > rightClipIndex) {
+                clip.copy(timelineStartMs = clip.timelineStartMs + correctionMs)
+            } else {
+                clip
+            }
+        }
+    )
+}
+
 private fun splitKeyframes(
     keyframes: List<Keyframe>,
     splitMs: Long

@@ -6,6 +6,7 @@ import com.novacut.editor.engine.playbackSessionNeedsReset
 import com.novacut.editor.model.*
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -881,6 +882,35 @@ class TimelineEditingTest {
         ) ?: error("expected split")
 
         assertEquals(split.left.timelineEndMs, split.right.timelineStartMs)
+    }
+
+    @Test
+    fun `speed-curve split shifts following clips to the reconstructed boundary`() {
+        val ramped = clip("ramped", 1_000L, 0L, 4_000L, 4_000L, speedCurve = SpeedCurve.rampUp())
+        val originalEndMs = ramped.timelineEndMs
+        val following = clip("following", originalEndMs, 0L, 500L, 500L)
+        var generatedId = 0
+        val split = splitTimelineClip(
+            clip = ramped,
+            playheadMs = ramped.timelineStartMs + ramped.durationMs / 2,
+            newClipId = "right",
+            newLinkedClipId = null,
+            rightGroupId = null,
+            idFactory = { "generated-${generatedId++}" }
+        ) ?: error("expected split")
+        assertNotEquals(originalEndMs, split.right.timelineEndMs)
+        val corrected = shiftFollowingClipsPreservingGaps(
+            track = Track(
+                type = TrackType.VIDEO,
+                index = 0,
+                clips = listOf(split.left, split.right, following),
+            ),
+            afterClipId = split.right.id,
+            correctionMs = split.right.timelineEndMs - originalEndMs,
+        )
+
+        assertEquals(split.right.timelineEndMs, corrected.clips[2].timelineStartMs)
+        assertEquals(corrected.clips[1].timelineEndMs, corrected.clips[2].timelineStartMs)
     }
 
     @Test
