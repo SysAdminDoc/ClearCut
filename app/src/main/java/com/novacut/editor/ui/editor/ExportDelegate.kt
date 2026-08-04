@@ -68,9 +68,20 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.roundToInt
 import com.novacut.editor.engine.RedactedLog
+
+internal class ExportSaveGate {
+    private val inFlight = AtomicBoolean(false)
+
+    fun tryEnter(): Boolean = inFlight.compareAndSet(false, true)
+
+    fun exit() {
+        inFlight.set(false)
+    }
+}
 
 /**
  * Delegate handling export, batch export, render preview, share, and save-to-gallery.
@@ -120,6 +131,7 @@ class ExportDelegate(
     // (GIF encode, contact-sheet render) + any future CPU-only export paths
     // all need the same cancel/teardown plumbing.
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
+    private val saveToGalleryGate = ExportSaveGate()
     private data class ActiveResumeSession(
         val outputFile: File,
         val eligible: Boolean,
@@ -1982,25 +1994,30 @@ class ExportDelegate(
     }
 
     fun saveToGallery() {
-        val filePath = stateFlow.value.lastExportedFilePath ?: run {
-            showToast(appContext.getString(R.string.export_no_media_toast))
+        if (!saveToGalleryGate.tryEnter()) {
+            showToast(text(R.string.export_save_in_progress_toast))
             return
         }
-        val file = File(filePath)
-        if (!file.exists()) {
-            showToast(appContext.getString(R.string.export_file_not_found_toast))
+        val filePath = stateFlow.value.lastExportedFilePath ?: run {
+            saveToGalleryGate.exit()
+            showToast(appContext.getString(R.string.export_no_media_toast))
             return
         }
 
         scope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    val savedMessage = saveExportedFile(file)
-                    withContext(Dispatchers.Main) { showToast(savedMessage) }
-                } catch (e: Exception) {
-                    Log.e("ExportDelegate", "Save exported media failed", e)
-                    withContext(Dispatchers.Main) { showToast(text(R.string.export_save_failed_toast)) }
+            try {
+                val savedMessage = withContext(Dispatchers.IO) {
+                    val file = File(filePath)
+                    if (!file.isFile) null else saveExportedFile(file)
                 }
+                withContext(Dispatchers.Main) {
+                    showToast(savedMessage ?: text(R.string.export_file_not_found_toast))
+                }
+            } catch (e: Exception) {
+                Log.e("ExportDelegate", "Save exported media failed", e)
+                withContext(Dispatchers.Main) { showToast(text(R.string.export_save_failed_toast)) }
+            } finally {
+                saveToGalleryGate.exit()
             }
         }
     }

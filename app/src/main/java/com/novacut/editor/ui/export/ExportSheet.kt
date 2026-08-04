@@ -46,7 +46,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -118,10 +120,22 @@ import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.delay
 
 enum class ExportSheetPresentation {
     BOTTOM_SHEET,
     EMBEDDED_PANE
+}
+
+internal fun exportElapsedMs(nowMs: Long, exportStartTimeMs: Long): Long {
+    if (exportStartTimeMs <= 0L) return 0L
+    return (nowMs - exportStartTimeMs).coerceAtLeast(0L)
+}
+
+internal fun exportEtaRemainingMs(elapsedMs: Long, exportProgress: Float): Long? {
+    if (exportProgress <= 0.05f || elapsedMs <= 2_000L) return null
+    val totalEstimateMs = (elapsedMs / exportProgress).toLong()
+    return (totalEstimateMs - elapsedMs).coerceAtLeast(0L)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -169,6 +183,17 @@ fun ExportSheet(
     onClearAiUsageLedger: () -> Unit = {},
     onClose: () -> Unit
 ) {
+    var timingNowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(exportState, exportStartTime) {
+        timingNowMs = System.currentTimeMillis()
+        if (exportState == ExportState.EXPORTING && exportStartTime > 0L) {
+            while (true) {
+                delay(1_000L)
+                timingNowMs = System.currentTimeMillis()
+            }
+        }
+    }
+
     val semanticColors = LocalClearCutColors.current
     val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
     val (width, height) = config.resolution.forAspect(aspectRatio)
@@ -442,16 +467,12 @@ fun ExportSheet(
         Spacer(modifier = Modifier.height(16.dp))
         if (exportState == ExportState.EXPORTING) {
             val percent = (exportProgress * 100).toInt().coerceIn(0, 100)
-            val elapsedMs = if (exportStartTime > 0L) System.currentTimeMillis() - exportStartTime else 0L
+            val elapsedMs = exportElapsedMs(timingNowMs, exportStartTime)
             val elapsedSeconds = (elapsedMs / 1000).toInt()
             val elapsedLabel = "%d:%02d".format(elapsedSeconds / 60, elapsedSeconds % 60)
-            val etaLabel = if (exportProgress > 0.05f && elapsedMs > 2000L) {
-                val totalEstimateMs = (elapsedMs / exportProgress).toLong()
-                val remainingMs = (totalEstimateMs - elapsedMs).coerceAtLeast(0L)
+            val etaLabel = exportEtaRemainingMs(elapsedMs, exportProgress)?.let { remainingMs ->
                 val remainingSeconds = (remainingMs / 1000).toInt()
                 stringResource(R.string.export_eta_remaining, "%d:%02d".format(remainingSeconds / 60, remainingSeconds % 60))
-            } else {
-                null
             }
 
             val encoderLine = encoderName?.let { stringResource(R.string.export_encoder_format, it) }
@@ -2566,30 +2587,34 @@ private fun formatHistoryBytes(bytes: Long): String = when {
 private fun ExportPreviewPlayer(filePath: String) {
     val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
-    val file = remember(filePath) { java.io.File(filePath) }
-    if (!file.exists()) return
+    var player by remember(filePath, context) { mutableStateOf<ExoPlayer?>(null) }
 
-    val playerSession = remember(filePath) {
-        val lease = CodecInstanceBudget.acquirePlayerBlocking()
-        try {
-            lease to ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-                repeatMode = Player.REPEAT_MODE_OFF
-                prepare()
+    DisposableEffect(filePath, context) {
+        player = null
+        val file = java.io.File(filePath)
+        if (!file.isFile || file.length() <= 0L) {
+            onDispose { }
+        } else {
+            val lease = CodecInstanceBudget.acquirePlayerBlocking()
+            val createdPlayer = try {
+                ExoPlayer.Builder(context).build().apply {
+                    setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+                    repeatMode = Player.REPEAT_MODE_OFF
+                    prepare()
+                }
+            } catch (t: Throwable) {
+                lease.close()
+                throw t
             }
-        } catch (t: Throwable) {
-            lease.close()
-            throw t
+            player = createdPlayer
+            onDispose {
+                createdPlayer.release()
+                lease.close()
+                if (player === createdPlayer) player = null
+            }
         }
     }
-    val player = playerSession.second
-
-    DisposableEffect(filePath) {
-        onDispose {
-            player.release()
-            playerSession.first.close()
-        }
-    }
+    val previewPlayer = player ?: return
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -2599,12 +2624,13 @@ private fun ExportPreviewPlayer(filePath: String) {
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    this.player = player
+                    this.player = previewPlayer
                     useController = true
                     setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                     controllerAutoShow = true
                 }
             },
+            update = { it.player = previewPlayer },
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)

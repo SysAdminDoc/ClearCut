@@ -439,6 +439,7 @@
     <string name="export_device_tier_advanced">Avanzado</string>
     <string name="export_device_tier_premium">Prémium</string>
     <string name="export_save_failed_toast">No se pudo guardar. Revise el acceso al almacenamiento e inténtelo de nuevo.</string>
+    <string name="export_save_in_progress_toast">Guardando la exportación en la galería…</string>
     <string name="ai_processing_format">Procesamiento: %1$s\u2026</string>
     <string name="ai_tools_ready_now">Listo ahora</string>
     <string name="ai_tools_ready_now_description">Estas asistencias pueden ejecutarse inmediatamente con la selección de la línea de tiempo actual y los modelos descargados.</string>

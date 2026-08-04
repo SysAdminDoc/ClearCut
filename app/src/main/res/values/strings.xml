@@ -454,6 +454,7 @@
     <string name="export_device_tier_advanced">Advanced</string>
     <string name="export_device_tier_premium">Premium</string>
     <string name="export_save_failed_toast">Save failed. Check storage access and try again.</string>
+    <string name="export_save_in_progress_toast">Saving export to gallery…</string>
     <string name="ai_processing_format">Processing: %1$s\u2026</string>
     <string name="ai_tools_ready_now">Ready Now</string>
     <string name="ai_tools_ready_now_description">These assists can run immediately with the current timeline selection and downloaded models.</string>
