@@ -7,6 +7,7 @@ import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ExportQuality
 import com.novacut.editor.model.Resolution
+import com.novacut.editor.model.TimelineExportRange
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,6 +31,7 @@ class BatchExportPlanStoreTest {
                 chapters = listOf(ChapterMarker(1_250L, "Opening")),
                 exportAsContactSheet = true,
                 contactSheetColumns = 6,
+                timelineRange = TimelineExportRange(30L, 180L),
                 filenameTemplate = "{name}-square",
             )
             val failed = BatchExportItem(

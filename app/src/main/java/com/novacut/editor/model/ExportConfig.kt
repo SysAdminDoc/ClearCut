@@ -31,6 +31,8 @@ data class ExportConfig(
     val filenameTemplate: String = "{name}",
     val exportAsContactSheet: Boolean = false,
     val contactSheetColumns: Int = 4,
+    /** Null keeps the historical whole-timeline export behavior. */
+    val timelineRange: TimelineExportRange? = null,
     val watermark: Watermark? = null,
     // R8.9: when enabled, export writes a local AI-use declaration sidecar
     // and downstream publish/share surfaces include disclosure copy derived

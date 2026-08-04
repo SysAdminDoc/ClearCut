@@ -216,6 +216,8 @@ fun BoxScope.EditorPrimaryPanelHost(
             errorMessage = state.exportErrorMessage,
             exportStartTime = state.exportStartTime,
             totalDurationMs = state.totalDurationMs,
+            playheadMs = playheadMs,
+            timelineTimebase = state.project.timelineTimebase,
             smartRenderSummary = exportSmartRenderSummary,
             sourceHdrSummary = sourceHdrSummary,
             projectColorPolicy = ProjectColorPolicy.DEFAULT,

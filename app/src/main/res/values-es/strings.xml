@@ -72,6 +72,17 @@
     <string name="export_hdr_preserve_overlays_disabled">No disponible con superposiciones de texto, imagen o marca de agua. La exportación usará la ruta de superposición SDR para evitar errores de color HDR.</string>
     <string name="export_fast_trim">Recorte rápido cuando sea posible</string>
     <string name="export_fast_trim_description">Utilice la copia continua para recortes intactos de una sola fuente y recurra a un renderizado completo cuando las ediciones lo requieran.</string>
+    <string name="export_timeline_range">Rango de la línea de tiempo</string>
+    <string name="export_timeline_range_description">Exporte solo una sección cuantificada por fotogramas para revisiones, avances o entregas parciales. El proyecto permanece sin cambios.</string>
+    <string name="export_range_whole_timeline">Línea de tiempo completa</string>
+    <string name="export_range_summary">Seleccionado %1$s–%2$s · %3$s</string>
+    <string name="export_range_current_frame">Cabezal: %1$s</string>
+    <string name="export_range_set_start">Establecer inicio</string>
+    <string name="export_range_set_end">Establecer final</string>
+    <string name="export_range_clear">Borrar rango</string>
+    <string name="export_range_incomplete">Establezca un fotograma inicial y final para activar esta exportación.</string>
+    <string name="export_range_end_exclusive_note">El final es un límite de fotograma exclusivo, por lo que los rangos adyacentes no duplican un fotograma.</string>
+    <string name="export_range_invalid">El rango de exportación seleccionado está incompleto o fuera de la línea de tiempo del proyecto.</string>
     <string name="export_color_confidence_title">Confianza en color/HDR</string>
     <string name="export_color_confidence_description">ClearCut verifica el códec elegido, la intención de los metadatos y los límites del dispositivo anunciado antes de exportar.</string>
     <string name="compound_breadcrumb_root">Proyecto</string>

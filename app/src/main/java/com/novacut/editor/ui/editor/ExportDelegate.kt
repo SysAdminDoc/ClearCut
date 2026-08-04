@@ -34,6 +34,7 @@ import com.novacut.editor.engine.MixedRenderExportPlanner
 import com.novacut.editor.engine.ProjectDependencyManifest
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
+import com.novacut.editor.engine.TimelineRangeExportEngine
 import com.novacut.editor.engine.TrackBlendModeCapability
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.gifLogicalScreenSize
@@ -320,6 +321,12 @@ class ExportDelegate(
         val summaryWithConsent = listOfNotNull(diagnosticSummary, acceptedFallbackNote)
             .takeIf { it.isNotEmpty() }
             ?.joinToString(" ")
+        val resolvedRange = config.timelineRange?.resolve(
+            timebase = sourceState.project.timelineTimebase,
+            totalDurationMs = sourceState.tracks
+                .flatMap { it.clips }
+                .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+        )
         val entry = buildExportHistoryEntry(
             projectId = sourceState.project.id,
             projectName = sourceState.project.name,
@@ -329,6 +336,7 @@ class ExportDelegate(
             outputFile = outputFile,
             config = config,
             timelineDurationMs = timelineDurationMs,
+            resolvedRange = resolvedRange,
             errorMessage = errorMessage,
             diagnosticSummary = summaryWithConsent,
             mediaWarningCount = healthReport?.warningCount ?: 0,
@@ -374,9 +382,13 @@ class ExportDelegate(
         )
         val preset = config.platformPreset?.displayName ?: config.aspectRatio.label
         val state = stateFlow.value
-        val totalDurationMs = state.tracks
+        val projectDurationMs = state.tracks
             .flatMap { it.clips }
             .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+        val totalDurationMs = config.timelineRange
+            ?.resolve(state.project.timelineTimebase, projectDurationMs)
+            ?.durationMs
+            ?: projectDurationMs
         val durationToken = formatDurationToken(totalDurationMs)
         val clipCount = state.tracks.sumOf { it.clips.size }
         // projectFolder is a dir-safe flavour of the base name: spaces→_, drop
@@ -436,6 +448,10 @@ class ExportDelegate(
     ): Boolean {
         val engine = streamCopyEngine ?: return false
         if (!config.allowStreamCopy) return false
+        // A selected range must flow through the Transformer so every track,
+        // overlay, caption, and effect is rebased consistently. Stream-copy
+        // only understands the untouched single-source trim contract.
+        if (config.timelineRange != null) return false
         // Any overlay / chapter / subtitle / transparent-output / GIF mode
         // disqualifies — the muxer can only copy sample packets.
         if (textOverlays.isNotEmpty()) return false
@@ -513,7 +529,7 @@ class ExportDelegate(
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
         state: EditorState,
         outputFile: File
-    ) = MixedRenderExportPlanner.buildPlan(
+    ) = if (config.timelineRange == null) MixedRenderExportPlanner.buildPlan(
         tracks = tracks,
         config = config,
         finalOutputName = outputFile.name,
@@ -521,7 +537,7 @@ class ExportDelegate(
         textOverlays = textOverlays,
         hasImageOverlays = state.imageOverlays.isNotEmpty(),
         hasTrackedObjects = state.trackedObjects.any { it.isEnabled },
-    )
+    ) else null
 
     private fun finalizeFilenameSize(outputFile: File): File {
         if (!outputFile.name.contains("{sizeMB}")) return outputFile
@@ -730,20 +746,70 @@ class ExportDelegate(
             return
         }
 
-        val totalDurationMs = currentState.tracks
+        val projectDurationMs = currentState.tracks
             .flatMap { it.clips }
             .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+        val requestedRange = currentState.exportConfig.timelineRange
+        val resolvedRange = requestedRange?.resolve(
+            timebase = currentState.project.timelineTimebase,
+            totalDurationMs = projectDurationMs,
+        )
+        if (requestedRange != null && resolvedRange == null) {
+            val message = text(R.string.export_range_invalid)
+            val invalidConfig = currentState.exportConfig.copy(
+                aspectRatio = currentState.project.aspectRatio,
+            )
+            updateExport {
+                it.copy(
+                    state = ExportState.ERROR,
+                    progress = 0f,
+                    errorMessage = message,
+                    lastExportedFilePath = null,
+                )
+            }
+            recordExportHistory(
+                sourceState = currentState,
+                status = ExportHistoryStatus.BLOCKED,
+                startedAtMs = System.currentTimeMillis(),
+                outputFile = null,
+                config = invalidConfig,
+                timelineDurationMs = projectDurationMs,
+                errorMessage = message,
+                diagnosticSummary = "Export range was incomplete or outside the project timeline.",
+                healthReport = healthReport,
+            )
+            showToast(message)
+            return
+        }
+
+        val totalDurationMs = resolvedRange?.durationMs ?: projectDurationMs
         val config = currentState.exportConfig
             .copy(aspectRatio = currentState.project.aspectRatio)
             .resolveTargetSize(totalDurationMs)
-        val configWithChapters = if (config.includeChapterMarkers && config.chapters.isEmpty()) {
-            config.copy(chapters = currentState.timelineMarkers
+        val baseChapters = if (config.includeChapterMarkers && config.chapters.isEmpty()) {
+            currentState.timelineMarkers
                 .sortedBy { it.timeMs }
                 .map { ChapterMarker(timeMs = it.timeMs, title = it.label.ifBlank { "Chapter" }) }
+        } else config.chapters
+        val slicedExport = resolvedRange?.let { range ->
+            TimelineRangeExportEngine.slice(
+                tracks = currentState.tracks,
+                range = range,
+                textOverlays = currentState.textOverlays,
+                imageOverlays = currentState.imageOverlays,
+                trackedObjects = currentState.trackedObjects,
+                globalTransitions = currentState.globalTransitions,
+                chapters = baseChapters,
             )
-        } else config
-        val tracks = currentState.tracks
-        val textOverlays = currentState.textOverlays
+        }
+        val configWithChapters = config.copy(
+            chapters = slicedExport?.chapters ?: baseChapters,
+        )
+        val tracks = slicedExport?.tracks ?: currentState.tracks
+        val textOverlays = slicedExport?.textOverlays ?: currentState.textOverlays
+        val imageOverlays = slicedExport?.imageOverlays ?: currentState.imageOverlays
+        val trackedObjects = slicedExport?.trackedObjects ?: currentState.trackedObjects
+        val globalTransitions = slicedExport?.globalTransitions ?: currentState.globalTransitions
 
         withContext(Dispatchers.IO) { outputDir.mkdirs() }
         val storageCheck = ExportStoragePolicy.check(
@@ -954,7 +1020,10 @@ class ExportDelegate(
                         )
                         return@launch
                     }
-                    val totalDurationMs = allClips.maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+                    // Keep the resolved range duration, including leading or
+                    // trailing gaps. The sliced clips alone cannot describe a
+                    // selected range that ends after the last media item.
+                    val gifDurationMs = totalDurationMs
                     // Cap frameRate at 60 fps (sane GIF limit) and floor frameInterval at 1 ms so
                     // a misconfigured >1000 fps value can't produce a 0-ms interval, infinite frame
                     // count, OOM, and an export loop that never terminates.
@@ -965,7 +1034,7 @@ class ExportDelegate(
                     // interval can exceed Int.MAX_VALUE, and `.toInt()` silently wraps to a
                     // negative value which `coerceIn` then clamps to 1 — skipping a real
                     // export instead of capping it at 300 frames.
-                    val frameCount = (totalDurationMs / frameIntervalMs).coerceIn(1L, 300L).toInt()
+                    val frameCount = (gifDurationMs / frameIntervalMs).coerceIn(1L, 300L).toInt()
                     val maxWidth = configWithChapters.gifMaxWidth
 
                     // The GIF header must precede its frames, so determine the maximum
@@ -1152,6 +1221,7 @@ class ExportDelegate(
                         videoEngine.exportAudioStems(
                             tracks = tracks,
                             config = configWithChapters,
+                            timelineDurationMsOverride = totalDurationMs,
                             outputFileFor = { index, trackName ->
                                 createOutputFile(
                                     outputDir = outputDir,
@@ -1194,6 +1264,7 @@ class ExportDelegate(
                             tracks = tracks,
                             config = configWithChapters,
                             outputFile = outputFile,
+                            timelineDurationMsOverride = totalDurationMs,
                             onProgress = { p -> sampleProgress(p); updateExport { it.copy(progress = p) } },
                             onComplete = {
                                 val finalized = finalizeFilenameSize(outputFile)
@@ -1497,8 +1568,8 @@ class ExportDelegate(
                         config = configWithChapters,
                         outputFile = outputFile,
                         textOverlays = textOverlays,
-                        imageOverlays = currentState.imageOverlays,
-                        trackedObjects = currentState.trackedObjects,
+                        imageOverlays = imageOverlays,
+                        trackedObjects = trackedObjects,
                         onProgress = { progress ->
                             sampleProgress(progress)
                             updateExport { it.copy(progress = progress) }
@@ -1513,10 +1584,11 @@ class ExportDelegate(
                     tracks = tracks,
                     config = configWithChapters,
                     outputFile = outputFile,
+                    timelineDurationMsOverride = totalDurationMs,
                     textOverlays = textOverlays,
-                    imageOverlays = currentState.imageOverlays,
-                    trackedObjects = currentState.trackedObjects,
-                    globalTransitions = currentState.globalTransitions,
+                    imageOverlays = imageOverlays,
+                    trackedObjects = trackedObjects,
+                    globalTransitions = globalTransitions,
                     onProgress = { progress ->
                         sampleProgress(progress)
                         updateExport { it.copy(progress = progress) }

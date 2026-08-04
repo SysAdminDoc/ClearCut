@@ -560,6 +560,7 @@ class VideoEngine @Inject constructor(
         tracks: List<Track>,
         config: ExportConfig,
         outputFile: File,
+        timelineDurationMsOverride: Long? = null,
         textOverlays: List<com.novacut.editor.model.TextOverlay> = emptyList(),
         imageOverlays: List<ImageOverlay> = emptyList(),
         lottieOverlays: List<LottieOverlaySpec> = emptyList(),
@@ -569,10 +570,13 @@ class VideoEngine @Inject constructor(
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
+        val requestedDurationMs = timelineDurationMsOverride?.coerceAtLeast(0L)
+            ?: tracks.flatMap { it.clips }
+                .maxOfOrNull { it.timelineStartMs + it.durationMs }
+                ?: 0L
         val storageCheck = ExportStoragePolicy.check(
             request = ExportStoragePolicy.request(
-                durationMs = tracks.flatMap { it.clips }
-                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                durationMs = requestedDurationMs,
                 config = config,
                 tracks = tracks,
                 sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
@@ -610,7 +614,8 @@ class VideoEngine @Inject constructor(
                 imageOverlays = imageOverlays,
                 lottieOverlays = lottieOverlays,
                 trackedObjects = trackedObjects,
-                globalTransitions = globalTransitions
+                globalTransitions = globalTransitions,
+                durationOverrideMs = timelineDurationMsOverride,
             )
 
             startTransformerWithPolling(
@@ -619,14 +624,12 @@ class VideoEngine @Inject constructor(
                 config = config,
                 outputFile = outputFile,
                 storageRequest = ExportStoragePolicy.request(
-                    durationMs = processedTracks.flatMap { it.clips }
-                        .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                    durationMs = requestedDurationMs,
                     config = config,
                     tracks = processedTracks,
                     sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                 ),
-                expectedDurationMs = processedTracks.flatMap { it.clips }
-                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                expectedDurationMs = requestedDurationMs,
                 onProgress = onProgress,
                 onComplete = {
                     reversedTempFiles.forEach { it.delete() }
@@ -683,6 +686,7 @@ class VideoEngine @Inject constructor(
         tracks: List<Track>,
         config: ExportConfig,
         outputFile: File,
+        timelineDurationMsOverride: Long? = null,
         onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
@@ -691,8 +695,10 @@ class VideoEngine @Inject constructor(
             onError(UnsupportedAudioExportException(config.audioCodec))
             return
         }
-        val totalDurationMs = tracks.flatMap { it.clips }
-            .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+        val totalDurationMs = timelineDurationMsOverride?.coerceAtLeast(0L)
+            ?: tracks.flatMap { it.clips }
+                .maxOfOrNull { it.timelineStartMs + it.durationMs }
+                ?: 0L
         if (!beginExportSession(outputFile)) return
         val reversedTempFiles = mutableListOf<File>()
         try {
@@ -741,6 +747,7 @@ class VideoEngine @Inject constructor(
         tracks: List<Track>,
         config: ExportConfig,
         outputFileFor: (index: Int, trackName: String) -> File,
+        timelineDurationMsOverride: Long? = null,
         onProgress: (Float) -> Unit = {},
         onComplete: (List<File>) -> Unit = {},
         onError: (Exception) -> Unit = {}
@@ -749,8 +756,10 @@ class VideoEngine @Inject constructor(
             onError(UnsupportedAudioExportException(config.audioCodec))
             return
         }
-        val totalDurationMs = tracks.flatMap { it.clips }
-            .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
+        val totalDurationMs = timelineDurationMsOverride?.coerceAtLeast(0L)
+            ?: tracks.flatMap { it.clips }
+                .maxOfOrNull { it.timelineStartMs + it.durationMs }
+                ?: 0L
         val stemTracks = buildAudioMixdownTracks(tracks)
             .filter { isTrackAudibleForMix(it, tracks.filter { t -> t.isSolo }.map { t -> t.id }.toSet()) }
             .sortedBy { it.index }
@@ -1245,7 +1254,8 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
-        globalTransitions: List<GlobalTransition> = emptyList()
+        globalTransitions: List<GlobalTransition> = emptyList(),
+        durationOverrideMs: Long? = null,
     ): TransformerExportPlan {
         val compositionPlan = CompositionPlanBuilder.build(
             tracks = tracks,
@@ -1265,7 +1275,8 @@ class VideoEngine @Inject constructor(
         val soloTrackIds = compositionPlan.soloTrackIds
         val (targetW, targetH) = config.resolution.forAspect(config.aspectRatio)
 
-        val totalTimelineDurationMs = compositionPlan.durationMs
+        val totalTimelineDurationMs = durationOverrideMs?.coerceAtLeast(0L)
+            ?: compositionPlan.durationMs
         val reversedCount = visibleVideoTracks.sumOf { track -> track.clips.count { it.isReversed } }
         if (reversedCount > 0) {
             Log.w(TAG, "Export: $reversedCount reversed clip(s) not pre-rendered (FFmpeg unavailable or over limit)")

@@ -100,6 +100,8 @@ import com.novacut.editor.model.PlatformPreset
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SubtitleFormat
 import com.novacut.editor.model.TargetSizePreset
+import com.novacut.editor.model.TimelineExportRange
+import com.novacut.editor.model.TimelineTimebase
 import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
@@ -131,6 +133,8 @@ fun ExportSheet(
     errorMessage: String? = null,
     exportStartTime: Long = 0L,
     totalDurationMs: Long = 0L,
+    playheadMs: Long = 0L,
+    timelineTimebase: TimelineTimebase = TimelineTimebase(30),
     smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
     projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
@@ -164,11 +168,31 @@ fun ExportSheet(
     val semanticColors = LocalClearCutColors.current
     val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
     val (width, height) = config.resolution.forAspect(aspectRatio)
-    val effectiveConfig = remember(config, totalDurationMs) {
-        if (config.targetSizeBytes != null) config.resolveTargetSize(totalDurationMs) else config
+    val resolvedRange = remember(config.timelineRange, timelineTimebase, totalDurationMs) {
+        config.timelineRange?.resolve(timelineTimebase, totalDurationMs)
     }
-    val estimatedSize = remember(effectiveConfig, totalDurationMs) {
-        estimateExportSize(totalDurationMs, effectiveConfig)
+    val exportDurationMs = resolvedRange?.durationMs ?: totalDurationMs
+    val maxFrameExclusive = remember(timelineTimebase, totalDurationMs) {
+        timelineTimebase.frameIndexAtOrAfter(totalDurationMs.coerceAtLeast(0L))
+    }
+    val playheadFrame = timelineTimebase.frameIndexAt(playheadMs)
+        .coerceIn(0L, maxFrameExclusive)
+    val rangeReady = config.timelineRange == null || resolvedRange != null
+    val rangeDescription = when {
+        config.timelineRange == null -> stringResource(R.string.export_range_whole_timeline)
+        resolvedRange != null -> stringResource(
+            R.string.export_range_summary,
+            timelineTimebase.formatTimecode(resolvedRange.startMs),
+            timelineTimebase.formatTimecode(resolvedRange.endMs),
+            formatEtaSeconds((resolvedRange.durationMs / 1000L).coerceAtLeast(0L)),
+        )
+        else -> stringResource(R.string.export_range_incomplete)
+    }
+    val effectiveConfig = remember(config, exportDurationMs) {
+        if (config.targetSizeBytes != null) config.resolveTargetSize(exportDurationMs) else config
+    }
+    val estimatedSize = remember(effectiveConfig, exportDurationMs) {
+        estimateExportSize(exportDurationMs, effectiveConfig)
     }
     val videoModeEnabled = !config.exportAudioOnly && !config.exportStemsOnly && !config.exportAsGif && !config.captureFrameOnly && !config.exportAsContactSheet
     val audioCodecVisible = !config.captureFrameOnly && !config.exportAsGif && !config.exportAsContactSheet
@@ -620,6 +644,78 @@ fun ExportSheet(
                         )
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (!config.captureFrameOnly) {
+            ExportSectionCard(
+                title = stringResource(R.string.export_timeline_range),
+                description = stringResource(R.string.export_timeline_range_description),
+                accent = ClearCutAccents.Teal
+            ) {
+                Text(
+                    text = rangeDescription,
+                    color = if (rangeReady) semanticColors.subtext else ClearCutAccents.Yellow,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = stringResource(
+                        R.string.export_range_current_frame,
+                        timelineTimebase.formatTimecode(timelineTimebase.timeMsAt(playheadFrame)),
+                    ),
+                    color = semanticColors.subtext,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        onClick = {
+                            onConfigChanged(
+                                config.copy(
+                                    timelineRange = TimelineExportRange(
+                                        startFrame = playheadFrame,
+                                        endFrameExclusive = config.timelineRange?.endFrameExclusive,
+                                    )
+                                )
+                            )
+                        },
+                        label = { Text(stringResource(R.string.export_range_set_start), style = MaterialTheme.typography.labelMedium) },
+                        selected = config.timelineRange?.startFrame == playheadFrame,
+                        colors = exportChipColors(ClearCutAccents.Teal),
+                    )
+                    FilterChip(
+                        onClick = {
+                            onConfigChanged(
+                                config.copy(
+                                    timelineRange = TimelineExportRange(
+                                        startFrame = config.timelineRange?.startFrame,
+                                        endFrameExclusive = playheadFrame,
+                                    )
+                                )
+                            )
+                        },
+                        label = { Text(stringResource(R.string.export_range_set_end), style = MaterialTheme.typography.labelMedium) },
+                        selected = config.timelineRange?.endFrameExclusive == playheadFrame,
+                        colors = exportChipColors(ClearCutAccents.Teal),
+                    )
+                    if (config.timelineRange != null) {
+                        FilterChip(
+                            onClick = { onConfigChanged(config.copy(timelineRange = null)) },
+                            label = { Text(stringResource(R.string.export_range_clear), style = MaterialTheme.typography.labelMedium) },
+                            selected = false,
+                            colors = exportChipColors(ClearCutAccents.Peach),
+                        )
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.export_range_end_exclusive_note),
+                    color = semanticColors.subtext,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
         }
 
@@ -1176,8 +1272,8 @@ fun ExportSheet(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            if (totalDurationMs > 0L && videoModeEnabled) {
-                val etaSec = estimateExportEtaSeconds(totalDurationMs, effectiveConfig)
+            if (exportDurationMs > 0L && videoModeEnabled) {
+                val etaSec = estimateExportEtaSeconds(exportDurationMs, effectiveConfig)
                 Text(
                     text = stringResource(R.string.export_estimated_time_format, formatEtaSeconds(etaSec)),
                     color = ClearCutAccents.Blue,
@@ -1205,7 +1301,7 @@ fun ExportSheet(
                     // and even YouTube/Drive uploads from mobile get painful
                     // past a gig. Warn so users can pick target-size if they
                     // intended to share.
-                    val estimatedBytes = estimateExportBytes(totalDurationMs, effectiveConfig)
+                    val estimatedBytes = estimateExportBytes(exportDurationMs, effectiveConfig)
                     if (estimatedBytes >= 1_073_741_824L) {
                         add(stringResource(R.string.export_warning_large_file))
                     }
@@ -1286,7 +1382,7 @@ fun ExportSheet(
                         )
                     }
                 }
-                if (config.targetSizeBytes != null && totalDurationMs > 0L) {
+                if (config.targetSizeBytes != null && exportDurationMs > 0L) {
                     val mbps = effectiveConfig.videoBitrate / 1_000_000.0
                     Text(
                         text = stringResource(R.string.export_target_bitrate, mbps),
@@ -1357,6 +1453,7 @@ fun ExportSheet(
                     }
                 },
                 icon = primaryButtonIcon,
+                enabled = rangeReady,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
@@ -1518,6 +1615,18 @@ private fun ExportHistoryRow(
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.bodySmall
                 )
+                if (entry.rangeStartMs != null && entry.rangeEndMs != null) {
+                    Text(
+                        text = stringResource(
+                            R.string.export_range_summary,
+                            formatEtaSeconds((entry.rangeStartMs / 1000L).coerceAtLeast(0L)),
+                            formatEtaSeconds((entry.rangeEndMs / 1000L).coerceAtLeast(0L)),
+                            formatEtaSeconds(((entry.rangeEndMs - entry.rangeStartMs) / 1000L).coerceAtLeast(0L)),
+                        ),
+                        color = ClearCutAccents.Teal,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 entry.diagnosticSummary?.let { diagnostic ->
                     Text(
                         text = diagnostic,

@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.ResolvedTimelineExportRange
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -34,6 +35,10 @@ data class ExportHistoryEntry(
     val resolutionLabel: String,
     val frameRate: Int,
     val timelineDurationMs: Long,
+    val rangeStartFrame: Long? = null,
+    val rangeEndFrameExclusive: Long? = null,
+    val rangeStartMs: Long? = null,
+    val rangeEndMs: Long? = null,
     val errorMessage: String? = null,
     val diagnosticSummary: String? = null,
     val mediaWarningCount: Int = 0,
@@ -86,6 +91,7 @@ fun buildExportHistoryEntry(
     outputFile: File?,
     config: ExportConfig,
     timelineDurationMs: Long,
+    resolvedRange: ResolvedTimelineExportRange? = null,
     errorMessage: String? = null,
     diagnosticSummary: String? = null,
     mediaWarningCount: Int = 0,
@@ -114,6 +120,10 @@ fun buildExportHistoryEntry(
         },
         frameRate = config.frameRate,
         timelineDurationMs = timelineDurationMs.coerceAtLeast(0L),
+        rangeStartFrame = resolvedRange?.startFrame,
+        rangeEndFrameExclusive = resolvedRange?.endFrameExclusive,
+        rangeStartMs = resolvedRange?.startMs,
+        rangeEndMs = resolvedRange?.endMs,
         errorMessage = errorMessage?.takeIf { it.isNotBlank() },
         diagnosticSummary = diagnosticSummary?.takeIf { it.isNotBlank() },
         mediaWarningCount = mediaWarningCount.coerceAtLeast(0),
@@ -139,6 +149,10 @@ private fun exportHistoryToJson(entries: List<ExportHistoryEntry>): JSONArray {
                 put("resolutionLabel", entry.resolutionLabel)
                 put("frameRate", entry.frameRate)
                 put("timelineDurationMs", entry.timelineDurationMs)
+                putNullable("rangeStartFrame", entry.rangeStartFrame)
+                putNullable("rangeEndFrameExclusive", entry.rangeEndFrameExclusive)
+                putNullable("rangeStartMs", entry.rangeStartMs)
+                putNullable("rangeEndMs", entry.rangeEndMs)
                 putNullable("errorMessage", entry.errorMessage)
                 putNullable("diagnosticSummary", entry.diagnosticSummary)
                 put("mediaWarningCount", entry.mediaWarningCount)
@@ -170,6 +184,10 @@ private fun exportHistoryEntryFromJson(json: JSONObject): ExportHistoryEntry? {
         resolutionLabel = json.optString("resolutionLabel", "Unknown"),
         frameRate = json.optInt("frameRate").coerceAtLeast(0),
         timelineDurationMs = json.optLong("timelineDurationMs").coerceAtLeast(0L),
+        rangeStartFrame = json.optNullableLong("rangeStartFrame"),
+        rangeEndFrameExclusive = json.optNullableLong("rangeEndFrameExclusive"),
+        rangeStartMs = json.optNullableLong("rangeStartMs"),
+        rangeEndMs = json.optNullableLong("rangeEndMs"),
         errorMessage = json.optNullableString("errorMessage"),
         diagnosticSummary = json.optNullableString("diagnosticSummary"),
         mediaWarningCount = json.optInt("mediaWarningCount").coerceAtLeast(0),

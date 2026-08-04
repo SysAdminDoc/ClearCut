@@ -13,6 +13,7 @@ import com.novacut.editor.model.FrameCaptureFormat
 import com.novacut.editor.model.PlatformPreset
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SubtitleFormat
+import com.novacut.editor.model.TimelineExportRange
 import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.AudioCodec
 import com.novacut.editor.model.Watermark
@@ -234,6 +235,12 @@ private fun exportConfigToJson(config: ExportConfig): JSONObject = JSONObject().
     put("filenameTemplate", config.filenameTemplate.take(MAX_TEXT_LENGTH))
     put("exportAsContactSheet", config.exportAsContactSheet)
     put("contactSheetColumns", config.contactSheetColumns)
+    config.timelineRange?.let { range ->
+        put("timelineRange", JSONObject().apply {
+            range.startFrame?.let { put("startFrame", it) }
+            range.endFrameExclusive?.let { put("endFrameExclusive", it) }
+        })
+    }
     config.watermark?.let { watermark ->
         put("watermark", JSONObject().apply {
             put("sourceUri", watermark.sourceUri.toString().take(MAX_TEXT_LENGTH))
@@ -275,6 +282,14 @@ private fun exportConfigFromJson(json: JSONObject?): ExportConfig? {
                 scalePercent = watermarkJson.optInt("scalePercent", 15).coerceIn(5, 50),
             )
         }
+        val timelineRange = json.optJSONObject("timelineRange")?.let { rangeJson ->
+            val startFrame = rangeJson.optLong("startFrame")
+                .takeIf { rangeJson.has("startFrame") && !rangeJson.isNull("startFrame") }
+            val endFrameExclusive = rangeJson.optLong("endFrameExclusive")
+                .takeIf { rangeJson.has("endFrameExclusive") && !rangeJson.isNull("endFrameExclusive") }
+            if (startFrame == null && endFrameExclusive == null) null
+            else TimelineExportRange(startFrame = startFrame, endFrameExclusive = endFrameExclusive)
+        }
         ExportConfig(
             resolution = enumOrDefault(json.optString("resolution"), Resolution.FHD_1080P),
             frameRate = json.optInt("frameRate", 30).coerceIn(1, 240),
@@ -302,6 +317,7 @@ private fun exportConfigFromJson(json: JSONObject?): ExportConfig? {
             filenameTemplate = json.optString("filenameTemplate", "{name}").take(MAX_TEXT_LENGTH),
             exportAsContactSheet = json.optBoolean("exportAsContactSheet", false),
             contactSheetColumns = json.optInt("contactSheetColumns", 4).coerceIn(1, 12),
+            timelineRange = timelineRange,
             watermark = watermark,
             discloseAiUse = json.optBoolean("discloseAiUse", false),
             writeAiUseSidecar = json.optBoolean("writeAiUseSidecar", true),

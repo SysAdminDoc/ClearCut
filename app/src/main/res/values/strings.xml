@@ -75,6 +75,17 @@
     <string name="export_hdr_preserve_overlays_disabled">Unavailable with text, image, or watermark overlays. Export will use the SDR overlay path to prevent HDR color errors.</string>
     <string name="export_fast_trim">Fast Trim When Possible</string>
     <string name="export_fast_trim_description">Use stream-copy for untouched single-source trims and fall back to a full render when edits require it.</string>
+    <string name="export_timeline_range">Timeline Range</string>
+    <string name="export_timeline_range_description">Export only a frame-quantized section for reviews, previews, or partial deliverables. The project stays unchanged.</string>
+    <string name="export_range_whole_timeline">Whole timeline</string>
+    <string name="export_range_summary">Selected %1$s–%2$s • %3$s</string>
+    <string name="export_range_current_frame">Playhead: %1$s</string>
+    <string name="export_range_set_start">Set Start</string>
+    <string name="export_range_set_end">Set End</string>
+    <string name="export_range_clear">Clear Range</string>
+    <string name="export_range_incomplete">Set both a start and end frame to enable this export.</string>
+    <string name="export_range_end_exclusive_note">End is an exclusive frame boundary, so adjacent ranges do not duplicate a frame.</string>
+    <string name="export_range_invalid">The selected export range is incomplete or outside the project timeline.</string>
     <string name="export_color_confidence_title">Color / HDR confidence</string>
     <string name="export_color_confidence_description">ClearCut checks the chosen codec, metadata intent, and advertised device limits before export.</string>
 

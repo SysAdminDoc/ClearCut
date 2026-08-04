@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.TimelineExportRange
+import com.novacut.editor.model.TimelineTimebase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -70,6 +72,37 @@ class ExportHistoryStoreTest {
             assertEquals(4096L, entry.outputBytes)
             assertEquals(2500L, entry.elapsedMs)
             assertEquals("Road Trip", entry.projectName)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun persistsResolvedTimelineRangeMetadata() {
+        val dir = Files.createTempDirectory("export-history-range-").toFile()
+        try {
+            val range = TimelineExportRange(30L, 90L)
+                .resolve(TimelineTimebase(30), 5_000L)
+            val store = ExportHistoryStore(File(dir, "history.json"))
+            val entry = buildExportHistoryEntry(
+                projectId = "project",
+                projectName = "Range Review",
+                status = ExportHistoryStatus.COMPLETE,
+                startedAtEpochMs = 100L,
+                finishedAtEpochMs = 200L,
+                outputFile = null,
+                config = ExportConfig(),
+                timelineDurationMs = range!!.durationMs,
+                resolvedRange = range,
+            )
+
+            store.append(entry)
+            val restored = store.read().single()
+
+            assertEquals(30L, restored.rangeStartFrame)
+            assertEquals(90L, restored.rangeEndFrameExclusive)
+            assertEquals(1_000L, restored.rangeStartMs)
+            assertEquals(3_000L, restored.rangeEndMs)
         } finally {
             dir.deleteRecursively()
         }
