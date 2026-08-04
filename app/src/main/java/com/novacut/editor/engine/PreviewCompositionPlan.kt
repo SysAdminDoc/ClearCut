@@ -3,6 +3,8 @@ package com.novacut.editor.engine
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
+import com.novacut.editor.model.effectiveTimelineEndMs
+import com.novacut.editor.model.effectiveTimelineStartMs
 
 /** Pure, testable selection contract shared by live preview and export ordering. */
 internal data class PreviewCompositionPlan(
@@ -15,9 +17,11 @@ internal data class PreviewCompositionPlan(
         val clampedPosition = positionMs.coerceIn(0L, durationMs.coerceAtLeast(0L))
         return visualTracks.firstNotNullOfOrNull { track ->
             track.clips.firstOrNull { clip ->
-                clampedPosition >= clip.timelineStartMs &&
-                    (clampedPosition < clip.timelineEndMs ||
-                        (clampedPosition == durationMs && clip.timelineEndMs == durationMs))
+                val startMs = track.effectiveTimelineStartMs(clip)
+                val endMs = track.effectiveTimelineEndMs(clip)
+                clampedPosition >= startMs &&
+                    (clampedPosition < endMs ||
+                        (clampedPosition == durationMs && endMs == durationMs))
             }
         }
     }

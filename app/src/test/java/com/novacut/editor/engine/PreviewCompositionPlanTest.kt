@@ -60,6 +60,19 @@ class PreviewCompositionPlanTest {
     }
 
     @Test
+    fun `visual track offset moves preview coverage without moving other tracks`() {
+        val base = track("base", TrackType.VIDEO, 0, clip("base-clip", 0L, 4_000L))
+        val shifted = track("shifted", TrackType.OVERLAY, 1, clip("shifted-clip", 0L, 1_000L))
+            .copy(timelineOffsetMs = 500L)
+
+        val plan = PreviewCompositionPlan.create(listOf(base, shifted))
+
+        assertEquals(4_000L, plan.durationMs)
+        assertEquals("base-clip", plan.primaryClipAt(250L)?.id)
+        assertEquals("shifted-clip", plan.primaryClipAt(750L)?.id)
+    }
+
+    @Test
     fun `speed curves publish increasing sampled change points`() {
         assertEquals(10_000L, nextSampledSpeedChangeTimeUs(0L, 35_000L))
         assertEquals(20_000L, nextSampledSpeedChangeTimeUs(10_000L, 35_000L))

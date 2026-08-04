@@ -18,13 +18,41 @@ internal sealed class TimelineSequenceStep {
     ) : TimelineSequenceStep()
 }
 
-internal fun buildTimelineSequenceSteps(
-    clips: List<Clip>,
-    totalDurationMs: Long? = null
-): List<TimelineSequenceStep> {
-    val sortedClips = clips
+internal fun shiftClipForTimelineOffset(clip: Clip, offsetMs: Long): Clip? {
+    if (offsetMs == 0L) return clip
+    val shiftedStartMs = clip.timelineStartMs + offsetMs
+    if (shiftedStartMs >= 0L) {
+        return clip.copy(timelineStartMs = shiftedStartMs)
+    }
+
+    val elapsedMs = -shiftedStartMs
+    if (elapsedMs >= clip.durationMs) return null
+    val shiftedTrimStartMs = clip.timelineOffsetToSourceMs(elapsedMs)
+    if (shiftedTrimStartMs >= clip.trimEndMs) return null
+    return clip.copy(
+        timelineStartMs = 0L,
+        trimStartMs = shiftedTrimStartMs,
+    )
+}
+
+internal fun shiftedTimelineClips(clips: List<Clip>, offsetMs: Long): List<Clip> {
+    if (offsetMs == 0L) {
+        return clips.filter { it.durationMs > 0L }.sortedBy { it.timelineStartMs }
+    }
+    return clips
+        .mapNotNull { clip ->
+            if (clip.durationMs <= 0L) null else shiftClipForTimelineOffset(clip, offsetMs)
+        }
         .filter { it.durationMs > 0L }
         .sortedBy { it.timelineStartMs }
+}
+
+internal fun buildTimelineSequenceSteps(
+    clips: List<Clip>,
+    totalDurationMs: Long? = null,
+    timelineOffsetMs: Long = 0L,
+): List<TimelineSequenceStep> {
+    val sortedClips = shiftedTimelineClips(clips, timelineOffsetMs)
 
     val steps = mutableListOf<TimelineSequenceStep>()
     var cursorMs = 0L

@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.model.Track
+import com.novacut.editor.model.effectiveTimelineEndMs
+import com.novacut.editor.model.effectiveTimelineStartMs
 
 /**
  * Full-duration mini-strip shown below the tracks area. Paints one rectangle per
@@ -95,8 +97,12 @@ internal fun TimelineOverviewBar(
             tracks.forEach { track ->
                 val barColor = trackAccentColor(track.type).copy(alpha = 0.55f)
                 track.clips.forEach { clip ->
-                    val startF = clip.timelineStartMs.toFloat() / totalF
-                    val widthF = (clip.durationMs.toFloat() / totalF).coerceAtLeast(0.002f)
+                    val shiftedStartMs = track.effectiveTimelineStartMs(clip)
+                    val shiftedEndMs = track.effectiveTimelineEndMs(clip)
+                    val startMs = shiftedStartMs.coerceAtLeast(0L)
+                    val endMs = shiftedEndMs.coerceAtLeast(startMs)
+                    val startF = (startMs.toFloat() / totalF).coerceIn(0f, 1f)
+                    val widthF = ((endMs - startMs).toFloat() / totalF).coerceAtLeast(0.002f)
                     drawRect(
                         color = barColor,
                         topLeft = Offset(startF * size.width, size.height * 0.22f),

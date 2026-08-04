@@ -51,6 +51,16 @@ class CompositionBoundaryTest {
         assertTrue(composition.sequences.single() === sequence)
     }
 
+    @Test
+    fun compositionPlanIncludesPerTrackOffsetInTimelineDuration() {
+        val shiftedAudio = track("audio", TrackType.AUDIO, 0, 1_000L)
+            .copy(timelineOffsetMs = 500L)
+
+        val plan = CompositionPlanBuilder.build(listOf(shiftedAudio))
+
+        assertEquals(1_500L, plan.durationMs)
+    }
+
     private fun track(
         id: String,
         type: TrackType,

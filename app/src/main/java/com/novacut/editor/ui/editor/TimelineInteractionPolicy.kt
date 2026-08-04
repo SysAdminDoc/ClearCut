@@ -28,20 +28,25 @@ internal fun findSnapTarget(positionMs: Long, targets: List<Long>, thresholdMs: 
         ?.takeIf { abs(it - positionMs) <= thresholdMs }
 }
 
-internal fun Clip.containsTimelinePosition(positionMs: Long): Boolean {
-    return positionMs >= timelineStartMs && positionMs < timelineEndMs
+internal fun Clip.containsTimelinePosition(positionMs: Long, timelineOffsetMs: Long = 0L): Boolean {
+    val effectiveStartMs = timelineStartMs + timelineOffsetMs
+    val effectiveEndMs = timelineEndMs + timelineOffsetMs
+    return positionMs >= effectiveStartMs && positionMs < effectiveEndMs
 }
 
-internal fun Clip.accessibleSplitPointMs(playheadMs: Long): Long? {
-    val earliestSplitMs = timelineStartMs + MIN_TIMELINE_CLIP_DURATION_MS
-    val latestSplitMs = timelineEndMs - MIN_TIMELINE_CLIP_DURATION_MS
-    if (latestSplitMs < earliestSplitMs) return null
-    val preferredSplitMs = if (playheadMs in earliestSplitMs..latestSplitMs) {
+internal fun Clip.accessibleSplitPointMs(playheadMs: Long, timelineOffsetMs: Long = 0L): Long? {
+    val earliestEffectiveSplitMs = timelineStartMs + timelineOffsetMs + MIN_TIMELINE_CLIP_DURATION_MS
+    val latestEffectiveSplitMs = timelineEndMs + timelineOffsetMs - MIN_TIMELINE_CLIP_DURATION_MS
+    if (latestEffectiveSplitMs < earliestEffectiveSplitMs) return null
+    val preferredEffectiveSplitMs = if (playheadMs in earliestEffectiveSplitMs..latestEffectiveSplitMs) {
         playheadMs
     } else {
-        timelineStartMs + durationMs / 2
+        timelineStartMs + timelineOffsetMs + durationMs / 2
     }
-    return preferredSplitMs.coerceIn(earliestSplitMs, latestSplitMs)
+    return (preferredEffectiveSplitMs - timelineOffsetMs).coerceIn(
+        timelineStartMs + MIN_TIMELINE_CLIP_DURATION_MS,
+        timelineEndMs - MIN_TIMELINE_CLIP_DURATION_MS,
+    )
 }
 
 internal fun keyboardNudgeAmountMs(isShiftPressed: Boolean): Long =

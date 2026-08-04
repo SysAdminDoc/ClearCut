@@ -554,7 +554,7 @@ class ExportDelegate(
         textOverlays: List<com.novacut.editor.model.TextOverlay>,
         state: EditorState,
         outputFile: File
-    ) = if (config.timelineRange == null) MixedRenderExportPlanner.buildPlan(
+    ) = if (config.timelineRange == null && tracks.none { it.timelineOffsetMs != 0L }) MixedRenderExportPlanner.buildPlan(
         tracks = tracks,
         config = config,
         finalOutputName = outputFile.name,

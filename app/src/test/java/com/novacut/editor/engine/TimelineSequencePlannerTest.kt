@@ -43,6 +43,48 @@ class TimelineSequencePlannerTest {
     }
 
     @Test
+    fun buildTimelineSequenceSteps_appliesPositiveTrackOffset() {
+        val clip = clip(id = "clip", timelineStartMs = 1_000L, durationMs = 2_000L)
+
+        val steps = buildTimelineSequenceSteps(
+            clips = listOf(clip),
+            totalDurationMs = 5_000L,
+            timelineOffsetMs = 500L,
+        )
+
+        assertEquals(
+            listOf("gap:0:1500", "clip:clip:1500:2000", "gap:3500:1500"),
+            steps.map(::describeStep),
+        )
+    }
+
+    @Test
+    fun buildTimelineSequenceSteps_cropsClipThatStartsBeforeTimelineZero() {
+        val clip = clip(id = "clip", timelineStartMs = 500L, durationMs = 2_000L)
+
+        val steps = buildTimelineSequenceSteps(
+            clips = listOf(clip),
+            timelineOffsetMs = -750L,
+        )
+
+        val clipStep = steps.single() as TimelineSequenceStep.ClipStep
+        assertEquals(0L, clipStep.timelineStartMs)
+        assertEquals(1_750L, clipStep.durationMs)
+        assertEquals(250L, clipStep.clip.trimStartMs)
+    }
+
+    @Test
+    fun buildTimelineSequenceSteps_zeroOffsetKeepsClipDocumentUnchanged() {
+        val clip = clip(id = "clip", timelineStartMs = 1_000L, durationMs = 2_000L)
+
+        val clipStep = buildTimelineSequenceSteps(listOf(clip)).single {
+            it is TimelineSequenceStep.ClipStep
+        } as TimelineSequenceStep.ClipStep
+
+        assertEquals(clip, clipStep.clip)
+    }
+
+    @Test
     fun mismatchedVideoAndAudioDurationsShareTheSameTimelineEnd() {
         val video = clip(id = "video", timelineStartMs = 0L, durationMs = 3_000L)
         val audio = clip(id = "audio", timelineStartMs = 0L, durationMs = 3_030L)

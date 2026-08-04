@@ -1409,6 +1409,7 @@ data class AutoSaveState(
                 put("id", track.id)
                 put("type", track.type.name)
                 put("index", track.index)
+                put("timelineOffsetMs", track.timelineOffsetMs)
                 put("isLocked", track.isLocked)
                 put("isVisible", track.isVisible)
                 put("isMuted", track.isMuted)
@@ -1845,6 +1846,7 @@ data class AutoSaveState(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
                 type = safeValueOf(json.optString("type", "VIDEO"), TrackType.VIDEO),
                 index = json.optInt("index", 0).coerceAtLeast(0),
+                timelineOffsetMs = clampTrackTimelineOffsetMs(json.optLong("timelineOffsetMs", 0L)),
                 isLocked = json.optBoolean("isLocked", false),
                 isVisible = json.optBoolean("isVisible", true),
                 isMuted = json.optBoolean("isMuted", false),

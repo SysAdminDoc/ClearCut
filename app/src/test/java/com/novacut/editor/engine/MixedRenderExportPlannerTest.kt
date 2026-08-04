@@ -79,6 +79,24 @@ class MixedRenderExportPlannerTest {
     }
 
     @Test
+    fun buildPlan_trackTimelineOffset_rejectsMixedPlan() {
+        val tracks = listOf(videoTrack(baseClip(id = "offset", startMs = 0L)).copy(timelineOffsetMs = 250L))
+
+        assertEquals(
+            "per-track timeline offset present",
+            MixedRenderExportPlanner.rejectionReason(tracks, ExportConfig()),
+        )
+        assertNull(
+            MixedRenderExportPlanner.buildPlan(
+                tracks = tracks,
+                config = ExportConfig(),
+                finalOutputName = "demo.mp4",
+                projectStem = "demo",
+            )
+        )
+    }
+
+    @Test
     fun buildPlan_nonVideoExportShape_rejectsMixedPlan() {
         val tracks = listOf(
             videoTrack(

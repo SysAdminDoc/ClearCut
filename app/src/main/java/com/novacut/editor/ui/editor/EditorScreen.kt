@@ -1150,6 +1150,8 @@ fun EditorScreen(
                         onCollapseAllTracks = viewModel::collapseAllTracks,
                         onExpandAllTracks = viewModel::expandAllTracks,
                         onSetTrackHeight = viewModel::setTrackHeight,
+                        frameDurationMs = state.project.timelineTimebase.timeMsAt(1L).coerceAtLeast(1L),
+                        onSetTrackTimelineOffset = viewModel::setTrackTimelineOffset,
                         onScrubStart = viewModel::beginScrub,
                         onScrubEnd = viewModel::endScrub,
                         onSplitAtPlayhead = viewModel::splitClipAtPlayhead,

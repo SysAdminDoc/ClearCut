@@ -80,12 +80,19 @@ enum class Resolution(val width: Int, val height: Int, val label: String) {
 
 enum class TrackType { VIDEO, AUDIO, OVERLAY, TEXT, ADJUSTMENT }
 
+const val MAX_TRACK_TIMELINE_OFFSET_MS = 60_000L
+const val MIN_TRACK_TIMELINE_OFFSET_MS = -MAX_TRACK_TIMELINE_OFFSET_MS
+
+fun clampTrackTimelineOffsetMs(value: Long): Long =
+    value.coerceIn(MIN_TRACK_TIMELINE_OFFSET_MS, MAX_TRACK_TIMELINE_OFFSET_MS)
+
 @Immutable
 data class Track(
     val id: String = UUID.randomUUID().toString(),
     val type: TrackType,
     val index: Int,
     val clips: List<Clip> = emptyList(),
+    val timelineOffsetMs: Long = 0L,
     val isLocked: Boolean = false,
     val isVisible: Boolean = true,
     val isMuted: Boolean = false,
@@ -103,8 +110,15 @@ data class Track(
     init {
         require(index >= 0) { "Track index must be non-negative" }
         require(pan in -1f..1f) { "Pan must be between -1 and 1" }
+        require(timelineOffsetMs in MIN_TRACK_TIMELINE_OFFSET_MS..MAX_TRACK_TIMELINE_OFFSET_MS) {
+            "Track timeline offset must be between $MIN_TRACK_TIMELINE_OFFSET_MS and $MAX_TRACK_TIMELINE_OFFSET_MS ms"
+        }
     }
 }
+
+fun Track.effectiveTimelineStartMs(clip: Clip): Long = clip.timelineStartMs + timelineOffsetMs
+
+fun Track.effectiveTimelineEndMs(clip: Clip): Long = clip.timelineEndMs + timelineOffsetMs
 
 enum class ClipLabel(val argb: Long, val displayName: String) {
     NONE(0x00000000, "None"),

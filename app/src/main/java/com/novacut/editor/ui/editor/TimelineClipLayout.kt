@@ -3,6 +3,8 @@ package com.novacut.editor.ui.editor
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.model.Track
+import com.novacut.editor.model.effectiveTimelineEndMs
+import com.novacut.editor.model.effectiveTimelineStartMs
 
 internal data class TimelineClipLayout(
     val startPx: Float,
@@ -34,11 +36,16 @@ internal sealed class TimelineClipGestureAction {
 internal fun timelineClipLayout(
     clip: Clip,
     scrollOffsetMs: Long,
-    pixelsPerMs: Float
+    pixelsPerMs: Float,
+    timelineOffsetMs: Long = 0L,
 ): TimelineClipLayout {
+    val shiftedStartMs = clip.timelineStartMs + timelineOffsetMs
+    val shiftedEndMs = clip.timelineEndMs + timelineOffsetMs
+    val visibleStartMs = shiftedStartMs.coerceAtLeast(0L)
+    val visibleEndMs = shiftedEndMs.coerceAtLeast(visibleStartMs)
     return TimelineClipLayout(
-        startPx = (clip.timelineStartMs - scrollOffsetMs) * pixelsPerMs,
-        widthPx = clip.durationMs * pixelsPerMs
+        startPx = (visibleStartMs - scrollOffsetMs) * pixelsPerMs,
+        widthPx = (visibleEndMs - visibleStartMs) * pixelsPerMs
     )
 }
 
@@ -124,7 +131,12 @@ internal fun timelineSlideSnapTargets(
     val clipEdges = tracks.flatMap { track ->
         track.clips
             .filter { it.id !in excludedClipIds }
-            .flatMap { listOf(it.timelineStartMs, it.timelineEndMs) }
+            .flatMap { clip ->
+                listOf(
+                    track.effectiveTimelineStartMs(clip),
+                    track.effectiveTimelineEndMs(clip),
+                )
+            }
     }
     return buildList {
         addAll(clipEdges)

@@ -47,6 +47,9 @@ class StreamCopyExportEngine @Inject constructor(
         val audioTracks = tracks.filter { it.type == TrackType.AUDIO && it.isVisible && it.clips.isNotEmpty() }
         if (audioTracks.isNotEmpty()) return Eligibility(false, "additional audio tracks")
         val videoTrack = videoTracks[0]
+        if (videoTrack.timelineOffsetMs != 0L) {
+            return Eligibility(false, "video track has timeline offset")
+        }
         if (videoTrack.isMuted || videoTrack.opacity != 1f || videoTrack.volume != 1f ||
             videoTrack.pan != 0f || videoTrack.blendMode != BlendMode.NORMAL ||
             videoTrack.audioEffects.isNotEmpty()

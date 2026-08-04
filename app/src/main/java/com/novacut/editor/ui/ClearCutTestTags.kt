@@ -23,6 +23,7 @@ object ClearCutTestTags {
     const val TIMELINE_DELETE = "timeline.delete"
     const val TIMELINE_TRIM_START = "timeline.trimStart"
     const val TIMELINE_TRIM_END = "timeline.trimEnd"
+    const val TRACK_OFFSET_INPUT = "timeline.track.offset.input"
     const val TIMELINE_CLIP_PREFIX = "timeline.clip."
 
     const val MEDIA_PICKER_SHEET = "mediaPicker.sheet"

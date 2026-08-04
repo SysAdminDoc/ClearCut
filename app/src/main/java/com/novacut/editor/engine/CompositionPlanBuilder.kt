@@ -22,17 +22,18 @@ internal object CompositionPlanBuilder {
         val visualTracks = orderedTracks
             .filter { track ->
                 track.type in setOf(TrackType.VIDEO, TrackType.OVERLAY) &&
-                    track.isVisible && track.clips.any { it.durationMs > 0L }
+                    track.isVisible && shiftedTimelineClips(track.clips, track.timelineOffsetMs).isNotEmpty()
             }
             .sortedByDescending { it.index }
         val audioTracks = orderedTracks.filter { track ->
             track.type == TrackType.AUDIO &&
-                track.clips.any { it.durationMs > 0L } &&
+                shiftedTimelineClips(track.clips, track.timelineOffsetMs).isNotEmpty() &&
                 track.isVisible && !track.isMuted &&
                 (soloTrackIds.isEmpty() || track.id in soloTrackIds)
         }
         val timelineDurationMs = orderedTracks.maxOfOrNull { track ->
-            track.clips.maxOfOrNull(Clip::timelineEndMs) ?: 0L
+            shiftedTimelineClips(track.clips, track.timelineOffsetMs)
+                .maxOfOrNull(Clip::timelineEndMs) ?: 0L
         } ?: 0L
         val additionalDurationMs = additionalDurationsMs.maxOfOrNull { it.coerceAtLeast(0L) } ?: 0L
 

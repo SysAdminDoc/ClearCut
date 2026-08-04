@@ -2601,6 +2601,16 @@
     <string name="timeline_track_more_options">Track options</string>
     <string name="timeline_track_make_smaller">Make track shorter</string>
     <string name="timeline_track_make_larger">Make track taller</string>
+    <string name="timeline_track_offset">Sync %1$s</string>
+    <string name="timeline_track_set_offset">Set sync offset</string>
+    <string name="timeline_track_offset_dialog_title">Track sync offset</string>
+    <string name="timeline_track_offset_dialog_message">Shift every clip on this track without changing other tracks. Positive values move it later.</string>
+    <string name="timeline_track_offset_ms_label">Offset in milliseconds</string>
+    <string name="timeline_track_offset_apply">Apply</string>
+    <string name="timeline_track_offset_cancel">Cancel</string>
+    <string name="timeline_track_offset_earlier">Nudge one frame earlier</string>
+    <string name="timeline_track_offset_later">Nudge one frame later</string>
+    <string name="timeline_track_offset_reset">Reset sync offset</string>
     <string name="timeline_trim_mode_hint">Trim mode: drag edges to resize; drag the clip body to slip media.</string>
     <string name="timeline_clip_content_description">%1$s, %2$s on %3$s, %4$s, starts at %5$s</string>
     <string name="timeline_select_clip_action">Select clip</string>

@@ -576,9 +576,9 @@ class VideoEngine @Inject constructor(
         onError: (Exception) -> Unit = {}
     ) {
         val requestedDurationMs = timelineDurationMsOverride?.coerceAtLeast(0L)
-            ?: tracks.flatMap { it.clips }
-                .maxOfOrNull { it.timelineStartMs + it.durationMs }
-                ?: 0L
+            ?: tracks.maxOfOrNull { track ->
+                track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
+            }?.coerceAtLeast(0L) ?: 0L
         val storageCheck = ExportStoragePolicy.check(
             request = ExportStoragePolicy.request(
                 durationMs = requestedDurationMs,
@@ -730,9 +730,9 @@ class VideoEngine @Inject constructor(
             return
         }
         val totalDurationMs = timelineDurationMsOverride?.coerceAtLeast(0L)
-            ?: tracks.flatMap { it.clips }
-                .maxOfOrNull { it.timelineStartMs + it.durationMs }
-                ?: 0L
+            ?: tracks.maxOfOrNull { track ->
+                track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
+            }?.coerceAtLeast(0L) ?: 0L
         if (!beginExportSession(outputFile)) return
         val reversedTempFiles = mutableListOf<File>()
         try {
@@ -791,9 +791,9 @@ class VideoEngine @Inject constructor(
             return
         }
         val totalDurationMs = timelineDurationMsOverride?.coerceAtLeast(0L)
-            ?: tracks.flatMap { it.clips }
-                .maxOfOrNull { it.timelineStartMs + it.durationMs }
-                ?: 0L
+            ?: tracks.maxOfOrNull { track ->
+                track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
+            }?.coerceAtLeast(0L) ?: 0L
         val stemTracks = buildAudioMixdownTracks(tracks)
             .filter { isTrackAudibleForMix(it, tracks.filter { t -> t.isSolo }.map { t -> t.id }.toSet()) }
             .sortedBy { it.index }
@@ -1006,6 +1006,10 @@ class VideoEngine @Inject constructor(
         onError: (Exception) -> Unit = {}
     ): Boolean {
         if (plan.benefit != MixedRenderComposer.Benefit.Mixed || !plan.needsConcat) return false
+        if (tracks.any { it.timelineOffsetMs != 0L }) {
+            Log.d(TAG, "Mixed export skipped: per-track timeline offsets require full Transformer composition")
+            return false
+        }
         if (textOverlays.isNotEmpty() || imageOverlays.isNotEmpty() ||
             lottieOverlays.isNotEmpty() || trackedObjects.any { it.isEnabled }
         ) {
@@ -1024,8 +1028,9 @@ class VideoEngine @Inject constructor(
 
         val storageCheck = ExportStoragePolicy.check(
             request = ExportStoragePolicy.request(
-                durationMs = tracks.flatMap { it.clips }
-                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                durationMs = tracks.maxOfOrNull { track ->
+                    track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
+                }?.coerceAtLeast(0L) ?: 0L,
                 config = config,
                 tracks = tracks,
                 mixedRender = true,
@@ -1169,8 +1174,9 @@ class VideoEngine @Inject constructor(
             }
             requireStorageImmediatelyBeforeOutput(
                 request = ExportStoragePolicy.request(
-                    durationMs = tracks.flatMap { it.clips }
-                        .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                    durationMs = tracks.maxOfOrNull { track ->
+                        track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
+                    }?.coerceAtLeast(0L) ?: 0L,
                     config = config,
                     tracks = tracks.map { track ->
                         track.copy(clips = track.clips.map { it.copy(isReversed = false) })
@@ -1193,8 +1199,9 @@ class VideoEngine @Inject constructor(
             ensureVerifiedExportOutput(
                 outputFile = outputFile,
                 label = "Mixed concat",
-                expectedDurationMs = tracks.flatMap { it.clips }
-                    .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                expectedDurationMs = tracks.maxOfOrNull { track ->
+                    track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
+                }?.coerceAtLeast(0L) ?: 0L,
             )
 
             _exportState.value = ExportState.COMPLETE
@@ -1633,7 +1640,7 @@ class VideoEngine @Inject constructor(
         globalTransitions: List<GlobalTransition> = emptyList(),
         previewMode: Boolean = false,
     ): EditedMediaItemSequence {
-        val sortedClips = clips.filter { it.durationMs > 0L }.sortedBy { it.timelineStartMs }
+        val sortedClips = shiftedTimelineClips(clips, audioTrack.timelineOffsetMs)
         val trackTypes = if (videoMuted) {
             setOf(C.TRACK_TYPE_VIDEO)
         } else {
@@ -2135,10 +2142,14 @@ class VideoEngine @Inject constructor(
     ): List<EditedMediaItemSequence> {
         val audioTracks = tracks
             .sortedBy { it.index }
-            .filter { it.type == TrackType.AUDIO && it.clips.isNotEmpty() && isTrackAudibleForMix(it, soloTrackIds) }
+            .filter {
+                it.type == TrackType.AUDIO &&
+                    shiftedTimelineClips(it.clips, it.timelineOffsetMs).isNotEmpty() &&
+                    isTrackAudibleForMix(it, soloTrackIds)
+            }
         return audioTracks.map { at ->
             val builder = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
-            for (step in buildTimelineSequenceSteps(at.clips, totalTimelineDurationMs)) {
+            for (step in buildTimelineSequenceSteps(at.clips, totalTimelineDurationMs, at.timelineOffsetMs)) {
                 when (step) {
                     is TimelineSequenceStep.GapStep -> {
                         builder.addGap(durationMsToUs(step.durationMs))

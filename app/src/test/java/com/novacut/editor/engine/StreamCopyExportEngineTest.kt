@@ -188,6 +188,15 @@ class StreamCopyExportEngineTest {
     }
 
     @Test
+    fun analyze_trackTimelineOffsetDisqualifies() {
+        val track = videoTrack(baseClip()).copy(timelineOffsetMs = 250L)
+        val result = engine.analyze(listOf(track), false)
+
+        assertFalse(result.eligible)
+        assertEquals("video track has timeline offset", result.reason)
+    }
+
+    @Test
     fun analyze_trackOpacityDisqualifies() {
         val track = videoTrack(baseClip()).copy(opacity = 0.5f)
         assertFalse(engine.analyze(listOf(track), false).eligible)

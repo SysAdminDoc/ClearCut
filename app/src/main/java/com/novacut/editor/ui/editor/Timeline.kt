@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -239,6 +240,9 @@ private fun formatTrimTime(ms: Long): String {
     else String.format(java.util.Locale.US, "%.2f", sec)
 }
 
+private fun formatTrackOffsetLabel(offsetMs: Long): String =
+    if (offsetMs > 0L) "+$offsetMs ms" else "$offsetMs ms"
+
 private fun parseTrimTime(text: String): Long? {
     val cleaned = text.replace(',', '.')
     if (cleaned.contains(':')) {
@@ -414,6 +418,8 @@ fun Timeline(
     onCollapseAllTracks: () -> Unit = {},
     onExpandAllTracks: () -> Unit = {},
     onSetTrackHeight: (String, Int) -> Unit = { _, _ -> },
+    frameDurationMs: Long = 33L,
+    onSetTrackTimelineOffset: (String, Long) -> Unit = { _, _ -> },
     snapToBeat: Boolean = false,
     snapToMarker: Boolean = true,
     markers: List<TimelineMarker> = emptyList(),
@@ -445,8 +451,8 @@ fun Timeline(
         val edges = mutableSetOf<Long>()
         tracks.forEach { track ->
             track.clips.forEach { clip ->
-                edges.add(clip.timelineStartMs)
-                edges.add(clip.timelineStartMs + clip.durationMs)
+                edges.add(track.effectiveTimelineStartMs(clip).coerceAtLeast(0L))
+                edges.add(track.effectiveTimelineEndMs(clip).coerceAtLeast(0L))
             }
         }
         textOverlays.forEach { overlay ->
@@ -459,6 +465,9 @@ fun Timeline(
     }
     var lastScrubBoundaryIdx by remember { mutableIntStateOf(-1) }
     var timelineOptionsExpanded by remember { mutableStateOf(false) }
+    var trackOffsetDialogTrackId by remember { mutableStateOf<String?>(null) }
+    var trackOffsetDialogText by remember { mutableStateOf("") }
+    val trackOffsetDialogTrack = tracks.firstOrNull { it.id == trackOffsetDialogTrackId }
     val fitZoomLevel = remember(timelineWidthPx, totalDurationMs) {
         if (timelineWidthPx <= 0f || totalDurationMs <= 0L) {
             1f
@@ -559,6 +568,46 @@ fun Timeline(
     val currentOnSlipEditEnded by rememberUpdatedState(onSlipEditEnded)
     val currentSelectedClipId by rememberUpdatedState(selectedClipId)
 
+    if (trackOffsetDialogTrack != null) {
+        AlertDialog(
+            onDismissRequest = { trackOffsetDialogTrackId = null },
+            title = { Text(stringResource(R.string.timeline_track_offset_dialog_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.timeline_track_offset_dialog_message))
+                    OutlinedTextField(
+                        value = trackOffsetDialogText,
+                        onValueChange = { trackOffsetDialogText = it },
+                        singleLine = true,
+                        label = { Text(stringResource(R.string.timeline_track_offset_ms_label)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(ClearCutTestTags.TRACK_OFFSET_INPUT),
+                    )
+                }
+            },
+            confirmButton = {
+                val parsedOffsetMs = trackOffsetDialogText.toLongOrNull()
+                TextButton(
+                    enabled = parsedOffsetMs != null,
+                    onClick = {
+                        parsedOffsetMs?.let { offsetMs ->
+                            onSetTrackTimelineOffset(trackOffsetDialogTrack.id, offsetMs)
+                            trackOffsetDialogTrackId = null
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.timeline_track_offset_apply))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { trackOffsetDialogTrackId = null }) {
+                    Text(stringResource(R.string.timeline_track_offset_cancel))
+                }
+            },
+        )
+    }
+
     // Hoist the vertical gradient overlay applied on top of every clip body. The
     // Timeline recomposes ~30 Hz during playback; without `remember` this brush
     // was being allocated fresh per clip per frame (a 10-clip project = 300
@@ -603,8 +652,8 @@ fun Timeline(
             .flatMap { track ->
                 track.clips
                     .filter { clip ->
-                        clip.timelineEndMs >= thumbnailVisibleStartMs &&
-                            clip.timelineStartMs <= thumbnailVisibleEndMs
+                        track.effectiveTimelineEndMs(clip) >= thumbnailVisibleStartMs &&
+                            track.effectiveTimelineStartMs(clip) <= thumbnailVisibleEndMs
                     }
                     .map { clip -> "${clip.id}_$quantizedZoom" }
             }
@@ -616,8 +665,8 @@ fun Timeline(
             .forEach { track ->
                 track.clips
                     .filter { clip ->
-                        clip.timelineEndMs >= thumbnailVisibleStartMs &&
-                            clip.timelineStartMs <= thumbnailVisibleEndMs
+                        track.effectiveTimelineEndMs(clip) >= thumbnailVisibleStartMs &&
+                            track.effectiveTimelineStartMs(clip) <= thumbnailVisibleEndMs
                     }
                     .forEach { clip ->
                         val key = "${clip.id}_${quantizedZoom}"
@@ -887,10 +936,19 @@ fun Timeline(
                             }
                             val trackColor = trackAccentColor(track.type)
                             var trackMenuExpanded by remember(track.id) { mutableStateOf(false) }
+                            val trackOffsetStatusLabel = if (track.timelineOffsetMs != 0L) {
+                                stringResource(
+                                    R.string.timeline_track_offset,
+                                    formatTrackOffsetLabel(track.timelineOffsetMs),
+                                )
+                            } else {
+                                null
+                            }
                             val statusBits = buildList {
                                 if (track.isLocked) add(lockedShortLabel)
                                 if (track.isMuted) add(mutedShortLabel)
                                 if (!track.isVisible) add(hiddenShortLabel)
+                                trackOffsetStatusLabel?.let(::add)
                             }
                             val trackItemCount = if (track.type == TrackType.TEXT) textOverlays.size else track.clips.size
                             val trackSummary = statusBits.joinToString(" · ").ifEmpty {
@@ -1112,6 +1170,55 @@ fun Timeline(
                                                                     },
                                                                 )
                                                             }
+                                                        }
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.timeline_track_offset_earlier)) },
+                                                            leadingIcon = {
+                                                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null)
+                                                            },
+                                                            onClick = {
+                                                                trackMenuExpanded = false
+                                                                onSetTrackTimelineOffset(
+                                                                    track.id,
+                                                                    track.timelineOffsetMs - frameDurationMs.coerceAtLeast(1L),
+                                                                )
+                                                            },
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.timeline_track_offset_later)) },
+                                                            leadingIcon = {
+                                                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                                                            },
+                                                            onClick = {
+                                                                trackMenuExpanded = false
+                                                                onSetTrackTimelineOffset(
+                                                                    track.id,
+                                                                    track.timelineOffsetMs + frameDurationMs.coerceAtLeast(1L),
+                                                                )
+                                                            },
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.timeline_track_set_offset)) },
+                                                            leadingIcon = {
+                                                                Icon(Icons.Default.Edit, contentDescription = null)
+                                                            },
+                                                            onClick = {
+                                                                trackMenuExpanded = false
+                                                                trackOffsetDialogText = track.timelineOffsetMs.toString()
+                                                                trackOffsetDialogTrackId = track.id
+                                                            },
+                                                        )
+                                                        if (track.timelineOffsetMs != 0L) {
+                                                            DropdownMenuItem(
+                                                                text = { Text(stringResource(R.string.timeline_track_offset_reset)) },
+                                                                leadingIcon = {
+                                                                    Icon(Icons.Default.Clear, contentDescription = null)
+                                                                },
+                                                                onClick = {
+                                                                    trackMenuExpanded = false
+                                                                    onSetTrackTimelineOffset(track.id, 0L)
+                                                                },
+                                                            )
                                                         }
                                                         DropdownMenuItem(
                                                             text = {
@@ -1401,7 +1508,7 @@ fun Timeline(
                                             }
                                             val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
                                             val clip = trackClips.firstOrNull {
-                                                it.containsTimelinePosition(tappedMs)
+                                                it.containsTimelinePosition(tappedMs, track.timelineOffsetMs)
                                             }
                                             if (clip != null) {
                                                 onClipSelected(clip.id, track.id)
@@ -1416,7 +1523,7 @@ fun Timeline(
                                             val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
                                             val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
                                             val clip = trackClips.firstOrNull {
-                                                it.containsTimelinePosition(tappedMs)
+                                                it.containsTimelinePosition(tappedMs, track.timelineOffsetMs)
                                             }
                                             if (clip != null) {
                                                 dispatchTimelineClipLongPress(
@@ -1451,7 +1558,8 @@ fun Timeline(
                                         val clipLayout = timelineClipLayout(
                                             clip = clip,
                                             scrollOffsetMs = scrollOffsetMs,
-                                            pixelsPerMs = pixelsPerMs
+                                            pixelsPerMs = pixelsPerMs,
+                                            timelineOffsetMs = track.timelineOffsetMs,
                                         )
                                         if (clipLayout.isVisibleIn(timelineWidthPx)) {
                                             Box(
@@ -1523,7 +1631,8 @@ fun Timeline(
                                 val clipLayout = timelineClipLayout(
                                     clip = clip,
                                     scrollOffsetMs = scrollOffsetMs,
-                                    pixelsPerMs = pixelsPerMs
+                                    pixelsPerMs = pixelsPerMs,
+                                    timelineOffsetMs = track.timelineOffsetMs,
                                 )
                                 val clipStartPx = clipLayout.startPx
                                 val clipWidthPx = clipLayout.widthPx
@@ -1549,7 +1658,9 @@ fun Timeline(
                                     val clipTypeLabel = clipLabelForType(track.type)
                                     val trackTypeLabel = trackLabelForType(track.type)
                                     val clipDurationLabel = formatTimelineDurationLabel(clip.durationMs)
-                                    val clipStartLabel = formatTimelineTime(clip.timelineStartMs)
+                                    val clipStartLabel = formatTimelineTime(
+                                        track.effectiveTimelineStartMs(clip).coerceAtLeast(0L)
+                                    )
                                     val clipContentDescription = stringResource(
                                         R.string.timeline_clip_content_description,
                                         clipFileName,
@@ -1576,8 +1687,9 @@ fun Timeline(
                                         clip.id,
                                         track.id,
                                         track.isLocked,
-                                        clip.timelineStartMs,
-                                        clip.timelineEndMs,
+                                        track.timelineOffsetMs,
+                                        track.effectiveTimelineStartMs(clip),
+                                        track.effectiveTimelineEndMs(clip),
                                         clip.durationMs,
                                         clip.isCompound,
                                         splitClipActionLabel,
@@ -1595,7 +1707,10 @@ fun Timeline(
                                                         CustomAccessibilityAction(
                                                             label = splitClipActionLabel
                                                         ) {
-                                                            val splitPointMs = clip.accessibleSplitPointMs(currentPlayheadMs)
+                                                            val splitPointMs = clip.accessibleSplitPointMs(
+                                                                currentPlayheadMs,
+                                                                track.timelineOffsetMs,
+                                                            )
                                                             if (splitPointMs == null) {
                                                                 false
                                                             } else {
@@ -1672,7 +1787,10 @@ fun Timeline(
                                         if (track.isLocked) {
                                             false
                                         } else {
-                                            val splitPointMs = clip.accessibleSplitPointMs(currentPlayheadMs)
+                                            val splitPointMs = clip.accessibleSplitPointMs(
+                                                currentPlayheadMs,
+                                                track.timelineOffsetMs,
+                                            )
                                             if (splitPointMs == null) {
                                                 false
                                             } else {
@@ -1892,7 +2010,7 @@ fun Timeline(
                                                                         snapToMarker = snapToMarker
                                                                     )
                                                                     val snap = resolveTimelineSlideSnap(
-                                                                        currentStartMs = currentClip.timelineStartMs,
+                                                                        currentStartMs = track.effectiveTimelineStartMs(currentClip),
                                                                         clipDurationMs = currentClip.durationMs,
                                                                         deltaMs = action.deltaMs,
                                                                         snapTargets = snapTargetsLocal,
@@ -2273,7 +2391,12 @@ fun Timeline(
                                 ) {
                                     track.clips
                                         .filter { it.id != selectedClipId }
-                                        .flatMap { listOf(it.timelineStartMs, it.timelineEndMs) }
+                                        .flatMap { clip ->
+                                            listOf(
+                                                track.effectiveTimelineStartMs(clip),
+                                                track.effectiveTimelineEndMs(clip),
+                                            )
+                                        }
                                         .distinct()
                                         .plus(playheadMs)
                                         .plus(0L)
@@ -2284,8 +2407,16 @@ fun Timeline(
                                 // (where 8dp / pixelsPerMs would round to 0L and disable snap).
                                 val snapThresholdMs = (snapThresholdPx / pixelsPerMs).toLong().coerceAtLeast(1L)
 
-                                val startSnap = findSnapTarget(selectedClipObj.timelineStartMs, snapTargets, snapThresholdMs)
-                                val endSnap = findSnapTarget(selectedClipObj.timelineEndMs, snapTargets, snapThresholdMs)
+                                val startSnap = findSnapTarget(
+                                    track.effectiveTimelineStartMs(selectedClipObj),
+                                    snapTargets,
+                                    snapThresholdMs,
+                                )
+                                val endSnap = findSnapTarget(
+                                    track.effectiveTimelineEndMs(selectedClipObj),
+                                    snapTargets,
+                                    snapThresholdMs,
+                                )
                                 val snapPositions = listOfNotNull(startSnap, endSnap).distinct()
 
                                 snapPositions.forEach { snapMs ->

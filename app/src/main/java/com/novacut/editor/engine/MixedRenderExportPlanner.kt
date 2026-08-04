@@ -25,6 +25,7 @@ object MixedRenderExportPlanner {
         hasTrackedObjects: Boolean = false,
     ): String? {
         if (!config.allowStreamCopy) return "stream-copy disabled"
+        if (tracks.any { it.timelineOffsetMs != 0L }) return "per-track timeline offset present"
         if (textOverlays.isNotEmpty()) return "text overlays present"
         if (hasImageOverlays) return "image overlays present"
         if (hasLottieOverlays) return "Lottie overlays present"

@@ -54,6 +54,29 @@ class AutoSaveStateTest {
     }
 
     @Test
+    fun trackTimelineOffset_roundTripsAndDefaultsForOlderDocuments() {
+        val state = AutoSaveState(
+            projectId = "offset-project",
+            tracks = listOf(
+                Track(
+                    type = TrackType.AUDIO,
+                    index = 0,
+                    timelineOffsetMs = 1_234L,
+                )
+            ),
+        )
+
+        val restored = AutoSaveState.deserialize(state.serialize()) { FakeUri }
+        assertEquals(1_234L, restored.tracks.single().timelineOffsetMs)
+
+        val oldJson = JSONObject(state.serialize()).apply {
+            getJSONArray("tracks").getJSONObject(0).remove("timelineOffsetMs")
+        }
+        val restoredOld = AutoSaveState.deserialize(oldJson.toString()) { FakeUri }
+        assertEquals(0L, restoredOld.tracks.single().timelineOffsetMs)
+    }
+
+    @Test
     fun deserialize_coercesTrackFieldsToModelInvariants() {
         val state = AutoSaveState.deserialize(
             """

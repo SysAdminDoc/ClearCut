@@ -35,6 +35,34 @@ class TimelineClipLayoutTest {
     }
 
     @Test
+    fun `clip layout shifts positive and crops negative track offsets`() {
+        val clip = clip(
+            id = "clip",
+            timelineStartMs = 500L,
+            trimEndMs = 2_500L,
+            sourceDurationMs = 2_500L,
+        )
+
+        val later = timelineClipLayout(
+            clip = clip,
+            scrollOffsetMs = 0L,
+            pixelsPerMs = 0.1f,
+            timelineOffsetMs = 250L,
+        )
+        assertEquals(75f, later.startPx, 0.001f)
+        assertEquals(250f, later.widthPx, 0.001f)
+
+        val earlier = timelineClipLayout(
+            clip = clip,
+            scrollOffsetMs = 0L,
+            pixelsPerMs = 0.1f,
+            timelineOffsetMs = -750L,
+        )
+        assertEquals(0f, earlier.startPx, 0.001f)
+        assertEquals(225f, earlier.widthPx, 0.001f)
+    }
+
+    @Test
     fun `clip content visibility keeps badge thresholds stable`() {
         val compactVisibility = timelineClipContentVisibility(140f)
         val wideVisibility = timelineClipContentVisibility(170f)

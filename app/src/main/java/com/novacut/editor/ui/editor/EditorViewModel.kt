@@ -1287,8 +1287,8 @@ class EditorViewModel @Inject constructor(
                 ),
                 media = current.media.copy(healthReport = mediaHealthReport),
                 totalDurationMs = recovery.tracks.maxOfOrNull { t ->
-                    t.clips.maxOfOrNull { c -> c.timelineEndMs } ?: 0L
-                } ?: 0L
+                    t.clips.maxOfOrNull { c -> t.effectiveTimelineEndMs(c) } ?: 0L
+                }?.coerceAtLeast(0L) ?: 0L
             )
         }
         _playheadMs.value = recovery.playheadMs
@@ -2991,6 +2991,28 @@ class EditorViewModel @Inject constructor(
                 if (it.id == trackId) it.copy(trackHeight = height.coerceIn(32, 120)) else it
             })
         }
+        saveProject()
+    }
+    fun setTrackTimelineOffset(trackId: String, offsetMs: Long) {
+        val clampedOffsetMs = clampTrackTimelineOffsetMs(offsetMs)
+        val currentTrack = _state.value.tracks.firstOrNull { it.id == trackId } ?: return
+        if (currentTrack.timelineOffsetMs == clampedOffsetMs) return
+        pauseIfPlaying()
+        saveUndoState("Change track sync offset")
+        _state.update { state ->
+            recalculateDuration(
+                state.copy(
+                    tracks = state.tracks.map { track ->
+                        if (track.id == trackId) {
+                            track.copy(timelineOffsetMs = clampedOffsetMs)
+                        } else {
+                            track
+                        }
+                    }
+                )
+            )
+        }
+        rebuildPlayerTimeline()
         saveProject()
     }
     fun toggleTrackCollapsed(trackId: String) {
@@ -6516,8 +6538,8 @@ class EditorViewModel @Inject constructor(
             track.copy(clips = track.clips.sortedBy { it.timelineStartMs })
         }
         val totalDuration = normalizedTracks.maxOfOrNull { t ->
-            t.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-        } ?: 0L
+            t.clips.maxOfOrNull { clip -> t.effectiveTimelineEndMs(clip) } ?: 0L
+        }?.coerceAtLeast(0L) ?: 0L
         val normalizedState = normalizeSelectionState(
             state.copy(
                 tracks = normalizedTracks,
