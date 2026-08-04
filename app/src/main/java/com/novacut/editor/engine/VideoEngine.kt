@@ -12,6 +12,7 @@ import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.media3.common.C
@@ -42,6 +43,17 @@ import javax.inject.Singleton
 private const val TAG = "VideoEngine"
 private const val DEFAULT_STILL_IMAGE_DURATION_MS = 3_000L
 private const val SPEED_CURVE_PREVIEW_STEP_US = 10_000L
+
+private fun logAndroid15LoudnessIntegration(stage: String) {
+    if (Android15MediaPolicy.loudnessIntegrationForSdk(Build.VERSION.SDK_INT) ==
+        Android15MediaPolicy.LoudnessIntegration.MEDIA3_PLATFORM_CONTROLLER
+    ) {
+        Log.d(
+            TAG,
+            "$stage audio uses Media3 1.10.1's API-35 LoudnessCodecController integration"
+        )
+    }
+}
 
 /**
  * Longest clip the reverse pre-render will attempt. Anything above this is
@@ -357,6 +369,7 @@ class VideoEngine @Inject constructor(
                     .setPrioritizeTimeOverSizeThresholds(true)
                     .build()
                 val previewAudioAttributes = ClearCutAudioFocusPolicy.buildPreviewAttributes()
+                logAndroid15LoudnessIntegration("Preview")
                 player = CompositionPlayer.Builder(context)
                     .setLoadControl(loadControl)
                     .setVideoGraphFactory(MultipleInputVideoGraph.Factory())
@@ -2407,6 +2420,12 @@ class VideoEngine @Inject constructor(
             }
             requireStorageImmediatelyBeforeOutput(storageRequest, outputFile)
             var terminalReached = false
+            // Media3 1.10.1's Transformer SequenceAudioRenderer is a
+            // MediaCodecAudioRenderer. On API 35+ it attaches Android's
+            // LoudnessCodecController to the input decoder internally; the
+            // app deliberately does not reflect into Transformer's private
+            // codec or create an unattached controller.
+            logAndroid15LoudnessIntegration("Export")
             val transformerBuilder = Transformer.Builder(context)
                 .setVideoMimeType(mimeType)
                 .setAudioMimeType(MimeTypes.AUDIO_AAC)

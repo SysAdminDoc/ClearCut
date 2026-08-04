@@ -354,6 +354,9 @@ fun EditorScreen(
                 .flatMap { track -> track.clips.sortedBy { it.timelineStartMs } }
         }
     }
+    val hasHdrPreviewContent = previewVisualClips.any { clip ->
+        clip.sourceColorMetadata.hasHdr
+    }
     val previewClipAtPlayhead by remember(previewVisualClips, state.totalDurationMs) {
         derivedStateOf {
             previewClipForDisplay(previewVisualClips, playheadMs, state.totalDurationMs)
@@ -399,6 +402,7 @@ fun EditorScreen(
     }
 
     ImmersivePreviewSystemUi(isImmersive = isImmersivePreview)
+    Android15HdrHeadroomWindow(hasHdrContent = hasHdrPreviewContent)
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()

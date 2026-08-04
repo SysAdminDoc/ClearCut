@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Android 15+ now uses Media3's platform loudness-controller path for preview/export audio decoding, applies a guarded HDR headroom policy to HDR editor windows and preview surfaces, and restores prior display settings on exit; older Android versions remain no-op fallbacks.
 - Added an immersive fullscreen preview toggle that hides editor chrome and system bars, preserves the active Media3 surface/playback, and exits cleanly through the toggle or Back.
 - Clip transform controls now support undoable horizontal and vertical flips that persist through autosave and edit-decision JSON while sharing the preview/export Media3 matrix path.
 - Added portable `.clearcut-edl.json` edit-decision export/import with documented schema v1, preview-first routing, future-schema rejection, media-relink diagnostics, and canonical mapping for clips, markers, captions, and overlays.

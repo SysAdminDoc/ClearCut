@@ -3,6 +3,8 @@ package com.novacut.editor.ui.editor
 import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import android.graphics.Bitmap
+import android.os.Build
+import android.view.SurfaceView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -65,6 +67,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import coil3.compose.SubcomposeAsyncImage
 import com.novacut.editor.R
+import com.novacut.editor.engine.Android15MediaPolicy
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Clip
@@ -131,6 +134,10 @@ fun PreviewPanel(
     val frameDurationMs = remember(frameRate) {
         (1_000L / frameRate.coerceAtLeast(1)).coerceAtLeast(1L)
     }
+    val desiredPreviewHdrHeadroom = Android15MediaPolicy.desiredHdrHeadroom(
+        sdkInt = Build.VERSION.SDK_INT,
+        hasHdrContent = currentTimelineClip?.sourceColorMetadata?.hasHdr == true,
+    )
 
     Column(
         modifier = modifier
@@ -253,6 +260,10 @@ fun PreviewPanel(
                             update = { playerView ->
                                 val player = engine.getPlayer()
                                 if (playerView.player !== player) playerView.player = player
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                                    (playerView.videoSurfaceView as? SurfaceView)
+                                        ?.setDesiredHdrHeadroom(desiredPreviewHdrHeadroom)
+                                }
                             },
                             modifier = Modifier.fillMaxSize()
                         )
