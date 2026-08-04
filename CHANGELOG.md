@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Batch media imports now release only the persistable URI grants they acquired across review, cancellation, and storage-abort paths; dropped-file storage failures report insufficient space instead of a generic copy error.
 - Exported project shortcuts now verify their project ID against Room off the main thread before opening the editor; stale or external IDs stay on Projects and cannot seed ghost rows.
 - Batch export status pills and secondary project/settings feedback now use bilingual resources and plurals; localized editor-mode labels retain their canonical selection state.
 - Export sheet playback now releases its player and codec lease with the composition, elapsed/ETA remain live during encoder stalls, and gallery saves move file checks off the main thread with double-tap protection.

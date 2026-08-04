@@ -132,16 +132,18 @@ fun MediaPickerSheet(
     var sequenceReview by remember { mutableStateOf<List<MediaPickerSelection>?>(null) }
     var sequenceOrder by remember { mutableStateOf(MediaSequenceOrder.CAPTURE_TIME) }
     var sequenceDragPermissions by remember { mutableStateOf<DragAndDropPermissions?>(null) }
+    var sequencePersistedUris by remember { mutableStateOf<Set<Uri>>(emptySet()) }
     val actionsEnabled = operationState == null && sequenceReview == null
 
     fun cancelSequenceReview() {
-        val selections = sequenceReview ?: return
+        val selections = sequenceReview
+        val persistedUris = sequencePersistedUris
+        if (selections == null && persistedUris.isEmpty()) return
         sequenceReview = null
         sequenceOrder = MediaSequenceOrder.CAPTURE_TIME
+        sequencePersistedUris = emptySet()
         coroutineScope.launch(NonCancellable + Dispatchers.IO) {
-            selections.forEach { selection ->
-                releasePersistedReadPermission(context, selection.uri)
-            }
+            releasePersistedReadPermissions(context, persistedUris)
         }
         sequenceDragPermissions?.release()
         sequenceDragPermissions = null
@@ -150,8 +152,12 @@ fun MediaPickerSheet(
     fun stageSequenceReview(
         uris: List<Uri>,
         dragPermissions: DragAndDropPermissions? = null,
+        persistedUris: List<Uri> = emptyList(),
     ) {
         if (uris.isEmpty()) {
+            coroutineScope.launch(NonCancellable + Dispatchers.IO) {
+                releasePersistedReadPermissions(context, persistedUris)
+            }
             dragPermissions?.release()
             return
         }
@@ -179,6 +185,7 @@ fun MediaPickerSheet(
                     )
                     sequenceOrder = MediaSequenceOrder.CAPTURE_TIME
                     sequenceDragPermissions = dragPermissions
+                    sequencePersistedUris = persistedUris.toSet()
                     retainedPermissions = true
                 }
             } catch (error: CancellationException) {
@@ -190,7 +197,7 @@ fun MediaPickerSheet(
                 operationState = null
                 if (!retainedPermissions) {
                     withContext(NonCancellable + Dispatchers.IO) {
-                        uris.forEach { uri -> releasePersistedReadPermission(context, uri) }
+                        releasePersistedReadPermissions(context, persistedUris)
                     }
                     dragPermissions?.release()
                 }
@@ -204,6 +211,8 @@ fun MediaPickerSheet(
         sequenceOrder = MediaSequenceOrder.CAPTURE_TIME
         val dragPermissions = sequenceDragPermissions
         sequenceDragPermissions = null
+        val persistedUris = sequencePersistedUris
+        sequencePersistedUris = emptySet()
         coroutineScope.launch {
             operationState = MediaPickerOperationState(
                 title = importingBatchTitle,
@@ -236,9 +245,7 @@ fun MediaPickerSheet(
                 }
             } finally {
                 withContext(NonCancellable + Dispatchers.IO) {
-                    selections.forEach { selection ->
-                        releasePersistedReadPermission(context, selection.uri)
-                    }
+                    releasePersistedReadPermissions(context, persistedUris)
                 }
                 dragPermissions?.release()
             }
@@ -279,18 +286,13 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         if (uris.isNotEmpty()) {
+            val persistedUris = mutableListOf<Uri>()
             uris.forEach { uri ->
-                // Take persistent permission
-                try {
-                    context.contentResolver.takePersistableUriPermission(
-                        uri,
-                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                } catch (e: SecurityException) {
-                    android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
+                if (takePersistableReadPermission(context, uri)) {
+                    persistedUris += uri
                 }
             }
-            stageSequenceReview(uris)
+            stageSequenceReview(uris, persistedUris = persistedUris)
         }
     }
 
@@ -332,11 +334,13 @@ fun MediaPickerSheet(
                 title = importingBatchTitle,
                 description = importingBatchDescription
             )
+            var stoppedForInsufficientSpace = false
             try {
                 val imported = withContext(Dispatchers.IO) {
                     val sorted = sortMediaChronologically(context, uris)
                     val totalSize = sorted.sumOf { querySourceSize(context, it).coerceAtLeast(0L) }
                     if (totalSize > 0L && !checkFreeSpace(context, totalSize)) {
+                        stoppedForInsufficientSpace = true
                         return@withContext emptyList<Pair<Uri, String>>()
                     }
                     sorted.mapNotNull { uri ->
@@ -345,7 +349,9 @@ fun MediaPickerSheet(
                     }
                 }
                 imported.forEach { (localUri, type) -> onMediaSelected(localUri, type) }
-                if (imported.size < uris.size) {
+                if (stoppedForInsufficientSpace) {
+                    permissionMessage = insufficientSpace
+                } else if (imported.size < uris.size) {
                     permissionMessage = if (imported.isEmpty()) {
                         localCopyFailed
                     } else {
@@ -395,14 +401,7 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            try {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            } catch (e: SecurityException) {
-                android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
-            }
+            val persisted = takePersistableReadPermission(context, uri)
             // The ACTION_OPEN_DOCUMENT MIME filter is advisory — on some devices
             // the system picker still allows selecting items from other categories.
             // Verify the resolver's reported MIME before routing an audio pick to
@@ -411,6 +410,9 @@ fun MediaPickerSheet(
             if (pendingMediaType == "audio") {
                 val mimeType = context.contentResolver.getType(uri).orEmpty()
                 if (!mimeType.startsWith("audio/") && mimeType != "application/ogg") {
+                    if (persisted) {
+                        releasePersistedReadPermissions(context, listOf(uri))
+                    }
                     permissionMessage = audioOnly
                     return@rememberLauncherForActivityResult
                 }
@@ -902,6 +904,31 @@ private fun releasePersistedReadPermission(
         )
     } catch (_: SecurityException) {
     } catch (_: IllegalArgumentException) {
+    }
+}
+
+private fun releasePersistedReadPermissions(
+    context: android.content.Context,
+    uris: Iterable<Uri>,
+) {
+    uris.distinct().forEach { uri ->
+        releasePersistedReadPermission(context, uri)
+    }
+}
+
+private fun takePersistableReadPermission(
+    context: android.content.Context,
+    uri: Uri,
+): Boolean {
+    return try {
+        context.contentResolver.takePersistableUriPermission(
+            uri,
+            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
+        true
+    } catch (error: SecurityException) {
+        android.util.Log.w("MediaPicker", "Failed to persist URI permission", error)
+        false
     }
 }
 
