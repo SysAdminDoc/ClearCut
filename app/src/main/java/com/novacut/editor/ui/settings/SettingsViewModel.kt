@@ -310,7 +310,7 @@ class SettingsViewModel @Inject constructor(
                 _diagnosticExport.update {
                     it.copy(
                         isExporting = false,
-                        errorMessage = "Diagnostic ZIP could not be created. Try again.",
+                        errorMessage = appContext.getString(R.string.settings_diagnostic_export_create_failed),
                         message = null
                     )
                 }
@@ -330,7 +330,7 @@ class SettingsViewModel @Inject constructor(
         _diagnosticExport.update {
             it.copy(
                 message = null,
-                errorMessage = "Diagnostic ZIP could not be shared from this device."
+                errorMessage = appContext.getString(R.string.settings_diagnostic_export_share_failed)
             )
         }
     }

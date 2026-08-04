@@ -660,6 +660,8 @@
     <string name="settings_diagnostic_share">Share</string>
     <string name="settings_diagnostic_rebuild">Rebuild</string>
     <string name="settings_diagnostic_share_chooser">Share diagnostic ZIP</string>
+    <string name="settings_diagnostic_export_create_failed">Diagnostic ZIP could not be created. Try again.</string>
+    <string name="settings_diagnostic_export_share_failed">Diagnostic ZIP could not be shared from this device.</string>
     <string name="settings_reset_notice_message">Settings were restored to defaults after the preferences file could not be read. A redacted reset report will be included in diagnostic ZIPs.</string>
     <string name="settings_updates_section_title">Updates</string>
     <string name="settings_updates_section_description">Sideload and GitHub-release installs only. ClearCut never downloads or installs an update for you.</string>
@@ -936,6 +938,7 @@
 
     <!-- BatchExportPanel -->
     <string name="batch_export_title">Batch Export</string>
+    <string name="batch_export_subtitle">Queue delivery variants, social presets, or utility exports and send them out in one run.</string>
     <string name="batch_export_add_platform_preset">Add Export Targets</string>
     <string name="batch_export_audio_only">Audio Only</string>
     <string name="batch_export_audio_stems">Audio Stems</string>
@@ -964,6 +967,50 @@
     <string name="batch_export_status_ready">Ready</string>
     <string name="batch_export_status_queued">Queued</string>
     <string name="batch_export_status_in_progress">Export in progress</string>
+    <plurals name="batch_export_total">
+        <item quantity="one">%1$d total</item>
+        <item quantity="other">%1$d total</item>
+    </plurals>
+    <plurals name="batch_export_active">
+        <item quantity="one">%1$d active</item>
+        <item quantity="other">%1$d active</item>
+    </plurals>
+    <plurals name="batch_export_needs_review">
+        <item quantity="one">%1$d needs review</item>
+        <item quantity="other">%1$d need review</item>
+    </plurals>
+    <plurals name="batch_export_needs_attention">
+        <item quantity="one">%1$d needs attention</item>
+        <item quantity="other">%1$d need attention</item>
+    </plurals>
+    <plurals name="batch_export_done">
+        <item quantity="one">%1$d done</item>
+        <item quantity="other">%1$d done</item>
+    </plurals>
+    <plurals name="batch_export_queued">
+        <item quantity="one">%1$d queued</item>
+        <item quantity="other">%1$d queued</item>
+    </plurals>
+    <plurals name="batch_export_exporting">
+        <item quantity="one">%1$d exporting</item>
+        <item quantity="other">%1$d exporting</item>
+    </plurals>
+    <plurals name="batch_export_failed">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <plurals name="batch_export_cancelled">
+        <item quantity="one">%1$d cancelled</item>
+        <item quantity="other">%1$d cancelled</item>
+    </plurals>
+    <plurals name="batch_export_interrupted">
+        <item quantity="one">%1$d interrupted</item>
+        <item quantity="other">%1$d interrupted</item>
+    </plurals>
+    <plurals name="batch_export_review">
+        <item quantity="one">%1$d review</item>
+        <item quantity="other">%1$d reviews</item>
+    </plurals>
     <string name="batch_export_review_required_toast">Review the changed batch item before retrying</string>
     <string name="batch_export_no_queued_items_toast">No queued items are ready to export</string>
     <plurals name="batch_export_queue_limit">
@@ -1121,13 +1168,17 @@
     <string name="project_import_partial_success">Imported %1$d of %2$d shared files.</string>
     <string name="project_imported_default_name">Imported</string>
     <string name="project_template_import_success">Imported template: %1$s</string>
+    <string name="project_template_import_partial_warning">Warning: %1$s omitted from the template.</string>
     <string name="project_template_import_failed">Template import failed</string>
     <string name="project_template_import_incompatible">Template needs a newer ClearCut version or unsupported tools.</string>
     <string name="project_template_import_invalid">Template file is not readable.</string>
     <string name="project_template_import_too_large">Template file is too large.</string>
     <string name="project_document_import_confirm">Import</string>
     <string name="project_document_import_failed">Document import failed</string>
+    <string name="project_document_preview_multiple_warning">Only the first recognized document was previewed; open the remaining files one at a time.</string>
     <string name="project_template_export_failed">Template export failed</string>
+    <string name="project_template_share_chooser">Share Template</string>
+    <string name="project_template_restore_partial_warning">Warning: %1$s omitted while loading the template.</string>
     <string name="project_template_open_failed">Template could not be opened</string>
     <string name="project_template_delete_success">Deleted template: %1$s</string>
     <string name="project_template_delete_success_generic">Deleted template</string>

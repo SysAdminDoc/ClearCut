@@ -637,6 +637,8 @@
     <string name="settings_diagnostic_share">Compartir</string>
     <string name="settings_diagnostic_rebuild">reconstruir</string>
     <string name="settings_diagnostic_share_chooser">Compartir ZIP de diagnóstico</string>
+    <string name="settings_diagnostic_export_create_failed">No se pudo crear el ZIP de diagnóstico. Inténtelo de nuevo.</string>
+    <string name="settings_diagnostic_export_share_failed">No se pudo compartir el ZIP de diagnóstico desde este dispositivo.</string>
     <string name="settings_reset_notice_message">La configuración se restableció a los valores predeterminados después de que no se pudo leer el archivo de preferencias. Se incluirá un informe de restablecimiento redactado en los ZIP de diagnóstico.</string>
     <string name="settings_updates_section_title">Actualizaciones</string>
     <string name="settings_updates_section_description">Solo para instalaciones externas y de versiones de GitHub. ClearCut nunca descarga ni instala una actualización por ti.</string>
@@ -897,6 +899,7 @@
     <string name="sticker_category_social">Social</string>
     <string name="sticker_category_custom">Personalizado</string>
     <string name="batch_export_title">Exportación por lotes</string>
+    <string name="batch_export_subtitle">Ponga en cola variantes de entrega, ajustes sociales o exportaciones auxiliares y envíelos en una sola ejecución.</string>
     <string name="batch_export_add_platform_preset">Agregar objetivos de exportación</string>
     <string name="batch_export_audio_only">Sólo audio</string>
     <string name="batch_export_audio_stems">Tallos de audio</string>
@@ -925,6 +928,50 @@
     <string name="batch_export_status_ready">Listo</string>
     <string name="batch_export_status_queued">En cola</string>
     <string name="batch_export_status_in_progress">Exportación en curso</string>
+    <plurals name="batch_export_total" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d total</item>
+        <item quantity="other">%1$d en total</item>
+    </plurals>
+    <plurals name="batch_export_active" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d activo</item>
+        <item quantity="other">%1$d activos</item>
+    </plurals>
+    <plurals name="batch_export_needs_review" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d requiere revisión</item>
+        <item quantity="other">%1$d requieren revisión</item>
+    </plurals>
+    <plurals name="batch_export_needs_attention" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d requiere atención</item>
+        <item quantity="other">%1$d requieren atención</item>
+    </plurals>
+    <plurals name="batch_export_done" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d terminado</item>
+        <item quantity="other">%1$d terminados</item>
+    </plurals>
+    <plurals name="batch_export_queued" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d en cola</item>
+        <item quantity="other">%1$d en cola</item>
+    </plurals>
+    <plurals name="batch_export_exporting" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d exportando</item>
+        <item quantity="other">%1$d exportando</item>
+    </plurals>
+    <plurals name="batch_export_failed" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d fallido</item>
+        <item quantity="other">%1$d fallidos</item>
+    </plurals>
+    <plurals name="batch_export_cancelled" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d cancelado</item>
+        <item quantity="other">%1$d cancelados</item>
+    </plurals>
+    <plurals name="batch_export_interrupted" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d interrumpido</item>
+        <item quantity="other">%1$d interrumpidos</item>
+    </plurals>
+    <plurals name="batch_export_review" tools:ignore="MissingQuantity">
+        <item quantity="one">%1$d revisión</item>
+        <item quantity="other">%1$d revisiones</item>
+    </plurals>
     <string name="batch_export_review_required_toast">Revise el elemento cambiado antes de reintentarlo</string>
     <string name="batch_export_no_queued_items_toast">No hay elementos en cola listos para exportar</string>
     <plurals name="batch_export_queue_limit" tools:ignore="MissingQuantity">
@@ -1078,13 +1125,17 @@
     <string name="project_import_partial_success">Importó %1$d de %2$d archivos compartidos.</string>
     <string name="project_imported_default_name">Importado</string>
     <string name="project_template_import_success">Plantilla importada: %1$s</string>
+    <string name="project_template_import_partial_warning">Advertencia: se omitió %1$s de la plantilla.</string>
     <string name="project_template_import_failed">Error al importar la plantilla</string>
     <string name="project_template_import_incompatible">La plantilla necesita una versión más reciente de ClearCut o herramientas no compatibles.</string>
     <string name="project_template_import_invalid">El archivo de plantilla no es legible.</string>
     <string name="project_template_import_too_large">El archivo de plantilla es demasiado grande.</string>
     <string name="project_document_import_confirm">Importar</string>
     <string name="project_document_import_failed">Error al importar el documento</string>
+    <string name="project_document_preview_multiple_warning">Solo se obtuvo una vista previa del primer documento reconocido; abra los archivos restantes de uno en uno.</string>
     <string name="project_template_export_failed">Error al exportar la plantilla</string>
+    <string name="project_template_share_chooser">Compartir plantilla</string>
+    <string name="project_template_restore_partial_warning">Advertencia: se omitió %1$s al cargar la plantilla.</string>
     <string name="project_template_open_failed">No se pudo abrir la plantilla</string>
     <string name="project_template_delete_success">Plantilla eliminada: %1$s</string>
     <string name="project_template_delete_success_generic">Plantilla eliminada</string>

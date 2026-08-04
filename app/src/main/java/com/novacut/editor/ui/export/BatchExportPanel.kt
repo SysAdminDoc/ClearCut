@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,17 +68,22 @@ fun BatchExportPanel(
     val cancelledCount = queue.count { it.status == BatchExportStatus.CANCELLED }
     val interruptedCount = queue.count { it.status == BatchExportStatus.INTERRUPTED }
     val reviewCount = queue.count { it.status == BatchExportStatus.REVIEW_REQUIRED }
+    val reviewOrInterruptedCount = reviewCount + interruptedCount
     val activeLabel = when {
-        inProgressCount > 0 -> "$inProgressCount active"
-        reviewCount + interruptedCount > 0 -> "${reviewCount + interruptedCount} needs review"
-        failedCount > 0 -> "$failedCount needs attention"
-        completedCount > 0 -> "$completedCount done"
+        inProgressCount > 0 -> pluralStringResource(R.plurals.batch_export_active, inProgressCount, inProgressCount)
+        reviewOrInterruptedCount > 0 -> pluralStringResource(
+            R.plurals.batch_export_needs_review,
+            reviewOrInterruptedCount,
+            reviewOrInterruptedCount
+        )
+        failedCount > 0 -> pluralStringResource(R.plurals.batch_export_needs_attention, failedCount, failedCount)
+        completedCount > 0 -> pluralStringResource(R.plurals.batch_export_done, completedCount, completedCount)
         else -> stringResource(R.string.batch_export_status_ready)
     }
 
     PremiumEditorPanel(
         title = stringResource(R.string.batch_export_title),
-        subtitle = "Queue multiple delivery variants, social presets, or utility exports and send them out in one run.",
+        subtitle = stringResource(R.string.batch_export_subtitle),
         icon = Icons.Default.FileUpload,
         accent = ClearCutAccents.Mauve,
         onClose = onClose,
@@ -123,7 +129,7 @@ fun BatchExportPanel(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     PremiumPanelPill(
-                        text = "${queue.size} total",
+                        text = pluralStringResource(R.plurals.batch_export_total, queue.size, queue.size),
                         accent = ClearCutAccents.Blue
                     )
                     PremiumPanelPill(
@@ -138,42 +144,42 @@ fun BatchExportPanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 PremiumPanelPill(
-                    text = "$queuedCount queued",
+                    text = pluralStringResource(R.plurals.batch_export_queued, queuedCount, queuedCount),
                     accent = ClearCutAccents.Blue
                 )
                 if (inProgressCount > 0) {
                     PremiumPanelPill(
-                        text = "$inProgressCount exporting",
+                        text = pluralStringResource(R.plurals.batch_export_exporting, inProgressCount, inProgressCount),
                         accent = ClearCutAccents.Mauve
                     )
                 }
                 if (completedCount > 0) {
                     PremiumPanelPill(
-                        text = "$completedCount done",
+                        text = pluralStringResource(R.plurals.batch_export_done, completedCount, completedCount),
                         accent = ClearCutAccents.Green
                     )
                 }
                 if (failedCount > 0) {
                     PremiumPanelPill(
-                        text = "$failedCount failed",
+                        text = pluralStringResource(R.plurals.batch_export_failed, failedCount, failedCount),
                         accent = ClearCutAccents.Red
                     )
                 }
                 if (cancelledCount > 0) {
                     PremiumPanelPill(
-                        text = "$cancelledCount cancelled",
+                        text = pluralStringResource(R.plurals.batch_export_cancelled, cancelledCount, cancelledCount),
                         accent = ClearCutAccents.Yellow
                     )
                 }
                 if (interruptedCount > 0) {
                     PremiumPanelPill(
-                        text = "$interruptedCount interrupted",
+                        text = pluralStringResource(R.plurals.batch_export_interrupted, interruptedCount, interruptedCount),
                         accent = ClearCutAccents.Yellow
                     )
                 }
                 if (reviewCount > 0) {
                     PremiumPanelPill(
-                        text = "$reviewCount review",
+                        text = pluralStringResource(R.plurals.batch_export_review, reviewCount, reviewCount),
                         accent = ClearCutAccents.Red
                     )
                 }

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Batch export status pills and secondary project/settings feedback now use bilingual resources and plurals; localized editor-mode labels retain their canonical selection state.
 - Export sheet playback now releases its player and codec lease with the composition, elapsed/ETA remain live during encoder stalls, and gallery saves move file checks off the main thread with double-tap protection.
 - Accepted reverse-export fallbacks now surface a warning through the ViewModel toast and export sheet, including the completed export state; preflight and runtime copy share one deterministic message formatter.
 - Editor canvases now resolve structural grids, rulers, scope surfaces, and template gradients through semantic theme roles; duplicated Catppuccin accents use palette tokens while signal/chroma colors remain explicit.

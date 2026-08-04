@@ -87,6 +87,16 @@ private enum class SettingsAiModelRemovalTarget {
     SEGMENTATION
 }
 
+internal data class SettingsEditorModeOption(
+    val value: String,
+    val label: String
+)
+
+internal fun selectedEditorModeOption(
+    editorMode: String,
+    options: List<SettingsEditorModeOption>
+): SettingsEditorModeOption = options.firstOrNull { it.value == editorMode } ?: options.last()
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
@@ -111,6 +121,11 @@ fun SettingsScreen(
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val editorModeOptions = listOf(
+        SettingsEditorModeOption("Easy", stringResource(R.string.settings_mode_easy)),
+        SettingsEditorModeOption("Pro", stringResource(R.string.settings_mode_pro))
+    )
+    val selectedEditorMode = selectedEditorModeOption(settings.editorMode, editorModeOptions)
     val thumbnailCacheSizes = remember(context) {
         ThumbnailCachePolicy.availableSettingsSizes(
             maxMemoryBytes = Runtime.getRuntime().maxMemory(),
@@ -153,6 +168,7 @@ fun SettingsScreen(
         ) {
         SettingsHero(
             settings = settings,
+            editorModeLabel = selectedEditorMode.label,
             onBack = onBack,
             onManageAiModels = bringAiModelsIntoView
         )
@@ -519,9 +535,9 @@ fun SettingsScreen(
                 accent = ClearCutAccents.Mauve,
                 label = stringResource(R.string.settings_default_mode),
                 description = stringResource(R.string.settings_default_mode_description),
-                value = settings.editorMode,
-                options = listOf(stringResource(R.string.settings_mode_easy), stringResource(R.string.settings_mode_pro)),
-                onSelected = { viewModel.setEditorMode(listOf("Easy", "Pro")[it]) }
+                value = selectedEditorMode.label,
+                options = editorModeOptions.map { it.label },
+                onSelected = { viewModel.setEditorMode(editorModeOptions[it].value) }
             )
             SettingsToggle(
                 icon = Icons.Default.TouchApp,
@@ -924,6 +940,7 @@ private fun SettingsAiModelRemovalConfirmDialog(
 @Composable
 private fun SettingsHero(
     settings: AppSettings,
+    editorModeLabel: String,
     onBack: () -> Unit,
     onManageAiModels: () -> Unit
 ) {
@@ -973,7 +990,7 @@ private fun SettingsHero(
                 item {
                     SettingsOverviewStat(
                         label = stringResource(R.string.settings_editor),
-                        value = settings.editorMode,
+                        value = editorModeLabel,
                         accent = ClearCutAccents.Sky,
                         modifier = Modifier.width(132.dp)
                     )

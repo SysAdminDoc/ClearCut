@@ -256,7 +256,7 @@ class ProjectListViewModel @Inject constructor(
      * specific format (a 9:16 short, say) passes its own values and keeps them.
      */
     fun createProject(
-        name: String = "Untitled",
+        name: String = "",
         aspectRatio: AspectRatio? = null,
         frameRate: Int? = null,
         resolution: Resolution? = null,
@@ -468,9 +468,18 @@ class ProjectListViewModel @Inject constructor(
                 val template = importResult.template
                 if (template != null) {
                     val warning = importResult.restoreReport.takeIf { it.isPartial }
-                        ?.let { " Warning: ${it.summary()} omitted from the template." }
-                        .orEmpty()
-                    showToast(appContext.getString(R.string.project_template_import_success, template.name) + warning)
+                        ?.let {
+                            appContext.getString(
+                                R.string.project_template_import_partial_warning,
+                                it.summary()
+                            )
+                        }
+                    showToast(
+                        listOfNotNull(
+                            appContext.getString(R.string.project_template_import_success, template.name),
+                            warning
+                        ).joinToString(" ")
+                    )
                 } else {
                     showToast(templateImportFailureMessage(importResult))
                 }
@@ -497,7 +506,7 @@ class ProjectListViewModel @Inject constructor(
                     if (documents.size > 1) {
                         result.copy(
                             warnings = result.warnings +
-                                "Only the first recognized document was previewed; open the remaining files one at a time."
+                                appContext.getString(R.string.project_document_preview_multiple_warning)
                         )
                     } else {
                         result
@@ -586,7 +595,10 @@ class ProjectListViewModel @Inject constructor(
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 appContext.startActivity(
-                    Intent.createChooser(shareIntent, "Share Template")
+                    Intent.createChooser(
+                        shareIntent,
+                        appContext.getString(R.string.project_template_share_chooser)
+                    )
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 )
             } catch (e: Exception) {
@@ -643,7 +655,12 @@ class ProjectListViewModel @Inject constructor(
                 if (created) {
                     onCreated(project.id)
                     if (loaded.restoreReport.isPartial) {
-                        showToast("Warning: ${loaded.restoreReport.summary()} omitted while loading the template.")
+                        showToast(
+                            appContext.getString(
+                                R.string.project_template_restore_partial_warning,
+                                loaded.restoreReport.summary()
+                            )
+                        )
                     }
                 } else {
                     showToast(appContext.getString(R.string.project_create_failed))
@@ -894,15 +911,17 @@ class ProjectListViewModel @Inject constructor(
             .joinToString("")
             .replace(Regex("""\s+"""), " ")
             .trim()
-        return normalized.ifBlank { "Untitled" }
+        val defaultProjectName = appContext.getString(R.string.project_untitled)
+        return normalized.ifBlank { defaultProjectName }
             .take(MAX_PROJECT_NAME_CHARS)
             .trim()
-            .ifBlank { "Untitled" }
+            .ifBlank { defaultProjectName }
     }
 
     private fun projectCopyName(baseName: String, suffix: String): String {
         val maxBaseChars = (MAX_PROJECT_NAME_CHARS - suffix.length).coerceAtLeast(1)
-        val boundedBase = baseName.take(maxBaseChars).trim().ifBlank { "Untitled".take(maxBaseChars) }
+        val defaultProjectName = appContext.getString(R.string.project_untitled)
+        val boundedBase = baseName.take(maxBaseChars).trim().ifBlank { defaultProjectName.take(maxBaseChars) }
         return "$boundedBase$suffix"
     }
 
