@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- GIF export now streams sampled frames into its atomic output, recycles each frame immediately, derives the logical canvas from source geometry, and uses a bounded primitive LZW table with streaming sub-blocks.
 - Added an isolated `qa` Android build with a separate application ID, bundled timeline fixture, deterministic Compose tags, and on-device coverage for import, trim, split, delete, undo/redo, relaunch persistence, and scoped cleanup.
 - Multi-selected local media now opens a capture-time/name/manual starter-sequence review with drag reordering, then appends the accepted sequence as one undoable timeline mutation.
 - Waveform and proxy jobs now bind results to clip timeline identities, discard stale completions after edits, and requeue current waveform work when the timeline changes during extraction.

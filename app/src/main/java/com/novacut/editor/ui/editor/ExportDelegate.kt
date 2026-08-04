@@ -25,6 +25,7 @@ import com.novacut.editor.engine.ExportStorageException
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
+import com.novacut.editor.engine.GifStreamEncoder
 import com.novacut.editor.engine.MAX_REVERSE_CLIP_DURATION_MS
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MixedRenderExportPlanner
@@ -33,8 +34,7 @@ import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.TrackBlendModeCapability
 import com.novacut.editor.engine.VideoEngine
-import com.novacut.editor.engine.nearestGifPaletteIndex
-import com.novacut.editor.engine.quantizedGifRgb
+import com.novacut.editor.engine.gifLogicalScreenSize
 import com.novacut.editor.engine.buildExportHistoryEntry
 import com.novacut.editor.engine.exportMimeTypeFor
 import com.novacut.editor.engine.exportUsesAudioCollection
@@ -112,6 +112,7 @@ class ExportDelegate(
     // Set for the lifetime of an export the user allowed through preflight
     // warnings; appended to every history row that run produces.
     @Volatile private var acceptedFallbackNote: String? = null
+    private class NoGifFramesException : Exception()
     private val exportHistoryStore = ExportHistoryStore.forContext(appContext)
 
     private inline fun updateExport(transform: (EditorExportDomainState) -> EditorExportDomainState) {
@@ -904,8 +905,8 @@ class ExportDelegate(
         if (configWithChapters.exportAsGif) {
             val startedAtMs = markExportStarted()
             nonVideoExportJob = scope.launch {
-                val frames = mutableListOf<android.graphics.Bitmap>()
                 var gifFile: File? = null
+                var encodedFrameCount = 0
                 try {
                     withContext(Dispatchers.IO) { outputDir.mkdirs() }
                     gifFile = createOutputFile(
@@ -955,74 +956,94 @@ class ExportDelegate(
                     val frameCount = (totalDurationMs / frameIntervalMs).coerceIn(1L, 300L).toInt()
                     val maxWidth = configWithChapters.gifMaxWidth
 
-                    for (i in 0 until frameCount) {
-                        // Check for cancellation between frames
-                        ensureActive()
-                        val timeMs = i * frameIntervalMs
-                        val clip = allClips.firstOrNull { clip ->
-                            timeMs >= clip.timelineStartMs && timeMs < clip.timelineStartMs + clip.durationMs
-                        }
-                        if (clip == null) {
-                            frames.add(createGapGifFrame(maxWidth, configWithChapters.aspectRatio))
-                            updateExport { it.copy(progress = (i + 1).toFloat() / frameCount * 0.9f) }
-                            continue
-                        }
-                        // Respect speedCurve — `timelineOffsetToSourceMs` integrates the
-                        // curve when present and falls back to `* speed` for constant
-                        // speed, so static clips still produce the same frame mapping
-                        // as before this change.
-                        val timelineOffsetInClip = timeMs - clip.timelineStartMs
-                        val clipTimeUs = clip.timelineOffsetToSourceMs(timelineOffsetInClip) * 1000
-                        val bitmap = videoEngine.extractThumbnail(clip.sourceUri, clipTimeUs, maxWidth)
-                        if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
-                            // `bitmap` is owned by VideoEngine's thumbnail LruCache, so it must
-                            // never be recycled here — the frames list is recycled at the end of
-                            // the export, and freeing a cached instance would crash the next
-                            // timeline thumbnail / GIF export with "recycled bitmap". Always add a
-                            // frames-owned copy or a freshly-scaled bitmap, and leave the cached
-                            // original intact.
-                            val targetW = minOf(maxWidth, bitmap.width).coerceAtLeast(1)
-                            val ratio = targetW.toFloat() / bitmap.width
-                            // Clamp height to >= 1 — createScaledBitmap throws IllegalArgumentException
-                            // on zero/negative dimensions, which would abort the entire GIF export
-                            // on any single-pixel-tall source frame.
-                            val targetH = (bitmap.height * ratio).toInt().coerceAtLeast(1)
-                            val frameBitmap = if (targetW == bitmap.width && targetH == bitmap.height) {
-                                bitmap.copy(bitmap.config ?: android.graphics.Bitmap.Config.ARGB_8888, false)
-                            } else {
-                                android.graphics.Bitmap.createScaledBitmap(bitmap, targetW, targetH, true)
-                            }
-                            frames.add(frameBitmap)
-                        }
-                        updateExport { it.copy(progress = (i + 1).toFloat() / frameCount * 0.9f) }
+                    // The GIF header must precede its frames, so determine the maximum
+                    // canvas from source metadata before opening the atomic output. This
+                    // keeps the encoder one-pass without retaining sampled bitmaps.
+                    val sourceSizes = withContext(Dispatchers.IO) {
+                        allClips.map { it.sourceUri }
+                            .distinct()
+                            .associateWith { uri -> videoEngine.getVideoResolution(uri) }
+                            .values
                     }
-
-                    if (frames.isEmpty()) {
-                        val message = "No frames extracted"
-                        updateExport {
-                            it.copy(
-                                state = ExportState.ERROR,
-                                errorMessage = message
-                            )
-                        }
-                        recordExportHistory(
-                            sourceState = currentState,
-                            status = ExportHistoryStatus.FAILED,
-                            startedAtMs = startedAtMs,
-                            outputFile = null,
-                            config = configWithChapters,
-                            timelineDurationMs = totalDurationMs,
-                            errorMessage = message,
-                            diagnosticSummary = "GIF export could not extract any usable frames.",
-                            healthReport = healthReport
-                        )
-                        return@launch
-                    }
+                    val (logicalWidth, logicalHeight) = gifLogicalScreenSize(
+                        targetWidth = maxWidth,
+                        aspectRatio = configWithChapters.aspectRatio.toFloat(),
+                        sourceSizes = sourceSizes,
+                    )
 
                     withContext(Dispatchers.IO) {
                         writeFileAtomically(targetGifFile, requireNonEmpty = true) { tempFile ->
                             tempFile.outputStream().buffered().use { out ->
-                                encodeGif(frames, frameIntervalMs.toInt(), out)
+                                val encoder = GifStreamEncoder(
+                                    output = out,
+                                    logicalWidth = logicalWidth,
+                                    logicalHeight = logicalHeight,
+                                    delayMs = frameIntervalMs.toInt(),
+                                )
+                                for (i in 0 until frameCount) {
+                                    ensureActive()
+                                    val timeMs = i * frameIntervalMs
+                                    val clip = allClips.firstOrNull { clip ->
+                                        timeMs >= clip.timelineStartMs &&
+                                            timeMs < clip.timelineStartMs + clip.durationMs
+                                    }
+                                    var frameBitmap: android.graphics.Bitmap? = null
+                                    try {
+                                        if (clip == null) {
+                                            frameBitmap = createGapGifFrame(
+                                                maxWidth,
+                                                configWithChapters.aspectRatio,
+                                            )
+                                        } else {
+                                            // Respect speedCurve — `timelineOffsetToSourceMs`
+                                            // integrates the curve when present and falls back
+                                            // to `* speed` for constant speed.
+                                            val timelineOffsetInClip = timeMs - clip.timelineStartMs
+                                            val clipTimeUs = clip.timelineOffsetToSourceMs(
+                                                timelineOffsetInClip
+                                            ) * 1000
+                                            val bitmap = videoEngine.extractThumbnail(
+                                                clip.sourceUri,
+                                                clipTimeUs,
+                                                maxWidth,
+                                            )
+                                            if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
+                                                // `bitmap` is owned by VideoEngine's thumbnail
+                                                // cache. Only recycle this frames-owned copy.
+                                                val targetW = minOf(maxWidth, bitmap.width).coerceAtLeast(1)
+                                                val ratio = targetW.toFloat() / bitmap.width
+                                                val targetH = (bitmap.height * ratio).toInt().coerceAtLeast(1)
+                                                frameBitmap = if (
+                                                    targetW == bitmap.width && targetH == bitmap.height
+                                                ) {
+                                                    bitmap.copy(
+                                                        bitmap.config
+                                                            ?: android.graphics.Bitmap.Config.ARGB_8888,
+                                                        false,
+                                                    )
+                                                } else {
+                                                    android.graphics.Bitmap.createScaledBitmap(
+                                                        bitmap,
+                                                        targetW,
+                                                        targetH,
+                                                        true,
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        frameBitmap?.let { frame ->
+                                            encoder.addFrame(frame)
+                                            encodedFrameCount++
+                                        }
+                                    } finally {
+                                        frameBitmap?.takeUnless { it.isRecycled }?.recycle()
+                                    }
+                                    updateExport {
+                                        it.copy(progress = (i + 1).toFloat() / frameCount * 0.9f)
+                                    }
+                                }
+                                if (encodedFrameCount == 0) throw NoGifFramesException()
+                                encoder.finish()
                             }
                         }
                     }
@@ -1066,9 +1087,14 @@ class ExportDelegate(
                         healthReport = healthReport
                     )
                 } catch (e: Exception) {
-                    android.util.Log.w("ExportDelegate", "GIF export failed", e)
+                    val noFramesExtracted = e is NoGifFramesException
+                    if (!noFramesExtracted) {
+                        android.util.Log.w("ExportDelegate", "GIF export failed", e)
+                    }
                     gifFile?.delete()
-                    val message = e.message ?: "GIF export failed"
+                    val message = if (noFramesExtracted) "No frames extracted" else {
+                        e.message ?: "GIF export failed"
+                    }
                     updateExport {
                         it.copy(
                             state = ExportState.ERROR,
@@ -1084,17 +1110,15 @@ class ExportDelegate(
                         config = configWithChapters,
                         timelineDurationMs = totalDurationMs,
                         errorMessage = message,
-                        diagnosticSummary = "GIF export failed during frame extraction or encoding.",
+                        diagnosticSummary = if (noFramesExtracted) {
+                            "GIF export could not extract any usable frames."
+                        } else {
+                            "GIF export failed during frame extraction or encoding."
+                        },
                         healthReport = healthReport
                     )
                 } finally {
                     nonVideoExportJob = null
-                    frames.forEach { bitmap ->
-                        if (!bitmap.isRecycled) {
-                            bitmap.recycle()
-                        }
-                    }
-                    frames.clear()
                 }
             }
             return
@@ -2052,189 +2076,6 @@ class ExportDelegate(
         return android.graphics.Bitmap
             .createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
             .apply { eraseColor(android.graphics.Color.BLACK) }
-    }
-
-    private fun encodeGif(frames: List<android.graphics.Bitmap>, delayMs: Int, output: java.io.OutputStream) {
-        // GIF89a header
-        output.write("GIF89a".toByteArray())
-        // Logical screen must be at least as large as the LARGEST frame — frames vary in
-        // size (gap frames use the export aspect, real frames keep their source aspect /
-        // narrower-than-maxWidth sources stay unscaled). Sizing from frame[0] alone made
-        // any larger later frame overflow the canvas and corrupt the GIF in strict decoders.
-        val width = frames.maxOf { it.width }
-        val height = frames.maxOf { it.height }
-        // Logical screen descriptor
-        output.write(width and 0xFF)
-        output.write((width shr 8) and 0xFF)
-        output.write(height and 0xFF)
-        output.write((height shr 8) and 0xFF)
-        output.write(0x00) // no global color table
-        output.write(0x00) // background color
-        output.write(0x00) // pixel aspect ratio
-        // Netscape extension for looping
-        output.write(0x21) // extension
-        output.write(0xFF) // app extension
-        output.write(0x0B) // block size
-        output.write("NETSCAPE2.0".toByteArray())
-        output.write(0x03) // sub-block size
-        output.write(0x01) // loop sub-block id
-        output.write(0x00) // loop count (0 = infinite)
-        output.write(0x00)
-        output.write(0x00) // block terminator
-
-        for (frame in frames) {
-            val pixels = IntArray(frame.width * frame.height)
-            frame.getPixels(pixels, 0, frame.width, 0, 0, frame.width, frame.height)
-
-            // Build color table (simple quantization to 256 colors)
-            val colorMap = mutableMapOf<Int, Int>()
-            val palette = mutableListOf<Int>()
-            for (pixel in pixels) {
-                val rgb = pixel and 0x00FFFFFF
-                val quantized = ((rgb shr 16 and 0xF0) shl 8) or ((rgb shr 8) and 0xF0) or ((rgb and 0xF0) shr 4)
-                if (quantized !in colorMap && palette.size < 256) {
-                    colorMap[quantized] = palette.size
-                    palette.add(rgb)
-                }
-            }
-            val paletteColors = palette.toList()
-            val nearestColorMap = mutableMapOf<Int, Int>()
-            while (palette.size < 256) palette.add(0)
-
-            // Floor at 1 centisecond — a 0 delay is undefined in GIF89a and most decoders
-            // clamp it to a slow default, so a high-fps GIF would play at the wrong speed.
-            val delayCentiseconds = (delayMs / 10).coerceAtLeast(1)
-            // Graphic control extension
-            output.write(0x21)
-            output.write(0xF9)
-            output.write(0x04)
-            // Disposal method 2 (restore to background) in bits 2-4, no transparency.
-            // Frames can be smaller than the logical screen (gap frames use the export
-            // aspect, source frames keep their own), so without a per-frame clear an
-            // undersized frame placed at (0,0) leaves the previous larger frame's
-            // border visible. Restoring to background between frames prevents that
-            // ghosting; undersized frames simply letterbox against the background.
-            output.write(0x08)
-            output.write(delayCentiseconds and 0xFF)
-            output.write((delayCentiseconds shr 8) and 0xFF)
-            output.write(0x00) // transparent color index
-            output.write(0x00) // terminator
-
-            // Image descriptor
-            output.write(0x2C)
-            output.write(0x00); output.write(0x00) // left
-            output.write(0x00); output.write(0x00) // top
-            output.write(frame.width and 0xFF); output.write((frame.width shr 8) and 0xFF)
-            output.write(frame.height and 0xFF); output.write((frame.height shr 8) and 0xFF)
-            output.write(0x87) // local color table, 256 entries
-
-            // Local color table
-            for (color in palette) {
-                output.write((color shr 16) and 0xFF) // R
-                output.write((color shr 8) and 0xFF) // G
-                output.write(color and 0xFF) // B
-            }
-
-            // LZW-encode the image data
-            val indexedPixels = ByteArray(pixels.size)
-            for (i in pixels.indices) {
-                val rgb = pixels[i] and 0x00FFFFFF
-                val quantized = ((rgb shr 16 and 0xF0) shl 8) or ((rgb shr 8) and 0xF0) or ((rgb and 0xF0) shr 4)
-                val paletteIndex = colorMap[quantized] ?: nearestColorMap.getOrPut(quantized) {
-                    nearestGifPaletteIndex(quantizedGifRgb(quantized), paletteColors)
-                }
-                indexedPixels[i] = paletteIndex.toByte()
-            }
-
-            // Simple LZW encoding
-            lzwEncode(output, indexedPixels, 8)
-        }
-
-        output.write(0x3B) // GIF trailer
-        output.flush()
-    }
-
-    private fun lzwEncode(output: java.io.OutputStream, pixels: ByteArray, minCodeSize: Int) {
-        output.write(minCodeSize)
-        val clearCode = 1 shl minCodeSize
-        val eoiCode = clearCode + 1
-
-        val buffer = java.io.ByteArrayOutputStream()
-        var codeSize = minCodeSize + 1
-        var nextCode = eoiCode + 1
-        val codeTable = mutableMapOf<List<Byte>, Int>()
-        // Initialize code table
-        for (i in 0 until clearCode) {
-            codeTable[listOf(i.toByte())] = i
-        }
-
-        var bitBuffer = 0
-        var bitCount = 0
-
-        fun writeBits(code: Int, bits: Int) {
-            bitBuffer = bitBuffer or (code shl bitCount)
-            bitCount += bits
-            while (bitCount >= 8) {
-                buffer.write(bitBuffer and 0xFF)
-                bitBuffer = bitBuffer shr 8
-                bitCount -= 8
-            }
-        }
-
-        fun flushSubBlocks() {
-            if (bitCount > 0) {
-                buffer.write(bitBuffer and 0xFF)
-                bitBuffer = 0
-                bitCount = 0
-            }
-            val data = buffer.toByteArray()
-            buffer.reset()
-            var offset = 0
-            while (offset < data.size) {
-                val blockSize = minOf(255, data.size - offset)
-                output.write(blockSize)
-                output.write(data, offset, blockSize)
-                offset += blockSize
-            }
-        }
-
-        writeBits(clearCode, codeSize)
-
-        if (pixels.isEmpty()) {
-            writeBits(eoiCode, codeSize)
-            flushSubBlocks()
-            output.write(0x00)
-            return
-        }
-
-        var current = listOf(pixels[0])
-        for (i in 1 until pixels.size) {
-            val next = current + pixels[i]
-            if (next in codeTable) {
-                current = next
-            } else {
-                writeBits(codeTable[current]!!, codeSize)
-                if (nextCode < 4096) {
-                    codeTable[next] = nextCode++
-                    if (nextCode >= (1 shl codeSize) && codeSize < 12) {
-                        codeSize++
-                    }
-                } else {
-                    writeBits(clearCode, codeSize)
-                    codeTable.clear()
-                    for (j in 0 until clearCode) {
-                        codeTable[listOf(j.toByte())] = j
-                    }
-                    nextCode = eoiCode + 1
-                    codeSize = minCodeSize + 1
-                }
-                current = listOf(pixels[i])
-            }
-        }
-        writeBits(codeTable[current]!!, codeSize)
-        writeBits(eoiCode, codeSize)
-        flushSubBlocks()
-        output.write(0x00) // block terminator
     }
 
 }

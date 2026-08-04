@@ -17,6 +17,27 @@ internal fun aspectPreservingThumbnailSize(
     return width to height
 }
 
+internal fun gifLogicalScreenSize(
+    targetWidth: Int,
+    aspectRatio: Float,
+    sourceSizes: Iterable<Pair<Int, Int>>,
+): Pair<Int, Int> {
+    val width = targetWidth.coerceAtLeast(1)
+    val safeAspectRatio = aspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
+    var maxWidth = width
+    var maxHeight = (width / safeAspectRatio).roundToInt().coerceAtLeast(1)
+    sourceSizes.forEach { (sourceWidth, sourceHeight) ->
+        val (frameWidth, frameHeight) = aspectPreservingThumbnailSize(
+            targetWidth = width,
+            sourceWidth = sourceWidth,
+            sourceHeight = sourceHeight,
+        )
+        maxWidth = maxOf(maxWidth, frameWidth)
+        maxHeight = maxOf(maxHeight, frameHeight)
+    }
+    return maxWidth.coerceIn(1, 0xFFFF) to maxHeight.coerceIn(1, 0xFFFF)
+}
+
 internal fun quantizedGifRgb(quantized: Int): Int {
     val red = (quantized ushr 8) and 0xF0
     val green = quantized and 0xF0

@@ -32,4 +32,28 @@ class GifExportPolicyTest {
     fun quantizedKeysCanBeComparedAsRepresentativeRgbColors() {
         assertEquals(0xA0B0C0, quantizedGifRgb(0xA0BC))
     }
+
+    @Test
+    fun logicalScreenIncludesPortraitSourcesAndTheConfiguredGapCanvas() {
+        assertEquals(
+            480 to 853,
+            gifLogicalScreenSize(
+                targetWidth = 480,
+                aspectRatio = 16f / 9f,
+                sourceSizes = listOf(1920 to 1080, 1080 to 1920),
+            ),
+        )
+    }
+
+    @Test
+    fun logicalScreenFallsBackToSafeDimensionsForInvalidAspectRatio() {
+        assertEquals(
+            640 to 640,
+            gifLogicalScreenSize(
+                targetWidth = 640,
+                aspectRatio = 0f,
+                sourceSizes = emptyList(),
+            ),
+        )
+    }
 }
