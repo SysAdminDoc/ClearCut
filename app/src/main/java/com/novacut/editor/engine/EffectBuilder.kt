@@ -494,6 +494,12 @@ internal object EffectBuilder {
         val hasKfPosition = clip.keyframes.any {
             it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y
         }
+        // Keep flips in the same matrix as the authored transform so preview,
+        // Transformer export, keyframes, anchors, and overlays share one
+        // coordinate path. The positive scale fields remain compatible with
+        // existing saved projects; the sign carries only the flip decision.
+        val flipSx = if (clip.flipHorizontal) -1f else 1f
+        val flipSy = if (clip.flipVertical) -1f else 1f
         val staticSx = safeEffectFloat(clip.scaleX, 1f, 0.1f, 5f)
         val staticSy = safeEffectFloat(clip.scaleY, 1f, 0.1f, 5f)
         val staticRot = safeEffectFloat(clip.rotation, 0f, -3600f, 3600f)
@@ -502,15 +508,16 @@ internal object EffectBuilder {
         val staticAx = safeEffectFloat(clip.anchorX, 0f, -10f, 10f)
         val staticAy = safeEffectFloat(clip.anchorY, 0f, -10f, 10f)
         val hasAnchor = staticAx != 0f || staticAy != 0f
-        val needsStaticTransform = clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f ||
+        val needsStaticTransform = clip.flipHorizontal || clip.flipVertical ||
+            clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f ||
             clip.positionX != 0f || clip.positionY != 0f || hasAnchor
         if (hasKfScale || hasKfRotation || hasKfPosition) {
             val kfs = clip.keyframes
             val ax = staticAx; val ay = staticAy
             add(MatrixTransformation { presentationTimeUs ->
                 val timeMs = presentationTimeUs / 1000L
-                val sx = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx, staticSx, 0.1f, 5f)
-                val sy = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy, staticSy, 0.1f, 5f)
+                val sx = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx, staticSx, 0.1f, 5f) * flipSx
+                val sy = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy, staticSy, 0.1f, 5f) * flipSy
                 val rot = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.ROTATION, timeMs) ?: staticRot, staticRot, -3600f, 3600f)
                 val px = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx, staticPx, -10f, 10f)
                 val py = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy, staticPy, -10f, 10f)
@@ -525,7 +532,7 @@ internal object EffectBuilder {
         } else if (needsStaticTransform) {
             val m = android.graphics.Matrix().apply {
                 if (hasAnchor) postTranslate(-staticAx, staticAy)
-                postScale(staticSx, staticSy)
+                postScale(staticSx * flipSx, staticSy * flipSy)
                 postRotate(staticRot)
                 if (hasAnchor) postTranslate(staticAx, -staticAy)
                 postTranslate(staticPx, -staticPy)

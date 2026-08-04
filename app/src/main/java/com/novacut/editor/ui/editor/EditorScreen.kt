@@ -913,7 +913,9 @@ fun EditorScreen(
                     onToggleCompositionGuides = { showCompositionGuides = !showCompositionGuides },
                     isSplitPreviewEnabled = state.isSplitPreviewEnabled,
                     onToggleSplitPreview = viewModel::toggleSplitPreview,
-                    hasActiveEffects = selectedClip?.effects?.any { it.enabled } == true || selectedClip?.colorGrade != null,
+                    hasActiveEffects = selectedClip?.effects?.any { it.enabled } == true ||
+                        selectedClip?.colorGrade != null ||
+                        selectedClip?.flipHorizontal == true || selectedClip?.flipVertical == true,
                     modifier = Modifier.fillMaxSize()
                 )
 

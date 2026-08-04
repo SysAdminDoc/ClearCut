@@ -77,6 +77,49 @@ class AutoSaveStateTest {
     }
 
     @Test
+    fun clipFlipAxes_roundTripAndDefaultOffForOlderDocuments() {
+        val state = AutoSaveState(
+            projectId = "flip-project",
+            tracks = listOf(
+                Track(
+                    type = TrackType.VIDEO,
+                    index = 0,
+                    clips = listOf(
+                        Clip(
+                            sourceUri = FakeUri,
+                            sourceDurationMs = 1_000L,
+                            timelineStartMs = 0L,
+                            trimEndMs = 1_000L,
+                            flipHorizontal = true,
+                            flipVertical = true,
+                        )
+                    ),
+                )
+            ),
+        )
+
+        val serialized = JSONObject(state.serialize())
+        val serializedClip = serialized.getJSONArray("tracks")
+            .getJSONObject(0)
+            .getJSONArray("clips")
+            .getJSONObject(0)
+        assertTrue(serializedClip.getBoolean("flipHorizontal"))
+        assertTrue(serializedClip.getBoolean("flipVertical"))
+
+        val restored = AutoSaveState.deserialize(serialized.toString()) { FakeUri }
+        val restoredClip = restored.tracks.single().clips.single()
+        assertTrue(restoredClip.flipHorizontal)
+        assertTrue(restoredClip.flipVertical)
+
+        serializedClip.remove("flipHorizontal")
+        serializedClip.remove("flipVertical")
+        val restoredOld = AutoSaveState.deserialize(serialized.toString()) { FakeUri }
+            .tracks.single().clips.single()
+        assertFalse(restoredOld.flipHorizontal)
+        assertFalse(restoredOld.flipVertical)
+    }
+
+    @Test
     fun deserialize_coercesTrackFieldsToModelInvariants() {
         val state = AutoSaveState.deserialize(
             """

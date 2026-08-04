@@ -1120,6 +1120,8 @@ fun TransformPanel(
     onOpacityDragStarted: () -> Unit,
     onOpacityDragEnded: () -> Unit,
     onOpacityChanged: (Float) -> Unit,
+    onToggleFlipHorizontal: () -> Unit,
+    onToggleFlipVertical: () -> Unit,
     onReset: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -1218,6 +1220,69 @@ fun TransformPanel(
             }
             EffectSlider(stringResource(R.string.tool_scale_y), clip.scaleY, 0.1f, 5f, onTransformDragStarted, onTransformDragEnded) {
                 onTransformChanged(null, null, null, it, null)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
+            Text(
+                text = stringResource(R.string.panel_transform_flip_title),
+                color = semanticColors.text,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.panel_transform_flip_description),
+                color = semanticColors.subtext,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = clip.flipHorizontal,
+                    onClick = onToggleFlipHorizontal,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    label = { Text(stringResource(R.string.tool_flip_horizontal)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = semanticColors.panelHighest,
+                        labelColor = semanticColors.subtext,
+                        iconColor = semanticColors.subtext,
+                        selectedContainerColor = ClearCutAccents.Sapphire.copy(alpha = 0.18f),
+                        selectedLabelColor = ClearCutAccents.Sapphire,
+                        selectedLeadingIconColor = ClearCutAccents.Sapphire
+                    )
+                )
+                FilterChip(
+                    selected = clip.flipVertical,
+                    onClick = onToggleFlipVertical,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.SwapVert,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    label = { Text(stringResource(R.string.tool_flip_vertical)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = semanticColors.panelHighest,
+                        labelColor = semanticColors.subtext,
+                        iconColor = semanticColors.subtext,
+                        selectedContainerColor = ClearCutAccents.Sapphire.copy(alpha = 0.18f),
+                        selectedLabelColor = ClearCutAccents.Sapphire,
+                        selectedLeadingIconColor = ClearCutAccents.Sapphire
+                    )
+                )
             }
         }
 

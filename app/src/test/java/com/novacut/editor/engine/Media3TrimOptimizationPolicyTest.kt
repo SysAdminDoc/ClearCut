@@ -119,12 +119,22 @@ class Media3TrimOptimizationPolicyTest {
             config = ExportConfig(),
             inputMimeType = "video/mp4",
         )
+        val flip = Media3TrimOptimizationPolicy.evaluate(
+            tracks = listOf(
+                videoTrack(
+                    clip(trimStartMs = 1_000L, trimEndMs = 9_000L).copy(flipVertical = true)
+                )
+            ),
+            config = ExportConfig(),
+            inputMimeType = "video/mp4",
+        )
 
         assertEquals(Media3TrimOptimizationPolicy.Reason.NOT_SINGLE_VIDEO_ASSET, secondClip.reason)
         assertEquals(Media3TrimOptimizationPolicy.Reason.SPEED_CHANGE, speed.reason)
         assertEquals(Media3TrimOptimizationPolicy.Reason.VIDEO_EDIT, effect.reason)
         assertEquals(Media3TrimOptimizationPolicy.Reason.UNSUPPORTED_ROTATION, rotation.reason)
-        assertFalse(secondClip.eligible || speed.eligible || effect.eligible || rotation.eligible)
+        assertEquals(Media3TrimOptimizationPolicy.Reason.VIDEO_EDIT, flip.reason)
+        assertFalse(secondClip.eligible || speed.eligible || effect.eligible || rotation.eligible || flip.eligible)
     }
 
     @Test

@@ -1356,6 +1356,8 @@
     <string name="tool_position_y">Posición Y</string>
     <string name="tool_scale_x">Escala X</string>
     <string name="tool_scale_y">Escala Y</string>
+    <string name="tool_flip_horizontal">Voltear horizontalmente</string>
+    <string name="tool_flip_vertical">Voltear verticalmente</string>
     <string name="tool_rotation">Rotación</string>
     <string name="tool_opacity">Opacidad</string>
     <string name="tool_crop_aspect_ratio">Relación cultivo/aspecto</string>
@@ -1387,6 +1389,8 @@
     <string name="panel_transform_presence_title">Presencia</string>
     <string name="panel_transform_presence_description">Ajuste la rotación y la opacidad para que las tomas en capas parezcan intencionadas.</string>
     <string name="panel_transform_scale">Escala</string>
+    <string name="panel_transform_flip_title">Reflejar el clip</string>
+    <string name="panel_transform_flip_description">Voltee la fuente en cualquiera de los ejes. Cada cambio es una transformación deshacible y se incluye en la vista previa y la exportación.</string>
     <string name="panel_crop_subtitle">Elija el lienzo que coincida con el lugar donde vivirá este corte.</string>
     <string name="panel_crop_live_canvas">lienzo en vivo</string>
     <string name="panel_crop_presets_title">Preajustes de destino</string>

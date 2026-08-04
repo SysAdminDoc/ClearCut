@@ -5614,9 +5614,44 @@ class EditorViewModel @Inject constructor(
         // bracket the gesture.
     }
 
+    fun toggleClipFlipHorizontal(clipId: String) {
+        toggleClipFlip(clipId, horizontal = true)
+    }
+
+    fun toggleClipFlipVertical(clipId: String) {
+        toggleClipFlip(clipId, horizontal = false)
+    }
+
+    private fun toggleClipFlip(clipId: String, horizontal: Boolean) {
+        val clip = _state.value.tracks.asSequence()
+            .flatMap { it.clips.asSequence() }
+            .firstOrNull { it.id == clipId }
+            ?: return
+        saveUndoState(if (horizontal) "Flip clip horizontally" else "Flip clip vertically")
+        updateClipById(clipId) { current ->
+            if (horizontal) {
+                current.copy(flipHorizontal = !current.flipHorizontal)
+            } else {
+                current.copy(flipVertical = !current.flipVertical)
+            }
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+    }
+
     fun resetClipTransform(clipId: String) {
         saveUndoState("Reset transform")
-        updateClipById(clipId) { it.copy(positionX = 0f, positionY = 0f, scaleX = 1f, scaleY = 1f, rotation = 0f) }
+        updateClipById(clipId) {
+            it.copy(
+                positionX = 0f,
+                positionY = 0f,
+                scaleX = 1f,
+                scaleY = 1f,
+                flipHorizontal = false,
+                flipVertical = false,
+                rotation = 0f,
+            )
+        }
         saveProject()
     }
 

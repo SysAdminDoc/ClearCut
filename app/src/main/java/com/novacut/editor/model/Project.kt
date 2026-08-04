@@ -189,6 +189,8 @@ data class Clip(
     val rotation: Float = 0f,
     val scaleX: Float = 1f,
     val scaleY: Float = 1f,
+    val flipHorizontal: Boolean = false,
+    val flipVertical: Boolean = false,
     val positionX: Float = 0f,
     val positionY: Float = 0f,
     val anchorX: Float = 0.5f,

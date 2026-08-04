@@ -1419,6 +1419,8 @@
     <string name="tool_position_y">Position Y</string>
     <string name="tool_scale_x">Scale X</string>
     <string name="tool_scale_y">Scale Y</string>
+    <string name="tool_flip_horizontal">Flip horizontal</string>
+    <string name="tool_flip_vertical">Flip vertical</string>
     <string name="tool_rotation">Rotation</string>
     <string name="tool_opacity">Opacity</string>
     <string name="tool_crop_aspect_ratio">Crop / Aspect Ratio</string>
@@ -1450,6 +1452,8 @@
     <string name="panel_transform_presence_title">Presence</string>
     <string name="panel_transform_presence_description">Dial in rotation and opacity so layered shots feel intentional.</string>
     <string name="panel_transform_scale">Scale</string>
+    <string name="panel_transform_flip_title">Mirror the clip</string>
+    <string name="panel_transform_flip_description">Flip the source across either axis. Each change is one undoable transform and is included in preview and export.</string>
     <string name="panel_crop_subtitle">Pick the canvas that matches where this cut will live.</string>
     <string name="panel_crop_live_canvas">Live canvas</string>
     <string name="panel_crop_presets_title">Destination presets</string>

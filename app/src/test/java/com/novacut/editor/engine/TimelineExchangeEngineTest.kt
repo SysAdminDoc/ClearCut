@@ -219,6 +219,8 @@ class TimelineExchangeEngineTest {
         ).copy(
             trimStartMs = 500L,
             trimEndMs = 3_500L,
+            flipHorizontal = true,
+            flipVertical = true,
             captions = listOf(
                 Caption(
                     id = "caption",
@@ -248,6 +250,10 @@ class TimelineExchangeEngineTest {
         assertEquals(30_000, root.getJSONObject("project").getInt("frameRateNumerator"))
         assertEquals("decision-clip", root.getJSONArray("tracks")
             .getJSONObject(0).getJSONArray("clips").getJSONObject(0).getString("id"))
+        val exportedClip = root.getJSONArray("tracks")
+            .getJSONObject(0).getJSONArray("clips").getJSONObject(0)
+        assertTrue(exportedClip.getBoolean("flipHorizontal"))
+        assertTrue(exportedClip.getBoolean("flipVertical"))
 
         val imported = engine.importFromEditDecisionJson(json, ::testUri)
 
@@ -255,6 +261,8 @@ class TimelineExchangeEngineTest {
         assertEquals(1, imported.tracks.single().clips.size)
         assertEquals("decision-clip", imported.tracks.single().clips.single().id)
         assertEquals(750L, imported.tracks.single().clips.single().timelineStartMs)
+        assertTrue(imported.tracks.single().clips.single().flipHorizontal)
+        assertTrue(imported.tracks.single().clips.single().flipVertical)
         assertEquals("Keep this line", imported.tracks.single().clips.single().captions.single().text)
         assertEquals(CaptionStyleType.KARAOKE, imported.tracks.single().clips.single().captions.single().style.type)
         assertEquals(listOf(marker), imported.timelineMarkers)

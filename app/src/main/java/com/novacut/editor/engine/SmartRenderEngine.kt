@@ -50,7 +50,8 @@ object SmartRenderEngine {
                 if (clip.isReversed) {
                     reasons.add("reversed")
                 }
-                if (clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f ||
+                if (clip.flipHorizontal || clip.flipVertical ||
+                    clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f ||
                     clip.positionX != 0f || clip.positionY != 0f
                 ) {
                     reasons.add("transform")

@@ -44,6 +44,8 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
                 onOpacityDragStarted = viewModel::beginOpacityChange,
                 onOpacityDragEnded = viewModel::endOpacityChange,
                 onOpacityChanged = { viewModel.setClipOpacity(clip.id, it) },
+                onToggleFlipHorizontal = { viewModel.toggleClipFlipHorizontal(clip.id) },
+                onToggleFlipVertical = { viewModel.toggleClipFlipVertical(clip.id) },
                 onReset = { viewModel.resetClipTransform(clip.id) },
                 onClose = viewModel::hideTransformPanel
             )

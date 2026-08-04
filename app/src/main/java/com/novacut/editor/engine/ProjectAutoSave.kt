@@ -1463,6 +1463,8 @@ data class AutoSaveState(
                 putSafeFloat("rotation", clip.rotation)
                 putSafeFloat("scaleX", clip.scaleX, default = 1f)
                 putSafeFloat("scaleY", clip.scaleY, default = 1f)
+                put("flipHorizontal", clip.flipHorizontal)
+                put("flipVertical", clip.flipVertical)
                 putSafeFloat("positionX", clip.positionX)
                 putSafeFloat("positionY", clip.positionY)
                 putSafeFloat("anchorX", clip.anchorX, default = 0.5f)
@@ -1933,6 +1935,8 @@ data class AutoSaveState(
                 rotation = safeFloat(json.optDouble("rotation", 0.0), 0f),
                 scaleX = safeFloat(json.optDouble("scaleX", 1.0), 1f),
                 scaleY = safeFloat(json.optDouble("scaleY", 1.0), 1f),
+                flipHorizontal = json.optBoolean("flipHorizontal", false),
+                flipVertical = json.optBoolean("flipVertical", false),
                 positionX = safeFloat(json.optDouble("positionX", 0.0), 0f),
                 positionY = safeFloat(json.optDouble("positionY", 0.0), 0f),
                 anchorX = safeFloat(json.optDouble("anchorX", 0.5), 0.5f),

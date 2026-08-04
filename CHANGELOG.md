@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Clip transform controls now support undoable horizontal and vertical flips that persist through autosave and edit-decision JSON while sharing the preview/export Media3 matrix path.
 - Added portable `.clearcut-edl.json` edit-decision export/import with documented schema v1, preview-first routing, future-schema rejection, media-relink diagnostics, and canonical mapping for clips, markers, captions, and overlays.
 - Media Manager diagnostics now detect embedded subtitle and GPS-like tracks; text subtitles can be converted locally to VTT/SRT, NMEA or container locations to GPX/CSV, and unsupported telemetry is explained without network access. Sidecars are bounded, stored under the existing secure diagnostic-share root, and share through a MIME-specific FileProvider URI.
 - Android 10+ gallery saves now have an on-device MediaStore contract proving real MP4 exports appear in the Video collection with video classification, duration, and time metadata.

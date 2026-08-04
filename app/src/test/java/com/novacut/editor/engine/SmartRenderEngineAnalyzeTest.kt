@@ -161,6 +161,14 @@ class SmartRenderEngineAnalyzeTest {
     }
 
     @Test
+    fun reEncode_withFlip() {
+        val c = clip().copy(flipHorizontal = true, flipVertical = true)
+        val segments = SmartRenderEngine.analyzeTimeline(listOf(track(c)), config)
+        assertTrue(segments[0].needsReEncode)
+        assertTrue("transform" in segments[0].reason)
+    }
+
+    @Test
     fun reEncode_withPosition() {
         val c = clip(positionX = 0.1f)
         val segments = SmartRenderEngine.analyzeTimeline(listOf(track(c)), config)

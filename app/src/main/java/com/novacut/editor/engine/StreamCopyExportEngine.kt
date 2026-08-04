@@ -120,6 +120,7 @@ class StreamCopyExportEngine @Inject constructor(
         keyframes.isNotEmpty() -> "clip has keyframes"
         positionX != 0f || positionY != 0f -> "clip is translated"
         scaleX != 1f || scaleY != 1f -> "clip is scaled"
+        flipHorizontal || flipVertical -> "clip is flipped"
         rotation != 0f -> "clip is rotated"
         opacity != 1f -> "clip opacity < 1"
         anchorX != 0.5f || anchorY != 0.5f -> "clip anchor moved"

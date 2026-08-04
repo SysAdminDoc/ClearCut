@@ -143,6 +143,7 @@ object Media3TrimOptimizationPolicy {
             clip.motionTrackingData != null || clip.headTransition != null ||
             clip.tailTransition != null || clip.captions.isNotEmpty() ||
             clip.opacity != 1f || clip.scaleX != 1f || clip.scaleY != 1f ||
+            clip.flipHorizontal || clip.flipVertical ||
             clip.positionX != 0f || clip.positionY != 0f ||
             clip.anchorX != 0.5f || clip.anchorY != 0.5f ||
             clip.blendMode != BlendMode.NORMAL

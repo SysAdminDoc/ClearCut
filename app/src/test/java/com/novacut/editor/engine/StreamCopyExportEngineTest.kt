@@ -66,6 +66,16 @@ class StreamCopyExportEngineTest {
     }
 
     @Test
+    fun analyze_flipOnClip_disqualifies() {
+        val result = engine.analyze(
+            listOf(videoTrack(baseClip().copy(flipHorizontal = true))),
+            hasEffectsOrOverlays = false,
+        )
+        assertFalse(result.eligible)
+        assertTrue(result.reason.contains("flipped"))
+    }
+
+    @Test
     fun analyze_speedChange_disqualifies() {
         val clip = baseClip().copy(speed = 2f)
         assertFalse(engine.analyze(listOf(videoTrack(clip)), false).eligible)

@@ -187,6 +187,8 @@ internal object EditDecisionJsonEngine {
         putFiniteFloat("rotation", clip.rotation, 0f)
         putFiniteFloat("scaleX", clip.scaleX, 1f)
         putFiniteFloat("scaleY", clip.scaleY, 1f)
+        put("flipHorizontal", clip.flipHorizontal)
+        put("flipVertical", clip.flipVertical)
         putFiniteFloat("positionX", clip.positionX, 0f)
         putFiniteFloat("positionY", clip.positionY, 0f)
         putFiniteFloat("anchorX", clip.anchorX, 0.5f)
@@ -415,6 +417,8 @@ internal object EditDecisionJsonEngine {
             rotation = json.safeFloat("rotation", 0f),
             scaleX = json.safeFloat("scaleX", 1f),
             scaleY = json.safeFloat("scaleY", 1f),
+            flipHorizontal = json.optBoolean("flipHorizontal", false),
+            flipVertical = json.optBoolean("flipVertical", false),
             positionX = json.safeFloat("positionX", 0f),
             positionY = json.safeFloat("positionY", 0f),
             anchorX = json.safeFloat("anchorX", 0.5f),
