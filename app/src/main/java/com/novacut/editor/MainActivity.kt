@@ -47,6 +47,7 @@ import com.novacut.editor.ui.settings.SettingsScreen
 import com.novacut.editor.ui.theme.ClearCutTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
     private var pendingIncomingMedia by mutableStateOf<List<IncomingMediaItem>>(emptyList())
     private var pendingIncomingDocuments by mutableStateOf<List<IncomingDocumentItem>>(emptyList())
     private var pendingEditorOpen by mutableStateOf<PendingEditorOpen?>(null)
+    private var shortcutValidationJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -232,19 +234,28 @@ class MainActivity : ComponentActivity() {
                 // shortcut shape is stable for users who pin it.
             }
             ProjectShortcutPlanner.ACTION_RESUME_RECOVERED -> {
-                pendingEditorOpen = pendingShortcutOpen(intent, expectRecovery = true)
+                validateShortcutProject(intent, expectRecovery = true)
             }
             ProjectShortcutPlanner.ACTION_OPEN_LAST_PROJECT -> {
-                pendingEditorOpen = pendingShortcutOpen(intent, expectRecovery = false)
+                validateShortcutProject(intent, expectRecovery = false)
             }
         }
     }
 
-    private fun pendingShortcutOpen(intent: Intent, expectRecovery: Boolean): PendingEditorOpen? {
+    private fun validateShortcutProject(intent: Intent, expectRecovery: Boolean) {
+        pendingEditorOpen = null
         val projectId = intent.getStringExtra(ProjectShortcutPlanner.EXTRA_PROJECT_ID)
             ?.takeIf { it.isNotBlank() }
-            ?: return null
-        return PendingEditorOpen(projectId = projectId, expectRecovery = expectRecovery)
+            ?: return
+        shortcutValidationJob?.cancel()
+        shortcutValidationJob = lifecycleScope.launch {
+            val projectExists = withContext(Dispatchers.IO) {
+                projectDao.getProject(projectId) != null
+            }
+            if (projectExists) {
+                pendingEditorOpen = PendingEditorOpen(projectId = projectId, expectRecovery = expectRecovery)
+            }
+        }
     }
 
     private fun handleIncomingMediaIntent(intent: Intent) {
