@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- GIF export now requests aspect-preserving frames at the configured maximum width, prefers base VIDEO tracks over overlays, and maps palette overflow to the nearest available color.
 - Cross-app media-picker drops now accept MIME metadata during drag-start, request temporary URI access before ingesting content URIs, and release the grant on success, failure, or early exit.
 - Projects, templates, privacy, licenses, and settings now resolve structural colors through the semantic theme roles while preserving stable media accents; the source-policy test audits both feature trees for raw palette and hex bypasses.
 - Editor orchestration now delegates document/recovery, archive transfer, WorkManager jobs, and preview playback sessions to fake-tested Hilt coordinators while preserving the ViewModel's state projection and cancellation behavior.

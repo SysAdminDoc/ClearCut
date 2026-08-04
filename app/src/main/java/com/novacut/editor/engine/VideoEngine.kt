@@ -193,6 +193,7 @@ class VideoEngine @Inject constructor(
             // Bitmap will be GC'd when no longer referenced
         }
     }
+    private val thumbnailAspectCache = ConcurrentHashMap<String, Pair<Int, Int>>()
 
     init {
         memoryTrimRegistry.register(
@@ -522,6 +523,21 @@ class VideoEngine @Inject constructor(
         } finally {
             retrieverLease.close()
         }
+    }
+
+    /** Extract a thumbnail at [width] while retaining the source media aspect ratio. */
+    fun extractThumbnail(uri: Uri, timeUs: Long, width: Int): Bitmap? {
+        val resolution = thumbnailAspectCache[uri.toString()] ?: getVideoResolution(uri).also {
+            if (it.first > 0 && it.second > 0) {
+                thumbnailAspectCache[uri.toString()] = it
+            }
+        }
+        val (targetWidth, targetHeight) = aspectPreservingThumbnailSize(
+            targetWidth = width,
+            sourceWidth = resolution.first,
+            sourceHeight = resolution.second,
+        )
+        return extractThumbnail(uri, timeUs, targetWidth, targetHeight)
     }
 
     suspend fun extractThumbnailStrip(
@@ -2356,6 +2372,7 @@ class VideoEngine @Inject constructor(
 
     fun clearThumbnailCache() {
         thumbnailCache.evictAll()
+        thumbnailAspectCache.clear()
     }
 
     fun resetExportState() {

@@ -33,6 +33,8 @@ import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.TrackBlendModeCapability
 import com.novacut.editor.engine.VideoEngine
+import com.novacut.editor.engine.nearestGifPaletteIndex
+import com.novacut.editor.engine.quantizedGifRgb
 import com.novacut.editor.engine.buildExportHistoryEntry
 import com.novacut.editor.engine.exportMimeTypeFor
 import com.novacut.editor.engine.exportUsesAudioCollection
@@ -912,10 +914,12 @@ class ExportDelegate(
                         preferredOutputName = preferredOutputName ?: currentState.project.name
                     )
                     val targetGifFile = gifFile ?: return@launch
-                    val allClips = tracks
-                        .filter { it.type == TrackType.VIDEO || it.type == TrackType.OVERLAY }
+                    val videoTrackClips = tracks
+                        .filter { it.type == TrackType.VIDEO }
                         .flatMap { it.clips }
-                        .sortedBy { it.timelineStartMs }
+                    val allClips = (videoTrackClips.ifEmpty {
+                        tracks.filter { it.type == TrackType.OVERLAY }.flatMap { it.clips }
+                    }).sortedBy { it.timelineStartMs }
                     if (allClips.isEmpty()) {
                         val message = "No video clips"
                         updateExport {
@@ -969,7 +973,7 @@ class ExportDelegate(
                         // as before this change.
                         val timelineOffsetInClip = timeMs - clip.timelineStartMs
                         val clipTimeUs = clip.timelineOffsetToSourceMs(timelineOffsetInClip) * 1000
-                        val bitmap = videoEngine.extractThumbnail(clip.sourceUri, clipTimeUs)
+                        val bitmap = videoEngine.extractThumbnail(clip.sourceUri, clipTimeUs, maxWidth)
                         if (bitmap != null && bitmap.width > 0 && bitmap.height > 0) {
                             // `bitmap` is owned by VideoEngine's thumbnail LruCache, so it must
                             // never be recycled here — the frames list is recycled at the end of
@@ -2093,6 +2097,8 @@ class ExportDelegate(
                     palette.add(rgb)
                 }
             }
+            val paletteColors = palette.toList()
+            val nearestColorMap = mutableMapOf<Int, Int>()
             while (palette.size < 256) palette.add(0)
 
             // Floor at 1 centisecond — a 0 delay is undefined in GIF89a and most decoders
@@ -2134,7 +2140,10 @@ class ExportDelegate(
             for (i in pixels.indices) {
                 val rgb = pixels[i] and 0x00FFFFFF
                 val quantized = ((rgb shr 16 and 0xF0) shl 8) or ((rgb shr 8) and 0xF0) or ((rgb and 0xF0) shr 4)
-                indexedPixels[i] = (colorMap[quantized] ?: 0).toByte()
+                val paletteIndex = colorMap[quantized] ?: nearestColorMap.getOrPut(quantized) {
+                    nearestGifPaletteIndex(quantizedGifRgb(quantized), paletteColors)
+                }
+                indexedPixels[i] = paletteIndex.toByte()
             }
 
             // Simple LZW encoding
