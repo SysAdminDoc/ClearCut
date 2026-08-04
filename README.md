@@ -10,6 +10,7 @@
 
 ### v3.78.0 Nothing reports work that did not happen
 
+- **The editor walkthrough is explicit.** New editor sessions no longer interrupt work with an automatic tutorial; Settings → Replay Editor Walkthrough opens it immediately in the latest project (or a blank editor when no project exists), and Back/Skip return cleanly without a persisted reset flag.
 - **Auto Captions stop inventing words.** Without a transcription model the fallback measured *when* speech happened and filled the gap with "[Speech segment N]" — text that was saved to your project, drawn in the preview, burned into the exported video and written to the SRT, under a toast saying captions had been added. The timing is real, so it is now marked on the timeline; the missing transcript is stated outright.
 - **The copyright check stops clearing audio it never checked.** The content-ID pre-check does not contact AcoustID, and reported "No copyright match detected" anyway. It now distinguishes *looked up and found nothing* from *never looked up*, and says which.
 - **A partial project restore no longer overwrites itself.** Deserialization dropped malformed clips, tracks, effects, keyframes, masks, overlays, markers and media assets to the log; the project opened looking whole and the next autosave wrote the truncation back over the only file that still had them. Every drop is now reported with its kind and reason, saving is paused, and you choose between keeping what was recovered and falling back to the previous autosave.
@@ -426,13 +427,13 @@ Planning files are local-only in the development checkout:
 - **Command-based undo/redo** foundation — sealed class with AddClip, RemoveClip, TrimClip, MoveClip, SetClipSpeed, ApplyEffect, CompoundCommand
 - **3-tier proxy workflow** — thumbnail (scrubbing) / proxy (540p editing) / original (export) with auto-switch and storage management
 - Archive Transfer for local project rollback and device moves; remote sync remains planned behind explicit backend gates
-- **First-run tutorial** — auto-shows on first launch, dismissable, resettable from Settings
+- **Editor walkthrough** — replayable on demand from Settings; it never opens automatically when an editor session starts
 
 ### Settings
 - Default resolution, frame rate, aspect ratio, export codec
 - Auto-save toggle + interval (15-300s)
 - Proxy resolution selector
-- Reset first-run tutorial
+- Replay Editor Walkthrough
 - **Show waveforms** — Global waveform visibility toggle
 - **Snap to beat / snap to markers** — Timeline snap behavior toggles
 - **Default track height** — 48/64/80/96dp chips

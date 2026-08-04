@@ -29,6 +29,7 @@ import androidx.navigation.navArgument
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.IncomingDocumentIntentParser
 import com.novacut.editor.engine.IncomingDocumentItem
@@ -37,6 +38,7 @@ import com.novacut.editor.engine.IncomingMediaIntentParser
 import com.novacut.editor.engine.IncomingMediaItem
 import com.novacut.editor.engine.ProjectShortcutPlanner
 import com.novacut.editor.engine.SettingsRepository
+import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.engine.resolveMediaDisplayName
 import com.novacut.editor.ui.editor.EditorScreen
 import com.novacut.editor.ui.editor.LocalTabletopPosture
@@ -44,7 +46,10 @@ import com.novacut.editor.ui.projects.ProjectListScreen
 import com.novacut.editor.ui.settings.SettingsScreen
 import com.novacut.editor.ui.theme.ClearCutTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -52,6 +57,9 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var settingsRepository: SettingsRepository
+
+    @Inject
+    lateinit var projectDao: ProjectDao
 
     private var pendingIncomingMedia by mutableStateOf<List<IncomingMediaItem>>(emptyList())
     private var pendingIncomingDocuments by mutableStateOf<List<IncomingDocumentItem>>(emptyList())
@@ -151,13 +159,43 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             SettingsScreen(
+                                onBack = { navController.popBackStack() },
+                                onReplayTutorial = {
+                                    lifecycleScope.launch {
+                                        val projectId = withContext(Dispatchers.IO) {
+                                            projectDao.getAllProjectsSnapshot()
+                                                .maxByOrNull { it.updatedAt }
+                                                ?.id
+                                        }
+                                        val route = projectId?.let {
+                                            "editor/${Uri.encode(it)}?expectRecovery=false&replayTutorial=true"
+                                        } ?: "editor/tutorial?replayTutorial=true"
+                                        navController.navigate(route)
+                                    }
+                                }
+                            )
+                        }
+                        composable(
+                            route = "editor/tutorial?replayTutorial={replayTutorial}",
+                            arguments = listOf(
+                                navArgument("replayTutorial") {
+                                    type = NavType.BoolType
+                                    defaultValue = true
+                                }
+                            )
+                        ) {
+                            EditorScreen(
                                 onBack = { navController.popBackStack() }
                             )
                         }
                         composable(
-                            route = "editor/{projectId}?expectRecovery={expectRecovery}",
+                            route = "editor/{projectId}?expectRecovery={expectRecovery}&replayTutorial={replayTutorial}",
                             arguments = listOf(
                                 navArgument("expectRecovery") {
+                                    type = NavType.BoolType
+                                    defaultValue = false
+                                },
+                                navArgument("replayTutorial") {
                                     type = NavType.BoolType
                                     defaultValue = false
                                 }

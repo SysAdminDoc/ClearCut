@@ -98,7 +98,6 @@ internal object SettingsPreferenceKeys {
     val PROXY_RES = stringPreferencesKey("proxy_resolution")
     val DEFAULT_CODEC = stringPreferencesKey("default_codec")
     val PROXY_ENABLED = booleanPreferencesKey("proxy_enabled")
-    val TUTORIAL_SHOWN = booleanPreferencesKey("tutorial_shown")
     val FAVORITE_EFFECTS = stringSetPreferencesKey("favorite_effects")
     val RECENT_EFFECTS = stringPreferencesKey("recent_effects")
     val EDITOR_MODE = stringPreferencesKey("editor_mode")
@@ -254,14 +253,6 @@ class SettingsRepository internal constructor(
 
     suspend fun updateProxyEnabled(enabled: Boolean) {
         dataStore.edit { it[SettingsPreferenceKeys.PROXY_ENABLED] = enabled }
-    }
-
-    suspend fun isTutorialShown(): Boolean {
-        return data.map { it[SettingsPreferenceKeys.TUTORIAL_SHOWN] ?: false }.first()
-    }
-
-    suspend fun setTutorialShown(shown: Boolean = true) {
-        dataStore.edit { it[SettingsPreferenceKeys.TUTORIAL_SHOWN] = shown }
     }
 
     suspend fun getFavoriteEffects(): Set<String> {

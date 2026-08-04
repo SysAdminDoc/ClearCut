@@ -604,10 +604,10 @@
     <string name="settings_model_downloading">Descargando</string>
     <string name="settings_model_error">necesita atencion</string>
     <string name="settings_tutorial">Tutoría</string>
-    <string name="settings_tutorial_description">Vuelva a reproducir el tutorial de la primera ejecución siempre que necesite un repaso.</string>
-    <string name="settings_reset_tutorial">Restablecer el tutorial de primera ejecución</string>
-    <string name="settings_reset_tutorial_row_description">Muestre el tutorial guiado del editor la próxima vez que abra ClearCut.</string>
-    <string name="settings_reset_tutorial_action">Restablecer tutorial</string>
+    <string name="settings_tutorial_description">Repita el tutorial guiado del editor cuando necesite un repaso.</string>
+    <string name="settings_replay_tutorial">Repetir tutorial del editor</string>
+    <string name="settings_replay_tutorial_row_description">Abra ahora el tutorial guiado del editor.</string>
+    <string name="settings_replay_tutorial_action">Repetir tutorial</string>
     <string name="settings_diagnostics">Diagnóstico</string>
     <string name="settings_diagnostics_description">Cree un paquete de soporte local solo cuando elija compartir uno.</string>
     <string name="settings_appearance">Apariencia</string>
@@ -2185,8 +2185,6 @@
     <string name="settings_quality_small">Archivo pequeño</string>
     <string name="settings_quality_balanced">equilibrado</string>
     <string name="settings_quality_best">Mejor calidad</string>
-    <string name="settings_reset_tutorial_confirm">¿Restablecer el tutorial de primera ejecución? Verás el tutorial nuevamente la próxima vez que abras el editor.</string>
-    <string name="settings_reset_tutorial_confirm_title">Tutorial de reinicio</string>
     <string name="settings_confirm">Confirmar</string>
     <string name="chapter_description">Los capítulos están integrados en las exportaciones MP4 para la navegación de YouTube</string>
     <string name="cd_chapter_save">Guardar</string>

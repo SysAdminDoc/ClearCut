@@ -675,6 +675,7 @@ class EditorViewModel @Inject constructor(
 
     private val projectId: String? = savedStateHandle["projectId"]
     private val expectRecovery: Boolean = savedStateHandle["expectRecovery"] ?: false
+    private val replayTutorial: Boolean = savedStateHandle["replayTutorial"] ?: false
     private var suggestionSnoozedUntilMs: Map<String, Long> =
         savedStateHandle.get<java.util.HashMap<String, Long>>(SUGGESTION_SNOOZE_STATE_KEY)
             ?.toMap()
@@ -984,6 +985,9 @@ class EditorViewModel @Inject constructor(
     init {
         val autoSaveId = projectId ?: _state.value.project.id
         exportDelegate.loadExportHistory()
+        if (replayTutorial) {
+            showTutorial()
+        }
 
         // Load existing project if projectId provided, then restore auto-save
         viewModelScope.launch {
@@ -1043,16 +1047,6 @@ class EditorViewModel @Inject constructor(
                 if (exportState == ExportState.CANCELLED) {
                     showToast(text(R.string.vm_export_cancelled_toast))
                 }
-            }
-        }
-
-        // First-run tutorial: show on first launch. This auto-show was lost in
-        // the menu-chrome refactor, which left the tutorial (and the Settings
-        // "Reset tutorial" row that clears the flag) unreachable dead code.
-        viewModelScope.launch {
-            if (!settingsRepo.isTutorialShown()) {
-                delay(500)
-                showTutorial()
             }
         }
 
@@ -1331,7 +1325,8 @@ class EditorViewModel @Inject constructor(
     private fun applyAutoSaveSettings(settings: AppSettings? = latestSettings) {
         val current = settings ?: return
         latestSettings = current
-        val shouldRun = recoveryOpenComplete &&
+        val shouldRun = projectId != null &&
+            recoveryOpenComplete &&
             !autoSaveBlockedByRecovery &&
             current.autoSaveEnabled
         val intervalSec = if (shouldRun) current.autoSaveIntervalSec else null
@@ -2896,7 +2891,6 @@ class EditorViewModel @Inject constructor(
     } // no dismiss — overlays other panels
     fun hideTutorial() {
         hidePanel(PanelId.TUTORIAL)
-        viewModelScope.launch { settingsRepo.setTutorialShown() }
     }
 
     // --- Auto-save indicator ---

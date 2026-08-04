@@ -41,6 +41,12 @@ class ClearCutSmokeTest {
             .performClick()
 
         compose.waitUntilAtLeastOneExists(ClearCutTestTags.EDITOR_SCREEN)
+        compose.waitForIdle()
+        assertTrue(
+            compose.onAllNodesWithTag(ClearCutTestTags.TUTORIAL_SCREEN)
+                .fetchSemanticsNodes()
+                .isEmpty()
+        )
         dismissTutorialIfPresent()
         compose.assertAccessibilityChecksPass()
 
@@ -72,6 +78,17 @@ class ClearCutSmokeTest {
         compose.onNodeWithTag(ClearCutTestTags.SETTINGS_LICENSES_DIALOG).assertIsDisplayed()
         compose.assertAccessibilityChecksPass()
         compose.onNodeWithTag(ClearCutTestTags.SETTINGS_LICENSES_CLOSE).performClick()
+
+        compose.onNodeWithTag(ClearCutTestTags.SETTINGS_REPLAY_TUTORIAL)
+            .performScrollTo()
+            .performClick()
+        compose.waitUntilAtLeastOneExists(ClearCutTestTags.EDITOR_SCREEN)
+        compose.onNodeWithTag(ClearCutTestTags.TUTORIAL_SCREEN).assertIsDisplayed()
+        compose.onNodeWithTag(ClearCutTestTags.TUTORIAL_SKIP).performClick()
+        compose.onNodeWithTag(ClearCutTestTags.EDITOR_SCREEN).assertIsDisplayed()
+        compose.onNodeWithTag(ClearCutTestTags.EDITOR_BACK).performClick()
+        compose.waitUntilAtLeastOneExists(ClearCutTestTags.SETTINGS_SCREEN)
+
         compose.onNodeWithTag(ClearCutTestTags.SETTINGS_BACK).performClick()
 
         compose.waitUntilAtLeastOneExists(ClearCutTestTags.PROJECTS_SCREEN)

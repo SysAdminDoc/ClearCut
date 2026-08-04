@@ -33,6 +33,7 @@ object ClearCutTestTags {
 
     const val SETTINGS_SCREEN = "settings.screen"
     const val SETTINGS_BACK = "settings.back"
+    const val SETTINGS_REPLAY_TUTORIAL = "settings.replayTutorial"
     const val SETTINGS_PRIVACY_OPEN = "settings.privacy.open"
     const val SETTINGS_PRIVACY_DASHBOARD = "settings.privacy.dashboard"
     const val SETTINGS_PRIVACY_CLOSE = "settings.privacy.close"

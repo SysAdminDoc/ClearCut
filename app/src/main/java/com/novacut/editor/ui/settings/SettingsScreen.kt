@@ -92,6 +92,7 @@ private enum class SettingsAiModelRemovalTarget {
 fun SettingsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onReplayTutorial: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val scrollState = rememberScrollState()
@@ -597,7 +598,6 @@ fun SettingsScreen(
         }
 
         // Tutorial
-        var showResetConfirm by remember { mutableStateOf(false) }
         SettingsSection(
             title = stringResource(R.string.settings_tutorial),
             description = stringResource(R.string.settings_tutorial_description)
@@ -605,24 +605,16 @@ fun SettingsScreen(
             SettingsTile(
                 icon = Icons.Default.School,
                 accent = ClearCutAccents.Sapphire,
-                label = stringResource(R.string.settings_reset_tutorial),
-                description = stringResource(R.string.settings_reset_tutorial_row_description),
-                onClick = { showResetConfirm = true }
+                label = stringResource(R.string.settings_replay_tutorial),
+                description = stringResource(R.string.settings_replay_tutorial_row_description),
+                onClick = onReplayTutorial,
+                modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_REPLAY_TUTORIAL)
             ) {
                 ClearCutMetricPill(
-                    text = stringResource(R.string.settings_reset_tutorial_action),
+                    text = stringResource(R.string.settings_replay_tutorial_action),
                     accent = ClearCutAccents.Sapphire
                 )
             }
-        }
-        if (showResetConfirm) {
-            ResetTutorialConfirmDialog(
-                onDismissRequest = { showResetConfirm = false },
-                onConfirm = {
-                    viewModel.resetTutorial()
-                    showResetConfirm = false
-                }
-            )
         }
 
         // Diagnostics
@@ -867,53 +859,6 @@ fun SettingsScreen(
             }
         }
     }
-}
-
-@Composable
-private fun ResetTutorialConfirmDialog(
-    onDismissRequest: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        icon = {
-            ClearCutDialogIcon(
-                icon = Icons.Default.School,
-                accent = ClearCutAccents.Sapphire
-            )
-        },
-        title = {
-            Text(
-                text = stringResource(R.string.settings_reset_tutorial_confirm_title),
-                color = LocalClearCutColors.current.text,
-                style = MaterialTheme.typography.titleLarge
-            )
-        },
-        text = {
-            Text(
-                text = stringResource(R.string.settings_reset_tutorial_confirm),
-                color = LocalClearCutColors.current.subtext,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
-        confirmButton = {
-            ClearCutPrimaryButton(
-                text = stringResource(R.string.settings_reset_tutorial_action),
-                onClick = onConfirm,
-                icon = Icons.Default.Check
-            )
-        },
-        dismissButton = {
-            ClearCutSecondaryButton(
-                text = stringResource(R.string.cancel),
-                onClick = onDismissRequest
-            )
-        },
-        containerColor = LocalClearCutColors.current.panelHighest,
-        titleContentColor = LocalClearCutColors.current.text,
-        textContentColor = LocalClearCutColors.current.subtext,
-        shape = RoundedCornerShape(Radius.xxl)
-    )
 }
 
 @Composable

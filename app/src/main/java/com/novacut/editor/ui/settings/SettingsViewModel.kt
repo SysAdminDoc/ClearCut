@@ -127,7 +127,6 @@ class SettingsViewModel @Inject constructor(
     fun setProxyResolution(v: ProxyResolution) = viewModelScope.launch { repo.updateProxyResolution(v) }
     fun setDefaultCodec(codec: String) = viewModelScope.launch { repo.updateDefaultCodec(codec) }
     fun setProxyEnabled(enabled: Boolean) = viewModelScope.launch { repo.updateProxyEnabled(enabled) }
-    fun resetTutorial() = viewModelScope.launch { repo.setTutorialShown(false) }
     fun setEditorMode(mode: String) = viewModelScope.launch { repo.updateEditorMode(mode) }
     fun setHapticEnabled(enabled: Boolean) = viewModelScope.launch { repo.updateHapticEnabled(enabled) }
     fun setShowWaveforms(v: Boolean) = viewModelScope.launch { repo.updateShowWaveforms(v) }

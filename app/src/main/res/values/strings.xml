@@ -627,10 +627,10 @@
     <string name="settings_model_downloading">Downloading</string>
     <string name="settings_model_error">Needs attention</string>
     <string name="settings_tutorial">Tutorial</string>
-    <string name="settings_tutorial_description">Replay the first-run walkthrough whenever you need a refresher.</string>
-    <string name="settings_reset_tutorial">Reset First-Run Tutorial</string>
-    <string name="settings_reset_tutorial_row_description">Show the guided editor walkthrough the next time ClearCut opens.</string>
-    <string name="settings_reset_tutorial_action">Reset tutorial</string>
+    <string name="settings_tutorial_description">Replay the editor walkthrough whenever you need a refresher.</string>
+    <string name="settings_replay_tutorial">Replay Editor Walkthrough</string>
+    <string name="settings_replay_tutorial_row_description">Open the guided editor walkthrough now.</string>
+    <string name="settings_replay_tutorial_action">Replay walkthrough</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_description">Create a local support bundle only when you choose to share one.</string>
     <string name="settings_appearance">Appearance</string>
@@ -2340,8 +2340,6 @@
     <string name="settings_quality_small">Small File</string>
     <string name="settings_quality_balanced">Balanced</string>
     <string name="settings_quality_best">Best Quality</string>
-    <string name="settings_reset_tutorial_confirm">Reset the first-run tutorial? You will see the tutorial again next time you open the editor.</string>
-    <string name="settings_reset_tutorial_confirm_title">Reset Tutorial</string>
     <string name="settings_confirm">Confirm</string>
 
     <!-- ChapterMarkerPanel — v3.13.0 -->
