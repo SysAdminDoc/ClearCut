@@ -25,7 +25,10 @@ enum class MediaHealthIssueType {
     MISSING_REFERENCE_ASSET_ID,
     UNKNOWN_ASSET_ID,
     STALE_REFERENCE_URI,
-    UNPROBEABLE_SOURCE
+    UNPROBEABLE_SOURCE,
+    MEDIA_DIAGNOSTICS_UNAVAILABLE,
+    MEDIA_TIMESTAMP_RISK,
+    MEDIA_COLOR_RISK
 }
 
 data class MediaHealthIssue(
@@ -41,7 +44,8 @@ data class MediaHealthReport(
     val managedAssets: Int,
     val localReadyReferences: Int,
     val externalReferences: Int,
-    val issues: List<MediaHealthIssue>
+    val issues: List<MediaHealthIssue>,
+    val diagnostics: List<MediaDiagnostic> = emptyList(),
 ) {
     val blockingCount: Int get() = issues.count { it.severity == MediaHealthSeverity.BLOCKING }
     val warningCount: Int get() = issues.count { it.severity == MediaHealthSeverity.WARNING }
@@ -51,7 +55,10 @@ data class MediaHealthReport(
 
 object MediaHealth {
 
-    fun analyze(state: AutoSaveState): MediaHealthReport {
+    fun analyze(
+        state: AutoSaveState,
+        diagnostics: List<MediaDiagnostic> = emptyList(),
+    ): MediaHealthReport {
         val references = collectProjectReferences(state)
         val duplicateAssetIds = state.mediaAssets
             .groupingBy { it.assetId }
@@ -82,6 +89,38 @@ object MediaHealth {
 
         state.mediaAssets.forEach { asset ->
             issues += validateAsset(asset)
+        }
+
+        diagnostics.forEach { diagnostic ->
+            diagnostic.probeError?.let { error ->
+                issues += MediaHealthIssue(
+                    type = MediaHealthIssueType.MEDIA_DIAGNOSTICS_UNAVAILABLE,
+                    severity = MediaHealthSeverity.WARNING,
+                    subjectId = diagnostic.uri,
+                    uri = diagnostic.uri,
+                    message = "Media diagnostics are unavailable for ${redactedDiagnosticUri(diagnostic.uri)}: $error"
+                )
+            }
+            diagnostic.timestampRisk?.let { risk ->
+                issues += MediaHealthIssue(
+                    type = MediaHealthIssueType.MEDIA_TIMESTAMP_RISK,
+                    severity = MediaHealthSeverity.WARNING,
+                    subjectId = diagnostic.uri,
+                    uri = diagnostic.uri,
+                    message = diagnostic.exportWarningMessages().firstOrNull { it.contains("timestamp risk") }
+                        ?: "Media timestamp risk for ${redactedDiagnosticUri(diagnostic.uri)}: $risk"
+                )
+            }
+            diagnostic.colorRisk?.let { risk ->
+                issues += MediaHealthIssue(
+                    type = MediaHealthIssueType.MEDIA_COLOR_RISK,
+                    severity = MediaHealthSeverity.WARNING,
+                    subjectId = diagnostic.uri,
+                    uri = diagnostic.uri,
+                    message = diagnostic.exportWarningMessages().firstOrNull { it.contains("color risk") }
+                        ?: "Media color risk for ${redactedDiagnosticUri(diagnostic.uri)}: $risk"
+                )
+            }
         }
 
         var localReady = 0
@@ -198,7 +237,8 @@ object MediaHealth {
             managedAssets = state.mediaAssets.size,
             localReadyReferences = localReady,
             externalReferences = external,
-            issues = issues.distinctBy { listOf(it.type, it.subjectId, it.uri).joinToString("|") }
+            issues = issues.distinctBy { listOf(it.type, it.subjectId, it.uri).joinToString("|") },
+            diagnostics = diagnostics.distinctBy { it.uri },
         )
     }
 

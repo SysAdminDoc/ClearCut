@@ -1775,6 +1775,28 @@
     <string name="media_file_meta">%1$s • %2$s</string>
     <string name="media_missing_asset_title">Source unavailable</string>
     <string name="media_unverified_asset_title">Source unverified</string>
+    <string name="media_diagnostics_title">Technical diagnostics</string>
+    <string name="media_diagnostics_unavailable">Diagnostics unavailable: %1$s</string>
+    <string name="media_diagnostics_container">Container %1$s</string>
+    <string name="media_diagnostics_duration">Duration %1$s</string>
+    <string name="media_diagnostics_rotation">Rotation %1$d°</string>
+    <string name="media_diagnostics_color">Color %1$s</string>
+    <string name="media_diagnostics_color_unknown">Unknown confidence</string>
+    <string name="media_diagnostics_video_track">Video</string>
+    <string name="media_diagnostics_audio_track">Audio</string>
+    <string name="media_diagnostics_track">%1$s · %2$s · language %3$s</string>
+    <string name="media_diagnostics_language_unknown">unknown language</string>
+    <string name="media_diagnostics_unknown">unknown</string>
+    <string name="media_diagnostics_fps">%1$.2f fps</string>
+    <string name="media_diagnostics_fps_unknown">unknown fps</string>
+    <string name="media_diagnostics_video_details">%1$s · %2$s · %3$s</string>
+    <string name="media_diagnostics_sync_frames">%1$d sync frames</string>
+    <string name="media_diagnostics_sync_frames_approx">%1$d+ sync frames</string>
+    <string name="media_diagnostics_timestamp_risk">Timestamp risk: %1$s</string>
+    <string name="media_diagnostics_color_risk">Color risk: %1$s</string>
+    <string name="media_diagnostics_previous_sync">Previous sync frame</string>
+    <string name="media_diagnostics_next_sync">Next sync frame</string>
+    <string name="vm_no_sync_frame_toast">No nearby sync frame was found for this clip.</string>
 
     <!-- SmartReframePanel -->
     <string name="smart_reframe_title">Smart Reframe</string>

@@ -72,7 +72,9 @@ import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
 import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.MediaHealth
+import com.novacut.editor.engine.MediaDiagnosticsProbe
 import com.novacut.editor.engine.MediaRelinkProbe
+import com.novacut.editor.engine.SyncFrameDirection
 import com.novacut.editor.engine.OverlayAssetImportResult
 import com.novacut.editor.engine.OverlayAssetStore
 import com.novacut.editor.engine.ProjectMediaAsset
@@ -627,6 +629,7 @@ class EditorViewModel @Inject constructor(
     private val multiCamEngine: MultiCamEngine,
     private val mediaImportEngine: MediaImportEngine,
     private val mediaRelinkProbe: MediaRelinkProbe,
+    private val mediaDiagnosticsProbe: MediaDiagnosticsProbe,
     private val overlayAssetStore: OverlayAssetStore,
     // v3.69 engines (15-feature wave)
     private val textBasedEditEngine: TextBasedEditEngine,
@@ -4264,10 +4267,14 @@ class EditorViewModel @Inject constructor(
         val imageOverlays = _state.value.imageOverlays
         if (tracks.flatMap { it.clips }.isEmpty() && imageOverlays.isEmpty()) {
             mediaRelinkProbeJob?.cancel()
-            val healthReport = analyzeMediaHealthForState(_state.value)
+            val healthReport = analyzeMediaHealthForState(_state.value, emptyList())
             _state.update { state ->
                 state.copyMedia { media ->
-                    media.copy(relinkReports = emptyMap(), healthReport = healthReport)
+                    media.copy(
+                        relinkReports = emptyMap(),
+                        diagnostics = emptyMap(),
+                        healthReport = healthReport
+                    )
                 }
             }
             return
@@ -4279,13 +4286,20 @@ class EditorViewModel @Inject constructor(
                 .filterValues { it.state == MediaRelinkProbe.RelinkState.MISSING }
                 .keys
             val reports = mediaRelinkProbe.probeClips(tracks) + mediaRelinkProbe.probeImageOverlays(imageOverlays)
-            val healthReport = analyzeMediaHealthForState(_state.value)
+            val diagnostics = mediaDiagnosticsProbe.probeTracks(tracks, imageOverlays)
+            val healthReport = analyzeMediaHealthForState(_state.value, diagnostics.values)
             val missingCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.MISSING }
             val unknownCount = reports.values.count { it.state == MediaRelinkProbe.RelinkState.UNKNOWN }
             val healthBlockingCount = healthReport.blockingCount
             val healthWarningCount = healthReport.warningCount
             _state.update { state ->
-                state.copy(media = state.media.copy(relinkReports = reports, healthReport = healthReport))
+                state.copy(
+                    media = state.media.copy(
+                        relinkReports = reports,
+                        diagnostics = diagnostics,
+                        healthReport = healthReport
+                    )
+                )
                     .copyPanel { panel ->
                         panel.copy(
                             panels = if (
@@ -4340,6 +4354,41 @@ class EditorViewModel @Inject constructor(
         seekTo(clip.timelineStartMs)
         selectClip(clipId, trackId)
         hideMediaManager()
+    }
+
+    fun jumpToSyncFrame(clipId: String, direction: SyncFrameDirection) {
+        val snapshot = _state.value
+        val clip = snapshot.tracks.flatMap { it.clips }.find { it.id == clipId } ?: return
+        val trackId = snapshot.tracks.find { it.clips.any { candidate -> candidate.id == clipId } }?.id
+        val relativePlayheadMs = (_playheadMs.value - clip.timelineStartMs)
+            .coerceIn(0L, clip.durationMs.coerceAtLeast(0L))
+        val sourceTargetMs = clip.timelineOffsetToSourceMs(relativePlayheadMs)
+        viewModelScope.launch(Dispatchers.IO) {
+            val sourceSyncMs = mediaDiagnosticsProbe.findNearestSyncFrame(
+                uri = clip.sourceUri,
+                targetMs = sourceTargetMs,
+                direction = direction,
+            )
+            if (sourceSyncMs == null) {
+                withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                    showToast(text(R.string.vm_no_sync_frame_toast), ToastSeverity.Warning)
+                }
+                return@launch
+            }
+            val timelineOffsetMs = clip.sourceTimeToTimelineOffsetMs(sourceSyncMs)
+            if (timelineOffsetMs == null) {
+                withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                    showToast(text(R.string.vm_no_sync_frame_toast), ToastSeverity.Warning)
+                }
+                return@launch
+            }
+            val timelinePositionMs = clip.timelineStartMs + timelineOffsetMs
+            withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                seekTo(timelinePositionMs)
+                selectClip(clipId, trackId)
+                hideMediaManager()
+            }
+        }
     }
 
     fun removeUnusedMedia() {
@@ -5539,8 +5588,10 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    private fun analyzeMediaHealthForState(state: EditorState = _state.value) =
-        MediaHealth.analyze(buildAutoSaveState(state))
+    private fun analyzeMediaHealthForState(
+        state: EditorState = _state.value,
+        diagnostics: Collection<com.novacut.editor.engine.MediaDiagnostic> = state.media.diagnostics.values,
+    ) = MediaHealth.analyze(buildAutoSaveState(state), diagnostics.toList())
 
     private fun analyzeMediaHealthForRecovery(recovery: AutoSaveState) =
         MediaHealth.analyze(recovery)

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Media health now reports container, codec, track-language, HDR/color, timestamp, and sync-frame diagnostics, with previous/next sync-frame navigation and export preflight risk disclosure.
 - GIF export now requests aspect-preserving frames at the configured maximum width, prefers base VIDEO tracks over overlays, and maps palette overflow to the nearest available color.
 - Cross-app media-picker drops now accept MIME metadata during drag-start, request temporary URI access before ingesting content URIs, and release the grant on success, failure, or early exit.
 - Projects, templates, privacy, licenses, and settings now resolve structural colors through the semantic theme roles while preserving stable media accents; the source-policy test audits both feature trees for raw palette and hex bypasses.

@@ -7,6 +7,7 @@ import com.novacut.editor.engine.CutAssistantEngine
 import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.MediaHealthReport
+import com.novacut.editor.engine.MediaDiagnostic
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.ai.AutoEditResult
@@ -126,6 +127,7 @@ data class EditorMediaState(
     val backupImportFeedback: BackupImportFeedback? = null,
     val timelineExchangeFeedback: TimelineExchangeFeedback? = null,
     val relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport> = emptyMap(),
+    val diagnostics: Map<String, MediaDiagnostic> = emptyMap(),
     val healthReport: MediaHealthReport? = null,
     val pendingIngests: List<PendingIngest> = emptyList()
 ) : EditorDomainState {

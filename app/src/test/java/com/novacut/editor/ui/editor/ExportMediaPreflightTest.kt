@@ -4,6 +4,8 @@ import com.novacut.editor.engine.MediaHealthIssue
 import com.novacut.editor.engine.MediaHealthIssueType
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaHealthSeverity
+import com.novacut.editor.engine.MediaDiagnostic
+import com.novacut.editor.engine.MediaDiagnosticKind
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.ProjectDependency
 import com.novacut.editor.engine.ProjectDependencyKind
@@ -225,6 +227,29 @@ class ExportMediaPreflightTest {
     }
 
     @Test
+    fun diagnosticTimestampAndColorRisksRequireConsent() {
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(
+                diagnostics = listOf(
+                    MediaDiagnostic(
+                        uri = "content://picker/clip",
+                        kind = MediaDiagnosticKind.VIDEO,
+                        timestampRisk = "Sample timestamps are not monotonic.",
+                        colorRisk = "HDR metadata is incomplete.",
+                    )
+                )
+            ),
+            relinkReports = emptyMap(),
+        )
+
+        assertTrue(result.canExport)
+        assertTrue(result.requiresConsent)
+        assertEquals(2, result.warningCount)
+        assertTrue(result.warnings.any { it.contains("timestamp risk") })
+        assertTrue(result.warnings.any { it.contains("color risk") })
+    }
+
+    @Test
     fun blockedProjectStillItemizesWarningsForTheReport() {
         val result = ExportMediaPreflight.evaluate(
             healthReport = report(
@@ -244,13 +269,17 @@ class ExportMediaPreflightTest {
         assertTrue(result.warnings.isEmpty())
     }
 
-    private fun report(vararg issues: MediaHealthIssue): MediaHealthReport {
+    private fun report(
+        vararg issues: MediaHealthIssue,
+        diagnostics: List<MediaDiagnostic> = emptyList(),
+    ): MediaHealthReport {
         return MediaHealthReport(
             totalReferences = 1,
             managedAssets = 1,
             localReadyReferences = 1,
             externalReferences = 0,
-            issues = issues.toList()
+            issues = issues.toList(),
+            diagnostics = diagnostics,
         )
     }
 }

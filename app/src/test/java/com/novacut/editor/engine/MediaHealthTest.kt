@@ -32,6 +32,30 @@ class MediaHealthTest {
     }
 
     @Test
+    fun analyzeSurfacesDiagnosticRisksAlongsideMediaHealth() {
+        withTempMedia("diagnostic.mp4", bytes = byteArrayOf(1, 2, 3)) { media ->
+            val uri = fileUri(media)
+            val state = stateWithClip(
+                clipUri = uri,
+                asset = asset(assetId = "asset-diagnostic", managedUri = uri.toString())
+            )
+            val diagnostic = MediaDiagnostic(
+                uri = uri.toString(),
+                kind = MediaDiagnosticKind.VIDEO,
+                timestampRisk = "Sample timestamps are not monotonic.",
+                colorRisk = "HDR metadata is incomplete.",
+            )
+
+            val report = MediaHealth.analyze(state, diagnostics = listOf(diagnostic))
+
+            assertEquals(listOf(diagnostic), report.diagnostics)
+            assertTrue(report.issues.any { it.type == MediaHealthIssueType.MEDIA_TIMESTAMP_RISK })
+            assertTrue(report.issues.any { it.type == MediaHealthIssueType.MEDIA_COLOR_RISK })
+            assertEquals(2, report.warningCount)
+        }
+    }
+
+    @Test
     fun analyzeBlocksMissingManagedLocalMedia() {
         val missing = File(Files.createTempDirectory("missing-media-").toFile(), "gone.mp4")
         val uri = fileUri(missing)

@@ -63,6 +63,10 @@ object ExportMediaPreflight {
             }
         }
 
+        healthReport?.diagnostics.orEmpty()
+            .flatMap { diagnostic -> diagnostic.exportWarningMessages() }
+            .forEach { warning -> warnings += warning }
+
         relinkReports.values.forEach { relink ->
             when (relink.state) {
                 MediaRelinkProbe.RelinkState.MISSING ->
@@ -101,8 +105,10 @@ object ExportMediaPreflight {
         intentFallbacks.forEach { fallback -> warnings += fallback.message }
         additionalWarnings.forEach { warning -> warnings += warning }
 
-        val blockingCount = blockers.size
-        val warningCount = warnings.size
+        val distinctBlockers = blockers.distinct()
+        val distinctWarnings = warnings.distinct()
+        val blockingCount = distinctBlockers.size
+        val warningCount = distinctWarnings.size
 
         return when {
             blockingCount > 0 -> ExportMediaPreflightResult(
@@ -112,8 +118,8 @@ object ExportMediaPreflight {
                 message = blockedMessage(blockingCount, dependencyBlockers),
                 audioConformance = audioConformance,
                 dependencies = dependencies,
-                blockers = blockers,
-                warnings = warnings,
+                blockers = distinctBlockers,
+                warnings = distinctWarnings,
                 intentFallbacks = intentFallbacks,
             )
             warningCount > 0 -> {
@@ -143,8 +149,8 @@ object ExportMediaPreflight {
                     },
                     audioConformance = audioConformance,
                     dependencies = dependencies,
-                    blockers = blockers,
-                    warnings = warnings,
+                    blockers = distinctBlockers,
+                    warnings = distinctWarnings,
                     intentFallbacks = intentFallbacks,
                 )
             }
@@ -155,8 +161,8 @@ object ExportMediaPreflight {
                 message = "Media ready for export.",
                 audioConformance = audioConformance,
                 dependencies = dependencies,
-                blockers = blockers,
-                warnings = warnings,
+                blockers = distinctBlockers,
+                warnings = distinctWarnings,
                 intentFallbacks = intentFallbacks,
             )
         }

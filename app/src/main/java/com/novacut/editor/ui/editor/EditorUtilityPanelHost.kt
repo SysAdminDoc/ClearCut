@@ -259,6 +259,7 @@ fun BoxScope.EditorUtilityPanelHost(
             relinkReports = state.mediaRelinkReports,
             mediaHealthReport = state.media.healthReport,
             onJumpToClip = viewModel::jumpToClip,
+            onJumpToSyncFrame = viewModel::jumpToSyncFrame,
             onRelinkMedia = onRelinkMedia,
             onBulkRelinkMissing = onBulkRelinkMissing,
             onRemoveUnused = viewModel::removeUnusedMedia,

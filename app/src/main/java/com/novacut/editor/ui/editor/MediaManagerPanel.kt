@@ -39,8 +39,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
+import com.novacut.editor.engine.MediaDiagnostic
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaRelinkProbe
+import com.novacut.editor.engine.MediaColorConfidence
+import com.novacut.editor.engine.SyncFrameDirection
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +63,8 @@ data class MediaAsset(
     } else {
         MediaRelinkProbe.RelinkState.MISSING
     },
-    val relinkMessage: String? = null
+    val relinkMessage: String? = null,
+    val diagnostic: MediaDiagnostic? = null,
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -70,6 +74,7 @@ fun MediaManagerPanel(
     relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
     mediaHealthReport: MediaHealthReport?,
     onJumpToClip: (String) -> Unit,
+    onJumpToSyncFrame: (String, SyncFrameDirection) -> Unit,
     onRelinkMedia: (Uri) -> Unit,
     onBulkRelinkMissing: () -> Unit,
     onRemoveUnused: () -> Unit,
@@ -78,13 +83,19 @@ fun MediaManagerPanel(
 ) {
     val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
-    var assets by remember(tracks, relinkReports) { mutableStateOf(emptyList<MediaAsset>()) }
-    var isAnalyzing by remember(tracks, relinkReports) { mutableStateOf(true) }
+    val diagnostics = mediaHealthReport?.diagnostics.orEmpty()
+    var assets by remember(tracks, relinkReports, diagnostics) { mutableStateOf(emptyList<MediaAsset>()) }
+    var isAnalyzing by remember(tracks, relinkReports, diagnostics) { mutableStateOf(true) }
 
-    LaunchedEffect(context, tracks, relinkReports) {
+    LaunchedEffect(context, tracks, relinkReports, diagnostics) {
         isAnalyzing = true
         assets = withContext(Dispatchers.IO) {
-            analyzeMediaAssets(context, tracks, relinkReports)
+            analyzeMediaAssets(
+                context = context,
+                tracks = tracks,
+                relinkReports = relinkReports,
+                diagnosticsByUri = diagnostics.associateBy { it.uri },
+            )
         }
         isAnalyzing = false
     }
@@ -385,6 +396,7 @@ fun MediaManagerPanel(
                             MediaAssetCard(
                                 asset = asset,
                                 onJumpToClip = onJumpToClip,
+                                onJumpToSyncFrame = onJumpToSyncFrame,
                                 onRelinkMedia = onRelinkMedia
                             )
                         }
@@ -532,6 +544,7 @@ private fun MediaManagerMessageCard(
 private fun MediaAssetCard(
     asset: MediaAsset,
     onJumpToClip: (String) -> Unit,
+    onJumpToSyncFrame: (String, SyncFrameDirection) -> Unit,
     onRelinkMedia: (Uri) -> Unit
 ) {
     val semanticColors = LocalClearCutColors.current
@@ -642,6 +655,14 @@ private fun MediaAssetCard(
                 )
             }
 
+            asset.diagnostic?.let { diagnostic ->
+                MediaDiagnosticCard(
+                    diagnostic = diagnostic,
+                    clipId = asset.usedInClipIds.firstOrNull(),
+                    onJumpToSyncFrame = onJumpToSyncFrame,
+                )
+            }
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -692,10 +713,173 @@ private fun MediaAssetCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MediaDiagnosticCard(
+    diagnostic: MediaDiagnostic,
+    clipId: String?,
+    onJumpToSyncFrame: (String, SyncFrameDirection) -> Unit,
+) {
+    val semanticColors = LocalClearCutColors.current
+    val colorLabel = when (diagnostic.colorConfidence) {
+        MediaColorConfidence.HDR -> diagnostic.hdrFormats.sorted().joinToString().ifBlank { "HDR" }
+        MediaColorConfidence.SDR -> listOfNotNull(diagnostic.colorStandard, diagnostic.colorTransfer)
+            .joinToString()
+            .ifBlank { "SDR" }
+        MediaColorConfidence.UNKNOWN -> stringResource(R.string.media_diagnostics_color_unknown)
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = semanticColors.surface,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, semanticColors.cardStroke),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.media_diagnostics_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = semanticColors.text,
+                fontWeight = FontWeight.SemiBold,
+            )
+            diagnostic.probeError?.let { error ->
+                Text(
+                    text = stringResource(R.string.media_diagnostics_unavailable, error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClearCutAccents.Peach,
+                )
+            } ?: run {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    diagnostic.containerMimeType?.let { mime ->
+                        Text(
+                            text = stringResource(R.string.media_diagnostics_container, mime),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = semanticColors.subtext,
+                        )
+                    }
+                    diagnostic.durationMs?.let { durationMs ->
+                        Text(
+                            text = stringResource(
+                                R.string.media_diagnostics_duration,
+                                formatDuration(durationMs),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = semanticColors.subtext,
+                        )
+                    }
+                    diagnostic.rotationDegrees?.takeIf { it != 0 }?.let { rotation ->
+                        Text(
+                            text = stringResource(R.string.media_diagnostics_rotation, rotation),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = semanticColors.subtext,
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.media_diagnostics_color, colorLabel),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = when (diagnostic.colorConfidence) {
+                            MediaColorConfidence.HDR -> ClearCutAccents.Peach
+                            MediaColorConfidence.SDR -> ClearCutAccents.Green
+                            MediaColorConfidence.UNKNOWN -> semanticColors.subtext
+                        },
+                    )
+                }
+
+                diagnostic.tracks.forEach { track ->
+                    val mediaType = when (track.mediaType) {
+                        "video" -> stringResource(R.string.media_diagnostics_video_track)
+                        "audio" -> stringResource(R.string.media_diagnostics_audio_track)
+                        else -> track.mediaType
+                    }
+                    Text(
+                        text = stringResource(
+                            R.string.media_diagnostics_track,
+                            mediaType,
+                            track.codec ?: track.mimeType ?: stringResource(R.string.media_diagnostics_unknown),
+                            track.language ?: stringResource(R.string.media_diagnostics_language_unknown),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = semanticColors.subtext,
+                    )
+                    if (track.isVideo) {
+                        val dimensions = if (track.width != null && track.height != null) {
+                            "${track.width}×${track.height}"
+                        } else {
+                            stringResource(R.string.media_diagnostics_unknown)
+                        }
+                        val frameRate = track.frameRate?.let { rate ->
+                            stringResource(R.string.media_diagnostics_fps, rate)
+                        }
+                        val syncFrames = if (track.syncFrameScanTruncated) {
+                            stringResource(R.string.media_diagnostics_sync_frames_approx, track.syncFrameCount)
+                        } else {
+                            stringResource(R.string.media_diagnostics_sync_frames, track.syncFrameCount)
+                        }
+                        Text(
+                            text = stringResource(
+                                R.string.media_diagnostics_video_details,
+                                dimensions,
+                                frameRate ?: stringResource(R.string.media_diagnostics_fps_unknown),
+                                syncFrames,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = semanticColors.subtext,
+                        )
+                    }
+                }
+
+                diagnostic.timestampRisk?.let { risk ->
+                    Text(
+                        text = stringResource(R.string.media_diagnostics_timestamp_risk, risk),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ClearCutAccents.Peach,
+                    )
+                }
+                diagnostic.colorRisk?.let { risk ->
+                    Text(
+                        text = stringResource(R.string.media_diagnostics_color_risk, risk),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ClearCutAccents.Peach,
+                    )
+                }
+                if (clipId != null && diagnostic.keyframeCount > 0) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = { onJumpToSyncFrame(clipId, SyncFrameDirection.PREVIOUS) },
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue),
+                        ) {
+                            Text(text = stringResource(R.string.media_diagnostics_previous_sync))
+                        }
+                        OutlinedButton(
+                            onClick = { onJumpToSyncFrame(clipId, SyncFrameDirection.NEXT) },
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue),
+                        ) {
+                            Text(text = stringResource(R.string.media_diagnostics_next_sync))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 private fun analyzeMediaAssets(
     context: Context,
     tracks: List<Track>,
-    relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>
+    relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
+    diagnosticsByUri: Map<String, MediaDiagnostic>,
 ): List<MediaAsset> {
     val clipsByUri = mutableMapOf<String, MutableList<Clip>>()
 
@@ -779,7 +963,8 @@ private fun analyzeMediaAssets(
             relinkState = relinkState,
             relinkMessage = relinkReport
                 ?.takeIf { it.state != MediaRelinkProbe.RelinkState.OK }
-                ?.userMessage
+                ?.userMessage,
+            diagnostic = diagnosticsByUri[uri.toString()],
         )
     }.sortedWith(compareBy<MediaAsset> { it.isAccessible }.thenByDescending { it.usedInClipIds.size })
 }
