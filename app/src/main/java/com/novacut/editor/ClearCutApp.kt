@@ -9,6 +9,7 @@ import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.CrashRecordStore
 import com.novacut.editor.engine.HealthEvent
 import com.novacut.editor.engine.MemoryTrimDispatcher
+import com.novacut.editor.engine.MediaStorePendingRowSweeper
 import com.novacut.editor.engine.ProcessExitRecorder
 import com.novacut.editor.engine.ProductHealthLedger
 import dagger.hilt.android.HiltAndroidApp
@@ -34,6 +35,9 @@ class ClearCutApp : Application(), Configuration.Provider {
     @Inject
     lateinit var productHealthLedger: ProductHealthLedger
 
+    @Inject
+    lateinit var mediaStorePendingRowSweeper: MediaStorePendingRowSweeper
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration
@@ -54,6 +58,9 @@ class ClearCutApp : Application(), Configuration.Provider {
         CrashRecordStore(this).installGlobalHandler(VERSION)
         processExitRecorder.recordStartupExitReasons()
         createNotificationChannels()
+        applicationScope.launch {
+            mediaStorePendingRowSweeper.sweep()
+        }
         applicationScope.launch {
             productHealthLedger.record(HealthEvent.COLD_START)
         }

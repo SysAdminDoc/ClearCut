@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Startup now removes only stale, app-owned pending MediaStore rows from ClearCut public output directories, recovering invisible artifacts left by a killed export or archive save.
 - Media3 export timeout cleanup now routes Transformer cancellation through an explicit termination fence before deleting output, preventing a late muxer write from recreating a partial artifact.
 - Speed-curve splits now carry their rounded boundary correction into subsequent clips, preserving the next clip and any intentional following gaps while retaining exact left/right abutment.
 - Timeline clip thumbnails now use keyed Compose lazy strips with a bounded cache window, and off-screen thumbnail/waveform surfaces pause through visibility callbacks; deterministic policy checks and the existing frame-timing scrub benchmark guard the scroll path.
