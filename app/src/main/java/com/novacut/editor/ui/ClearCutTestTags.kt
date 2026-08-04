@@ -14,6 +14,16 @@ object ClearCutTestTags {
     const val EDITOR_EXPORT = "editor.export"
     const val EDITOR_COMPOUND_BREADCRUMB = "editor.compoundBreadcrumb"
     const val EDITOR_DESKTOP_SIDEBAR = "editor.desktopSidebar"
+    const val EDITOR_UNDO = "editor.undo"
+    const val EDITOR_REDO = "editor.redo"
+    const val EDITOR_TOOL_TAB_PREFIX = "editor.toolTab."
+    const val EDITOR_TOOL_ACTION_PREFIX = "editor.toolAction."
+
+    const val TIMELINE_SPLIT = "timeline.split"
+    const val TIMELINE_DELETE = "timeline.delete"
+    const val TIMELINE_TRIM_START = "timeline.trimStart"
+    const val TIMELINE_TRIM_END = "timeline.trimEnd"
+    const val TIMELINE_CLIP_PREFIX = "timeline.clip."
 
     const val MEDIA_PICKER_SHEET = "mediaPicker.sheet"
     const val MEDIA_PICKER_CLOSE = "mediaPicker.close"

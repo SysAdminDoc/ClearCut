@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.focus.onFocusChanged
@@ -56,6 +57,7 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.ThumbnailStripPolicy
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.model.*
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Radius
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -136,6 +138,7 @@ private fun TrimNumericInputRow(
                     }
                     if (!focus.isFocused) startText = formatTrimTime(trimStartMs)
                 }
+                .testTag(ClearCutTestTags.TIMELINE_TRIM_START)
                 .semantics { contentDescription = trimStartDescription },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = ClearCutAccents.Peach,
@@ -172,6 +175,7 @@ private fun TrimNumericInputRow(
                     }
                     if (!focus.isFocused) endText = formatTrimTime(trimEndMs)
                 }
+                .testTag(ClearCutTestTags.TIMELINE_TRIM_END)
                 .semantics { contentDescription = trimEndDescription },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = ClearCutAccents.Peach,
@@ -299,6 +303,7 @@ private fun TimelineToolbarControls(
             compact = compact,
             highlight = true,
             enabled = canSplitAtPlayhead,
+            testTag = ClearCutTestTags.TIMELINE_SPLIT,
             onClick = onSplitAtPlayhead
         )
         if (selectedClipId != null) {
@@ -308,6 +313,7 @@ private fun TimelineToolbarControls(
                 compact = compact,
                 highlight = true,
                 destructive = true,
+                testTag = ClearCutTestTags.TIMELINE_DELETE,
                 onClick = onDeleteSelectedClip
             )
         }
@@ -1681,6 +1687,7 @@ fun Timeline(
                                                     RoundedCornerShape(Radius.xs)
                                                 )
                                             )
+                                            .testTag(ClearCutTestTags.TIMELINE_CLIP_PREFIX + clip.id)
                                             .semantics {
                                                 contentDescription = clipContentDescription
                                                 role = Role.Button

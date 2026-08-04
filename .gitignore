@@ -32,6 +32,9 @@ CLAUDE.md
 RESEARCH.md
 ROADMAP-COMPLETED.md
 qa/
+# The app's QA source set is checked-in test input, not local QA scratch.
+!app/src/qa/
+!app/src/qa/**
 
 # Cross-project pollution — HostShield is a separate app whose research drafts
 # sometimes end up in this working tree. Block them at the .gitignore layer and

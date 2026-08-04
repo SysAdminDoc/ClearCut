@@ -33,6 +33,7 @@ android {
         versionCode = 295
         versionName = "3.78.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testBuildType = "qa"
 
         // Passive, opt-in update check for sideload / GitHub-release installs.
         // A privacy-store fork (e.g. F-Droid) can override this to `false` to
@@ -40,6 +41,7 @@ android {
         // then never appears and UpdateChecker short-circuits to Unavailable.
         buildConfigField("boolean", "UPDATE_CHECK_AVAILABLE", "true")
         buildConfigField("boolean", "LOCAL_NETWORK_STREAMING_ENABLED", "false")
+        buildConfigField("boolean", "QA_TIMELINE_HARNESS_ENABLED", "false")
     }
 
     signingConfigs {
@@ -98,6 +100,13 @@ android {
             versionNameSuffix = "-streaming"
             matchingFallbacks += listOf("debug")
             buildConfigField("boolean", "LOCAL_NETWORK_STREAMING_ENABLED", "true")
+        }
+        create("qa") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qa"
+            versionNameSuffix = "-qa"
+            matchingFallbacks += listOf("debug")
+            buildConfigField("boolean", "QA_TIMELINE_HARNESS_ENABLED", "true")
         }
     }
 
@@ -833,6 +842,7 @@ dependencies {
     implementation(libs.okhttp)
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    add("qaImplementation", libs.androidx.compose.ui.test.manifest)
 
     testImplementation(libs.junit4)
     testImplementation(libs.org.json)

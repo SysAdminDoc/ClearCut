@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
@@ -38,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.annotation.StringRes
 import com.novacut.editor.R
 import com.novacut.editor.model.*
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.TouchTarget
@@ -511,6 +513,7 @@ private fun BottomTabBarItem(
                 onClick = onClick,
                 role = Role.Tab
             )
+            .testTag(ClearCutTestTags.EDITOR_TOOL_TAB_PREFIX + tab.id)
             .semantics { contentDescription = itemDescription }
             .height(itemHeight)
             .background(itemContainerColor)
@@ -589,6 +592,7 @@ private fun SubMenuGrid(
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(Radius.xs))
                         .clickable(enabled = !isDisabled) { onItemSelected(item.id) }
+                        .testTag(ClearCutTestTags.EDITOR_TOOL_ACTION_PREFIX + item.id)
                         .semantics {
                             contentDescription = itemLabel
                             if (isDisabled) disabled()

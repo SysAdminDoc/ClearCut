@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ internal fun TimelineToolbarButton(
     highlight: Boolean = false,
     destructive: Boolean = false,
     enabled: Boolean = true,
+    testTag: String? = null,
     onClick: () -> Unit
 ) {
     val colors = LocalClearCutColors.current
@@ -70,7 +72,8 @@ internal fun TimelineToolbarButton(
         shape = RoundedCornerShape(Radius.md),
         size = TouchTarget.minimum,
         iconSize = if (compact) 16.dp else 18.dp,
-        enabled = enabled
+        enabled = enabled,
+        modifier = testTag?.let { Modifier.testTag(it) } ?: Modifier,
     )
 }
 

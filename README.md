@@ -525,6 +525,13 @@ com.novacut.editor/
 # Debug build
 ./gradlew assembleDebug
 
+# Isolated QA timeline instrumentation (application ID: com.novacut.editor.qa)
+./gradlew :app:assembleQa :app:assembleQaAndroidTest
+# JVM/lint gate for the QA-targeted test graph
+./gradlew :app:testQaUnitTest :app:lintDebug
+# Run instrumentation only on a dedicated QA device or emulator
+./gradlew :app:connectedQaAndroidTest
+
 # Release build (requires keystore.properties or env vars)
 ./gradlew assembleRelease
 

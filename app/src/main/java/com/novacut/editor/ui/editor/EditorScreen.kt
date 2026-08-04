@@ -1673,7 +1673,9 @@ private fun EditorTopBar(
                         IconButton(
                             onClick = onUndo,
                             enabled = canUndo,
-                            modifier = Modifier.size(if (isCompactBar) 32.dp else 34.dp)
+                            modifier = Modifier
+                                .size(if (isCompactBar) 32.dp else 34.dp)
+                                .testTag(ClearCutTestTags.EDITOR_UNDO)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Undo,
@@ -1685,7 +1687,9 @@ private fun EditorTopBar(
                         IconButton(
                             onClick = onRedo,
                             enabled = canRedo,
-                            modifier = Modifier.size(if (isCompactBar) 32.dp else 34.dp)
+                            modifier = Modifier
+                                .size(if (isCompactBar) 32.dp else 34.dp)
+                                .testTag(ClearCutTestTags.EDITOR_REDO)
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.Redo,
