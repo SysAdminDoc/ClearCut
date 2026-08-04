@@ -39,6 +39,7 @@ import com.novacut.editor.engine.StreamCopyExportEngine
 import com.novacut.editor.engine.TimelineRangeExportEngine
 import com.novacut.editor.engine.TrackBlendModeCapability
 import com.novacut.editor.engine.VideoEngine
+import com.novacut.editor.engine.reverseRenderFallbackMessage
 import com.novacut.editor.engine.gifLogicalScreenSize
 import com.novacut.editor.engine.buildExportHistoryEntry
 import com.novacut.editor.engine.exportMimeTypeFor
@@ -204,6 +205,7 @@ class ExportDelegate(
                 progress = 0f,
                 state = ExportState.EXPORTING,
                 errorMessage = null,
+                warningMessage = null,
                 lastExportedFilePath = null,
                 encoderName = null,
                 etaMs = null,
@@ -786,20 +788,29 @@ class ExportDelegate(
                 ExportIntentFallback(
                     stage = "reverse-render",
                     subjectId = clip.id,
-                    message = "Clip ${clip.id} is reversed, but reverse rendering is unavailable on " +
-                        "this device. It would be exported playing forward.",
+                    message = requireNotNull(
+                        reverseRenderFallbackMessage(
+                            clipId = clip.id,
+                            clipDurationMs = clip.trimEndMs - clip.trimStartMs,
+                            reverseRenderAvailable = false,
+                        )
+                    ),
                 )
             }
         }
 
         return reversedClips.mapNotNull { clip ->
             val clipDurationMs = clip.trimEndMs - clip.trimStartMs
-            if (clipDurationMs <= MAX_REVERSE_CLIP_DURATION_MS) return@mapNotNull null
+            val fallbackMessage = reverseRenderFallbackMessage(
+                clipId = clip.id,
+                clipDurationMs = clipDurationMs,
+                reverseRenderAvailable = true,
+                maxDurationMs = MAX_REVERSE_CLIP_DURATION_MS,
+            ) ?: return@mapNotNull null
             ExportIntentFallback(
                 stage = "reverse-render",
                 subjectId = clip.id,
-                message = "Clip ${clip.id} is reversed and ${clipDurationMs / 1000}s long, over the " +
-                    "${MAX_REVERSE_CLIP_DURATION_MS / 1000}s reverse limit. It would be exported playing forward.",
+                message = fallbackMessage,
             )
         }
     }

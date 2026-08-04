@@ -81,6 +81,7 @@ class EditorDomainStateTest {
                 state = ExportState.EXPORTING,
                 lastExportedFilePath = "C:/exports/final.mp4",
                 errorMessage = "blocked",
+                warningMessage = "Clip clip-7 would export forward.",
                 startTime = 1234L
             ),
             ai = EditorAiState(
@@ -114,6 +115,7 @@ class EditorDomainStateTest {
         assertEquals(ExportState.EXPORTING, domains.export.state)
         assertEquals("C:/exports/final.mp4", domains.export.lastExportedFilePath)
         assertEquals("blocked", domains.export.errorMessage)
+        assertEquals("Clip clip-7 would export forward.", domains.export.warningMessage)
         assertEquals(1234L, domains.export.startTime)
         assertSame(prompt, domains.ai.requirementPrompt)
         assertSame(requirement, domains.ai.modelRequirement)

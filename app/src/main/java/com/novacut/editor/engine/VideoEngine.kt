@@ -72,6 +72,26 @@ internal fun nextSampledSpeedChangeTimeUs(
     return if (nextUs < durationUs) nextUs else C.TIME_UNSET
 }
 
+/**
+ * The user-visible explanation for a reversed clip that the export pipeline
+ * has consent to render forward. Keep this beside the engine limit so the
+ * preflight copy and the runtime warning cannot drift apart.
+ */
+internal fun reverseRenderFallbackMessage(
+    clipId: String,
+    clipDurationMs: Long,
+    reverseRenderAvailable: Boolean,
+    maxDurationMs: Long = MAX_REVERSE_CLIP_DURATION_MS,
+): String? {
+    if (!reverseRenderAvailable) {
+        return "Clip $clipId is reversed, but reverse rendering is unavailable on this device. " +
+            "It would be exported playing forward."
+    }
+    if (clipDurationMs <= maxDurationMs) return null
+    return "Clip $clipId is reversed and ${clipDurationMs / 1000}s long, over the " +
+        "${maxDurationMs / 1000}s reverse limit. It would be exported playing forward."
+}
+
 internal fun playbackSessionNeedsReset(
     forceRestart: Boolean,
     playbackState: Int,
@@ -237,6 +257,10 @@ class VideoEngine @Inject constructor(
     private val _exportErrorMessage = MutableStateFlow<String?>(null)
     val exportErrorMessage: StateFlow<String?> = _exportErrorMessage
 
+    /** Latest non-fatal export disclosure, such as an accepted reverse fallback. */
+    private val _exportWarningMessage = MutableStateFlow<String?>(null)
+    val exportWarningMessage: StateFlow<String?> = _exportWarningMessage
+
     /**
      * Why the last export ended in ERROR. Every terminal path below already computes
      * a specific reason; without a typed carrier the UI could only fall back to one
@@ -288,6 +312,15 @@ class VideoEngine @Inject constructor(
     private fun failExport(cause: ExportFailureCause, message: String) {
         _exportErrorMessage.value = message
         _exportFailureCause.value = cause
+    }
+
+    /** Keep every runtime fallback visible when several clips share one export. */
+    private fun appendExportWarning(message: String) {
+        val existing = _exportWarningMessage.value
+            ?.split('\n')
+            ?.filter(String::isNotBlank)
+            .orEmpty()
+        _exportWarningMessage.value = (existing + message).distinct().joinToString("\n")
     }
 
     /**
@@ -607,6 +640,7 @@ class VideoEngine @Inject constructor(
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
+        _exportWarningMessage.value = null
 
         val reversedTempFiles = mutableListOf<File>()
         try {
@@ -883,6 +917,7 @@ class VideoEngine @Inject constructor(
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
+        _exportWarningMessage.value = null
         return true
     }
 
@@ -926,10 +961,21 @@ class VideoEngine @Inject constructor(
         if (reversedClips.isEmpty()) return tracks
 
         // Both remaining fallbacks below are visible to export preflight, which
-        // requires the user to accept them before this runs. Anything the
-        // preflight could not predict fails the export instead of quietly
-        // shipping forward video.
-        if (!ffmpegEngine.isAvailable()) return tracks
+        // requires the user to accept them before this runs. Repeat the
+        // disclosure at the point where the fallback is actually applied so
+        // the completed export never looks indistinguishable from a faithful
+        // reverse render.
+        val reverseRenderAvailable = ffmpegEngine.isAvailable()
+        if (!reverseRenderAvailable) {
+            reversedClips.forEach { (_, clip) ->
+                reverseRenderFallbackMessage(
+                    clipId = clip.id,
+                    clipDurationMs = clip.trimEndMs - clip.trimStartMs,
+                    reverseRenderAvailable = false,
+                )?.let(::appendExportWarning)
+            }
+            return tracks
+        }
 
         val maxReverseDurationMs = MAX_REVERSE_CLIP_DURATION_MS
         val clipReplacements = mutableMapOf<String, Clip>()
@@ -941,8 +987,14 @@ class VideoEngine @Inject constructor(
             if (_exportState.value != ExportState.EXPORTING) break
             val (_, clip) = pair
             val clipDurationMs = clip.trimEndMs - clip.trimStartMs
-            if (clipDurationMs > maxReverseDurationMs) {
-                Log.w(TAG, "Reversed clip ${clip.id} exceeds ${maxReverseDurationMs / 1000}s limit, exporting forward")
+            reverseRenderFallbackMessage(
+                clipId = clip.id,
+                clipDurationMs = clipDurationMs,
+                reverseRenderAvailable = true,
+                maxDurationMs = maxReverseDurationMs,
+            )?.let { fallbackMessage ->
+                Log.w(TAG, fallbackMessage)
+                appendExportWarning(fallbackMessage)
                 continue
             }
 
@@ -1062,6 +1114,7 @@ class VideoEngine @Inject constructor(
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
+        _exportWarningMessage.value = null
 
         val parentDir = outputFile.parentFile ?: context.cacheDir
         val tempDir = File(
@@ -2650,6 +2703,7 @@ class VideoEngine @Inject constructor(
     fun resetExportState() {
         _exportState.value = ExportState.IDLE
         _exportProgress.value = 0f
+        _exportWarningMessage.value = null
     }
 
     fun release() {

@@ -133,6 +133,7 @@ fun ExportSheet(
     modifier: Modifier = Modifier,
     aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
     errorMessage: String? = null,
+    exportWarning: String? = null,
     exportStartTime: Long = 0L,
     totalDurationMs: Long = 0L,
     playheadMs: Long = 0L,
@@ -455,15 +456,18 @@ fun ExportSheet(
 
             val encoderLine = encoderName?.let { stringResource(R.string.export_encoder_format, it) }
             val stallLine = if (stallWarning) stringResource(R.string.export_stall_warning) else null
+            val warningLine = exportWarning?.takeIf { it.isNotBlank() }
             val bodyParts = listOfNotNull(
                 stringResource(R.string.export_elapsed, elapsedLabel),
                 encoderLine,
-                stallLine
+                stallLine,
+                warningLine,
             ).joinToString("\n")
+            val attentionNeeded = stallWarning || warningLine != null
 
             ExportStateCard(
-                icon = if (stallWarning) Icons.Default.Warning else Icons.Default.FileUpload,
-                tint = if (stallWarning) ClearCutAccents.Yellow else ClearCutAccents.Mauve,
+                icon = if (attentionNeeded) Icons.Default.Warning else Icons.Default.FileUpload,
+                tint = if (attentionNeeded) ClearCutAccents.Yellow else ClearCutAccents.Mauve,
                 title = stringResource(R.string.export_exporting),
                 body = bodyParts,
                 progress = exportProgress,
@@ -481,11 +485,15 @@ fun ExportSheet(
                 ExportPreviewPlayer(filePath = lastExportedFilePath)
                 Spacer(Modifier.height(Spacing.md))
             }
+            val completionBody = listOfNotNull(
+                stringResource(R.string.export_subtitle),
+                exportWarning?.takeIf { it.isNotBlank() },
+            ).joinToString("\n")
             ExportStateCard(
                 icon = Icons.Default.CheckCircle,
                 tint = ClearCutAccents.Green,
                 title = stringResource(R.string.export_complete),
-                body = stringResource(R.string.export_subtitle),
+                body = completionBody,
                 primaryLabel = stringResource(R.string.share),
                 onPrimary = onShare,
                 secondaryLabel = stringResource(R.string.export_save_to_gallery),

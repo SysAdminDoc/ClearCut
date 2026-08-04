@@ -441,6 +441,7 @@ data class EditorState(
     val exportState: ExportState get() = export.state
     val lastExportedFilePath: String? get() = export.lastExportedFilePath
     val exportErrorMessage: String? get() = export.errorMessage
+    val exportWarningMessage: String? get() = export.warningMessage
     val exportStartTime: Long get() = export.startTime
     val renderSegments: List<SmartRenderEngine.RenderSegment> get() = export.renderSegments
     val renderSummary: SmartRenderEngine.SmartRenderSummary? get() = export.renderSummary
@@ -1046,6 +1047,16 @@ class EditorViewModel @Inject constructor(
                 _state.update { it.copyExport { export -> export.copy(state = exportState) } }
                 if (exportState == ExportState.CANCELLED) {
                     showToast(text(R.string.vm_export_cancelled_toast))
+                }
+            }
+        }
+        viewModelScope.launch {
+            videoEngine.exportWarningMessage.collect { warningMessage ->
+                _state.update {
+                    it.copyExport { export -> export.copy(warningMessage = warningMessage) }
+                }
+                warningMessage?.takeIf { it.isNotBlank() }?.let { message ->
+                    showToast(message, ToastSeverity.Warning)
                 }
             }
         }
@@ -2108,7 +2119,8 @@ class EditorViewModel @Inject constructor(
                     ),
                     state = ExportState.IDLE,
                     progress = 0f,
-                    errorMessage = null
+                    errorMessage = null,
+                    warningMessage = null,
                 )
             )
         }

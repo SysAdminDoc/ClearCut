@@ -72,6 +72,7 @@ data class EditorExportDomainState(
     val state: ExportState = ExportState.IDLE,
     val lastExportedFilePath: String? = null,
     val errorMessage: String? = null,
+    val warningMessage: String? = null,
     val startTime: Long = 0L,
     val encoderName: String? = null,
     val etaMs: Long? = null,
