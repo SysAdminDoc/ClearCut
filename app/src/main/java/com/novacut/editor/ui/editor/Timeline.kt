@@ -1405,6 +1405,8 @@ fun Timeline(
                                 height = size.height,
                                 textMeasurer = textMeasurer,
                                 labelColor = semanticColors.subtext,
+                                majorTickColor = semanticColors.overlayStrong,
+                                minorTickColor = semanticColors.overlay,
                             )
 
                             // Draw timeline marker flags
@@ -2093,7 +2095,7 @@ fun Timeline(
                                                     }
                                                     drawPath(
                                                         path,
-                                                        Color(0xFFF9E2AF), // Yellow
+                                                        ClearCutAccents.Yellow,
                                                         style = Stroke(width = 1.5f)
                                                     )
                                                     // Draw keyframe dots on envelope (zero-duration guard above protects the divide).
@@ -2101,7 +2103,7 @@ fun Timeline(
                                                     volumeKfs.forEach { kf ->
                                                         val x = (kf.timeOffsetMs.toFloat() / durF) * size.width
                                                         val y = size.height * (1f - (kf.value / 2f).coerceIn(0f, 1f))
-                                                        drawCircle(Color(0xFFF9E2AF), 3f, Offset(x, y))
+                                                        drawCircle(ClearCutAccents.Yellow, 3f, Offset(x, y))
                                                     }
                                                 }
                                             }
@@ -2341,7 +2343,7 @@ fun Timeline(
                                                     val x = (kf.timeOffsetMs / clipDuration) * size.width
                                                     if (x in 0f..size.width) {
                                                         drawCircle(
-                                                            color = Color(0xFFF5C2E7), // ClearCutAccents.Pink
+                                                            color = ClearCutAccents.Pink,
                                                             radius = 3f,
                                                             center = Offset(x, size.height - 6f)
                                                         )
@@ -2365,7 +2367,7 @@ fun Timeline(
                                             .fillMaxHeight()
                                     ) {
                                         drawRect(
-                                            color = Color(0x40F9E2AF), // Yellow semi-transparent
+                                            color = ClearCutAccents.Yellow.copy(alpha = 0.25f),
                                             size = Size(1f * density.density, size.height)
                                         )
                                     }
@@ -2429,7 +2431,7 @@ fun Timeline(
                                                 .fillMaxHeight()
                                         ) {
                                             drawRect(
-                                                color = Color(0xFF89B4FA), // Blue snap line
+                                                color = ClearCutAccents.Blue,
                                                 size = Size(2f * density.density, size.height)
                                             )
                                             // Draw small diamond indicators at top and bottom
@@ -2441,7 +2443,7 @@ fun Timeline(
                                                 lineTo(size.width / 2 - diamondSize, diamondSize)
                                                 close()
                                             }
-                                            drawPath(topDiamond, Color(0xFF89B4FA))
+                                            drawPath(topDiamond, ClearCutAccents.Blue)
                                             val bottomDiamond = Path().apply {
                                                 moveTo(size.width / 2, size.height)
                                                 lineTo(size.width / 2 + diamondSize, size.height - diamondSize)
@@ -2449,7 +2451,7 @@ fun Timeline(
                                                 lineTo(size.width / 2 - diamondSize, size.height - diamondSize)
                                                 close()
                                             }
-                                            drawPath(bottomDiamond, Color(0xFF89B4FA))
+                                            drawPath(bottomDiamond, ClearCutAccents.Blue)
                                         }
                                     }
                                 }

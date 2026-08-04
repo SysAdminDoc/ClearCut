@@ -18,6 +18,8 @@ internal fun DrawScope.drawTimeRuler(
     height: Float,
     textMeasurer: TextMeasurer,
     labelColor: Color,
+    majorTickColor: Color,
+    minorTickColor: Color,
 ) {
     if (pixelsPerMs <= 0f || !pixelsPerMs.isFinite() || width <= 0f) return
     val intervalMs = when {
@@ -43,7 +45,7 @@ internal fun DrawScope.drawTimeRuler(
             val tickHeight = if (isMajor) height * 0.4f else height * 0.25f
 
             drawLine(
-                color = if (isMajor) Color(0xFF7F849C) else Color(0xFF45475A),
+                color = if (isMajor) majorTickColor else minorTickColor,
                 start = Offset(x, height - tickHeight),
                 end = Offset(x, height),
                 strokeWidth = if (isMajor) 1.5f else 0.5f

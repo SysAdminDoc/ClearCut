@@ -48,13 +48,11 @@ import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import kotlin.math.min
 
-private val ScopeBg = Color(0xFF11111B)
-private val ScopeCanvasBackground = Color(0xFF0A0A0A)
+// RGB trace colors are signal semantics, not UI theme colors, so they stay fixed
+// while structural surfaces and grids resolve from LocalClearCutColors below.
 private val ScopeRed = Color(0xFFFF4444)
 private val ScopeGreen = Color(0xFF44FF44)
 private val ScopeBlue = Color(0xFF4488FF)
-private val ScopeWhite = Color(0xFFCCCCCC)
-private val ScopeGrid = Color(0xFF333333)
 
 enum class ScopeType(val label: String) {
     HISTOGRAM("Histogram"),
@@ -90,7 +88,7 @@ fun VideoScopesOverlay(
 
     Surface(
         modifier = modifier.widthIn(min = 264.dp, max = 320.dp),
-        color = ScopeBg.copy(alpha = 0.96f),
+        color = semanticColors.panel.copy(alpha = 0.96f),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.9f))
     ) {
@@ -190,7 +188,7 @@ fun VideoScopesOverlay(
                     .fillMaxWidth()
                     .height(168.dp)
                     .clip(RoundedCornerShape(18.dp))
-                    .background(ScopeCanvasBackground),
+                    .background(semanticColors.canvas),
                 contentAlignment = Alignment.Center
             ) {
                 when {
@@ -203,9 +201,20 @@ fun VideoScopesOverlay(
 
                     else -> Canvas(modifier = Modifier.fillMaxSize()) {
                         when (activeScope) {
-                            ScopeType.HISTOGRAM -> drawHistogram(scopeData as? HistogramData)
-                            ScopeType.WAVEFORM -> drawWaveformScope(scopeData as? WaveformData)
-                            ScopeType.VECTORSCOPE -> drawVectorscope(scopeData as? VectorscopeData)
+                            ScopeType.HISTOGRAM -> drawHistogram(
+                                data = scopeData as? HistogramData,
+                                gridColor = semanticColors.cardStroke,
+                                lumaColor = semanticColors.text,
+                            )
+                            ScopeType.WAVEFORM -> drawWaveformScope(
+                                data = scopeData as? WaveformData,
+                                gridColor = semanticColors.cardStroke,
+                            )
+                            ScopeType.VECTORSCOPE -> drawVectorscope(
+                                data = scopeData as? VectorscopeData,
+                                gridColor = semanticColors.cardStroke,
+                                pointColor = semanticColors.text,
+                            )
                         }
                     }
                 }
@@ -379,14 +388,18 @@ private fun analyzeVectorscope(pixels: IntArray): VectorscopeData {
     return VectorscopeData(points)
 }
 
-private fun DrawScope.drawHistogram(data: HistogramData?) {
+private fun DrawScope.drawHistogram(
+    data: HistogramData?,
+    gridColor: Color,
+    lumaColor: Color,
+) {
     if (data == null) return
     val width = size.width
     val height = size.height
 
     for (index in 1..3) {
         val y = height * index / 4f
-        drawLine(ScopeGrid, Offset(0f, y), Offset(width, y), 0.5f)
+        drawLine(gridColor, Offset(0f, y), Offset(width, y), 0.5f)
     }
 
     val maxRed = data.red.max().coerceAtLeast(1).toFloat()
@@ -399,7 +412,7 @@ private fun DrawScope.drawHistogram(data: HistogramData?) {
         val x = index * barWidth
         val lumaHeight = (data.luma[index] / maxLuma) * height
         drawRect(
-            ScopeWhite.copy(alpha = 0.15f),
+            lumaColor.copy(alpha = 0.15f),
             Offset(x, height - lumaHeight),
             androidx.compose.ui.geometry.Size(barWidth, lumaHeight)
         )
@@ -429,14 +442,14 @@ private fun DrawScope.drawHistogram(data: HistogramData?) {
     }
 }
 
-private fun DrawScope.drawWaveformScope(data: WaveformData?) {
+private fun DrawScope.drawWaveformScope(data: WaveformData?, gridColor: Color) {
     if (data == null || data.columns.isEmpty()) return
     val width = size.width
     val height = size.height
 
     for (index in 0..4) {
         val y = height * index / 4f
-        drawLine(ScopeGrid, Offset(0f, y), Offset(width, y), 0.5f)
+        drawLine(gridColor, Offset(0f, y), Offset(width, y), 0.5f)
     }
 
     val columnWidth = width / data.columns.size
@@ -469,7 +482,11 @@ private fun DrawScope.drawWaveformScope(data: WaveformData?) {
     }
 }
 
-private fun DrawScope.drawVectorscope(data: VectorscopeData?) {
+private fun DrawScope.drawVectorscope(
+    data: VectorscopeData?,
+    gridColor: Color,
+    pointColor: Color,
+) {
     if (data == null) return
     val width = size.width
     val height = size.height
@@ -477,11 +494,11 @@ private fun DrawScope.drawVectorscope(data: VectorscopeData?) {
     val centerY = height / 2f
     val radius = min(centerX, centerY) * 0.9f
 
-    drawCircle(ScopeGrid, radius, Offset(centerX, centerY), style = Stroke(1f))
-    drawCircle(ScopeGrid, radius * 0.5f, Offset(centerX, centerY), style = Stroke(0.5f))
+    drawCircle(gridColor, radius, Offset(centerX, centerY), style = Stroke(1f))
+    drawCircle(gridColor, radius * 0.5f, Offset(centerX, centerY), style = Stroke(0.5f))
 
-    drawLine(ScopeGrid, Offset(centerX - radius, centerY), Offset(centerX + radius, centerY), 0.5f)
-    drawLine(ScopeGrid, Offset(centerX, centerY - radius), Offset(centerX, centerY + radius), 0.5f)
+    drawLine(gridColor, Offset(centerX - radius, centerY), Offset(centerX + radius, centerY), 0.5f)
+    drawLine(gridColor, Offset(centerX, centerY - radius), Offset(centerX, centerY + radius), 0.5f)
 
     val targets = listOf(
         Triple(0.5f, 0.35f, ScopeRed),
@@ -502,7 +519,7 @@ private fun DrawScope.drawVectorscope(data: VectorscopeData?) {
         val pointY = centerY - point.cr * radius * 2f
         if (pointX in 0f..width && pointY in 0f..height) {
             drawCircle(
-                ScopeWhite.copy(alpha = (0.05f + point.intensity * 0.2f).coerceAtMost(0.3f)),
+                pointColor.copy(alpha = (0.05f + point.intensity * 0.2f).coerceAtMost(0.3f)),
                 1.5f,
                 Offset(pointX, pointY)
             )

@@ -612,7 +612,7 @@ private fun TemplateCard(
                     .height(118.dp)
                     .background(
                         Brush.verticalGradient(
-                            listOf(accent.copy(alpha = 0.24f), Color(0xFF181825), semanticColors.panel)
+                            listOf(accent.copy(alpha = 0.24f), semanticColors.backgroundMid, semanticColors.panel)
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -780,7 +780,7 @@ private fun AnimatedTemplateCard(
                         Brush.verticalGradient(
                             listOf(
                                 template.accent.copy(alpha = 0.26f),
-                                Color(0xFF181825),
+                                semanticColors.backgroundMid,
                                 semanticColors.panel
                             )
                         )

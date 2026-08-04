@@ -16,7 +16,7 @@ class SemanticThemeSourcePolicyTest {
         val files = sourceRoots.flatMap { directory ->
             directory.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
         }
-        val rawColorFiles = listOf("projects", "settings").flatMap { area ->
+        val rawColorFiles = listOf("editor", "projects", "settings").flatMap { area ->
             File(root, "app/src/main/java/com/novacut/editor/ui/$area")
                 .walkTopDown()
                 .filter { it.isFile && it.extension == "kt" }
@@ -63,8 +63,22 @@ class SemanticThemeSourcePolicyTest {
         const val RAW_MOCHA_IMPORT = "import com.novacut.editor.ui.theme.Mocha"
         val APPROVED_ACCENT = Regex("ClearCutAccents\\.([A-Za-z0-9_]+)")
         val RAW_COLOR_LITERAL = Regex("Color\\(0x[0-9A-Fa-f]+\\)")
-        /** Exact exceptions for content-derived colors, kept empty until one is justified. */
-        val CONTENT_DRIVEN_COLOR_ALLOWLIST = emptyMap<String, Set<String>>()
+        /**
+         * Signal/preset colors are intentionally independent of the UI theme. Every
+         * structural editor color must still resolve through semantic or accent tokens.
+         */
+        val CONTENT_DRIVEN_COLOR_ALLOWLIST = mapOf(
+            "PipPresetsPanel.kt" to setOf(
+                "Color(0xFF00FF00)",
+                "Color(0xFF0044FF)",
+                "Color(0xFFFF0000)",
+            ),
+            "VideoScopes.kt" to setOf(
+                "Color(0xFFFF4444)",
+                "Color(0xFF44FF44)",
+                "Color(0xFF4488FF)",
+            ),
+        )
         val APPROVED_ACCENT_NAMES = setOf(
             "Neutral", "Lavender", "Blue", "Sapphire", "Sky", "Teal", "Green", "Yellow",
             "Peach", "Maroon", "Red", "Mauve", "Pink", "Flamingo", "Rosewater",

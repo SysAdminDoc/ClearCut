@@ -658,11 +658,11 @@ private fun CurveCanvas(
 
         for (index in 1..3) {
             val y = height * index / 4f
-            drawLine(Color(0xFF45475A), Offset(0f, y), Offset(width, y), 0.5f)
+            drawLine(semanticColors.cardStroke, Offset(0f, y), Offset(width, y), 0.5f)
         }
         for (index in 1..9) {
             val x = width * index / 10f
-            drawLine(Color(0xFF45475A), Offset(x, 0f), Offset(x, height), 0.5f)
+            drawLine(semanticColors.cardStroke, Offset(x, 0f), Offset(x, height), 0.5f)
         }
 
         activeProperties.forEach { property ->
@@ -709,7 +709,7 @@ private fun CurveCanvas(
         }
 
         val playheadX = (playheadMs.toFloat() / clipDurationMs) * width
-        drawLine(Color(0xFFF38BA8), Offset(playheadX, 0f), Offset(playheadX, height), 2f)
+        drawLine(semanticColors.danger, Offset(playheadX, 0f), Offset(playheadX, height), 2f)
     }
 }
 

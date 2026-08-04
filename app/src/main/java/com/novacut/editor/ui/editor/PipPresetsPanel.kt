@@ -287,19 +287,19 @@ fun ChromaKeyPanel(
             ChromaSlider(
                 label = stringResource(R.string.chroma_red),
                 value = keyColorR,
-                color = Color(0xFFF38BA8),
+                color = ClearCutAccents.Red,
                 onChanged = { onKeyColorChanged(it, keyColorG, keyColorB) }
             )
             ChromaSlider(
                 label = stringResource(R.string.chroma_green),
                 value = keyColorG,
-                color = Color(0xFFA6E3A1),
+                color = ClearCutAccents.Green,
                 onChanged = { onKeyColorChanged(keyColorR, it, keyColorB) }
             )
             ChromaSlider(
                 label = stringResource(R.string.chroma_blue),
                 value = keyColorB,
-                color = Color(0xFF89B4FA),
+                color = ClearCutAccents.Blue,
                 onChanged = { onKeyColorChanged(keyColorR, keyColorG, it) }
             )
         }

@@ -573,6 +573,7 @@ private fun SpeedCurveCanvas(
     val currentOnDragStarted by rememberUpdatedState(onDragStarted)
     val currentOnDragChanged by rememberUpdatedState(onDragChanged)
     val currentOnDragEnded by rememberUpdatedState(onDragEnded)
+    val semanticColors = LocalClearCutColors.current
 
     val canvasDescription = stringResource(R.string.speed_curve_canvas_cd)
     androidx.compose.foundation.Canvas(
@@ -658,11 +659,11 @@ private fun SpeedCurveCanvas(
 
         for (speed in listOf(0.5f, 1f, 2f, 4f)) {
             val y = (1f - (speed - minSpeed) / speedRange) * h
-            drawLine(Color(0xFF45475A), Offset(0f, y), Offset(w, y), 0.5f)
+            drawLine(semanticColors.cardStroke, Offset(0f, y), Offset(w, y), 0.5f)
         }
 
         val refY = (1f - (1f - minSpeed) / speedRange) * h
-        drawLine(Color(0xFF585B70), Offset(0f, refY), Offset(w, refY), 1.5f)
+        drawLine(semanticColors.cardStrokeStrong, Offset(0f, refY), Offset(w, refY), 1.5f)
 
         val path = Path()
         val steps = 200
