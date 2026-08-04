@@ -2,66 +2,38 @@ package com.novacut.editor.engine
 
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.novacut.editor.model.AudioEffect
 import com.novacut.editor.model.AudioEffectType
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class AudioRenderProcessorTest {
+/**
+ * Device-side PCM golden coverage for the processor contract shared by preview and export.
+ * This test never launches a UI or injects input; it exercises Media3's real Android audio
+ * processor implementation entirely in memory.
+ */
+@RunWith(AndroidJUnit4::class)
+class AudioRenderGoldenInstrumentationTest {
 
     @Test
-    fun stereoPanMovesTheSignalWithoutChangingTheFrameShape() {
-        val format = AudioProcessor.AudioFormat(48_000, 2, C.ENCODING_PCM_16BIT)
-        val output = process(PanAudioProcessor(1f), format, shortArrayOf(12_000, -8_000))
-
-        assertEquals(2, output.size)
-        assertEquals(0, output[0].toInt())
-        assertEquals(-8_000, output[1].toInt())
-    }
-
-    @Test
-    fun monoPanExpandsToStereoSoTheSavedValueIsAudible() {
-        val format = AudioProcessor.AudioFormat(44_100, 1, C.ENCODING_PCM_16BIT)
-        val processor = PanAudioProcessor(-1f)
-        val output = process(processor, format, shortArrayOf(16_000, -16_000))
-
-        assertEquals(4, output.size)
-        assertEquals(16_000, output[0].toInt())
-        assertEquals(0, output[1].toInt())
-        assertEquals(-16_000, output[2].toInt())
-        assertEquals(0, output[3].toInt())
-    }
-
-    @Test
-    fun centerPanPreservesStereoSamples() {
-        val format = AudioProcessor.AudioFormat(48_000, 2, C.ENCODING_PCM_16BIT)
-        val input = shortArrayOf(12_000, -8_000, 4_000, 2_000)
-
-        assertArrayEquals(input, process(PanAudioProcessor(0f), format, input))
-    }
-
-    @Test
-    fun dspProcessorUsesTheSameEngineContractAsAnalysis() {
-        val effect = AudioEffect(
-            type = AudioEffectType.LIMITER,
-            params = mapOf("ceiling" to -12f),
+    fun panAndDspRemainDeterministicAcrossMedia3Buffers() {
+        val stereoFormat = AudioProcessor.AudioFormat(48_000, 2, C.ENCODING_PCM_16BIT)
+        assertArrayEquals(
+            shortArrayOf(0, -8_000),
+            process(PanAudioProcessor(1f), stereoFormat, shortArrayOf(12_000, -8_000)),
         )
-        val format = AudioProcessor.AudioFormat(48_000, 2, C.ENCODING_PCM_16BIT)
-        val input = shortArrayOf(30_000, -30_000, 10_000, -10_000)
-        val expected = AudioEffectsEngine.processChain(input, 48_000, 2, listOf(effect))
-        val actual = process(AudioEffectsAudioProcessor(listOf(effect)), format, input)
 
-        assertEquals(expected.toList(), actual.toList())
-        assertTrue(actual.all { it.toInt() in Short.MIN_VALUE..Short.MAX_VALUE })
-    }
+        val monoFormat = AudioProcessor.AudioFormat(48_000, 1, C.ENCODING_PCM_16BIT)
+        assertArrayEquals(
+            shortArrayOf(16_000, 0, -16_000, 0),
+            process(PanAudioProcessor(-1f), monoFormat, shortArrayOf(16_000, -16_000)),
+        )
 
-    @Test
-    fun statefulDspKeepsFilterStateAcrossInputBufferBoundaries() {
-        val format = AudioProcessor.AudioFormat(48_000, 1, C.ENCODING_PCM_16BIT)
         val effect = AudioEffect(
             type = AudioEffectType.LOW_PASS,
             params = mapOf("frequency" to 1_200f, "resonance" to 0.7f),
@@ -74,15 +46,15 @@ class AudioRenderProcessorTest {
                 else -> 3_000
             }
         }
-
-        val whole = process(AudioEffectsAudioProcessor(listOf(effect)), format, input)
+        val whole = process(AudioEffectsAudioProcessor(listOf(effect)), monoFormat, input)
         val chunked = processChunks(
             AudioEffectsAudioProcessor(listOf(effect)),
-            format,
+            monoFormat,
             input,
-            chunkSizes = intArrayOf(1, 7, 2, 19, 5, 31, 3, 29),
+            intArrayOf(1, 7, 2, 19, 5, 31, 3, 29),
         )
 
+        assertEquals(input.size, whole.size)
         assertArrayEquals(whole, chunked)
     }
 

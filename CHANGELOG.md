@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Mixer pan and audio DSP now render through the same Media3 PCM chain in preview and export; constant-power mono/stereo pan and cross-buffer filter/effect state are covered by JVM and on-device audio-golden tests.
 - Exported MP4s now preserve source creation time and rotation through Media3's muxer; GPS and namespaced stream tags are opt-in, while metadata scrubbing filters forwarded source metadata and disables stream-copy shortcuts.
 - Removed the unused `BitrateMode`/CQ model and batch-plan field because Media3 1.10.1 rejects CQ at the encoder boundary; exports retain the supported bitrate strategy instead of exposing a nonfunctional control.
 - Added bounded per-track A/V sync offsets with frame nudges and millisecond entry; offsets persist through autosave, participate in preview/Transformer timing, remain undoable, and force modified timelines away from stream-copy shortcuts.

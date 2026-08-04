@@ -58,6 +58,96 @@ object AudioEffectsEngine {
         return ShortArray(buffer.size) { (sanitizeSample(buffer[it]) * 32767f).toInt().toShort() }
     }
 
+    internal fun createStreamingProcessor(
+        sampleRate: Int,
+        channels: Int,
+        effects: List<AudioEffect>,
+    ): StreamingProcessor = StreamingProcessor(sampleRate, channels, effects)
+
+    /**
+     * Stateful counterpart to [processChain] for Media3's buffer-by-buffer PCM contract.
+     * Every stateful effect keeps its delay/filter/envelope state here so a Media3 input
+     * buffer boundary is not audible. Effects whose algorithm is inherently block-based
+     * (pitch shift and normalization) retain their existing bounded block behavior.
+     */
+    internal class StreamingProcessor(
+        sampleRate: Int,
+        channels: Int,
+        effects: List<AudioEffect>,
+    ) {
+        private val safeSampleRate = sanitizedSampleRate(sampleRate)
+        private val safeChannels = sanitizedChannels(channels)
+        private val processors = effects
+            .filter { it.enabled }
+            .map { createStreamingEffect(it, safeSampleRate, safeChannels) }
+
+        fun process(pcm: ShortArray): ShortArray {
+            if (pcm.isEmpty()) return ShortArray(0)
+
+            var buffer = FloatArray(pcm.size) { pcm[it].toFloat() / 32768f }
+            for (processor in processors) buffer = processor.process(buffer)
+            return ShortArray(buffer.size) {
+                (sanitizeSample(buffer[it]) * 32767f).toInt().toShort()
+            }
+        }
+    }
+
+    private fun interface StreamingEffect {
+        fun process(input: FloatArray): FloatArray
+    }
+
+    private fun createStreamingEffect(
+        effect: AudioEffect,
+        sampleRate: Int,
+        channels: Int,
+    ): StreamingEffect = when (effect.type) {
+        AudioEffectType.PARAMETRIC_EQ -> StreamingParametricEq(sampleRate, channels, effect.params)
+        AudioEffectType.COMPRESSOR -> StreamingCompressor(sampleRate, channels, effect.params)
+        AudioEffectType.LIMITER -> StreamingEffect { input -> applyLimiter(input, effect.params) }
+        AudioEffectType.NOISE_GATE -> StreamingNoiseGate(sampleRate, channels, effect.params)
+        AudioEffectType.REVERB -> StreamingReverb(sampleRate, channels, effect.params)
+        AudioEffectType.DELAY -> StreamingDelay(sampleRate, channels, effect.params)
+        AudioEffectType.DE_ESSER -> StreamingDeEsser(sampleRate, channels, effect.params)
+        AudioEffectType.CHORUS -> StreamingModulatedDelay(sampleRate, channels, effect.params, flanger = false)
+        AudioEffectType.FLANGER -> StreamingModulatedDelay(sampleRate, channels, effect.params, flanger = true)
+        AudioEffectType.PITCH_SHIFT -> StreamingEffect { input ->
+            applyPitchShift(input, sampleRate, channels, effect.params)
+        }
+        AudioEffectType.NORMALIZER -> StreamingEffect { input -> applyNormalizer(input, effect.params) }
+        AudioEffectType.HIGH_PASS -> StreamingBiquad(
+            channels,
+            highPassCoeffs(
+                sampleRate,
+                sanitizeFrequency(finiteParam(effect.params, "frequency", 80f), sampleRate, 80f),
+                finiteParam(effect.params, "resonance", 0.7f).coerceIn(0.01f, 20f),
+            ),
+        )
+        AudioEffectType.LOW_PASS -> StreamingBiquad(
+            channels,
+            lowPassCoeffs(
+                sampleRate,
+                sanitizeFrequency(finiteParam(effect.params, "frequency", 12_000f), sampleRate, 12_000f),
+                finiteParam(effect.params, "resonance", 0.7f).coerceIn(0.01f, 20f),
+            ),
+        )
+        AudioEffectType.BAND_PASS -> StreamingBiquad(
+            channels,
+            bandPassCoeffs(
+                sampleRate,
+                sanitizeFrequency(finiteParam(effect.params, "frequency", 1_000f), sampleRate, 1_000f),
+                finiteParam(effect.params, "bandwidth", 1f).coerceIn(0.01f, 8f),
+            ),
+        )
+        AudioEffectType.NOTCH -> StreamingBiquad(
+            channels,
+            notchCoeffs(
+                sampleRate,
+                sanitizeFrequency(finiteParam(effect.params, "frequency", 1_000f), sampleRate, 1_000f),
+                finiteParam(effect.params, "bandwidth", 0.5f).coerceIn(0.01f, 8f),
+            ),
+        )
+    }
+
     // --- Biquad filter foundation ---
 
     private data class BiquadCoeffs(val b0: Float, val b1: Float, val b2: Float, val a1: Float, val a2: Float)
@@ -90,10 +180,15 @@ object AudioEffectsEngine {
         return safeFrequency.coerceIn(20f, maxFrequency)
     }
 
-    private fun biquadProcess(input: FloatArray, channels: Int, coeffs: BiquadCoeffs): FloatArray {
+    private fun biquadProcess(
+        input: FloatArray,
+        channels: Int,
+        coeffs: BiquadCoeffs,
+        retainedStates: Array<BiquadState>? = null,
+    ): FloatArray {
         val safeChannels = sanitizedChannels(channels)
         val output = FloatArray(input.size)
-        val states = Array(safeChannels) { BiquadState() }
+        val states = retainedStates ?: Array(safeChannels) { BiquadState() }
 
         for (i in input.indices) {
             val ch = i % safeChannels
@@ -106,6 +201,291 @@ object AudioEffectsEngine {
             output[i] = y
         }
         return output
+    }
+
+    private class StreamingBiquad(
+        private val channels: Int,
+        private val coeffs: BiquadCoeffs,
+    ) : StreamingEffect {
+        private val states = Array(sanitizedChannels(channels)) { BiquadState() }
+
+        override fun process(input: FloatArray): FloatArray = biquadProcess(
+            input = input,
+            channels = channels,
+            coeffs = coeffs,
+            retainedStates = states,
+        )
+    }
+
+    private class StreamingParametricEq(
+        sampleRate: Int,
+        channels: Int,
+        params: Map<String, Float>,
+    ) : StreamingEffect {
+        private val stages = buildList {
+            for (band in 1..5) {
+                val rawFreq = params["band${band}_freq"]?.takeIf { it.isFinite() } ?: continue
+                val frequency = sanitizeFrequency(rawFreq, sampleRate, 1_000f)
+                val gain = finiteParam(params, "band${band}_gain", 0f).coerceIn(-36f, 36f)
+                val q = finiteParam(params, "band${band}_q", 1f).coerceIn(0.01f, 20f)
+                if (abs(gain) > 0.1f) {
+                    add(StreamingBiquad(channels, peakEqCoeffs(sampleRate, frequency, gain, q)))
+                }
+            }
+        }
+
+        override fun process(input: FloatArray): FloatArray {
+            var result = input
+            for (stage in stages) result = stage.process(result)
+            return result
+        }
+    }
+
+    private class StreamingCompressor(
+        sampleRate: Int,
+        private val channels: Int,
+        params: Map<String, Float>,
+    ) : StreamingEffect {
+        private val threshold = 10f.pow(finiteParam(params, "threshold", -20f).coerceIn(-100f, 24f) / 20f)
+        private val ratio = finiteParam(params, "ratio", 4f).coerceIn(1f, 40f)
+        private val attackMs = finiteParam(params, "attack", 10f).coerceIn(0.1f, 5_000f)
+        private val releaseMs = finiteParam(params, "release", 100f).coerceIn(0.1f, 5_000f)
+        private val knee = finiteParam(params, "knee", 6f).coerceIn(0.01f, 60f)
+        private val makeupGain = 10f.pow(finiteParam(params, "makeupGain", 0f).coerceIn(-60f, 60f) / 20f)
+        private val attackCoeff = exp(-1f / (attackMs * sampleRate.coerceAtLeast(1) / 1000f))
+        private val releaseCoeff = exp(-1f / (releaseMs * sampleRate.coerceAtLeast(1) / 1000f))
+        private var envelope = 0f
+
+        override fun process(input: FloatArray): FloatArray {
+            val output = input.copyOf()
+            for (i in 0 until input.size - channels + 1 step channels) {
+                var peak = 0f
+                for (ch in 0 until channels) peak = maxOf(peak, abs(input[i + ch]))
+
+                val coeff = if (peak > envelope) attackCoeff else releaseCoeff
+                envelope = coeff * envelope + (1f - coeff) * peak
+                val gain = if (envelope <= threshold) {
+                    1f
+                } else {
+                    val kneeDb = knee / 2f
+                    val thresholdDb = 20f * log10(maxOf(threshold, 1e-10f))
+                    val envelopeDb = 20f * log10(maxOf(envelope, 1e-10f))
+                    val over = envelopeDb - thresholdDb
+                    val compressedDb = if (over < kneeDb) {
+                        thresholdDb + over - over * over / (4f * kneeDb)
+                    } else {
+                        thresholdDb + over / ratio
+                    }
+                    10f.pow((compressedDb - envelopeDb) / 20f)
+                }
+
+                for (ch in 0 until channels) output[i + ch] = input[i + ch] * gain * makeupGain
+            }
+            return output
+        }
+    }
+
+    private class StreamingNoiseGate(
+        sampleRate: Int,
+        private val channels: Int,
+        params: Map<String, Float>,
+    ) : StreamingEffect {
+        private val threshold = 10f.pow(finiteParam(params, "threshold", -40f).coerceIn(-100f, 0f) / 20f)
+        private val attackSamples = (
+            finiteParam(params, "attack", 1f).coerceIn(0.1f, 5_000f) * sampleRate / 1000f
+            ).toInt().coerceAtLeast(1)
+        private val holdSamples = (
+            finiteParam(params, "hold", 50f).coerceIn(0f, 5_000f) * sampleRate / 1000f
+            ).toInt().coerceAtLeast(0)
+        private val releaseSamples = (
+            finiteParam(params, "release", 100f).coerceIn(0.1f, 5_000f) * sampleRate / 1000f
+            ).toInt().coerceAtLeast(1)
+        private var gateOpen = false
+        private var holdCounter = 0
+        private var gain = 0f
+
+        override fun process(input: FloatArray): FloatArray {
+            val output = input.copyOf()
+            for (i in 0 until input.size - channels + 1 step channels) {
+                var peak = 0f
+                for (ch in 0 until channels) peak = maxOf(peak, abs(input[i + ch]))
+
+                if (peak >= threshold) {
+                    gateOpen = true
+                    holdCounter = holdSamples
+                } else if (holdCounter > 0) {
+                    holdCounter--
+                } else {
+                    gateOpen = false
+                }
+
+                val targetGain = if (gateOpen) 1f else 0f
+                val step = if (targetGain > gain) 1f / attackSamples else 1f / releaseSamples
+                gain = if (targetGain > gain) {
+                    minOf(gain + step, targetGain)
+                } else {
+                    maxOf(gain - step, targetGain)
+                }
+                for (ch in 0 until channels) output[i + ch] = input[i + ch] * gain
+            }
+            return output
+        }
+    }
+
+    private class StreamingReverb(
+        sampleRate: Int,
+        private val channels: Int,
+        params: Map<String, Float>,
+    ) : StreamingEffect {
+        private val roomSize = sanitizeUnitParam(finiteParam(params, "roomSize", 0.5f), 0.5f)
+        private val damping = sanitizeUnitParam(finiteParam(params, "damping", 0.5f), 0.5f)
+        private val wetDry = sanitizeUnitParam(finiteParam(params, "wetDry", 0.3f), 0.3f)
+        private val delaySamples = intArrayOf(
+            (0.0297f * sampleRate * roomSize).toInt(),
+            (0.0371f * sampleRate * roomSize).toInt(),
+            (0.0411f * sampleRate * roomSize).toInt(),
+            (0.0437f * sampleRate * roomSize).toInt(),
+        )
+        private val buffers = Array(4) { FloatArray(delaySamples[it].coerceAtLeast(1)) }
+        private val indices = IntArray(4)
+        private val feedback = (finiteParam(params, "decay", 2f).coerceIn(0f, 3f) * 0.3f).coerceIn(0f, 0.95f)
+        private val dampingCoeff = 1f - damping * 0.5f
+
+        override fun process(input: FloatArray): FloatArray {
+            val output = FloatArray(input.size)
+            for (i in 0 until input.size - channels + 1 step channels) {
+                var mono = 0f
+                for (ch in 0 until channels) mono += input[i + ch] / channels
+
+                var wet = 0f
+                for (tap in 0 until 4) {
+                    val delayed = buffers[tap][indices[tap]]
+                    wet += delayed
+                    var next = mono + delayed * feedback * dampingCoeff
+                    next = when {
+                        !next.isFinite() -> 0f
+                        abs(next) < 1e-20f -> 0f
+                        else -> next.coerceIn(-4f, 4f)
+                    }
+                    buffers[tap][indices[tap]] = next
+                    indices[tap] = (indices[tap] + 1) % buffers[tap].size
+                }
+                wet /= 4f
+                for (ch in 0 until channels) {
+                    output[i + ch] = input[i + ch] * (1f - wetDry) + wet * wetDry
+                }
+            }
+            passthroughTrailingPartialFrame(input, output, channels)
+            return output
+        }
+    }
+
+    private class StreamingDelay(
+        sampleRate: Int,
+        private val channels: Int,
+        params: Map<String, Float>,
+    ) : StreamingEffect {
+        private val delaySamples = (
+            finiteParam(params, "delayMs", 250f).coerceIn(1f, 2_000f) * sampleRate / 1000f
+            ).toInt().coerceAtLeast(1)
+        private val feedback = finiteParam(params, "feedback", 0.3f).coerceIn(-0.95f, 0.95f)
+        private val wetDry = sanitizeUnitParam(finiteParam(params, "wetDry", 0.3f), 0.3f)
+        private val pingPong = (params["pingPong"] ?: 0f) > 0.5f
+        private val delayBuffer = FloatArray(delaySamples * channels)
+        private var writePos = 0
+
+        override fun process(input: FloatArray): FloatArray {
+            val output = FloatArray(input.size)
+            for (i in 0 until input.size - channels + 1 step channels) {
+                val delayedValues = FloatArray(channels)
+                for (ch in 0 until channels) {
+                    delayedValues[ch] = delayBuffer[writePos * channels + ch]
+                    output[i + ch] = input[i + ch] * (1f - wetDry) + delayedValues[ch] * wetDry
+                }
+                for (ch in 0 until channels) {
+                    val feedbackChannel = if (pingPong && channels == 2) (ch + 1) % 2 else ch
+                    val feedbackIndex = writePos * channels + feedbackChannel
+                    delayBuffer[feedbackIndex] = (input[i + ch] + delayedValues[ch] * feedback)
+                        .coerceIn(-4f, 4f)
+                }
+                writePos = (writePos + 1) % delaySamples
+            }
+            passthroughTrailingPartialFrame(input, output, channels)
+            return output
+        }
+    }
+
+    private class StreamingDeEsser(
+        sampleRate: Int,
+        private val channels: Int,
+        params: Map<String, Float>,
+    ) : StreamingEffect {
+        private val threshold = 10f.pow(finiteParam(params, "threshold", -20f).coerceIn(-100f, 0f) / 20f)
+        private val ratio = finiteParam(params, "ratio", 3f).coerceIn(1f, 40f)
+        private val detector = StreamingBiquad(
+            channels,
+            bandPassCoeffs(
+                sampleRate,
+                sanitizeFrequency(finiteParam(params, "frequency", 6_000f), sampleRate, 6_000f),
+                1f,
+            ),
+        )
+
+        override fun process(input: FloatArray): FloatArray {
+            val sibilanceDetect = detector.process(input)
+            val output = input.copyOf()
+            for (i in 0 until input.size - channels + 1 step channels) {
+                var sibilance = 0f
+                for (ch in 0 until channels) sibilance = maxOf(sibilance, abs(sibilanceDetect[i + ch]))
+                if (sibilance > threshold) {
+                    val reduction = threshold + (sibilance - threshold) / ratio
+                    val gain = reduction / maxOf(sibilance, 1e-10f)
+                    for (ch in 0 until channels) output[i + ch] = input[i + ch] * gain
+                }
+            }
+            return output
+        }
+    }
+
+    private class StreamingModulatedDelay(
+        sampleRate: Int,
+        private val channels: Int,
+        params: Map<String, Float>,
+        private val flanger: Boolean,
+    ) : StreamingEffect {
+        private val rate = finiteParam(params, "rate", if (flanger) 0.5f else 1.5f).coerceIn(0.01f, 20f)
+        private val depth = sanitizeUnitParam(finiteParam(params, "depth", 0.5f), 0.5f)
+        private val feedback = if (flanger) {
+            finiteParam(params, "feedback", 0.3f).coerceIn(-0.95f, 0.95f)
+        } else {
+            0f
+        }
+        private val wetDry = sanitizeUnitParam(finiteParam(params, "wetDry", 0.3f), 0.3f)
+        private val maxDelay = ((if (flanger) 0.01f else 0.03f) * sampleRate).toInt().coerceAtLeast(2)
+        private val delayBuffer = FloatArray(maxDelay * channels)
+        private var writeIndex = 0
+        private var phase = 0f
+        private val phaseIncrement = rate / sampleRate
+
+        override fun process(input: FloatArray): FloatArray {
+            val output = input.copyOf()
+            for (i in 0 until input.size - channels + 1 step channels) {
+                phase += phaseIncrement
+                val modDelay = (
+                    maxDelay * 0.5f * (1f + sin(2f * PI.toFloat() * phase) * depth)
+                    ).toInt().coerceIn(1, maxDelay - 1)
+                for (ch in 0 until channels) {
+                    val readIndex = ((writeIndex - modDelay + maxDelay) % maxDelay) * channels + ch
+                    val delayed = delayBuffer[readIndex]
+                    output[i + ch] = input[i + ch] * (1f - wetDry) + delayed * wetDry
+                    val writeOffset = writeIndex * channels + ch
+                    delayBuffer[writeOffset] = (input[i + ch] + delayed * feedback).coerceIn(-4f, 4f)
+                }
+                writeIndex = (writeIndex + 1) % maxDelay
+            }
+            passthroughTrailingPartialFrame(input, output, channels)
+            return output
+        }
     }
 
     private fun lowPassCoeffs(sampleRate: Int, frequency: Float, q: Float): BiquadCoeffs {

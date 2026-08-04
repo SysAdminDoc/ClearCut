@@ -17,6 +17,8 @@ internal class AudioEffectsAudioProcessor(
     private val effects: List<AudioEffect>,
 ) : BaseAudioProcessor() {
 
+    private var streamingProcessor: AudioEffectsEngine.StreamingProcessor? = null
+
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
         if (inputAudioFormat.sampleRate <= 0 ||
             inputAudioFormat.channelCount <= 0 ||
@@ -24,6 +26,11 @@ internal class AudioEffectsAudioProcessor(
         ) {
             throw AudioProcessor.UnhandledAudioFormatException(inputAudioFormat)
         }
+        streamingProcessor = AudioEffectsEngine.createStreamingProcessor(
+            sampleRate = inputAudioFormat.sampleRate,
+            channels = inputAudioFormat.channelCount,
+            effects = effects,
+        )
         return inputAudioFormat
     }
 
@@ -38,14 +45,14 @@ internal class AudioEffectsAudioProcessor(
         for (index in samples.indices) samples[index] = inputBuffer.short
         if (inputBuffer.hasRemaining()) inputBuffer.position(inputBuffer.limit())
 
-        val processed = AudioEffectsEngine.processChain(
-            pcm = samples,
-            sampleRate = inputAudioFormat.sampleRate,
-            channels = inputAudioFormat.channelCount,
-            effects = effects,
-        )
+        val processed = streamingProcessor?.process(samples) ?: samples
         val outputBuffer = replaceOutputBuffer(processed.size * Short.SIZE_BYTES)
         processed.forEach(outputBuffer::putShort)
         outputBuffer.flip()
+    }
+
+    override fun onReset() {
+        streamingProcessor = null
+        super.onReset()
     }
 }
