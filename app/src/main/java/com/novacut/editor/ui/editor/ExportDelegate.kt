@@ -2413,50 +2413,7 @@ class ExportDelegate(
         val mimeType = exportMimeTypeFor(file.name)
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val resolver = appContext.contentResolver
-            val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
-                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, "$relativeDirectory/ClearCut")
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-            val collection = when {
-                usesImageCollection -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                usesAudioCollection -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-            }
-            val contentUri = resolver.insert(collection, values)
-                ?: throw IllegalStateException("Failed to create media destination")
-
-            try {
-                resolver.openOutputStream(contentUri)?.use { out ->
-                    file.inputStream().use { input -> input.copyTo(out) }
-                } ?: throw IllegalStateException("Failed to open media destination")
-
-                values.clear()
-                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                // If MediaStore reports zero rows updated, the file remains marked pending
-                // and stays invisible in Gallery / Photos apps. Treat as a failure rather
-                // than silently lying to the user that the save succeeded. Some devices
-                // transiently return 0 while an indexer run is in flight; retry a couple
-                // of times with short backoff before surfacing the error.
-                var updated = 0
-                val backoffsMs = longArrayOf(0L, 100L, 400L)
-                for (delayMs in backoffsMs) {
-                    if (delayMs > 0L) {
-                        kotlinx.coroutines.delay(delayMs)
-                    }
-                    updated = resolver.update(contentUri, values, null, null)
-                    if (updated >= 1) break
-                }
-                if (updated < 1) {
-                    throw IllegalStateException("MediaStore failed to clear IS_PENDING (rows=$updated)")
-                }
-                "Saved to gallery: ${file.name}"
-            } catch (e: Exception) {
-                resolver.delete(contentUri, null, null)
-                throw e
-            }
+            saveExportedFileToMediaStore(appContext, file)
         } else {
             val externalRoot = appContext.getExternalFilesDir(relativeDirectory)
                 ?: File(appContext.filesDir, relativeDirectory.lowercase())
@@ -2537,6 +2494,69 @@ class ExportDelegate(
             .apply { eraseColor(android.graphics.Color.BLACK) }
     }
 
+}
+
+/**
+ * Publishes an export through the matching MediaStore collection. Kept as a
+ * small internal boundary so the device contract can query the exact row that
+ * Gallery / Photos will see after the pending transaction is committed.
+ */
+internal suspend fun saveExportedFileToMediaStore(context: Context, file: File): String {
+    check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        "MediaStore pending exports require Android 10 or newer"
+    }
+    val usesImageCollection = exportUsesImageCollection(file.name)
+    val usesAudioCollection = exportUsesAudioCollection(file.name)
+    val relativeDirectory = when {
+        usesImageCollection -> Environment.DIRECTORY_PICTURES
+        usesAudioCollection -> Environment.DIRECTORY_MUSIC
+        else -> Environment.DIRECTORY_MOVIES
+    }
+    val mimeType = exportMimeTypeFor(file.name)
+    val resolver = context.contentResolver
+    val values = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
+        put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+        put(MediaStore.MediaColumns.RELATIVE_PATH, "$relativeDirectory/ClearCut")
+        put(MediaStore.MediaColumns.IS_PENDING, 1)
+    }
+    val collection = when {
+        usesImageCollection -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        usesAudioCollection -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+    }
+    val contentUri = resolver.insert(collection, values)
+        ?: throw IllegalStateException("Failed to create media destination")
+
+    return try {
+        resolver.openOutputStream(contentUri)?.use { out ->
+            file.inputStream().use { input -> input.copyTo(out) }
+        } ?: throw IllegalStateException("Failed to open media destination")
+
+        values.clear()
+        values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+        // If MediaStore reports zero rows updated, the file remains marked pending
+        // and stays invisible in Gallery / Photos apps. Treat as a failure rather
+        // than silently lying to the user that the save succeeded. Some devices
+        // transiently return 0 while an indexer run is in flight; retry a couple
+        // of times with short backoff before surfacing the error.
+        var updated = 0
+        val backoffsMs = longArrayOf(0L, 100L, 400L)
+        for (delayMs in backoffsMs) {
+            if (delayMs > 0L) {
+                kotlinx.coroutines.delay(delayMs)
+            }
+            updated = resolver.update(contentUri, values, null, null)
+            if (updated >= 1) break
+        }
+        if (updated < 1) {
+            throw IllegalStateException("MediaStore failed to clear IS_PENDING (rows=$updated)")
+        }
+        "Saved to gallery: ${file.name}"
+    } catch (e: Exception) {
+        resolver.delete(contentUri, null, null)
+        throw e
+    }
 }
 
 /** The two lines a terminal export failure must produce: the cause, then the fix. */

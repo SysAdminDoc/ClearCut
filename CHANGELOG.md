@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Media Manager diagnostics now detect embedded subtitle and GPS-like tracks; text subtitles can be converted locally to VTT/SRT, NMEA or container locations to GPX/CSV, and unsupported telemetry is explained without network access. Sidecars are bounded, stored under the existing secure diagnostic-share root, and share through a MIME-specific FileProvider URI.
+- Android 10+ gallery saves now have an on-device MediaStore contract proving real MP4 exports appear in the Video collection with video classification, duration, and time metadata.
 - `.ncfx` effect packs now embed validated `.cube`/`.3dl` LUT bytes within an 8 MB bounded payload and install them under content-hash-derived local names on import, so shared color grades no longer lose their LUT.
 - Declarative pack hashes now canonicalize numbers using JSON's serialized representation, keeping float-bearing exports valid after a save-and-reload round trip.
 - Metadata scrubbing now re-encodes WebP images without source metadata and routes TIFF images through the bundled FFmpeg TIFF codec with bounded input/timeout guards; failed conversions leave no claimed scrubbed output.
