@@ -44,7 +44,7 @@ internal object IncomingMediaIntentParser {
         resolveMimeType: (Uri) -> String?
     ): List<IncomingMediaItem> {
         val candidateUris = when (action) {
-            Intent.ACTION_VIEW -> listOfNotNull(dataUri) + clipDataUris
+            Intent.ACTION_VIEW -> listOfNotNull(dataUri) + clipDataUris.takeIf { hasReadGrant }.orEmpty()
             Intent.ACTION_SEND -> streamUris.ifEmpty { listOfNotNull(dataUri) } + clipDataUris
             Intent.ACTION_SEND_MULTIPLE -> streamUris + clipDataUris
             else -> return emptyList()
@@ -68,8 +68,7 @@ internal object IncomingMediaIntentParser {
         resolveMimeType: (Uri) -> String?
     ): List<IncomingMediaItem> {
         val action = intent.action
-        val hasReadGrant = action == Intent.ACTION_VIEW ||
-            (intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0
+        val hasReadGrant = (intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0
         return parse(
             action = action,
             dataUri = intent.data,

@@ -34,6 +34,44 @@ class IncomingDocumentIntentParserTest {
     }
 
     @Test
+    fun actionViewOnlyAcceptsClipDataWithReadGrant() {
+        val dataArchive = contentUri("data.clearcut")
+        val clipTimeline = contentUri("clip.otio")
+
+        val withoutGrant = IncomingDocumentIntentParser.parse(
+            action = Intent.ACTION_VIEW,
+            dataUri = dataArchive,
+            streamUris = emptyList(),
+            clipDataUris = listOf(clipTimeline),
+            intentMimeType = "application/octet-stream",
+            hasReadGrant = false,
+            resolveMetadata = { uri ->
+                if (uri.toString() == dataArchive.toString()) metadata("data.clearcut", "application/octet-stream", 512L)
+                else metadata("clip.otio", "application/json", 512L)
+            }
+        )
+        val withGrant = IncomingDocumentIntentParser.parse(
+            action = Intent.ACTION_VIEW,
+            dataUri = dataArchive,
+            streamUris = emptyList(),
+            clipDataUris = listOf(clipTimeline),
+            intentMimeType = "application/octet-stream",
+            hasReadGrant = true,
+            resolveMetadata = { uri ->
+                if (uri.toString() == dataArchive.toString()) metadata("data.clearcut", "application/octet-stream", 512L)
+                else metadata("clip.otio", "application/json", 512L)
+            }
+        )
+
+        assertParsed(withoutGrant, dataArchive.toString() to IncomingDocumentKind.PROJECT_ARCHIVE)
+        assertParsed(
+            withGrant,
+            dataArchive.toString() to IncomingDocumentKind.PROJECT_ARCHIVE,
+            clipTimeline.toString() to IncomingDocumentKind.TIMELINE_OTIO,
+        )
+    }
+
+    @Test
     fun actionSendRequiresReadGrantAndRoutesEffectPack() {
         val effectPack = contentUri("grade.ncfx")
 

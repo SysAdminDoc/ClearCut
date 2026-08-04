@@ -27,6 +27,42 @@ class IncomingMediaIntentParserTest {
     }
 
     @Test
+    fun actionViewOnlyAcceptsClipDataWithReadGrant() {
+        val dataVideo = contentUri("data.mp4")
+        val clipImage = contentUri("clip.png")
+        val mimeTypes = mapOf(
+            dataVideo.toString() to "video/mp4",
+            clipImage.toString() to "image/png",
+        )
+
+        val withoutGrant = IncomingMediaIntentParser.parse(
+            action = Intent.ACTION_VIEW,
+            dataUri = dataVideo,
+            streamUris = emptyList(),
+            clipDataUris = listOf(clipImage),
+            intentMimeType = null,
+            hasReadGrant = false,
+            resolveMimeType = { mimeTypes[it.toString()] }
+        )
+        val withGrant = IncomingMediaIntentParser.parse(
+            action = Intent.ACTION_VIEW,
+            dataUri = dataVideo,
+            streamUris = emptyList(),
+            clipDataUris = listOf(clipImage),
+            intentMimeType = null,
+            hasReadGrant = true,
+            resolveMimeType = { mimeTypes[it.toString()] }
+        )
+
+        assertParsed(withoutGrant, dataVideo.toString() to IncomingMediaKind.VIDEO)
+        assertParsed(
+            withGrant,
+            dataVideo.toString() to IncomingMediaKind.VIDEO,
+            clipImage.toString() to IncomingMediaKind.IMAGE,
+        )
+    }
+
+    @Test
     fun actionSendRequiresReadGrantAndRoutesSingleStream() {
         val image = contentUri("still.jpg")
 

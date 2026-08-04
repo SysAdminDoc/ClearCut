@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `ACTION_VIEW` imports now accept secondary clip-data URIs only when the intent carries a read grant; the primary data URI remains supported without one.
 - GIF and contact-sheet exports now replace the `{sizeMB}` filename token after atomic output completes, matching video and stream-copy exports.
 - Freeze-frame insertion now honors the selected PNG/JPEG capture format for both bitmap encoding and output file names.
 - Video frame-rate detection now prefers camera capture metadata and falls back to the actual video track's MediaFormat frame rate, normalizing fractional rates such as 23.976/29.97/59.94 instead of silently assuming 30 fps.
