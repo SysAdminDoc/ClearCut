@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
     private var pendingIncomingDocuments by mutableStateOf<List<IncomingDocumentItem>>(emptyList())
     private var pendingEditorOpen by mutableStateOf<PendingEditorOpen?>(null)
     private var shortcutValidationJob: Job? = null
+    private var incomingIntentJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -259,41 +260,69 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIncomingMediaIntent(intent: Intent) {
-        val parsed = IncomingMediaIntentParser.parse(intent) { uri ->
-            runCatching { contentResolver.getType(uri) }.getOrNull()
-        }
-        if (parsed.isEmpty()) {
-            handleIncomingDocumentIntent(intent)
-            return
-        }
-
-        val readableItems = parsed.filter { item ->
-            runCatching {
-                contentResolver.openAssetFileDescriptor(item.uri, "r")?.use { descriptor ->
-                    descriptor.length != 0L
-                } ?: false
-            }.getOrDefault(false)
-        }
-        if (readableItems.isNotEmpty()) {
-            pendingIncomingMedia = readableItems
+        launchIncomingIntentWork {
+            val readableMediaItems = withContext(Dispatchers.IO) {
+                readableIncomingMediaItems(intent)
+            }
+            if (readableMediaItems.isNotEmpty()) {
+                pendingIncomingMedia = readableMediaItems
+            } else {
+                val readableDocumentItems = withContext(Dispatchers.IO) {
+                    readableIncomingDocumentItems(intent)
+                }
+                if (readableDocumentItems.isNotEmpty()) {
+                    pendingIncomingDocuments = readableDocumentItems
+                }
+            }
         }
     }
 
     private fun handleIncomingDocumentIntent(intent: Intent) {
-        val parsed = IncomingDocumentIntentParser.parse(intent) { uri ->
-            incomingDocumentMetadata(uri, intent.type)
+        launchIncomingIntentWork {
+            val readableItems = withContext(Dispatchers.IO) {
+                readableIncomingDocumentItems(intent)
+            }
+            if (readableItems.isNotEmpty()) {
+                pendingIncomingDocuments = readableItems
+            }
         }
-        if (parsed.isEmpty()) return
+    }
 
-        val readableItems = parsed.filter { item ->
+    private fun launchIncomingIntentWork(work: suspend () -> Unit) {
+        incomingIntentJob?.cancel()
+        incomingIntentJob = lifecycleScope.launch {
+            work()
+        }
+    }
+
+    /**
+     * Content-provider calls stay inside the caller's IO context. A cloud-backed
+     * DocumentsProvider can block on network or filesystem work even for a
+     * seemingly harmless MIME or descriptor lookup.
+     */
+    private fun readableIncomingMediaItems(intent: Intent): List<IncomingMediaItem> {
+        val parsed = IncomingMediaIntentParser.parse(intent) { uri ->
+            runCatching { contentResolver.getType(uri) }.getOrNull()
+        }
+        return parsed.filter { item ->
             runCatching {
                 contentResolver.openAssetFileDescriptor(item.uri, "r")?.use { descriptor ->
                     descriptor.length != 0L
                 } ?: false
             }.getOrDefault(false)
         }
-        if (readableItems.isNotEmpty()) {
-            pendingIncomingDocuments = readableItems
+    }
+
+    private fun readableIncomingDocumentItems(intent: Intent): List<IncomingDocumentItem> {
+        val parsed = IncomingDocumentIntentParser.parse(intent) { uri ->
+            incomingDocumentMetadata(uri, intent.type)
+        }
+        return parsed.filter { item ->
+            runCatching {
+                contentResolver.openAssetFileDescriptor(item.uri, "r")?.use { descriptor ->
+                    descriptor.length != 0L
+                } ?: false
+            }.getOrDefault(false)
         }
     }
 

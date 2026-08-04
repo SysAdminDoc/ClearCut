@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Incoming media and document intents now resolve MIME types, provider descriptors, display names, and sizes on Dispatchers.IO with cancellable latest-intent work, keeping slow cloud-backed providers off the main thread.
 - Batch media imports now release only the persistable URI grants they acquired across review, cancellation, and storage-abort paths; dropped-file storage failures report insufficient space instead of a generic copy error.
 - Exported project shortcuts now verify their project ID against Room off the main thread before opening the editor; stale or external IDs stay on Projects and cannot seed ghost rows.
 - Batch export status pills and secondary project/settings feedback now use bilingual resources and plurals; localized editor-mode labels retain their canonical selection state.
