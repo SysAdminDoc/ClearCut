@@ -354,6 +354,7 @@
     <string name="editor_auto_duck_failed_toast">Auto-duck failed. Check the voice and music tracks, then try again.</string>
     <string name="editor_multicam_sync_failed_toast">Multi-cam sync failed. Try clips with clearer audio.</string>
     <string name="editor_media_read_failed_toast">Could not read that media file. Try another source.</string>
+    <string name="editor_media_sequence_partial_toast">Added %1$d of %2$d selected files. The unreadable files were skipped.</string>
     <string name="color_lut_import_failed_toast">Failed to import LUT. Check the file and try again.</string>
     <string name="color_lut_too_large_toast">LUT is too large. The limit is 32 MB.</string>
     <string name="export_video_failed_message">Export failed. Review the timeline and try again.</string>
@@ -978,6 +979,20 @@
     <string name="audio_conformance_mixed_rates">Clips have mixed sample rates. Audio will be resampled to match the export format.</string>
     <string name="audio_conformance_mixed_channels">Clips have mixed channel layouts. Audio will be normalized for export.</string>
     <string name="media_picker_audio_only">That file isn\'t audio. Pick a .mp3, .m4a, .wav, .ogg, or .flac.</string>
+    <string name="media_sequence_review_title">Review starter sequence</string>
+    <string name="media_sequence_review_description">Choose the order before ClearCut adds these local files as one undoable sequence.</string>
+    <string name="media_sequence_review_reorder_hint">Drag an item to reorder it, or use the arrow buttons.</string>
+    <string name="media_sequence_review_capture_time">Capture time</string>
+    <string name="media_sequence_review_name">Name</string>
+    <string name="media_sequence_review_manual">Manual</string>
+    <string name="media_sequence_review_add">Add sequence</string>
+    <string name="media_sequence_review_cancel">Cancel</string>
+    <string name="media_sequence_review_close_cd">Close sequence review</string>
+    <string name="media_sequence_review_drag_cd">Drag to reorder</string>
+    <string name="media_sequence_review_move_up_cd">Move %1$s up</string>
+    <string name="media_sequence_review_move_down_cd">Move %1$s down</string>
+    <string name="media_sequence_review_capture_unknown">Capture time unavailable</string>
+    <string name="media_sequence_review_item_detail">%1$s • captured %2$s</string>
 
     <!-- ProjectListScreen -->
     <string name="projects_app_title">ClearCut</string>

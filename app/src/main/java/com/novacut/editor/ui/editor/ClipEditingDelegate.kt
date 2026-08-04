@@ -20,6 +20,11 @@ import java.util.UUID
 
 internal data class PreparedTrimRange(val startMs: Long, val endMs: Long)
 
+data class SequenceMediaItem(
+    val uri: Uri,
+    val trackType: TrackType,
+)
+
 internal fun trimExtendsPreparedRange(prepared: PreparedTrimRange, clip: Clip): Boolean =
     clip.trimStartMs < prepared.startMs || clip.trimEndMs > prepared.endMs
 
@@ -60,6 +65,13 @@ class ClipEditingDelegate(
         val sourceColorMetadata: SourceColorMetadata
     )
 
+    private data class PreparedClipInsertion(
+        val item: SequenceMediaItem,
+        val mediaInfo: ImportedMediaInfo,
+        val clipId: String,
+        val linkedAudioClipId: String?,
+    )
+
     // Rolling timestamps of recent delete operations for the bulk-change
     // detector. Bounded to the window length so the structure can't grow.
     // Accessed only from the delegate's own methods, which in turn are only
@@ -73,14 +85,7 @@ class ClipEditingDelegate(
     fun addClipToTrack(uri: Uri, trackType: TrackType = TrackType.VIDEO) {
         scope.launch {
             val mediaInfo = try {
-                withContext(Dispatchers.IO) {
-                    ImportedMediaInfo(
-                        durationMs = videoEngine.getMediaDuration(uri),
-                        hasVisualTrack = videoEngine.hasVisualTrack(uri),
-                        hasAudioTrack = videoEngine.hasAudioTrack(uri),
-                        sourceColorMetadata = mediaImportEngine.inspectSourceColor(uri)
-                    )
-                }
+                readMediaInfo(uri)
             } catch (e: Exception) {
                 Log.e("ClipEditingDelegate", "Could not read media", e)
                 showToast(text(R.string.editor_media_read_failed_toast))
@@ -106,73 +111,15 @@ class ClipEditingDelegate(
                 null
             }
 
-            stateFlow.update { state ->
-                val baseTracks = if (state.tracks.any { it.type == trackType }) {
-                    state.tracks
-                } else {
-                    state.tracks + Track(type = trackType, index = state.tracks.size)
-                }
-                val trackIndex = baseTracks.indexOfFirst { it.type == trackType }
-                val track = baseTracks[trackIndex]
-                val timelineStart = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
-
-                val clip = Clip(
-                    id = clipId,
-                    sourceUri = uri,
-                    sourceDurationMs = duration,
-                    timelineStartMs = timelineStart,
-                    trimStartMs = 0L,
-                    trimEndMs = duration,
-                    linkedClipId = linkedAudioClipId,
-                    sourceColorMetadata = sourceColorMetadata
-                )
-
-                var tracks = baseTracks.mapIndexed { i, t ->
-                    if (i == trackIndex) t.copy(clips = t.clips + clip) else t
-                }
-
-                if (linkedAudioClipId != null) {
-                    val linkedAudioClip = Clip(
-                        id = linkedAudioClipId,
-                        sourceUri = uri,
-                        sourceDurationMs = duration,
-                        timelineStartMs = timelineStart,
-                        trimStartMs = 0L,
-                        trimEndMs = duration,
-                        linkedClipId = clipId,
-                        sourceColorMetadata = sourceColorMetadata
-                    )
-                    val clipEndMs = timelineStart + linkedAudioClip.durationMs
-                    val audioTrackIndex = preferredAudioTrackIndex(
-                        tracks = tracks,
-                        startMs = timelineStart,
-                        endMs = clipEndMs
-                    )
-                    tracks = if (audioTrackIndex != null) {
-                        tracks.mapIndexed { i, t ->
-                            if (i == audioTrackIndex) {
-                                t.copy(clips = t.clips + linkedAudioClip)
-                            } else {
-                                t
-                            }
-                        }
-                    } else {
-                        tracks + Track(
-                            type = TrackType.AUDIO,
-                            index = tracks.size,
-                            clips = listOf(linkedAudioClip)
-                        )
-                    }
-                }
-
-                recalculateDuration(
-                    state.copy(
-                        tracks = tracks,
-                        selectedClipId = clip.id,
-                        selectedTrackId = track.id
-                    ).copyPanel { panel ->
-                        panel.copy(panels = panel.panels.close(PanelId.MEDIA_PICKER))
-                    }
+            stateFlow.update {
+                appendImportedClip(
+                    state = it,
+                    prepared = PreparedClipInsertion(
+                        item = SequenceMediaItem(uri, trackType),
+                        mediaInfo = mediaInfo,
+                        clipId = clipId,
+                        linkedAudioClipId = linkedAudioClipId,
+                    ),
                 )
             }
 
@@ -183,6 +130,139 @@ class ClipEditingDelegate(
             // Notify ViewModel for proxy registration
             onClipAdded?.invoke(clipId, uri)
         }
+    }
+
+    /**
+     * Append a reviewed starter sequence as one document mutation. The media
+     * reads happen before the undo snapshot so a failed decoder never leaves
+     * an empty undo entry, and all successful clips share one undo action.
+     */
+    fun addMediaSequence(items: List<SequenceMediaItem>) {
+        if (items.isEmpty()) return
+        scope.launch {
+            val prepared = items.mapNotNull { item ->
+                val mediaInfo = runCatching { readMediaInfo(item.uri) }
+                    .onFailure { error ->
+                        Log.e("ClipEditingDelegate", "Could not read sequence media", error)
+                    }
+                    .getOrNull()
+                    ?.takeIf { it.durationMs > 0L }
+                if (mediaInfo == null) {
+                    null
+                } else {
+                    PreparedClipInsertion(
+                        item = item,
+                        mediaInfo = mediaInfo,
+                        clipId = UUID.randomUUID().toString(),
+                        linkedAudioClipId = if (
+                            item.trackType == TrackType.VIDEO &&
+                            mediaInfo.hasVisualTrack &&
+                            mediaInfo.hasAudioTrack
+                        ) {
+                            UUID.randomUUID().toString()
+                        } else {
+                            null
+                        },
+                    )
+                }
+            }
+            if (prepared.isEmpty()) {
+                showToast(text(R.string.editor_media_read_failed_toast))
+                return@launch
+            }
+
+            saveUndoState("Add media sequence")
+            stateFlow.update { state ->
+                prepared.fold(state) { current, insertion ->
+                    appendImportedClip(current, insertion)
+                }
+            }
+            rebuildPlayerTimeline()
+            saveProject()
+            prepared.forEach { insertion ->
+                onClipAdded?.invoke(insertion.clipId, insertion.item.uri)
+            }
+            if (prepared.size < items.size) {
+                showToast(text(R.string.editor_media_sequence_partial_toast, prepared.size, items.size))
+            }
+        }
+    }
+
+    private suspend fun readMediaInfo(uri: Uri): ImportedMediaInfo = withContext(Dispatchers.IO) {
+        ImportedMediaInfo(
+            durationMs = videoEngine.getMediaDuration(uri),
+            hasVisualTrack = videoEngine.hasVisualTrack(uri),
+            hasAudioTrack = videoEngine.hasAudioTrack(uri),
+            sourceColorMetadata = mediaImportEngine.inspectSourceColor(uri),
+        )
+    }
+
+    private fun appendImportedClip(
+        state: EditorState,
+        prepared: PreparedClipInsertion,
+    ): EditorState {
+        val trackType = prepared.item.trackType
+        val mediaInfo = prepared.mediaInfo
+        val baseTracks = if (state.tracks.any { it.type == trackType }) {
+            state.tracks
+        } else {
+            state.tracks + Track(type = trackType, index = state.tracks.size)
+        }
+        val trackIndex = baseTracks.indexOfFirst { it.type == trackType }
+        val track = baseTracks[trackIndex]
+        val timelineStart = track.clips.maxOfOrNull { it.timelineEndMs } ?: 0L
+        val clip = Clip(
+            id = prepared.clipId,
+            sourceUri = prepared.item.uri,
+            sourceDurationMs = mediaInfo.durationMs,
+            timelineStartMs = timelineStart,
+            trimStartMs = 0L,
+            trimEndMs = mediaInfo.durationMs,
+            linkedClipId = prepared.linkedAudioClipId,
+            sourceColorMetadata = mediaInfo.sourceColorMetadata,
+        )
+
+        var tracks = baseTracks.mapIndexed { index, candidate ->
+            if (index == trackIndex) candidate.copy(clips = candidate.clips + clip) else candidate
+        }
+
+        val linkedAudioClipId = prepared.linkedAudioClipId
+        if (linkedAudioClipId != null) {
+            val linkedAudioClip = clip.copy(
+                id = linkedAudioClipId,
+                linkedClipId = prepared.clipId,
+            )
+            val audioTrackIndex = preferredAudioTrackIndex(
+                tracks = tracks,
+                startMs = timelineStart,
+                endMs = timelineStart + linkedAudioClip.durationMs,
+            )
+            tracks = if (audioTrackIndex != null) {
+                tracks.mapIndexed { index, candidate ->
+                    if (index == audioTrackIndex) {
+                        candidate.copy(clips = candidate.clips + linkedAudioClip)
+                    } else {
+                        candidate
+                    }
+                }
+            } else {
+                tracks + Track(
+                    type = TrackType.AUDIO,
+                    index = tracks.size,
+                    clips = listOf(linkedAudioClip),
+                )
+            }
+        }
+
+        return recalculateDuration(
+            state.copy(
+                tracks = tracks,
+                selectedClipId = clip.id,
+                selectedTrackId = track.id,
+            ).copyPanel { panel ->
+                panel.copy(panels = panel.panels.close(PanelId.MEDIA_PICKER))
+            },
+        )
     }
 
     fun relinkMedia(oldUri: Uri, newUri: Uri) {

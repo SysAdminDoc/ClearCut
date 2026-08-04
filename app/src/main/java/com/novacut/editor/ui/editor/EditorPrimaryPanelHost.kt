@@ -28,6 +28,7 @@ import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.export.ExportSheet
 import com.novacut.editor.ui.export.ExportSheetPresentation
 import com.novacut.editor.ui.mediapicker.MediaPickerSheet
+import com.novacut.editor.ui.mediapicker.MediaPickerSelection
 import java.io.File
 
 @Composable
@@ -53,6 +54,19 @@ fun BoxScope.EditorPrimaryPanelHost(
                     else -> TrackType.VIDEO
                 }
                 viewModel.addClipToTrack(uri, trackType)
+            },
+            onMediaBatchSelected = { selections: List<MediaPickerSelection> ->
+                viewModel.addMediaSequence(
+                    selections.map { selection ->
+                        SequenceMediaItem(
+                            uri = selection.uri,
+                            trackType = when (selection.mediaType) {
+                                "audio" -> TrackType.AUDIO
+                                else -> TrackType.VIDEO
+                            },
+                        )
+                    },
+                )
             },
             onClose = viewModel::hideMediaPicker,
             modifier = Modifier.testTag(ClearCutTestTags.MEDIA_PICKER_SHEET)

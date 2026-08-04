@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.novacut.editor.R
 import com.novacut.editor.engine.IngestResult
+import com.novacut.editor.engine.MediaSequenceOrder
 import com.novacut.editor.engine.checkFreeSpace
 import com.novacut.editor.engine.finalizePendingCameraCapture
 import com.novacut.editor.engine.importUriToManagedMedia
@@ -61,6 +62,8 @@ import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -101,7 +104,8 @@ private data class MediaPickerOperationState(
 fun MediaPickerSheet(
     onMediaSelected: (Uri, String) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMediaBatchSelected: ((List<MediaPickerSelection>) -> Unit)? = null,
 ) {
     val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
@@ -125,7 +129,151 @@ fun MediaPickerSheet(
     var cameraVideoFile by remember { mutableStateOf<File?>(null) }
     var permissionMessage by remember { mutableStateOf<String?>(null) }
     var operationState by remember { mutableStateOf<MediaPickerOperationState?>(null) }
-    val actionsEnabled = operationState == null
+    var sequenceReview by remember { mutableStateOf<List<MediaPickerSelection>?>(null) }
+    var sequenceOrder by remember { mutableStateOf(MediaSequenceOrder.CAPTURE_TIME) }
+    var sequenceDragPermissions by remember { mutableStateOf<DragAndDropPermissions?>(null) }
+    val actionsEnabled = operationState == null && sequenceReview == null
+
+    fun cancelSequenceReview() {
+        val selections = sequenceReview ?: return
+        sequenceReview = null
+        sequenceOrder = MediaSequenceOrder.CAPTURE_TIME
+        coroutineScope.launch(NonCancellable + Dispatchers.IO) {
+            selections.forEach { selection ->
+                releasePersistedReadPermission(context, selection.uri)
+            }
+        }
+        sequenceDragPermissions?.release()
+        sequenceDragPermissions = null
+    }
+
+    fun stageSequenceReview(
+        uris: List<Uri>,
+        dragPermissions: DragAndDropPermissions? = null,
+    ) {
+        if (uris.isEmpty()) {
+            dragPermissions?.release()
+            return
+        }
+        coroutineScope.launch {
+            operationState = MediaPickerOperationState(
+                title = importingBatchTitle,
+                description = importingBatchDescription,
+            )
+            var retainedPermissions = false
+            try {
+                val selections = withContext(Dispatchers.IO) {
+                    uris.mapIndexed { index, uri ->
+                        buildMediaPickerSelection(
+                            context = context,
+                            uri = uri,
+                            mediaType = resolvePickedMediaType(context, uri, fallbackType = "video"),
+                            id = "$index:${uri}",
+                        )
+                    }
+                }
+                if (selections.isNotEmpty()) {
+                    sequenceReview = orderedMediaPickerSelections(
+                        selections = selections,
+                        order = MediaSequenceOrder.CAPTURE_TIME,
+                    )
+                    sequenceOrder = MediaSequenceOrder.CAPTURE_TIME
+                    sequenceDragPermissions = dragPermissions
+                    retainedPermissions = true
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("MediaPicker", "Could not prepare sequence review", error)
+                permissionMessage = localCopyFailed
+            } finally {
+                operationState = null
+                if (!retainedPermissions) {
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        uris.forEach { uri -> releasePersistedReadPermission(context, uri) }
+                    }
+                    dragPermissions?.release()
+                }
+            }
+        }
+    }
+
+    fun confirmSequenceReview() {
+        val selections = sequenceReview ?: return
+        sequenceReview = null
+        sequenceOrder = MediaSequenceOrder.CAPTURE_TIME
+        val dragPermissions = sequenceDragPermissions
+        sequenceDragPermissions = null
+        coroutineScope.launch {
+            operationState = MediaPickerOperationState(
+                title = importingBatchTitle,
+                description = importingBatchDescription,
+            )
+            var hasSpace = true
+            val imported = try {
+                withContext(Dispatchers.IO) {
+                    val totalSize = selections.sumOf { selection ->
+                        querySourceSize(context, selection.uri).coerceAtLeast(0L)
+                    }
+                    hasSpace = totalSize <= 0L || checkFreeSpace(context, totalSize)
+                    if (!hasSpace) {
+                        emptyList()
+                    } else {
+                        selections.mapIndexedNotNull { index, selection ->
+                            operationState = operationState?.copy(
+                                completed = index,
+                                total = selections.size,
+                            )
+                            importUriToManagedMedia(
+                                context,
+                                selection.uri,
+                                selection.mediaType,
+                            )?.let { managedUri ->
+                                selection.copy(uri = managedUri)
+                            }
+                        }
+                    }
+                }
+            } finally {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    selections.forEach { selection ->
+                        releasePersistedReadPermission(context, selection.uri)
+                    }
+                }
+                dragPermissions?.release()
+            }
+            if (!hasSpace) {
+                permissionMessage = insufficientSpace
+            } else if (imported.isNotEmpty()) {
+                onMediaBatchSelected?.invoke(imported)
+                    ?: imported.forEach { selection -> onMediaSelected(selection.uri, selection.mediaType) }
+                if (imported.size < selections.size) {
+                    permissionMessage = if (imported.isEmpty()) localCopyFailed else someImportsFailed
+                }
+            } else {
+                permissionMessage = localCopyFailed
+            }
+            operationState = null
+        }
+    }
+
+    fun reorderSequenceItem(itemId: String, targetIndex: Int) {
+        val current = sequenceReview ?: return
+        val fromIndex = current.indexOfFirst { it.id == itemId }
+        if (fromIndex !in current.indices || targetIndex !in current.indices) return
+        sequenceReview = moveMediaPickerSelection(
+            selections = current,
+            fromIndex = fromIndex,
+            toIndex = targetIndex,
+        )
+        sequenceOrder = MediaSequenceOrder.MANUAL
+    }
+
+    fun changeSequenceOrder(order: MediaSequenceOrder) {
+        val current = sequenceReview ?: return
+        sequenceReview = orderedMediaPickerSelections(current, order)
+        sequenceOrder = order
+    }
 
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
@@ -142,56 +290,7 @@ fun MediaPickerSheet(
                     android.util.Log.w("MediaPicker", "Failed to persist URI permission", e)
                 }
             }
-            coroutineScope.launch {
-                operationState = MediaPickerOperationState(
-                    title = importingBatchTitle,
-                    description = importingBatchDescription
-                )
-                try {
-                    val sortedUris = withContext(Dispatchers.IO) { sortMediaChronologically(context, uris) }
-                    val hasSpace = withContext(Dispatchers.IO) {
-                        val totalSize = sortedUris.sumOf { u -> querySourceSize(context, u).coerceAtLeast(0L) }
-                        totalSize <= 0L || checkFreeSpace(context, totalSize)
-                    }
-                    // Import one at a time on the caller so the card can count them off.
-                    // Batching the whole list inside a single withContext left the user
-                    // watching an unchanging spinner with no way to tell progress from a hang.
-                    val mediaItems = mutableListOf<Pair<Uri, String>>()
-                    if (hasSpace) {
-                        sortedUris.forEachIndexed { index, uri ->
-                            operationState = operationState?.copy(
-                                completed = index,
-                                total = sortedUris.size,
-                            )
-                            val mediaType = resolvePickedMediaType(context, uri, fallbackType = "video")
-                            withContext(Dispatchers.IO) {
-                                try {
-                                    importUriToManagedMedia(context, uri, mediaType)?.let { localUri ->
-                                        mediaItems += localUri to mediaType
-                                    }
-                                } finally {
-                                    releasePersistedReadPermission(context, uri)
-                                }
-                            }
-                        }
-                    } else {
-                        withContext(Dispatchers.IO) {
-                            sortedUris.forEach { uri -> releasePersistedReadPermission(context, uri) }
-                        }
-                    }
-                    val requestedCount = sortedUris.size
-                    mediaItems.forEach { (localUri, mediaType) -> onMediaSelected(localUri, mediaType) }
-                    if (mediaItems.size < requestedCount) {
-                        permissionMessage = if (mediaItems.isEmpty()) {
-                            localCopyFailed
-                        } else {
-                            someImportsFailed
-                        }
-                    }
-                } finally {
-                    operationState = null
-                }
-            }
+            stageSequenceReview(uris)
         }
     }
 
@@ -222,6 +321,10 @@ fun MediaPickerSheet(
     fun importDroppedMedia(uris: List<Uri>, dragPermissions: DragAndDropPermissions) {
         if (uris.isEmpty() || !actionsEnabled) {
             dragPermissions.release()
+            return
+        }
+        if (uris.size > 1) {
+            stageSequenceReview(uris, dragPermissions)
             return
         }
         coroutineScope.launch {
@@ -354,32 +457,7 @@ fun MediaPickerSheet(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
     ) { uris ->
         if (uris.isNotEmpty()) {
-            coroutineScope.launch {
-                operationState = MediaPickerOperationState(
-                    title = importingBatchTitle,
-                    description = importingBatchDescription
-                )
-                try {
-                    val imported = withContext(Dispatchers.IO) {
-                        sortMediaChronologically(context, uris).mapNotNull { uri ->
-                            val type = resolvePickedMediaType(context, uri, fallbackType = "video")
-                            importUriToManagedMedia(context, uri, type)?.let { localUri ->
-                                localUri to type
-                            }
-                        }
-                    }
-                    imported.forEach { (localUri, type) -> onMediaSelected(localUri, type) }
-                    if (imported.size < uris.size) {
-                        permissionMessage = if (imported.isEmpty()) {
-                            localCopyFailed
-                        } else {
-                            someImportsFailed
-                        }
-                    }
-                } finally {
-                    operationState = null
-                }
-            }
+            stageSequenceReview(uris)
         }
     }
 
@@ -471,12 +549,26 @@ fun MediaPickerSheet(
         }
     }
 
+    sequenceReview?.let { selections ->
+        MediaSequenceReviewDialog(
+            selections = selections,
+            order = sequenceOrder,
+            onOrderChange = ::changeSequenceOrder,
+            onMove = ::reorderSequenceItem,
+            onConfirm = ::confirmSequenceReview,
+            onCancel = ::cancelSequenceReview,
+        )
+    }
+
     PremiumEditorPanel(
         title = stringResource(R.string.media_picker_title),
         subtitle = stringResource(R.string.media_picker_subtitle),
         icon = Icons.Default.PermMedia,
         accent = ClearCutAccents.Blue,
-        onClose = onClose,
+        onClose = {
+            cancelSequenceReview()
+            onClose()
+        },
         closeButtonTestTag = ClearCutTestTags.MEDIA_PICKER_CLOSE,
         modifier = modifier
             .heightIn(min = 240.dp, max = 560.dp)
@@ -693,6 +785,55 @@ private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
             trackColor = semanticColors.surface
         )
     }
+}
+
+/**
+ * Read stable display metadata before the review is shown. The original source
+ * name and capture time travel with the selection even after the source is
+ * copied into app-managed media.
+ */
+private fun buildMediaPickerSelection(
+    context: android.content.Context,
+    uri: Uri,
+    mediaType: String,
+    id: String,
+): MediaPickerSelection {
+    var displayName = uri.lastPathSegment.orEmpty().ifBlank { uri.toString() }
+    var captureTimeMs: Long? = null
+    runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(
+                android.provider.OpenableColumns.DISPLAY_NAME,
+                MediaStore.Images.Media.DATE_TAKEN,
+                MediaStore.MediaColumns.DATE_MODIFIED,
+            ),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val displayNameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (displayNameIndex >= 0) {
+                    displayName = cursor.getString(displayNameIndex).orEmpty()
+                        .ifBlank { displayName }
+                }
+                val dateTakenIndex = cursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
+                val dateModifiedIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
+                val dateTaken = if (dateTakenIndex >= 0) cursor.getLong(dateTakenIndex) else 0L
+                val dateModifiedSeconds = if (dateModifiedIndex >= 0) cursor.getLong(dateModifiedIndex) else 0L
+                captureTimeMs = dateTaken.takeIf { it > 0L }
+                    ?: dateModifiedSeconds.takeIf { it > 0L }?.times(1000L)
+            }
+        }
+    }
+    return MediaPickerSelection(
+        id = id,
+        uri = uri,
+        mediaType = mediaType,
+        displayName = displayName,
+        captureTimeMs = captureTimeMs,
+    )
 }
 
 /**

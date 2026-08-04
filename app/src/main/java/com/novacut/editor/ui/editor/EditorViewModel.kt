@@ -1613,6 +1613,11 @@ class EditorViewModel @Inject constructor(
         setTool(EditorTool.NONE)
         clipEditingDelegate.addClipToTrack(uri, trackType)
     }
+    fun addMediaSequence(items: List<SequenceMediaItem>) {
+        if (items.isEmpty()) return
+        setTool(EditorTool.NONE)
+        clipEditingDelegate.addMediaSequence(items)
+    }
     fun relinkMedia(oldUri: Uri, newUri: Uri) = clipEditingDelegate.relinkMedia(oldUri, newUri)
     fun selectClip(clipId: String?, trackId: String? = null) {
         clipEditingDelegate.selectClip(clipId, trackId)
