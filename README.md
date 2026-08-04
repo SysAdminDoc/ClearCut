@@ -79,7 +79,7 @@
 ### v3.74.150 Deep audit hardening
 
 - **Security:** untrusted style-pack ids are sanitized before touching the filesystem (path-traversal fix); model downloads follow redirects manually and re-validate HTTPS on every hop; imported color values are masked to 32-bit ARGB.
-- **Privacy:** the metadata scrubber now strips a far wider set of GPS/device/timestamp EXIF tags and only claims to scrub JPEG/PNG (formats it can actually rewrite) instead of silently failing on WebP/TIFF.
+- **Privacy:** the metadata scrubber strips a far wider set of GPS/device/timestamp EXIF tags, rewrites WebP pixels without metadata, and uses the bundled FFmpeg TIFF re-encode path instead of silently passing through WebP/TIFF metadata.
 - **Correctness:** GIF export no longer recycles cached thumbnail bitmaps (a crash on the next thumbnail/export); adjacent clips only merge when their speed, reverse, volume, and speed-curve match; imported `.ncfx` LUT references that don't exist are dropped instead of colliding with another project's LUT.
 
 ### v3.74.149 Faster noise analysis

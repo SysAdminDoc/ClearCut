@@ -2,17 +2,34 @@ package com.novacut.editor.engine
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.ReturnCode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
 
 @Singleton
 class MetadataScrubEngine @Inject constructor() {
+
+    private enum class ReencodeKind {
+        WEBP,
+        TIFF,
+    }
+
+    private data class SensitiveSnapshot(
+        val tagsRemoved: Int,
+        val hadGpsData: Boolean,
+    )
 
     data class ScrubResult(
         val outputFile: File,
@@ -82,7 +99,33 @@ class MetadataScrubEngine @Inject constructor() {
 
     suspend fun scrubImage(inputFile: File, outputFile: File): ScrubResult? = withContext(Dispatchers.IO) {
         if (!inputFile.isFile) return@withContext null
+        if (inputFile.length() > NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES) return@withContext null
         try {
+            outputFile.parentFile?.mkdirs()
+            when (reencodeKindFor(inputFile)) {
+                ReencodeKind.WEBP -> {
+                    val snapshot = readSensitiveSnapshot(inputFile)
+                    if (!reencodeWebp(inputFile, outputFile)) return@withContext null
+                    return@withContext ScrubResult(
+                        outputFile = outputFile,
+                        tagsRemoved = snapshot.tagsRemoved,
+                        hadGpsData = snapshot.hadGpsData,
+                    )
+                }
+
+                ReencodeKind.TIFF -> {
+                    val snapshot = readSensitiveSnapshot(inputFile)
+                    if (!reencodeTiff(inputFile, outputFile)) return@withContext null
+                    return@withContext ScrubResult(
+                        outputFile = outputFile,
+                        tagsRemoved = snapshot.tagsRemoved,
+                        hadGpsData = snapshot.hadGpsData,
+                    )
+                }
+
+                null -> Unit
+            }
+
             val exif = ExifInterface(inputFile)
             val hadGps = GPS_TAGS.any { exif.getAttribute(it) != null }
             var removed = 0
@@ -116,14 +159,146 @@ class MetadataScrubEngine @Inject constructor() {
         }
     }
 
-    // Only JPEG and PNG are advertised as scrubbable: androidx ExifInterface's
-    // saveAttributes() rewrites metadata in place only for those two formats.
-    // Claiming WebP/TIFF here would let the caller believe a file was scrubbed
-    // when saveAttributes() cannot actually strip its tags. Re-encode-based
-    // scrubbing for other formats is tracked in ROADMAP.md.
-    fun canScrub(mimeType: String?): Boolean = when (mimeType?.lowercase()) {
-        "image/jpeg", "image/jpg", "image/png" -> true
+    /**
+     * Returns whether this engine has a metadata-safe path for the image MIME.
+     * JPEG/PNG use ExifInterface in-place editing. WebP is decoded and
+     * re-compressed without metadata; TIFF is re-encoded through the bundled
+     * FFmpeg decoder because Android's BitmapFactory does not decode TIFF.
+     */
+    fun canScrub(mimeType: String?): Boolean = when (
+        mimeType?.substringBefore(';')?.trim()?.lowercase()
+    ) {
+        "image/jpeg", "image/jpg", "image/png", "image/webp",
+        "image/tiff", "image/tif", "image/x-tiff" -> true
         else -> false
+    }
+
+    private fun readSensitiveSnapshot(inputFile: File): SensitiveSnapshot {
+        return runCatching {
+            val exif = ExifInterface(inputFile)
+            SensitiveSnapshot(
+                tagsRemoved = SENSITIVE_TAGS.count { exif.getAttribute(it) != null },
+                hadGpsData = GPS_TAGS.any { exif.getAttribute(it) != null },
+            )
+        }.getOrDefault(SensitiveSnapshot(tagsRemoved = 0, hadGpsData = false))
+    }
+
+    private fun reencodeWebp(inputFile: File, outputFile: File): Boolean {
+        val bitmap = BitmapFactory.decodeFile(inputFile.absolutePath) ?: return false
+        val parent = outputFile.parentFile ?: File(".")
+        parent.mkdirs()
+        val temporary = runCatching {
+            File.createTempFile("metadata-scrub-", ".webp", parent)
+        }.getOrNull() ?: run {
+            bitmap.recycle()
+            return false
+        }
+
+        return try {
+            val encoded = FileOutputStream(temporary).use { stream ->
+                bitmap.compress(webpCompressFormat(), 100, stream)
+            }
+            encoded && temporary.length() > 0L && installTemporary(temporary, outputFile)
+        } catch (_: Exception) {
+            false
+        } finally {
+            bitmap.recycle()
+            temporary.delete()
+        }
+    }
+
+    private suspend fun reencodeTiff(inputFile: File, outputFile: File): Boolean {
+        val parent = outputFile.parentFile ?: File(".")
+        parent.mkdirs()
+        val temporary = runCatching {
+            File.createTempFile("metadata-scrub-", ".tiff", parent)
+        }.getOrNull() ?: return false
+
+        return try {
+            val encoded = withTimeoutOrNull(TIFF_REENCODE_TIMEOUT_MS) {
+                executeFfmpeg(
+                    listOf(
+                        "-hide_banner",
+                        "-loglevel", "error",
+                        "-y",
+                        "-i", inputFile.absolutePath,
+                        "-map_metadata", "-1",
+                        "-map", "0:v:0",
+                        "-frames:v", "1",
+                        "-c:v", "tiff",
+                        temporary.absolutePath,
+                    )
+                )
+            } == true
+            encoded && temporary.length() > 0L && installTemporary(temporary, outputFile)
+        } catch (_: Exception) {
+            false
+        } finally {
+            temporary.delete()
+        }
+    }
+
+    private fun installTemporary(temporary: File, outputFile: File): Boolean {
+        return runCatching {
+            temporary.copyTo(outputFile, overwrite = true)
+            outputFile.isFile && outputFile.length() > 0L
+        }.getOrDefault(false)
+    }
+
+    private suspend fun executeFfmpeg(arguments: List<String>): Boolean {
+        return suspendCancellableCoroutine { continuation ->
+            try {
+                val session = FFmpegKit.executeWithArgumentsAsync(
+                    arguments.toTypedArray(),
+                    { completed ->
+                        if (continuation.isActive) {
+                            continuation.resume(ReturnCode.isSuccess(completed.getReturnCode()))
+                        }
+                    },
+                    { },
+                    { },
+                )
+                continuation.invokeOnCancellation { session.cancel() }
+            } catch (_: Throwable) {
+                if (continuation.isActive) continuation.resume(false)
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun webpCompressFormat(): Bitmap.CompressFormat =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Bitmap.CompressFormat.WEBP_LOSSLESS
+        } else {
+            Bitmap.CompressFormat.WEBP
+        }
+
+    private fun reencodeKindFor(inputFile: File): ReencodeKind? {
+        when (inputFile.extension.lowercase()) {
+            "webp" -> return ReencodeKind.WEBP
+            "tif", "tiff" -> return ReencodeKind.TIFF
+        }
+
+        val header = ByteArray(12)
+        val bytesRead = runCatching {
+            inputFile.inputStream().use { it.read(header) }
+        }.getOrDefault(0)
+        if (bytesRead >= 12 &&
+            header.copyOfRange(0, 4).contentEquals("RIFF".toByteArray(StandardCharsets.US_ASCII)) &&
+            header.copyOfRange(8, 12).contentEquals("WEBP".toByteArray(StandardCharsets.US_ASCII))
+        ) {
+            return ReencodeKind.WEBP
+        }
+        if (bytesRead >= 4 && (
+            header.copyOfRange(0, 4).contentEquals(byteArrayOf(0x49, 0x49, 0x2A, 0x00)) ||
+                header.copyOfRange(0, 4).contentEquals(byteArrayOf(0x4D, 0x4D, 0x00, 0x2A)) ||
+                header.copyOfRange(0, 4).contentEquals(byteArrayOf(0x49, 0x49, 0x2B, 0x00)) ||
+                header.copyOfRange(0, 4).contentEquals(byteArrayOf(0x4D, 0x4D, 0x00, 0x2B))
+            )
+        ) {
+            return ReencodeKind.TIFF
+        }
+        return null
     }
 
     fun redactUriForManifest(originalUri: String, assetId: String): String {
@@ -132,5 +307,6 @@ class MetadataScrubEngine @Inject constructor() {
 
     companion object {
         private const val TAG = "MetadataScrub"
+        private const val TIFF_REENCODE_TIMEOUT_MS = 120_000L
     }
 }

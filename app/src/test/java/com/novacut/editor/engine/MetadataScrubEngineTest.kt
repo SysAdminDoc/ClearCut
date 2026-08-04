@@ -1,9 +1,18 @@
 package com.novacut.editor.engine
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.io.FileOutputStream
 
 class MetadataScrubEngineTest {
 
@@ -25,11 +34,10 @@ class MetadataScrubEngineTest {
     }
 
     @Test
-    fun canScrub_webpAndTiff_returnFalse() {
-        // ExifInterface.saveAttributes() can only rewrite JPEG/PNG, so advertising
-        // WebP/TIFF would let callers believe a file was scrubbed when it was not.
-        assertFalse(engine.canScrub("image/webp"))
-        assertFalse(engine.canScrub("image/tiff"))
+    fun canScrub_webpAndTiff_useReencodePaths() {
+        assertTrue(engine.canScrub("image/webp"))
+        assertTrue(engine.canScrub("image/tiff"))
+        assertTrue(engine.canScrub("image/x-tiff; charset=binary"))
     }
 
     @Test
@@ -61,5 +69,34 @@ class MetadataScrubEngineTest {
         assertEquals("asset://asset-002", redacted)
         assertFalse(redacted.contains("file://"))
         assertFalse(redacted.contains("video.mp4"))
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+class MetadataScrubEngineReencodeTest {
+
+    @get:Rule
+    val temp = TemporaryFolder()
+
+    @Test
+    fun scrubImage_webpReencodesToReadableOutput() = runBlocking {
+        val input = temp.newFile("source.webp")
+        val bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+        try {
+            FileOutputStream(input).use { stream ->
+                @Suppress("DEPRECATION")
+                assertTrue(bitmap.compress(Bitmap.CompressFormat.WEBP, 100, stream))
+            }
+        } finally {
+            bitmap.recycle()
+        }
+
+        val output = temp.root.resolve("scrubbed.webp")
+        val result = MetadataScrubEngine().scrubImage(input, output)
+
+        assertNotNull(result)
+        assertTrue(output.isFile)
+        assertTrue(output.length() > 0L)
+        assertNotNull(BitmapFactory.decodeFile(output.absolutePath))
     }
 }

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Metadata scrubbing now re-encodes WebP images without source metadata and routes TIFF images through the bundled FFmpeg TIFF codec with bounded input/timeout guards; failed conversions leave no claimed scrubbed output.
 - Diagnostic ZIPs now live under a dedicated `diagnostic-shares/` FileProvider root instead of the private `diagnostics/` store; shared metadata redacts Windows/app-private paths, model URL query data, and stable build fingerprints while raw encoder errors remain explicit-consent only.
 - `ACTION_VIEW` imports now accept secondary clip-data URIs only when the intent carries a read grant; the primary data URI remains supported without one.
 - GIF and contact-sheet exports now replace the `{sizeMB}` filename token after atomic output completes, matching video and stream-copy exports.
