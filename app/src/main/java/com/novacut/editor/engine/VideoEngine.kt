@@ -221,6 +221,8 @@ class VideoEngine @Inject constructor(
     // Active Transformer for export cancellation
     @Volatile private var activeTransformer: Transformer? = null
     @Volatile private var activeExportOutputFile: File? = null
+    @Volatile private var activeResumeSourceFile: File? = null
+    private val preservedCancelledOutputPaths = ConcurrentHashMap.newKeySet<String>()
 
     private val mediaCharacteristicsCache = ConcurrentHashMap<String, MediaCharacteristics>()
 
@@ -561,6 +563,7 @@ class VideoEngine @Inject constructor(
         config: ExportConfig,
         outputFile: File,
         timelineDurationMsOverride: Long? = null,
+        resumeFromFile: File? = null,
         textOverlays: List<com.novacut.editor.model.TextOverlay> = emptyList(),
         imageOverlays: List<ImageOverlay> = emptyList(),
         lottieOverlays: List<LottieOverlaySpec> = emptyList(),
@@ -597,6 +600,7 @@ class VideoEngine @Inject constructor(
             }
             _exportState.value = ExportState.EXPORTING
             activeExportOutputFile = outputFile
+            activeResumeSourceFile = resumeFromFile
         }
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
@@ -630,6 +634,7 @@ class VideoEngine @Inject constructor(
                     sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                 ),
                 expectedDurationMs = requestedDurationMs,
+                resumeFromFile = resumeFromFile,
                 onProgress = onProgress,
                 onComplete = {
                     reversedTempFiles.forEach { it.delete() }
@@ -654,7 +659,11 @@ class VideoEngine @Inject constructor(
             _exportProgress.value = 0f
             activeTransformer = null
             activeExportOutputFile = null
-            runCatching { outputFile.delete() }
+            activeResumeSourceFile = null
+            if (preservedCancelledOutputPaths.remove(outputFile.absolutePath).not()) {
+                runCatching { outputFile.delete() }
+                runCatching { resumeFromFile?.delete() }
+            }
             throw e
         } catch (e: Exception) {
             Log.e(TAG, "Export setup failed", e)
@@ -664,7 +673,9 @@ class VideoEngine @Inject constructor(
             _exportProgress.value = 0f
             activeTransformer = null
             activeExportOutputFile = null
+            activeResumeSourceFile = null
             outputFile.delete()
+            runCatching { resumeFromFile?.delete() }
             onError(e)
         }
     }
@@ -838,6 +849,7 @@ class VideoEngine @Inject constructor(
             }
             _exportState.value = ExportState.EXPORTING
             activeExportOutputFile = outputFile
+            activeResumeSourceFile = null
         }
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
@@ -863,6 +875,7 @@ class VideoEngine @Inject constructor(
         _exportProgress.value = 0f
         activeTransformer = null
         activeExportOutputFile = null
+        activeResumeSourceFile = null
         runCatching { outputFile.delete() }
     }
 
@@ -2099,6 +2112,7 @@ class VideoEngine @Inject constructor(
         onError: (Exception) -> Unit,
         markCompleteOnFinish: Boolean = true,
         expectedDurationMs: Long = 0L,
+        resumeFromFile: File? = null,
     ) {
         withContext(Dispatchers.Main) {
             // Cancelled before the transformer was built: starting it anyway
@@ -2144,6 +2158,7 @@ class VideoEngine @Inject constructor(
                         _exportProgress.value = 0f
                         activeExportOutputFile = null
                         runCatching { outputFile.delete() }
+                        runCatching { resumeFromFile?.delete() }
                         onError(IllegalStateException("Empty output file"))
                         return
                     }
@@ -2160,9 +2175,11 @@ class VideoEngine @Inject constructor(
                         _exportProgress.value = 0f
                         activeExportOutputFile = null
                         runCatching { outputFile.delete() }
+                        runCatching { resumeFromFile?.delete() }
                         onError(IllegalStateException(verification.reason ?: "Export verification failed"))
                         return
                     }
+                    runCatching { resumeFromFile?.delete() }
                     terminalReached = true
                     if (markCompleteOnFinish) {
                         _exportState.value = ExportState.COMPLETE
@@ -2185,6 +2202,7 @@ class VideoEngine @Inject constructor(
                     _exportProgress.value = 0f
                     activeExportOutputFile = null
                     outputFile.delete()
+                    runCatching { resumeFromFile?.delete() }
                     terminalReached = true
                     onError(exportException)
                 }
@@ -2192,7 +2210,15 @@ class VideoEngine @Inject constructor(
 
             transformer.addListener(listener)
             activeTransformer = transformer
-            transformer.start(composition, outputFile.absolutePath)
+            if (resumeFromFile != null) {
+                transformer.resume(
+                    composition,
+                    resumeFromFile.absolutePath,
+                    outputFile.absolutePath,
+                )
+            } else {
+                transformer.start(composition, outputFile.absolutePath)
+            }
 
             val holder = ProgressHolder()
             // Hang detector, NOT a wall-clock ceiling: a healthy long export
@@ -2229,12 +2255,14 @@ class VideoEngine @Inject constructor(
                 _exportProgress.value = 0f
                 activeExportOutputFile = null
                 outputFile.delete()
+                runCatching { resumeFromFile?.delete() }
                 terminalReached = true
                 onError(Exception("Export stalled"))
             }
             if (_exportState.value == ExportState.ERROR && !terminalReached) {
                 val message = _exportErrorMessage.value ?: "Export failed"
                 outputFile.delete()
+                runCatching { resumeFromFile?.delete() }
                 activeExportOutputFile = null
                 terminalReached = true
                 onError(Exception(message))
@@ -2256,6 +2284,7 @@ class VideoEngine @Inject constructor(
             // pointing at a deleted file — a subsequent `cancelExport()` would
             // then try to delete that stale path and log an IO error.
             activeExportOutputFile = null
+            activeResumeSourceFile = null
         }
     }
 
@@ -2279,22 +2308,32 @@ class VideoEngine @Inject constructor(
     }
 
     @androidx.annotation.OptIn(UnstableApi::class)
-    fun cancelExport() {
+    fun cancelExport(preservePartial: Boolean = false): File? {
         // Synchronize to match the check-and-set in export(). Without this, cancelExport()
         // could read activeExportOutputFile as null (stale) in the narrow window after
         // _exportState was set to EXPORTING but before activeExportOutputFile was assigned —
         // both happen inside the same synchronized block in export(), but non-synchronized
         // reads have no formal happens-before guarantee for the non-volatile field.
+        var preservedOutput: File? = null
         synchronized(this) {
-            if (_exportState.value != ExportState.EXPORTING) return
+            if (_exportState.value != ExportState.EXPORTING) return null
             Log.d(TAG, "Cancelling export")
             _exportState.value = ExportState.CANCELLED
             activeTransformer?.cancel()
             activeTransformer = null
-            activeExportOutputFile?.delete()
+            val outputFile = activeExportOutputFile
+            if (preservePartial && outputFile != null) {
+                preservedCancelledOutputPaths += outputFile.absolutePath
+                preservedOutput = outputFile
+            } else {
+                outputFile?.delete()
+                activeResumeSourceFile?.delete()
+            }
             activeExportOutputFile = null
+            activeResumeSourceFile = null
         }
         _exportProgress.value = 0f
+        return preservedOutput
     }
 
     fun failExportDueToForegroundServiceTimeout(message: String): Boolean {
@@ -2307,6 +2346,8 @@ class VideoEngine @Inject constructor(
             activeTransformer = null
             activeExportOutputFile?.delete()
             activeExportOutputFile = null
+            activeResumeSourceFile?.delete()
+            activeResumeSourceFile = null
         }
         _exportProgress.value = 0f
         return true

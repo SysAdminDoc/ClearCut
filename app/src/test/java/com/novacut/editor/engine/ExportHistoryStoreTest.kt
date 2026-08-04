@@ -108,6 +108,38 @@ class ExportHistoryStoreTest {
         }
     }
 
+    @Test
+    fun persistsAndRemovesCancelledResumeMetadata() {
+        val dir = Files.createTempDirectory("export-history-resume-").toFile()
+        try {
+            val partial = File(dir, "partial.mp4").apply { writeBytes(ByteArray(12) { 2 }) }
+            val store = ExportHistoryStore(File(dir, "history.json"))
+            val entry = buildExportHistoryEntry(
+                projectId = "project",
+                projectName = "Resume Me",
+                status = ExportHistoryStatus.CANCELLED,
+                startedAtEpochMs = 100L,
+                finishedAtEpochMs = 200L,
+                outputFile = partial,
+                config = ExportConfig(),
+                timelineDurationMs = 5_000L,
+                resumePartialFile = partial,
+                resumeProjectFingerprint = "project-fingerprint",
+                resumeConfigFingerprint = "config-fingerprint",
+            )
+
+            store.append(entry)
+            val restored = store.read().single()
+
+            assertEquals(partial.absolutePath, restored.resumePartialPath)
+            assertEquals("project-fingerprint", restored.resumeProjectFingerprint)
+            assertEquals("config-fingerprint", restored.resumeConfigFingerprint)
+            assertEquals(emptyList<ExportHistoryEntry>(), store.remove(entry.id))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     private fun entry(projectId: String, startedAt: Long): ExportHistoryEntry {
         return buildExportHistoryEntry(
             projectId = projectId,

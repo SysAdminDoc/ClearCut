@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added conservative Media3 export resume support for single, gap-free A/V MP4 timelines: eligible cancellations retain a partial, Resume writes to a distinct destination and verifies completion before cleanup, while changed or failed resumes clean artifacts and fall back to Restart.
 - Added frame-quantized export ranges with Set Start/Set End/Clear controls; exports rebase media, effects, captions, overlays, transitions, chapters, audio gaps, and tracked state without mutating the project, and history records the resolved bounds.
 - Added bounded SRT/WebVTT caption import with encoding, language-confidence, overlap, invalid-cue, and size diagnostics; accepted previews apply offset-aware captions to the selected clip as one undoable edit.
 - Batch export plans now persist atomically with bounded, versioned JSON; interrupted work restores as explicit `INTERRUPTED` items, changed project/config fingerprints require review, and completed jobs remain in export history.

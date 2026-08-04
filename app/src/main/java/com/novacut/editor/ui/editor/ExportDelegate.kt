@@ -16,6 +16,7 @@ import com.novacut.editor.engine.BatchExportPlanContext
 import com.novacut.editor.engine.BatchExportPlanStore
 import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
+import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportHistoryStore
 import com.novacut.editor.engine.ExportIncidentBuilder
@@ -25,6 +26,7 @@ import com.novacut.editor.engine.ExportStoragePolicy
 import com.novacut.editor.engine.ExportStageException
 import com.novacut.editor.engine.ExportStorageException
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.ExportResumePolicy
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
 import com.novacut.editor.engine.GifStreamEncoder
@@ -117,6 +119,17 @@ class ExportDelegate(
     // (GIF encode, contact-sheet render) + any future CPU-only export paths
     // all need the same cancel/teardown plumbing.
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
+    private data class ActiveResumeSession(
+        val outputFile: File,
+        val eligible: Boolean,
+        val config: ExportConfig,
+        val projectFingerprint: String,
+        val configFingerprint: String,
+        val sourcePartialFile: File? = null,
+        val supersededHistoryId: String? = null,
+    )
+    @Volatile private var activeResumeSession: ActiveResumeSession? = null
+    private val preservedResumeOutputPaths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     // Set for the lifetime of an export the user allowed through preflight
     // warnings; appended to every history row that run produces.
     @Volatile private var acceptedFallbackNote: String? = null
@@ -312,7 +325,11 @@ class ExportDelegate(
         timelineDurationMs: Long,
         errorMessage: String? = null,
         diagnosticSummary: String? = null,
-        healthReport: MediaHealthReport? = sourceState.media.healthReport
+        healthReport: MediaHealthReport? = sourceState.media.healthReport,
+        resumePartialFile: File? = null,
+        resumeProjectFingerprint: String? = null,
+        resumeConfigFingerprint: String? = null,
+        supersededHistoryId: String? = null,
     ) {
         val finishedAtMs = System.currentTimeMillis()
         // An export the user let through despite preflight warnings produced a
@@ -336,6 +353,9 @@ class ExportDelegate(
             outputFile = outputFile,
             config = config,
             timelineDurationMs = timelineDurationMs,
+            resumePartialFile = resumePartialFile,
+            resumeProjectFingerprint = resumeProjectFingerprint,
+            resumeConfigFingerprint = resumeConfigFingerprint,
             resolvedRange = resolvedRange,
             errorMessage = errorMessage,
             diagnosticSummary = summaryWithConsent,
@@ -343,7 +363,10 @@ class ExportDelegate(
             mediaBlockingCount = healthReport?.blockingCount ?: 0
         )
         scope.launch(Dispatchers.IO) {
-            val history = exportHistoryStore.append(entry)
+            var history = exportHistoryStore.append(entry)
+            if (supersededHistoryId != null && supersededHistoryId != entry.id) {
+                history = exportHistoryStore.remove(supersededHistoryId)
+            }
             withContext(Dispatchers.Main) {
                 updateExport { it.copy(history = history) }
             }
@@ -444,10 +467,12 @@ class ExportDelegate(
         outputFile: File,
         startedAtMs: Long,
         totalDurationMs: Long,
-        healthReport: MediaHealthReport?
+        healthReport: MediaHealthReport?,
+        resumeFromFile: File? = null,
     ): Boolean {
         val engine = streamCopyEngine ?: return false
         if (!config.allowStreamCopy) return false
+        if (resumeFromFile != null) return false
         // A selected range must flow through the Transformer so every track,
         // overlay, caption, and effect is rebased consistently. Stream-copy
         // only understands the untouched single-source trim contract.
@@ -549,14 +574,76 @@ class ExportDelegate(
         return outputFile
     }
 
+    private fun resumeEligibility(
+        state: EditorState,
+        config: ExportConfig = state.exportConfig,
+        outputExtension: String = "mp4",
+    ): ExportResumePolicy.Decision = ExportResumePolicy.evaluate(
+        tracks = state.tracks,
+        config = config,
+        outputExtension = outputExtension,
+        textOverlayCount = state.textOverlays.size,
+        imageOverlayCount = state.imageOverlays.size,
+        trackedObjectCount = state.trackedObjects.count { it.isEnabled },
+        globalTransitionCount = state.globalTransitions.size,
+    )
+
+    private fun isOwnedResumeFile(file: File): Boolean {
+        val candidate = runCatching { file.canonicalFile }.getOrNull() ?: return false
+        val roots = listOfNotNull(
+            appContext.filesDir,
+            appContext.cacheDir,
+            appContext.getExternalFilesDir(Environment.DIRECTORY_MOVIES),
+            appContext.getExternalFilesDir(Environment.DIRECTORY_MUSIC),
+            appContext.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+        ).mapNotNull { runCatching { it.canonicalFile }.getOrNull() }
+        return roots.any { root ->
+            val rootPath = root.absolutePath.trimEnd(File.separatorChar) + File.separator
+            candidate.absolutePath.startsWith(rootPath, ignoreCase = true)
+        }
+    }
+
+    private fun deleteOwnedResumeFile(file: File?) {
+        if (file != null && isOwnedResumeFile(file)) {
+            runCatching { file.delete() }
+        }
+    }
+
     fun cancelExport() {
         val currentState = stateFlow.value
         val startedAtMs = currentState.exportStartTime.takeIf { it > 0L } ?: System.currentTimeMillis()
         val cancellingNonVideoExport = nonVideoExportJob != null
+        val resumeSession = activeResumeSession
         // Cancel GIF export coroutine if one is running
         nonVideoExportJob?.cancel()
         nonVideoExportJob = null
-        videoEngine.cancelExport()
+        val preservedOutput = if (!cancellingNonVideoExport && resumeSession != null) {
+            val preserve = resumeSession.eligible
+            if (preserve) preservedResumeOutputPaths += resumeSession.outputFile.absolutePath
+            videoEngine.cancelExport(preservePartial = preserve)
+        } else {
+            videoEngine.cancelExport()
+        }
+        val resumePartial = if (resumeSession?.eligible == true) {
+            preservedOutput?.takeIf { it.isFile && it.length() > 0L }
+                ?: resumeSession.sourcePartialFile
+                ?: preservedOutput
+                ?: resumeSession.outputFile
+        } else {
+            null
+        }
+        if (resumeSession?.sourcePartialFile != null &&
+            resumePartial != null &&
+            resumePartial.absolutePath != resumeSession.sourcePartialFile.absolutePath
+        ) {
+            deleteOwnedResumeFile(resumeSession.sourcePartialFile)
+        }
+        if (resumeSession?.sourcePartialFile != null &&
+            resumePartial?.absolutePath == resumeSession.sourcePartialFile.absolutePath
+        ) {
+            deleteOwnedResumeFile(resumeSession.outputFile)
+        }
+        activeResumeSession = null
         // Always push CANCELLED to the UI. The if-guard was only needed when we worried about
         // overwriting a COMPLETE state, but cancelExport() is only called by explicit user
         // action, so CANCELLED is always the right terminal state to show here.
@@ -571,11 +658,15 @@ class ExportDelegate(
                 sourceState = currentState,
                 status = ExportHistoryStatus.CANCELLED,
                 startedAtMs = startedAtMs,
-                outputFile = null,
-                config = currentState.exportConfig,
+                outputFile = resumePartial,
+                config = resumeSession?.config ?: currentState.exportConfig,
                 timelineDurationMs = currentState.totalDurationMs,
                 diagnosticSummary = "Export was cancelled by the user.",
-                healthReport = currentState.media.healthReport
+                healthReport = currentState.media.healthReport,
+                resumePartialFile = resumePartial,
+                resumeProjectFingerprint = resumeSession?.projectFingerprint,
+                resumeConfigFingerprint = resumeSession?.configFingerprint,
+                supersededHistoryId = resumeSession?.supersededHistoryId,
             )
         }
     }
@@ -591,6 +682,55 @@ class ExportDelegate(
             return
         }
         scope.launch { startExportAsync(outputDir, preferredOutputName, currentState) }
+    }
+
+    fun resumeExport(entry: ExportHistoryEntry) {
+        val currentState = stateFlow.value
+        if (currentState.exportState == ExportState.EXPORTING) {
+            showToast(appContext.getString(R.string.export_already_in_progress_toast))
+            return
+        }
+        val partialFile = entry.resumePartialPath?.let(::File)
+        val decision = partialFile?.let { resumeEligibility(currentState, outputExtension = it.extension) }
+        val fingerprintsMatch = entry.projectId == currentState.project.id &&
+            entry.resumeProjectFingerprint == projectFingerprint(currentState) &&
+            entry.resumeConfigFingerprint == exportConfigFingerprint(currentState.exportConfig)
+        val canResume = entry.status == ExportHistoryStatus.CANCELLED &&
+            partialFile != null &&
+            decision?.eligible == true &&
+            fingerprintsMatch &&
+            isOwnedResumeFile(partialFile) &&
+            partialFile.isFile &&
+            partialFile.length() > 0L
+        if (!canResume) {
+            deleteOwnedResumeFile(partialFile)
+            val message = text(R.string.export_resume_unavailable)
+            updateExport {
+                it.copy(
+                    state = ExportState.ERROR,
+                    progress = 0f,
+                    errorMessage = message,
+                    lastExportedFilePath = null,
+                )
+            }
+            scope.launch(Dispatchers.IO) {
+                val history = exportHistoryStore.remove(entry.id)
+                withContext(Dispatchers.Main) {
+                    updateExport { it.copy(history = history) }
+                }
+            }
+            showToast(message)
+            return
+        }
+        showToast(text(R.string.export_resume_started))
+        scope.launch {
+            startExportAsync(
+                outputDir = requireNotNull(partialFile.parentFile),
+                preferredOutputName = partialFile.nameWithoutExtension,
+                currentState = currentState,
+                resumeCandidate = entry,
+            )
+        }
     }
 
     /**
@@ -664,6 +804,7 @@ class ExportDelegate(
         preferredOutputName: String?,
         currentState: EditorState,
         acceptedConfirmation: ExportConfirmationRequest? = null,
+        resumeCandidate: ExportHistoryEntry? = null,
     ) {
         acceptedFallbackNote = acceptedConfirmation?.acceptedFallbackSummary()
         val healthReport = mediaHealthPreflight(currentState)
@@ -810,6 +951,44 @@ class ExportDelegate(
         val imageOverlays = slicedExport?.imageOverlays ?: currentState.imageOverlays
         val trackedObjects = slicedExport?.trackedObjects ?: currentState.trackedObjects
         val globalTransitions = slicedExport?.globalTransitions ?: currentState.globalTransitions
+
+        val resumeSourceFile = resumeCandidate?.resumePartialPath?.let(::File)
+        if (resumeCandidate != null) {
+            val resumeValid = resumeSourceFile != null &&
+                resumeEligibility(currentState, outputExtension = "mp4").eligible &&
+                resumeCandidate.projectId == currentState.project.id &&
+                resumeCandidate.resumeProjectFingerprint == projectFingerprint(currentState) &&
+                resumeCandidate.resumeConfigFingerprint == exportConfigFingerprint(currentState.exportConfig) &&
+                isOwnedResumeFile(resumeSourceFile) &&
+                resumeSourceFile.isFile &&
+                resumeSourceFile.length() > 0L
+            if (!resumeValid) {
+                deleteOwnedResumeFile(resumeSourceFile)
+                val message = text(R.string.export_resume_unavailable)
+                updateExport {
+                    it.copy(
+                        state = ExportState.ERROR,
+                        progress = 0f,
+                        errorMessage = message,
+                        lastExportedFilePath = null,
+                    )
+                }
+                recordExportHistory(
+                    sourceState = currentState,
+                    status = ExportHistoryStatus.FAILED,
+                    startedAtMs = System.currentTimeMillis(),
+                    outputFile = null,
+                    config = currentState.exportConfig,
+                    timelineDurationMs = totalDurationMs,
+                    errorMessage = message,
+                    diagnosticSummary = "Media3 resume was no longer eligible or its partial file was unavailable.",
+                    healthReport = healthReport,
+                    supersededHistoryId = resumeCandidate.id,
+                )
+                showToast(message)
+                return
+            }
+        }
 
         withContext(Dispatchers.IO) { outputDir.mkdirs() }
         val storageCheck = ExportStoragePolicy.check(
@@ -1316,6 +1495,8 @@ class ExportDelegate(
             )
 
             fun handleVideoExportComplete() {
+              val completedResumeId = activeResumeSession?.supersededHistoryId
+              activeResumeSession = null
               // The Transformer completion callback lands on the Main thread.
               // Finalization here (subtitle burn-in especially, which re-encodes
               // the whole video) can run for seconds to minutes, so run all of it
@@ -1470,13 +1651,16 @@ class ExportDelegate(
                     config = configWithChapters,
                     timelineDurationMs = totalDurationMs,
                     diagnosticSummary = "Video export completed.",
-                    healthReport = healthReport
+                    healthReport = healthReport,
+                    supersededHistoryId = completedResumeId,
                 )
                 showToast(appContext.getString(R.string.export_complete_toast, finalizedFile.name))
               }
             }
 
             fun handleVideoExportError(e: Exception) {
+                val failedResumeId = activeResumeSession?.supersededHistoryId
+                activeResumeSession = null
                 outputFile.delete()
                 val message = when (e) {
                     is ExportStorageException -> appContext.exportStorageFailureMessage(e.failure)
@@ -1510,7 +1694,8 @@ class ExportDelegate(
                         "Video export failed in the ${staged.stage} stage" +
                             (staged.subjectId?.let { " on clip $it" } ?: "") + "."
                     } ?: "Video export failed in the encoder pipeline.",
-                    healthReport = healthReport
+                    healthReport = healthReport,
+                    supersededHistoryId = failedResumeId,
                 )
                 recordExportIncident(
                     sourceState = currentState,
@@ -1545,7 +1730,8 @@ class ExportDelegate(
                         outputFile = outputFile,
                         startedAtMs = startedAtMs,
                         totalDurationMs = totalDurationMs,
-                        healthReport = healthReport
+                        healthReport = healthReport,
+                        resumeFromFile = resumeSourceFile,
                     )
                 ) {
                     return@launch
@@ -1555,13 +1741,13 @@ class ExportDelegate(
                 }
                 appContext.startForegroundService(serviceIntent)
                 setEncoderName(configWithChapters)
-                val mixedPlan = buildMixedRenderPlan(
+                val mixedPlan = if (resumeSourceFile == null) buildMixedRenderPlan(
                     tracks = tracks,
                     config = configWithChapters,
                     textOverlays = textOverlays,
                     state = currentState,
                     outputFile = outputFile
-                )
+                ) else null
                 if (mixedPlan != null && videoEngine.exportMixed(
                         plan = mixedPlan,
                         tracks = tracks,
@@ -1580,11 +1766,22 @@ class ExportDelegate(
                 ) {
                     return@launch
                 }
+                val resumeDecision = resumeEligibility(currentState, outputExtension = ext)
+                activeResumeSession = ActiveResumeSession(
+                    outputFile = outputFile,
+                    eligible = resumeDecision.eligible,
+                    config = configWithChapters,
+                    projectFingerprint = projectFingerprint(currentState),
+                    configFingerprint = exportConfigFingerprint(currentState.exportConfig),
+                    sourcePartialFile = resumeSourceFile,
+                    supersededHistoryId = resumeCandidate?.id,
+                )
                 videoEngine.export(
                     tracks = tracks,
                     config = configWithChapters,
                     outputFile = outputFile,
                     timelineDurationMsOverride = totalDurationMs,
+                    resumeFromFile = resumeSourceFile,
                     textOverlays = textOverlays,
                     imageOverlays = imageOverlays,
                     trackedObjects = trackedObjects,
@@ -1601,10 +1798,18 @@ class ExportDelegate(
                 // VideoEngine's transformer listener handles the CANCELLED
                 // state transition; we just clean up the partial file and
                 // let cancellation propagate so the launched job finishes.
-                runCatching { outputFile.delete() }
+                val preserved = preservedResumeOutputPaths.remove(outputFile.absolutePath)
+                activeResumeSession = null
+                if (!preserved) {
+                    runCatching { outputFile.delete() }
+                    deleteOwnedResumeFile(resumeSourceFile)
+                }
                 throw e
             } catch (e: Exception) {
+                val failedResumeId = activeResumeSession?.supersededHistoryId ?: resumeCandidate?.id
+                activeResumeSession = null
                 outputFile.delete()
+                deleteOwnedResumeFile(resumeSourceFile)
                 val message = exportFailureText(videoEngine.exportFailureCause.value)
                 val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
@@ -1623,7 +1828,8 @@ class ExportDelegate(
                     timelineDurationMs = totalDurationMs,
                     errorMessage = message,
                     diagnosticSummary = "Video export failed before the encoder could finish.",
-                    healthReport = healthReport
+                    healthReport = healthReport,
+                    supersededHistoryId = failedResumeId,
                 )
                 recordExportIncident(
                     sourceState = currentState,

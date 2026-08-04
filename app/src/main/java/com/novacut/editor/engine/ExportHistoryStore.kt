@@ -39,6 +39,10 @@ data class ExportHistoryEntry(
     val rangeEndFrameExclusive: Long? = null,
     val rangeStartMs: Long? = null,
     val rangeEndMs: Long? = null,
+    /** A non-final Media3 MP4 that can be offered to Transformer.resume. */
+    val resumePartialPath: String? = null,
+    val resumeProjectFingerprint: String? = null,
+    val resumeConfigFingerprint: String? = null,
     val errorMessage: String? = null,
     val diagnosticSummary: String? = null,
     val mediaWarningCount: Int = 0,
@@ -68,9 +72,19 @@ class ExportHistoryStore(
     fun append(entry: ExportHistoryEntry): List<ExportHistoryEntry> {
         val updated = (listOf(entry) + read().filterNot { it.id == entry.id })
             .take(retainCount.coerceAtLeast(1))
-        historyFile.parentFile?.mkdirs()
-        writeUtf8TextAtomically(historyFile, exportHistoryToJson(updated).toString(2))
+        write(updated)
         return updated
+    }
+
+    fun remove(id: String): List<ExportHistoryEntry> {
+        val updated = read().filterNot { it.id == id }
+        write(updated)
+        return updated
+    }
+
+    private fun write(entries: List<ExportHistoryEntry>) {
+        historyFile.parentFile?.mkdirs()
+        writeUtf8TextAtomically(historyFile, exportHistoryToJson(entries).toString(2))
     }
 
     companion object {
@@ -92,6 +106,9 @@ fun buildExportHistoryEntry(
     config: ExportConfig,
     timelineDurationMs: Long,
     resolvedRange: ResolvedTimelineExportRange? = null,
+    resumePartialFile: File? = null,
+    resumeProjectFingerprint: String? = null,
+    resumeConfigFingerprint: String? = null,
     errorMessage: String? = null,
     diagnosticSummary: String? = null,
     mediaWarningCount: Int = 0,
@@ -124,6 +141,9 @@ fun buildExportHistoryEntry(
         rangeEndFrameExclusive = resolvedRange?.endFrameExclusive,
         rangeStartMs = resolvedRange?.startMs,
         rangeEndMs = resolvedRange?.endMs,
+        resumePartialPath = resumePartialFile?.absolutePath,
+        resumeProjectFingerprint = resumeProjectFingerprint?.takeIf { it.isNotBlank() },
+        resumeConfigFingerprint = resumeConfigFingerprint?.takeIf { it.isNotBlank() },
         errorMessage = errorMessage?.takeIf { it.isNotBlank() },
         diagnosticSummary = diagnosticSummary?.takeIf { it.isNotBlank() },
         mediaWarningCount = mediaWarningCount.coerceAtLeast(0),
@@ -153,6 +173,9 @@ private fun exportHistoryToJson(entries: List<ExportHistoryEntry>): JSONArray {
                 putNullable("rangeEndFrameExclusive", entry.rangeEndFrameExclusive)
                 putNullable("rangeStartMs", entry.rangeStartMs)
                 putNullable("rangeEndMs", entry.rangeEndMs)
+                putNullable("resumePartialPath", entry.resumePartialPath)
+                putNullable("resumeProjectFingerprint", entry.resumeProjectFingerprint)
+                putNullable("resumeConfigFingerprint", entry.resumeConfigFingerprint)
                 putNullable("errorMessage", entry.errorMessage)
                 putNullable("diagnosticSummary", entry.diagnosticSummary)
                 put("mediaWarningCount", entry.mediaWarningCount)
@@ -188,6 +211,9 @@ private fun exportHistoryEntryFromJson(json: JSONObject): ExportHistoryEntry? {
         rangeEndFrameExclusive = json.optNullableLong("rangeEndFrameExclusive"),
         rangeStartMs = json.optNullableLong("rangeStartMs"),
         rangeEndMs = json.optNullableLong("rangeEndMs"),
+        resumePartialPath = json.optNullableString("resumePartialPath"),
+        resumeProjectFingerprint = json.optNullableString("resumeProjectFingerprint"),
+        resumeConfigFingerprint = json.optNullableString("resumeConfigFingerprint"),
         errorMessage = json.optNullableString("errorMessage"),
         diagnosticSummary = json.optNullableString("diagnosticSummary"),
         mediaWarningCount = json.optInt("mediaWarningCount").coerceAtLeast(0),

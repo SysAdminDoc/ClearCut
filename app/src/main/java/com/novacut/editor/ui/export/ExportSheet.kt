@@ -158,6 +158,7 @@ fun ExportSheet(
     onShare: () -> Unit = {},
     onSaveToGallery: () -> Unit = {},
     onCancel: () -> Unit = {},
+    onResumeExport: (ExportHistoryEntry) -> Unit = {},
     onExportOtio: () -> Unit = {},
     onExportFcpxml: () -> Unit = {},
     onExportSubtitles: (SubtitleFormat) -> Unit = {},
@@ -1348,7 +1349,10 @@ fun ExportSheet(
 
         if (exportHistory.isNotEmpty()) {
             Spacer(modifier = Modifier.height(12.dp))
-            ExportHistorySection(exportHistory.take(3))
+            ExportHistorySection(
+                entries = exportHistory.take(3),
+                onResumeExport = onResumeExport,
+            )
         }
 
         if (videoModeEnabled) {
@@ -1539,7 +1543,10 @@ private fun ExportSectionCard(
 }
 
 @Composable
-private fun ExportHistorySection(entries: List<ExportHistoryEntry>) {
+private fun ExportHistorySection(
+    entries: List<ExportHistoryEntry>,
+    onResumeExport: (ExportHistoryEntry) -> Unit,
+) {
     val semanticColors = LocalClearCutColors.current
     val dateFormat = remember {
         DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
@@ -1550,7 +1557,11 @@ private fun ExportHistorySection(entries: List<ExportHistoryEntry>) {
         accent = ClearCutAccents.Teal
     ) {
         entries.forEachIndexed { index, entry ->
-            ExportHistoryRow(entry = entry, dateFormat = dateFormat)
+            ExportHistoryRow(
+                entry = entry,
+                dateFormat = dateFormat,
+                onResumeExport = onResumeExport,
+            )
             if (index < entries.lastIndex) {
                 HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.7f))
             }
@@ -1561,7 +1572,8 @@ private fun ExportHistorySection(entries: List<ExportHistoryEntry>) {
 @Composable
 private fun ExportHistoryRow(
     entry: ExportHistoryEntry,
-    dateFormat: DateFormat
+    dateFormat: DateFormat,
+    onResumeExport: (ExportHistoryEntry) -> Unit,
 ) {
     val semanticColors = LocalClearCutColors.current
     val statusColor = when (entry.status) {
@@ -1644,6 +1656,17 @@ private fun ExportHistoryRow(
                         color = ClearCutAccents.Peach,
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+                if (entry.status == ExportHistoryStatus.CANCELLED && entry.resumePartialPath != null) {
+                    TextButton(
+                        onClick = { onResumeExport(entry) },
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.export_resume),
+                            color = ClearCutAccents.Teal,
+                        )
+                    }
                 }
             }
         }

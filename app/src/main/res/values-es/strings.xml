@@ -51,6 +51,9 @@
     <string name="export_history_status_blocked">Bloqueada</string>
     <string name="export_history_detail_format">%1$s • %2$s • %3$s</string>
     <string name="export_history_media_issues_format">%1$d elementos de reparación • %2$d advertencias</string>
+    <string name="export_resume">Reanudar</string>
+    <string name="export_resume_started">Reanudando exportación…</string>
+    <string name="export_resume_unavailable">Esta exportación parcial no se puede reanudar. Reinicie la exportación para crear un archivo nuevo.</string>
     <string name="export_smart_render_title">Perspectiva de renderizado inteligente</string>
     <string name="export_smart_render_detail">%1$d%% de la línea de tiempo puede transmitirse. %2$d rangos se copian directamente; %3$d necesita volver a codificarse.</string>
     <string name="export_delivery_summary">Resumen de entrega</string>

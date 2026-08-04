@@ -4512,6 +4512,7 @@ class EditorViewModel @Inject constructor(
 
     // --- Export ---
     fun cancelExport() = exportDelegate.cancelExport()
+    fun resumeExport(entry: com.novacut.editor.engine.ExportHistoryEntry) = exportDelegate.resumeExport(entry)
     fun confirmPendingExport() = exportDelegate.confirmPendingExport()
     fun dismissPendingExport() = exportDelegate.dismissPendingExport()
 

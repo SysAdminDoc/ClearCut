@@ -249,6 +249,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             },
             onSaveToGallery = viewModel::saveToGallery,
             onCancel = viewModel::cancelExport,
+            onResumeExport = viewModel::resumeExport,
             onExportOtio = viewModel::exportToOtio,
             onExportFcpxml = viewModel::exportToFcpxml,
             onCaptureFrame = viewModel::captureFrame,
