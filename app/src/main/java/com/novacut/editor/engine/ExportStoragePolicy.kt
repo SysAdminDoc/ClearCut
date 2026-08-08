@@ -320,4 +320,4 @@ class ExportStorageException(
  */
 class UnsupportedAudioExportException(
     val codec: com.novacut.editor.model.AudioCodec,
-) : IllegalStateException("Standalone audio export supports AAC only (requested ${codec.label})")
+) : IllegalStateException("AAC is the only currently supported export audio codec (requested ${codec.label})")

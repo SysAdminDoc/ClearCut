@@ -201,7 +201,20 @@ enum class VideoCodec(val mimeType: String, val label: String) {
 enum class AudioCodec(val mimeType: String, val label: String) {
     AAC("audio/mp4a-latm", "AAC"),
     OPUS("audio/opus", "Opus"),
-    FLAC("audio/flac", "FLAC")
+    FLAC("audio/flac", "FLAC");
+
+    companion object {
+        /**
+         * Audio codecs with a complete, device-verified export path. Keep
+         * unsupported enum values for persisted-config compatibility, but do
+         * not expose them as selectable options until their container and
+         * fallback behavior are verified end to end.
+         */
+        val supportedExportCodecs: List<AudioCodec> = listOf(AAC)
+
+        fun isSupportedForExport(codec: AudioCodec): Boolean =
+            codec in supportedExportCodecs
+    }
 }
 
 enum class ExportQuality(val label: String) {

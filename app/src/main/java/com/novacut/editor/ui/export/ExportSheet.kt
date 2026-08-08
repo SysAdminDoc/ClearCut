@@ -1310,7 +1310,7 @@ fun ExportSheet(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AudioCodec.entries.forEach { audioCodec ->
+                        AudioCodec.supportedExportCodecs.forEach { audioCodec ->
                             FilterChip(
                                 onClick = { onConfigChanged(config.copy(audioCodec = audioCodec)) },
                                 label = { Text(audioCodec.label, style = MaterialTheme.typography.labelMedium) },

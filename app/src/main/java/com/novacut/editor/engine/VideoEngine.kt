@@ -661,6 +661,10 @@ class VideoEngine @Inject constructor(
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {}
     ) {
+        if (!AudioCodec.isSupportedForExport(config.audioCodec)) {
+            onError(UnsupportedAudioExportException(config.audioCodec))
+            return
+        }
         val requestedDurationMs = timelineDurationMsOverride?.coerceAtLeast(0L)
             ?: tracks.maxOfOrNull { track ->
                 track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
@@ -2499,6 +2503,9 @@ class VideoEngine @Inject constructor(
         mp4EditListTrimEnabled: Boolean = false,
         metadataEntries: List<androidx.media3.common.Metadata.Entry> = emptyList(),
     ) {
+        if (!AudioCodec.isSupportedForExport(config.audioCodec)) {
+            throw UnsupportedAudioExportException(config.audioCodec)
+        }
         withContext(Dispatchers.Main) {
             // Cancelled before the transformer was built: starting it anyway
             // would run a detached full encode whose state-guarded listener
