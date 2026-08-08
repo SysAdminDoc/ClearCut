@@ -6,6 +6,8 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
 import java.nio.file.Files
 
 class ExportOutputVerifierTest {
@@ -85,5 +87,52 @@ class ExportOutputVerifierTest {
                 durationToleranceMs = 2_000L,
             )
         )
+    }
+
+    @Test
+    fun detectsMp4ContainerAndFastStartLayout() {
+        val dir = Files.createTempDirectory("verifier-container-test-").toFile()
+        try {
+            val fastStart = File(dir, "fast.mp4").apply {
+                writeBytes(atom("ftyp") + atom("moov") + atom("mdat", ByteArray(16)))
+            }
+            val progressive = File(dir, "progressive.mp4").apply {
+                writeBytes(atom("ftyp") + atom("mdat", ByteArray(16)) + atom("moov"))
+            }
+
+            assertEquals(ExportContainer.MP4, detectExportContainer(fastStart))
+            assertTrue(hasFastStartMp4Layout(fastStart))
+            assertFalse(hasFastStartMp4Layout(progressive))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun detectsWebmContainerFromEbmlHeader() {
+        val dir = Files.createTempDirectory("verifier-webm-test-").toFile()
+        try {
+            val webm = File(dir, "output.webm")
+            FileOutputStream(webm).use { it.write(byteArrayOf(0x1a, 0x45.toByte(), 0xdf.toByte(), 0xa3.toByte())) }
+            assertEquals(ExportContainer.WEBM, detectExportContainer(webm))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun expectedContainerFollowsOutputExtension() {
+        assertEquals(ExportContainer.MP4, expectedContainerForExtension("MP4"))
+        assertEquals(ExportContainer.MP4, expectedContainerForExtension("m4a"))
+        assertEquals(ExportContainer.WEBM, expectedContainerForExtension("webm"))
+        assertEquals(ExportContainer.UNKNOWN, expectedContainerForExtension("gif"))
+    }
+
+    private fun atom(type: String, payload: ByteArray = ByteArray(0)): ByteArray {
+        return ByteBuffer.allocate(8 + payload.size)
+            .putInt(8 + payload.size)
+            .put(type.toByteArray(Charsets.US_ASCII))
+            .put(payload)
+            .array()
     }
 }

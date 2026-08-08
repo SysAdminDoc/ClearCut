@@ -93,6 +93,8 @@ class AudioOnlyExportContractTest {
                 outputFile = output,
                 expectVideo = false,
                 expectAudio = true,
+                expectedAudioMimeType = MediaFormat.MIMETYPE_AUDIO_AAC,
+                expectedContainer = ExportContainer.MP4,
             )
             assertTrue("verifier rejected the m4a: ${verification.reason}", verification.valid)
             assertTrue("m4a has no audio track", verification.hasAudio)
@@ -121,6 +123,30 @@ class AudioOnlyExportContractTest {
             assertTrue(
                 "unexpected rejection reason: ${result.reason}",
                 result.reason?.contains("video track") == true,
+            )
+        } finally {
+            videoFixture.delete()
+        }
+    }
+
+    @Test
+    fun verifierRejectsRequestedVideoCodecMismatch() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val videoFixture = File(context.cacheDir, "video-codec-fixture-${System.nanoTime()}.mp4")
+        InstrumentationRegistry.getInstrumentation().context.assets.open("trim-boundary.mp4").use { input ->
+            videoFixture.outputStream().use(input::copyTo)
+        }
+        try {
+            val result = ExportOutputVerifier.verify(
+                outputFile = videoFixture,
+                expectVideo = true,
+                expectedVideoMimeType = "video/not-a-real-export-codec",
+                expectedContainer = ExportContainer.MP4,
+            )
+            assertFalse("verifier accepted an unexpected video codec", result.valid)
+            assertTrue(
+                "unexpected rejection reason: ${result.reason}",
+                result.reason?.contains("Video codec mismatch") == true,
             )
         } finally {
             videoFixture.delete()

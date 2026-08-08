@@ -55,6 +55,20 @@ private fun logAndroid15LoudnessIntegration(stage: String) {
     }
 }
 
+@androidx.annotation.OptIn(UnstableApi::class)
+private fun formatTransformerFallback(
+    original: TransformationRequest,
+    fallback: TransformationRequest,
+): String {
+    fun describe(request: TransformationRequest): String =
+        "video=${request.videoMimeType ?: "default"}, " +
+            "audio=${request.audioMimeType ?: "default"}, " +
+            "height=${request.outputHeight}, hdrMode=${request.hdrMode}"
+
+    return "Media3 export fallback applied: requested [${describe(original)}], " +
+        "actual [${describe(fallback)}]"
+}
+
 /**
  * Longest clip the reverse pre-render will attempt. Anything above this is
  * refused up front rather than started and abandoned; export preflight reads the
@@ -659,7 +673,8 @@ class VideoEngine @Inject constructor(
         globalTransitions: List<GlobalTransition> = emptyList(),
         onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
-        onError: (Exception) -> Unit = {}
+        onError: (Exception) -> Unit = {},
+        onFallbackApplied: (String) -> Unit = {},
     ) {
         if (!AudioCodec.isSupportedForExport(config.audioCodec)) {
             onError(UnsupportedAudioExportException(config.audioCodec))
@@ -769,7 +784,8 @@ class VideoEngine @Inject constructor(
                 onError = { e ->
                     preRenderTempFiles.forEach { it.delete() }
                     onError(e)
-                }
+                },
+                onFallbackApplied = onFallbackApplied,
             )
         } catch (e: CancellationException) {
             // User cancelled while pre-rendering or before the transformer
@@ -826,7 +842,8 @@ class VideoEngine @Inject constructor(
         timelineDurationMsOverride: Long? = null,
         onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
-        onError: (Exception) -> Unit = {}
+        onError: (Exception) -> Unit = {},
+        onFallbackApplied: (String) -> Unit = {},
     ) {
         if (config.audioCodec != AudioCodec.AAC) {
             onError(UnsupportedAudioExportException(config.audioCodec))
@@ -861,6 +878,7 @@ class VideoEngine @Inject constructor(
                 onProgress = onProgress,
                 onComplete = { reversedTempFiles.forEach { it.delete() }; onComplete() },
                 onError = { e -> reversedTempFiles.forEach { it.delete() }; onError(e) },
+                onFallbackApplied = onFallbackApplied,
             )
         } catch (e: CancellationException) {
             failExportSession(outputFile, reversedTempFiles, cancelled = true)
@@ -889,7 +907,8 @@ class VideoEngine @Inject constructor(
         timelineDurationMsOverride: Long? = null,
         onProgress: (Float) -> Unit = {},
         onComplete: (List<File>) -> Unit = {},
-        onError: (Exception) -> Unit = {}
+        onError: (Exception) -> Unit = {},
+        onFallbackApplied: (String) -> Unit = {},
     ) {
         if (config.audioCodec != AudioCodec.AAC) {
             onError(UnsupportedAudioExportException(config.audioCodec))
@@ -944,6 +963,7 @@ class VideoEngine @Inject constructor(
                     },
                     onComplete = { written.add(outFile) },
                     onError = { e -> stemError = e },
+                    onFallbackApplied = onFallbackApplied,
                     // Keep the session EXPORTING between stems; only the final
                     // COMPLETE is published after the whole set succeeds.
                     markCompleteOnFinish = false,
@@ -1196,7 +1216,8 @@ class VideoEngine @Inject constructor(
         trackedObjects: List<TrackedObject> = emptyList(),
         onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
-        onError: (Exception) -> Unit = {}
+        onError: (Exception) -> Unit = {},
+        onFallbackApplied: (String) -> Unit = {},
     ): Boolean {
         if (plan.benefit != MixedRenderComposer.Benefit.Mixed || !plan.needsConcat) return false
         if (config.forceConstantFrameRate) {
@@ -1352,6 +1373,7 @@ class VideoEngine @Inject constructor(
                                 publishMixedProgress(completedWeight, stepWeight, 1f)
                             },
                             onError = { error -> segmentError = error },
+                            onFallbackApplied = onFallbackApplied,
                             markCompleteOnFinish = false
                         )
                         segmentError?.let { throw it }
@@ -2496,6 +2518,7 @@ class VideoEngine @Inject constructor(
         onProgress: (Float) -> Unit,
         onComplete: () -> Unit,
         onError: (Exception) -> Unit,
+        onFallbackApplied: (String) -> Unit = {},
         markCompleteOnFinish: Boolean = true,
         expectedDurationMs: Long = 0L,
         resumeFromFile: File? = null,
@@ -2584,6 +2607,28 @@ class VideoEngine @Inject constructor(
                         expectVideo = !config.exportAudioOnly && !config.exportStemsOnly,
                         expectAudio = config.exportAudioOnly || config.exportStemsOnly,
                         expectedDurationMs = expectedDurationMs,
+                        expectedVideoMimeType = if (!config.exportAudioOnly && !config.exportStemsOnly) {
+                            config.codec.mimeType
+                        } else {
+                            null
+                        },
+                        expectedAudioMimeType = AudioCodec.AAC.mimeType,
+                        expectedVideoWidth = if (!config.exportAudioOnly && !config.exportStemsOnly) {
+                            encoderSafeOutputDimensions(config).first
+                        } else {
+                            null
+                        },
+                        expectedVideoHeight = if (!config.exportAudioOnly && !config.exportStemsOnly) {
+                            encoderSafeOutputDimensions(config).second
+                        } else {
+                            null
+                        },
+                        expectedFrameRate = if (!config.exportAudioOnly && !config.exportStemsOnly) {
+                            config.frameRate.toFloat()
+                        } else {
+                            null
+                        },
+                        expectedContainer = expectedContainerForExtension(outputFile.extension),
                     )
                     if (!verification.valid) {
                         Log.e(TAG, "Post-export verification failed: ${verification.reason}")
@@ -2593,7 +2638,7 @@ class VideoEngine @Inject constructor(
                         activeExportOutputFile = null
                         runCatching { outputFile.delete() }
                         runCatching { resumeFromFile?.delete() }
-                        onError(IllegalStateException(verification.reason ?: "Export verification failed"))
+                        onError(ExportVerificationException(verification))
                         return
                     }
                     runCatching { resumeFromFile?.delete() }
@@ -2622,6 +2667,19 @@ class VideoEngine @Inject constructor(
                     runCatching { resumeFromFile?.delete() }
                     terminalReached = true
                     onError(exportException)
+                }
+
+                override fun onFallbackApplied(
+                    composition: Composition,
+                    originalTransformationRequest: TransformationRequest,
+                    fallbackTransformationRequest: TransformationRequest,
+                ) {
+                    val message = formatTransformerFallback(
+                        original = originalTransformationRequest,
+                        fallback = fallbackTransformationRequest,
+                    )
+                    Log.w(TAG, message)
+                    onFallbackApplied(message)
                 }
             }
 

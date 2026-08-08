@@ -82,7 +82,9 @@ object EncoderCapabilityProbe {
      */
     data class Capability(
         val supported: Boolean,
-        val reason: String? = null
+        val reason: String? = null,
+        /** False means the probe could not establish a positive capability claim. */
+        val known: Boolean = true,
     )
 
     /**
@@ -109,7 +111,11 @@ object EncoderCapabilityProbe {
                 .filter { it.supportedTypes.any { t -> t.equals(mimeType, ignoreCase = true) } }
         } catch (e: Exception) {
             Log.w(TAG, "MediaCodecList lookup failed for ${codec.label}", e)
-            return Capability(true, null)  // Don't warn on a probe failure.
+            return Capability(
+                supported = false,
+                reason = "Encoder capability could not be queried; output will be verified after export.",
+                known = false,
+            )
         }
         if (codecInfos.isEmpty()) {
             return Capability(

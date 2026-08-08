@@ -21,6 +21,9 @@ import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportHistoryStore
 import com.novacut.editor.engine.ExportIncidentBuilder
 import com.novacut.editor.engine.ExportIncidentStore
+import com.novacut.editor.engine.ExportOutputVerifier
+import com.novacut.editor.engine.ExportVerificationException
+import com.novacut.editor.engine.expectedContainerForExtension
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportStoragePolicy
 import com.novacut.editor.engine.ExportStageException
@@ -32,6 +35,7 @@ import com.novacut.editor.engine.HdrOverlaySummary
 import com.novacut.editor.engine.GifStreamEncoder
 import com.novacut.editor.engine.MAX_REVERSE_CLIP_DURATION_MS
 import com.novacut.editor.engine.MediaHealthReport
+import com.novacut.editor.engine.Media3ExportRobustnessPolicy
 import com.novacut.editor.engine.MixedRenderExportPlanner
 import com.novacut.editor.engine.ProjectDependencyManifest
 import com.novacut.editor.engine.SmartRenderEngine
@@ -149,6 +153,10 @@ class ExportDelegate(
     // Set for the lifetime of an export the user allowed through preflight
     // warnings; appended to every history row that run produces.
     @Volatile private var acceptedFallbackNote: String? = null
+    // Runtime encoder fallbacks and output-contract decisions are appended to
+    // the same run's history rows so a successful-looking export remains
+    // auditable after the Transformer has returned.
+    @Volatile private var runtimeExportNote: String? = null
     private class NoGifFramesException : Exception()
     private val exportHistoryStore = ExportHistoryStore.forContext(appContext)
     private val batchExportPlanStore = BatchExportPlanStore.forContext(appContext)
@@ -156,6 +164,18 @@ class ExportDelegate(
     private val batchPlanWriteRevision = AtomicLong(0L)
     @Volatile private var batchPlanContext: BatchExportPlanContext? = null
     @Volatile private var batchExportJob: kotlinx.coroutines.Job? = null
+
+    private fun noteRuntimeExport(note: String) {
+        if (note.isBlank()) return
+        synchronized(this) {
+            val current = runtimeExportNote
+            if (current == null) {
+                runtimeExportNote = note
+            } else if (!current.contains(note)) {
+                runtimeExportNote = "$current $note"
+            }
+        }
+    }
 
     private inline fun updateExport(transform: (EditorExportDomainState) -> EditorExportDomainState) {
         stateFlow.update { it.copyExport(transform) }
@@ -352,7 +372,11 @@ class ExportDelegate(
         // An export the user let through despite preflight warnings produced a
         // file that differs from the timeline. Every history row for that run
         // carries the accepted list so the difference stays attributable.
-        val summaryWithConsent = listOfNotNull(diagnosticSummary, acceptedFallbackNote)
+        val summaryWithConsent = listOfNotNull(
+            diagnosticSummary,
+            acceptedFallbackNote,
+            runtimeExportNote,
+        )
             .takeIf { it.isNotEmpty() }
             ?.joinToString(" ")
         val resolvedRange = config.timelineRange?.resolve(
@@ -548,6 +572,33 @@ class ExportDelegate(
         }
         if (!ok) {
             android.util.Log.w("ExportDelegate", "stream-copy failed, falling back to Transformer")
+            runCatching { outputFile.delete() }
+            return false
+        }
+        val requestedDimensions = config.resolution.forAspect(config.aspectRatio)
+        val safeDimensions = Media3ExportRobustnessPolicy.encoderSafeDimensions(
+            requestedDimensions.first,
+            requestedDimensions.second,
+        )
+        val verification = ExportOutputVerifier.verify(
+            outputFile = outputFile,
+            expectVideo = true,
+            expectedAudioMimeType = com.novacut.editor.model.AudioCodec.AAC.mimeType,
+            expectedVideoMimeType = config.codec.mimeType,
+            expectedVideoWidth = safeDimensions.width,
+            expectedVideoHeight = safeDimensions.height,
+            expectedFrameRate = config.frameRate.toFloat(),
+            expectedContainer = expectedContainerForExtension(outputFile.extension),
+        )
+        if (!verification.valid) {
+            noteRuntimeExport(
+                "Stream-copy output rejected; falling back to Transformer: " +
+                    (verification.reason ?: "output contract mismatch")
+            )
+            android.util.Log.w(
+                "ExportDelegate",
+                "stream-copy output contract rejected: ${verification.reason}",
+            )
             runCatching { outputFile.delete() }
             return false
         }
@@ -836,6 +887,7 @@ class ExportDelegate(
         resumeCandidate: ExportHistoryEntry? = null,
     ) {
         acceptedFallbackNote = acceptedConfirmation?.acceptedFallbackSummary()
+        runtimeExportNote = null
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
         val hdrOverlayDisclosure = HdrOverlayPolicy.evaluate(
@@ -1468,7 +1520,8 @@ class ExportDelegate(
                             },
                             onError = { e ->
                                 recordAudioExportFailure(e, currentState, configWithChapters, totalDurationMs, startedAtMs, healthReport)
-                            }
+                            },
+                            onFallbackApplied = ::noteRuntimeExport,
                         )
                     } else {
                         val outputFile = createOutputFile(outputDir, "m4a", baseName)
@@ -1502,7 +1555,8 @@ class ExportDelegate(
                             },
                             onError = { e ->
                                 recordAudioExportFailure(e, currentState, configWithChapters, totalDurationMs, startedAtMs, healthReport)
-                            }
+                            },
+                            onFallbackApplied = ::noteRuntimeExport,
                         )
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -1723,10 +1777,15 @@ class ExportDelegate(
                     config = configWithChapters,
                     timelineDurationMs = totalDurationMs,
                     errorMessage = message,
-                    diagnosticSummary = (e as? ExportStageException)?.let { staged ->
-                        "Video export failed in the ${staged.stage} stage" +
-                            (staged.subjectId?.let { " on clip $it" } ?: "") + "."
-                    } ?: "Video export failed in the encoder pipeline.",
+                    diagnosticSummary = when (e) {
+                        is ExportVerificationException ->
+                            "Output contract rejected the artifact: " +
+                                (e.verification.reason ?: "invalid output") + "."
+                        is ExportStageException ->
+                            "Video export failed in the ${e.stage} stage" +
+                                (e.subjectId?.let { " on clip $it" } ?: "") + "."
+                        else -> "Video export failed in the encoder pipeline."
+                    },
                     healthReport = healthReport,
                     supersededHistoryId = failedResumeId,
                 )
@@ -1794,7 +1853,8 @@ class ExportDelegate(
                             updateExport { it.copy(progress = progress) }
                         },
                         onComplete = ::handleVideoExportComplete,
-                        onError = ::handleVideoExportError
+                        onError = ::handleVideoExportError,
+                        onFallbackApplied = ::noteRuntimeExport,
                     )
                 ) {
                     return@launch
@@ -1824,7 +1884,8 @@ class ExportDelegate(
                         updateExport { it.copy(progress = progress) }
                     },
                     onComplete = ::handleVideoExportComplete,
-                    onError = ::handleVideoExportError
+                    onError = ::handleVideoExportError,
+                    onFallbackApplied = ::noteRuntimeExport,
                 )
             } catch (e: kotlinx.coroutines.CancellationException) {
                 // The user actively cancelled — do not surface as ERROR.
@@ -2441,7 +2502,12 @@ class ExportDelegate(
             config = config,
             timelineDurationMs = totalDurationMs,
             errorMessage = technicalMessage,
-            diagnosticSummary = "Audio export failed in the encoder pipeline.",
+            diagnosticSummary = if (e is ExportVerificationException) {
+                "Output contract rejected the audio artifact: " +
+                    (e.verification.reason ?: "invalid output") + "."
+            } else {
+                "Audio export failed in the encoder pipeline."
+            },
             healthReport = healthReport,
         )
         recordExportIncident(

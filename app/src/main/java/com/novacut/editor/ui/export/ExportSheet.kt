@@ -1420,7 +1420,7 @@ fun ExportSheet(
                             bitrate = effectiveConfig.videoBitrate
                         )
                     }
-                    if (!probe.supported) {
+                    if (!probe.known || !probe.supported) {
                         probe.reason?.let { add(it) }
                     }
                 }

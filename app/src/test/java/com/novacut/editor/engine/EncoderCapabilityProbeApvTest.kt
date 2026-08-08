@@ -56,6 +56,17 @@ class EncoderCapabilityProbeApvTest {
     }
 
     @Test
+    fun unknownCapabilityCannotClaimSupport() {
+        val capability = EncoderCapabilityProbe.Capability(
+            supported = false,
+            reason = "probe unavailable",
+            known = false,
+        )
+        assertEquals(false, capability.supported)
+        assertEquals(false, capability.known)
+    }
+
+    @Test
     fun probeApvIngest_returnsEmptyOnJvm() {
         // On a plain JVM MediaCodecList throws and the probe catches it,
         // returning hasDecoder=false. Verify the contract.
