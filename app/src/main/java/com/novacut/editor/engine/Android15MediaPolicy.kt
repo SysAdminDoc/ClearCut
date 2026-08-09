@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 /**
  * Runtime policy for Android 15 media hooks.
  *
- * Media3 1.10.1 already owns the platform [android.media.LoudnessCodecController]
+ * Media3 1.11.0 already owns the platform [android.media.LoudnessCodecController]
  * integration in its API-35-aware [androidx.media3.exoplayer.mediacodec.MediaCodecAudioRenderer].
  * Both CompositionPlayer and Transformer's SequenceAudioRenderer use that renderer for
  * audio decoding, so preview and export input audio get the platform loudness path without

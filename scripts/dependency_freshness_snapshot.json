@@ -109,18 +109,19 @@
     },
     "media3": {
       "coordinate": "androidx.media3:media3-exoplayer",
-      "pinnedVersion": "1.10.1",
-      "latestStable": "1.10.1",
+      "pinnedVersion": "1.11.0",
+      "latestStable": "1.11.0",
       "source": "https://developer.android.com/jetpack/androidx/releases/media3",
       "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/media3/media3-exoplayer/maven-metadata.xml",
-      "reviewedOn": "2026-08-03",
+      "reviewedOn": "2026-08-08",
       "state": "current",
-      "reason": "The catalog pin matches the latest stable version returned by authoritative metadata.",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
       "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
       "compatibilityProbe": {
-        "status": "baseline",
-        "version": "1.10.1",
-        "command": "python scripts/probe_dependency_upgrade.py --dependency media3 --version 1.10.1"
+        "status": "passed",
+        "version": "1.11.0",
+        "verifiedOn": "2026-08-08",
+        "command": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
       }
     },
     "hilt": {

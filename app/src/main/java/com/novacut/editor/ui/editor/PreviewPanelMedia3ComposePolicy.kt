@@ -4,7 +4,7 @@ package com.novacut.editor.ui.editor
  * R6.10b decision guard for Media3's Material3 Compose player widgets.
  *
  * Keep this Android-free so future Media3 evaluations can be tested without a
- * Compose runtime. The default profile mirrors the inspected Media3 1.10.1
+ * Compose runtime. The default profile mirrors the inspected Media3 1.11.0
  * `media3-ui-compose-material3` surface.
  */
 object PreviewPanelMedia3ComposePolicy {
@@ -39,7 +39,7 @@ object PreviewPanelMedia3ComposePolicy {
         val supportsClearCutChrome: Boolean,
     ) {
         companion object {
-            val MEDIA3_1_10_1 = Media3ComposeProfile(
+            val MEDIA3_1_11_0 = Media3ComposeProfile(
                 hasPlayerComposable = true,
                 hasMaterial3PlaybackControls = true,
                 hasContentFrameSurface = true,
@@ -75,7 +75,7 @@ object PreviewPanelMedia3ComposePolicy {
 
     fun evaluate(
         requirements: Set<Requirement> = previewPanelRequirements,
-        profile: Media3ComposeProfile = Media3ComposeProfile.MEDIA3_1_10_1,
+        profile: Media3ComposeProfile = Media3ComposeProfile.MEDIA3_1_11_0,
     ): Evaluation {
         val missing = requirements.filterNot { profile.satisfies(it) }.toSet()
         val progressSliderCanReplaceTimelineSeek =

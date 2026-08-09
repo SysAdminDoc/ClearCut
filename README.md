@@ -455,7 +455,7 @@ Planning files are local-only in the development checkout:
 |-----------|-----------|
 | Language | Kotlin 2.4.10 |
 | UI | Jetpack Compose + Material 3 (Catppuccin Mocha theme) |
-| Video | Media3 1.10.1 (Transformer + ExoPlayer) |
+| Video | Media3 1.11.0 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
 | Speech-to-Text | ONNX Runtime 1.26.0 (Whisper) |
@@ -659,7 +659,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | MediaPipe | 0.10.35 | Selfie segmentation and smart reframe |
 | Lottie Compose | 6.7.1 | Animated title templates |
 | OkHttp | 5.4.0 | Model downloads and future opt-in provider calls |
-| Media3 | 1.10.1 | Transformer, ExoPlayer, effects, and muxing |
+| Media3 | 1.11.0 | Transformer, ExoPlayer, effects, and muxing |
 | Coil Compose | 3.3.0 | Image and video thumbnails |
 | Hilt / Dagger | 2.60.1 | Dependency injection |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |

@@ -68,7 +68,7 @@
     {
       "id": "media3",
       "label": "Media3",
-      "version": "1.10.1",
+      "version": "1.11.0",
       "coordinate": "androidx.media3",
       "catalogKeys": ["media3"],
       "purpose": "Transformer, ExoPlayer, effects, and muxing",

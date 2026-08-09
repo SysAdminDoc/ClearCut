@@ -673,7 +673,7 @@
     <string name="settings_about_description">Detalles de compilación y motor para solución de problemas y soporte.</string>
     <string name="settings_version">Versión</string>
     <string name="settings_engine">motor</string>
-    <string name="settings_engine_value">Transformador Media3 1.10.1</string>
+    <string name="settings_engine_value">Transformador Media3 1.11.0</string>
     <string name="settings_ai_models_value">Susurro ONNX + MediaPipe</string>
     <string name="settings_on">encendido</string>
     <string name="settings_off">Apagado</string>

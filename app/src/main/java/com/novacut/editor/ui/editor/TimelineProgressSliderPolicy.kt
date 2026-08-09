@@ -36,7 +36,7 @@ object TimelineProgressSliderPolicy {
         val supportsThemeColors: Boolean,
     ) {
         companion object {
-            val MEDIA3_1_10_1 = ProgressSliderProfile(
+            val MEDIA3_1_11_0 = ProgressSliderProfile(
                 usesPlayerPosition = true,
                 performsSeekInternally = true,
                 supportsExternalValue = false,
@@ -72,7 +72,7 @@ object TimelineProgressSliderPolicy {
     )
 
     fun evaluateTimelineRuler(
-        profile: ProgressSliderProfile = ProgressSliderProfile.MEDIA3_1_10_1,
+        profile: ProgressSliderProfile = ProgressSliderProfile.MEDIA3_1_11_0,
     ): Evaluation {
         val missing = timelineRulerRequirements.filterNot { profile.satisfies(it) }.toSet()
         return Evaluation(
@@ -86,7 +86,7 @@ object TimelineProgressSliderPolicy {
     }
 
     fun evaluateMiniPlayer(
-        profile: ProgressSliderProfile = ProgressSliderProfile.MEDIA3_1_10_1,
+        profile: ProgressSliderProfile = ProgressSliderProfile.MEDIA3_1_11_0,
     ): Evaluation {
         val missing = miniPlayerRequirements.filterNot { profile.satisfies(it) }.toSet()
         return Evaluation(

@@ -50,7 +50,7 @@ private fun logAndroid15LoudnessIntegration(stage: String) {
     ) {
         Log.d(
             TAG,
-            "$stage audio uses Media3 1.10.1's API-35 LoudnessCodecController integration"
+            "$stage audio uses Media3 1.11.0's API-35 LoudnessCodecController integration"
         )
     }
 }
@@ -2539,7 +2539,7 @@ class VideoEngine @Inject constructor(
             }
             requireStorageImmediatelyBeforeOutput(storageRequest, outputFile)
             var terminalReached = false
-            // Media3 1.10.1's Transformer SequenceAudioRenderer is a
+            // Media3 1.11.0's Transformer SequenceAudioRenderer is a
             // MediaCodecAudioRenderer. On API 35+ it attaches Android's
             // LoudnessCodecController to the input decoder internally; the
             // app deliberately does not reflect into Transformer's private

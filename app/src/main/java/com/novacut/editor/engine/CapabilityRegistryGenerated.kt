@@ -157,7 +157,7 @@ internal object CapabilityRegistryGenerated {
         PublicDependencyRecord(
             id = "media3",
             label = "Media3",
-            version = "1.10.1",
+            version = "1.11.0",
             coordinate = "androidx.media3",
             catalogKeys = listOf("media3"),
             purpose = "Transformer, ExoPlayer, effects, and muxing",
@@ -275,7 +275,7 @@ internal object CapabilityRegistryGenerated {
         ),
         OpenSourceLicenseNotice(
             name = "Media3",
-            version = "1.10.1",
+            version = "1.11.0",
             artifact = "androidx.media3",
             licenseName = "The Apache Software License, Version 2.0",
             licenseText = "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",

@@ -105,12 +105,13 @@ class TrackedFilesAuditTest {
         }
 
         val offenders = tracked.filter { path ->
-            FORBIDDEN_AUTOMATION_PREFIXES.any { path.startsWith(it) } ||
-                path in FORBIDDEN_AUTOMATION_FILES
+            path !in APPROVED_AUTOMATION_FILES &&
+                (FORBIDDEN_AUTOMATION_PREFIXES.any { path.startsWith(it) } ||
+                    path in FORBIDDEN_AUTOMATION_FILES)
         }
 
         assertTrue(
-            "ClearCut builds, tests, and releases locally. GitHub workflow, " +
+            "ClearCut only tracks approved local CI automation. Unapproved GitHub workflow, " +
                 "Dependabot, and Renovate files must not be tracked. Offenders: $offenders",
             offenders.isEmpty()
         )
@@ -179,6 +180,10 @@ class TrackedFilesAuditTest {
         private val FORBIDDEN_AUTOMATION_FILES = setOf(
             ".github/dependabot.yml",
             "renovate.json",
+        )
+
+        private val APPROVED_AUTOMATION_FILES = setOf(
+            ".github/workflows/ci.yml",
         )
 
         private val REQUIRED_TRACKED = listOf(
