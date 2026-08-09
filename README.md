@@ -547,6 +547,18 @@ com.novacut.editor/
 ./gradlew :baselineprofile:pixel6Api37BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
 ```
 
+For a reproducible headless API 37 lane, provision and launch the local
+16 KB-page-size AVD before running connected tests:
+
+```powershell
+python scripts\ensure_api37_avd.py --launch
+.\gradlew.bat :app:connectedDebugAndroidTest
+```
+
+The launcher uses `-no-window` and `-no-audio`, so it does not open a window on
+the operator's display. Set `ANDROID_HOME` or `ANDROID_SDK_ROOT` when the SDK
+is not in the standard location.
+
 ### Manual QA: audio focus
 
 Before release, verify audio focus on a physical device:
