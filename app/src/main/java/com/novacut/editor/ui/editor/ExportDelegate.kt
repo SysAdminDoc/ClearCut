@@ -53,6 +53,7 @@ import com.novacut.editor.engine.exportStorageFailureMessage
 import com.novacut.editor.engine.exportConfigFingerprint
 import com.novacut.editor.engine.finalizeFilenameSize
 import com.novacut.editor.engine.querySourceSize
+import com.novacut.editor.engine.reorderBatchExportItems
 import com.novacut.editor.engine.sanitizeFileName
 import com.novacut.editor.engine.writeFileAtomically
 import com.novacut.editor.engine.writeUtf8TextAtomically
@@ -138,6 +139,7 @@ class ExportDelegate(
     // (GIF encode, contact-sheet render) + any future CPU-only export paths
     // all need the same cancel/teardown plumbing.
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
+    @Volatile private var activeVideoExportJob: kotlinx.coroutines.Job? = null
     private val saveToGalleryGate = ExportSaveGate()
     private data class ActiveResumeSession(
         val outputFile: File,
@@ -164,6 +166,10 @@ class ExportDelegate(
     private val batchPlanWriteRevision = AtomicLong(0L)
     @Volatile private var batchPlanContext: BatchExportPlanContext? = null
     @Volatile private var batchExportJob: kotlinx.coroutines.Job? = null
+    @Volatile private var activeBatchItemId: String? = null
+    @Volatile private var batchPauseRequested = false
+    @Volatile private var batchCancelRequested = false
+    @Volatile private var lastCancelledBatchResumePath: String? = null
 
     private fun noteRuntimeExport(note: String) {
         if (note.isBlank()) return
@@ -432,7 +438,8 @@ class ExportDelegate(
     private fun applyFilenameTemplate(
         template: String,
         baseName: String,
-        config: com.novacut.editor.model.ExportConfig
+        config: com.novacut.editor.model.ExportConfig,
+        templateState: EditorState? = null,
     ): String {
         val now = java.util.Calendar.getInstance()
         val date = "%04d-%02d-%02d".format(
@@ -445,7 +452,7 @@ class ExportDelegate(
             now.get(java.util.Calendar.MINUTE)
         )
         val preset = config.platformPreset?.displayName ?: config.aspectRatio.label
-        val state = stateFlow.value
+        val state = templateState ?: stateFlow.value
         val projectDurationMs = state.tracks
             .flatMap { it.clips }
             .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L
@@ -684,6 +691,8 @@ class ExportDelegate(
         // Cancel GIF export coroutine if one is running
         nonVideoExportJob?.cancel()
         nonVideoExportJob = null
+        activeVideoExportJob?.cancel()
+        activeVideoExportJob = null
         val preservedOutput = if (!cancellingNonVideoExport && resumeSession != null) {
             val preserve = resumeSession.eligible
             if (preserve) preservedResumeOutputPaths += resumeSession.outputFile.absolutePath
@@ -696,6 +705,11 @@ class ExportDelegate(
                 ?: resumeSession.sourcePartialFile
                 ?: preservedOutput
                 ?: resumeSession.outputFile
+        } else {
+            null
+        }
+        lastCancelledBatchResumePath = if (activeBatchItemId != null) {
+            resumePartial?.absolutePath
         } else {
             null
         }
@@ -742,6 +756,8 @@ class ExportDelegate(
         outputDir: File,
         preferredOutputName: String? = null,
         currentStateOverride: EditorState? = null,
+        outputFileOverride: File? = null,
+        batchResumePartialPath: String? = null,
     ) {
         val currentState = currentStateOverride ?: stateFlow.value
         if (stateFlow.value.exportState == ExportState.EXPORTING) {
@@ -752,7 +768,21 @@ class ExportDelegate(
             showToast(appContext.getString(R.string.export_no_clips_toast))
             return
         }
-        scope.launch { startExportAsync(outputDir, preferredOutputName, currentState) }
+        var exportJob: kotlinx.coroutines.Job? = null
+        exportJob = scope.launch {
+            try {
+                startExportAsync(
+                    outputDir = outputDir,
+                    preferredOutputName = preferredOutputName,
+                    currentState = currentState,
+                    outputFileOverride = outputFileOverride,
+                    batchResumePartialPath = batchResumePartialPath,
+                )
+            } finally {
+                if (activeVideoExportJob === exportJob) activeVideoExportJob = null
+            }
+        }
+        activeVideoExportJob = exportJob
     }
 
     fun resumeExport(entry: ExportHistoryEntry) {
@@ -885,6 +915,8 @@ class ExportDelegate(
         currentState: EditorState,
         acceptedConfirmation: ExportConfirmationRequest? = null,
         resumeCandidate: ExportHistoryEntry? = null,
+        outputFileOverride: File? = null,
+        batchResumePartialPath: String? = null,
     ) {
         acceptedFallbackNote = acceptedConfirmation?.acceptedFallbackSummary()
         runtimeExportNote = null
@@ -1033,7 +1065,9 @@ class ExportDelegate(
         val trackedObjects = slicedExport?.trackedObjects ?: currentState.trackedObjects
         val globalTransitions = slicedExport?.globalTransitions ?: currentState.globalTransitions
 
-        val resumeSourceFile = resumeCandidate?.resumePartialPath?.let(::File)
+        val resumeSourceFile = (
+            resumeCandidate?.resumePartialPath ?: batchResumePartialPath
+        )?.let(::File)
         if (resumeCandidate != null) {
             val resumeValid = resumeSourceFile != null &&
                 resumeEligibility(currentState, outputExtension = "mp4").eligible &&
@@ -1575,7 +1609,7 @@ class ExportDelegate(
         scope.launch {
             val ext = if (currentState.exportConfig.transparentBackground) "webm" else "mp4"
             withContext(Dispatchers.IO) { outputDir.mkdirs() }
-            val outputFile = createOutputFile(
+            val outputFile = outputFileOverride ?: createOutputFile(
                 outputDir = outputDir,
                 extension = ext,
                 preferredOutputName = preferredOutputName ?: currentState.project.name
@@ -2116,6 +2150,25 @@ class ExportDelegate(
         }
     }
 
+    private suspend fun persistBatchPlanNow(
+        context: BatchExportPlanContext = batchPlanContext ?: currentBatchPlanContext().also {
+            batchPlanContext = it
+        },
+    ) {
+        val revision = batchPlanWriteRevision.incrementAndGet()
+        val items = stateFlow.value.batchExportQueue
+        withContext(Dispatchers.IO) {
+            batchPlanWriteMutex.withLock {
+                if (revision == batchPlanWriteRevision.get()) {
+                    runCatching { batchExportPlanStore.saveFor(context, items) }
+                        .onFailure { error ->
+                            Log.w("ExportDelegate", "Batch export plan persistence failed", error)
+                        }
+                }
+            }
+        }
+    }
+
     private fun updateBatchQueue(
         persist: Boolean = true,
         transform: (List<BatchExportItem>) -> List<BatchExportItem>,
@@ -2251,6 +2304,70 @@ class ExportDelegate(
         }
     }
 
+    private fun batchVideoOutputExtension(config: ExportConfig): String? = when {
+        config.exportAudioOnly || config.exportStemsOnly ||
+            config.exportAsGif || config.exportAsContactSheet -> null
+        config.transparentBackground -> "webm"
+        else -> "mp4"
+    }
+
+    private data class BatchOutputPlan(
+        val outputFile: File,
+        val resumePartialFile: File? = null,
+        val alreadyComplete: Boolean = false,
+    )
+
+    private fun planBatchVideoOutput(
+        outputDir: File,
+        item: BatchExportItem,
+        itemState: EditorState,
+    ): BatchOutputPlan? {
+        val extension = batchVideoOutputExtension(item.config) ?: return null
+        val persistedPath = item.resumePartialPath ?: item.outputPath
+        val persistedFile = persistedPath?.let(::File)
+        if (persistedFile != null && isOwnedResumeFile(persistedFile)) {
+            if (persistedFile.isFile && persistedFile.length() > 0L) {
+                val complete = ExportOutputVerifier.verify(
+                    outputFile = persistedFile,
+                    expectVideo = true,
+                    expectAudio = false,
+                    expectedVideoMimeType = item.config.codec.mimeType,
+                    expectedDurationMs = itemState.tracks.flatMap { it.clips }
+                        .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
+                    expectedContainer = expectedContainerForExtension(persistedFile.extension),
+                )
+                if (complete.valid) {
+                    return BatchOutputPlan(outputFile = persistedFile, alreadyComplete = true)
+                }
+            }
+            if (resumeEligibility(
+                    state = itemState,
+                    config = item.config,
+                    outputExtension = persistedFile.extension.ifBlank { extension },
+                ).eligible && persistedFile.isFile && persistedFile.length() > 0L
+            ) {
+                return BatchOutputPlan(
+                    outputFile = persistedFile,
+                    resumePartialFile = persistedFile,
+                )
+            }
+            runCatching { persistedFile.delete() }
+        }
+        return BatchOutputPlan(
+            outputFile = createOutputFile(
+                outputDir = outputDir,
+                extension = extension,
+                preferredOutputName = item.outputName,
+                configOverride = item.config,
+                stateOverride = itemState,
+            )
+        )
+    }
+
+    fun moveBatchExportItem(id: String, targetIndex: Int) {
+        updateBatchQueue { queue -> reorderBatchExportItems(queue, id, targetIndex) }
+    }
+
     fun removeBatchExportItem(id: String) {
         updateBatchQueue { queue -> queue.filter { it.id != id } }
     }
@@ -2263,10 +2380,15 @@ class ExportDelegate(
                 if (item.id == id && item.status in setOf(
                         BatchExportStatus.FAILED,
                         BatchExportStatus.CANCELLED,
+                        BatchExportStatus.PAUSED,
                         BatchExportStatus.INTERRUPTED,
                         BatchExportStatus.REVIEW_REQUIRED,
                     )
                 ) {
+                    if (item.status == BatchExportStatus.REVIEW_REQUIRED) {
+                        deleteOwnedResumeFile(item.resumePartialPath?.let(::File))
+                        deleteOwnedResumeFile(item.outputPath?.let(::File))
+                    }
                     item.copy(
                         projectId = context.projectId,
                         projectFingerprint = context.projectFingerprint,
@@ -2274,6 +2396,16 @@ class ExportDelegate(
                         status = BatchExportStatus.QUEUED,
                         progress = 0f,
                         errorMessage = null,
+                        outputPath = if (item.status == BatchExportStatus.REVIEW_REQUIRED) {
+                            null
+                        } else {
+                            item.outputPath
+                        },
+                        resumePartialPath = if (item.status == BatchExportStatus.REVIEW_REQUIRED) {
+                            null
+                        } else {
+                            item.resumePartialPath
+                        },
                     )
                 } else {
                     item
@@ -2282,15 +2414,34 @@ class ExportDelegate(
         }
     }
 
+    fun pauseBatchExport() {
+        if (batchExportJob?.isActive != true) return
+        batchPauseRequested = true
+        cancelExport()
+    }
+
+    fun cancelBatchExport() {
+        if (batchExportJob?.isActive != true) return
+        batchCancelRequested = true
+        cancelExport()
+    }
+
     fun startBatchExport() {
         if (batchExportJob?.isActive == true) {
             showToast(text(R.string.export_already_in_progress_toast))
             return
         }
+        batchPauseRequested = false
+        batchCancelRequested = false
+        lastCancelledBatchResumePath = null
         val currentContext = currentBatchPlanContext().also { batchPlanContext = it }
         val currentQueue = stateFlow.value.batchExportQueue
         val staleIds = currentQueue
-            .filter { it.status == BatchExportStatus.QUEUED }
+            .filter {
+                it.status == BatchExportStatus.QUEUED ||
+                    it.status == BatchExportStatus.PAUSED ||
+                    it.status == BatchExportStatus.INTERRUPTED
+            }
             .filter { item ->
                 item.projectId != currentContext.projectId ||
                     item.projectFingerprint != currentContext.projectFingerprint ||
@@ -2317,7 +2468,11 @@ class ExportDelegate(
         // Snapshot the queue and per-item configs up front so UI-side config
         // changes that happen while exports are running can't corrupt the batch.
         val queue = stateFlow.value.batchExportQueue
-            .filter { it.status == BatchExportStatus.QUEUED }
+            .filter {
+                it.status == BatchExportStatus.QUEUED ||
+                    it.status == BatchExportStatus.PAUSED ||
+                    it.status == BatchExportStatus.INTERRUPTED
+            }
             .toList()
         if (queue.isEmpty()) {
             showToast(text(R.string.batch_export_no_queued_items_toast))
@@ -2360,6 +2515,34 @@ class ExportDelegate(
             val originalConfig = stateFlow.value.exportConfig
             try {
                 for ((index, item) in queue.withIndex()) {
+                    if (batchCancelRequested || batchPauseRequested) break
+                    activeBatchItemId = item.id
+                    lastCancelledBatchResumePath = null
+                    val itemState = requireNotNull(itemStates[item])
+                    val outputPlan = planBatchVideoOutput(
+                        outputDir = outputDir,
+                        item = item,
+                        itemState = itemState,
+                    )
+                    if (outputPlan?.alreadyComplete == true) {
+                        updateBatchQueue { items ->
+                            items.map {
+                                if (it.id == item.id) {
+                                    it.copy(
+                                        status = BatchExportStatus.COMPLETED,
+                                        progress = 1f,
+                                        errorMessage = null,
+                                        outputPath = outputPlan.outputFile.absolutePath,
+                                        resumePartialPath = null,
+                                    )
+                                } else {
+                                    it
+                                }
+                            }
+                        }
+                        activeBatchItemId = null
+                        continue
+                    }
                     updateBatchQueue { items ->
                         items.map {
                             if (it.id == item.id) {
@@ -2367,12 +2550,15 @@ class ExportDelegate(
                                     status = BatchExportStatus.IN_PROGRESS,
                                     progress = 0f,
                                     errorMessage = null,
+                                    outputPath = outputPlan?.outputFile?.absolutePath ?: it.outputPath,
+                                    resumePartialPath = outputPlan?.resumePartialFile?.absolutePath,
                                 )
                             } else {
                                 it
                             }
                         }
                     }
+                    persistBatchPlanNow()
                     showToast(
                         appContext.getString(
                             R.string.export_batch_progress_toast,
@@ -2386,7 +2572,6 @@ class ExportDelegate(
                     // the wait loop below immediately sees the previous item's COMPLETE/ERROR
                     // state and advances before the new export has started, causing two items
                     // to export concurrently and the batch queue to report incorrect statuses.
-                    val itemState = requireNotNull(itemStates[item])
                     updateExport {
                         it.copy(
                             config = itemState.exportConfig,
@@ -2398,8 +2583,11 @@ class ExportDelegate(
                         outputDir = outputDir,
                         preferredOutputName = item.outputName,
                         currentStateOverride = itemState,
+                        outputFileOverride = outputPlan?.outputFile,
+                        batchResumePartialPath = outputPlan?.resumePartialFile?.absolutePath,
                     )
                     val progressJob = scope.launch {
+                        var lastPersistedProgress = -1f
                         stateFlow.map { it.exportProgress }
                             .distinctUntilChanged()
                             .collect { progress ->
@@ -2408,12 +2596,23 @@ class ExportDelegate(
                                         if (it.id == item.id) it.copy(progress = progress) else it
                                     }
                                 }
+                                if (
+                                    lastPersistedProgress < 0f ||
+                                        progress >= 1f ||
+                                        progress - lastPersistedProgress >= 0.05f
+                                ) {
+                                    lastPersistedProgress = progress
+                                    persistBatchPlan()
+                                }
                             }
                         }
-                    val result = try {
-                        stateFlow.map { it.exportState }
+                    val outcome = try {
+                        stateFlow
+                            .map { it.exportState to (it.export.pendingConfirmation != null) }
                             .distinctUntilChanged()
-                            .first { it != ExportState.IDLE && it != ExportState.EXPORTING }
+                            .first { (state, pendingConfirmation) ->
+                                pendingConfirmation || (state != ExportState.IDLE && state != ExportState.EXPORTING)
+                            }
                     } finally {
                         progressJob.cancel()
                         // Wait for the collector to fully stop before starting the next item.
@@ -2422,9 +2621,31 @@ class ExportDelegate(
                         // causing races on the batch queue state.
                         progressJob.join()
                     }
+                    if (outcome.second) {
+                        updateBatchQueue { items ->
+                            items.map {
+                                if (it.id == item.id) {
+                                    it.copy(
+                                        status = BatchExportStatus.REVIEW_REQUIRED,
+                                        progress = 0f,
+                                        errorMessage = "This batch item needs export-warning confirmation before it can run.",
+                                    )
+                                } else {
+                                    it
+                                }
+                            }
+                        }
+                        activeBatchItemId = null
+                        continue
+                    }
+                    val result = outcome.first
                     val newStatus = when (result) {
                         ExportState.COMPLETE -> BatchExportStatus.COMPLETED
-                        ExportState.CANCELLED -> BatchExportStatus.CANCELLED
+                        ExportState.CANCELLED -> if (batchPauseRequested) {
+                            BatchExportStatus.PAUSED
+                        } else {
+                            BatchExportStatus.CANCELLED
+                        }
                         else -> BatchExportStatus.FAILED
                     }
                     // Normalize the per-item progress to 100% on success and 0% on failure /
@@ -2432,16 +2653,36 @@ class ExportDelegate(
                     // errored partway through, and "99% COMPLETED" on a job whose progress
                     // collector got cancelled before observing the final 1.0 tick.
                     val finalProgress = if (result == ExportState.COMPLETE) 1f else 0f
+                    val resumePartialPath = lastCancelledBatchResumePath
                     updateBatchQueue { items ->
                         items.map {
                             if (it.id == item.id) {
                                 it.copy(
                                     status = newStatus,
                                     progress = finalProgress,
-                                    errorMessage = if (newStatus == BatchExportStatus.FAILED) {
-                                        stateFlow.value.exportErrorMessage
+                                    errorMessage = when (newStatus) {
+                                        BatchExportStatus.FAILED -> stateFlow.value.exportErrorMessage
+                                        BatchExportStatus.PAUSED -> if (resumePartialPath != null) {
+                                            "Paused because the encoder cannot pause mid-item. Resume to continue from the saved partial output."
+                                        } else {
+                                            "Paused because the encoder cannot pause mid-item. Resume will restart this item."
+                                        }
+                                        BatchExportStatus.CANCELLED -> if (resumePartialPath != null) {
+                                            "Cancelled by the user. Retry to resume this item from its saved partial output."
+                                        } else {
+                                            "Cancelled by the user. Retry to run this item again."
+                                        }
+                                        else -> null
+                                    },
+                                    outputPath = if (newStatus == BatchExportStatus.COMPLETED) {
+                                        stateFlow.value.lastExportedFilePath ?: it.outputPath
                                     } else {
-                                        null
+                                        it.outputPath
+                                    },
+                                    resumePartialPath = when (newStatus) {
+                                        BatchExportStatus.PAUSED,
+                                        BatchExportStatus.CANCELLED -> resumePartialPath
+                                        else -> null
                                     },
                                 )
                             } else {
@@ -2449,20 +2690,27 @@ class ExportDelegate(
                             }
                         }
                     }
+                    persistBatchPlanNow()
                     // Stop the batch when the user explicitly cancels — continuing onto the
                     // next item would feel like the cancel button was ignored. Failures don't
                     // break the batch (each item is independent and the user may want
                     // partial-success behaviour for a long queue).
                     if (result == ExportState.CANCELLED) break
+                    activeBatchItemId = null
                 }
             } finally {
+                activeBatchItemId = null
                 updateExport { it.copy(config = originalConfig) }
                 batchExportJob = null
             }
             val finalQueue = stateFlow.value.batchExportQueue
             val completedCount = finalQueue.count { it.status == BatchExportStatus.COMPLETED }
             val failedCount = finalQueue.count { it.status == BatchExportStatus.FAILED }
+            val pausedCount = finalQueue.count { it.status == BatchExportStatus.PAUSED }
+            val cancelledCount = finalQueue.count { it.status == BatchExportStatus.CANCELLED }
             val summary = when {
+                pausedCount > 0 -> "Batch paused ($completedCount items completed)"
+                cancelledCount > 0 && completedCount == 0 -> "Batch cancelled"
                 failedCount == 0 -> "Batch export complete ($completedCount items)"
                 completedCount == 0 -> "Batch export failed ($failedCount items)"
                 else -> "Batch export finished ($completedCount succeeded, $failedCount failed)"
@@ -2525,15 +2773,23 @@ class ExportDelegate(
     private fun createOutputFile(
         outputDir: File,
         extension: String,
-        preferredOutputName: String?
+        preferredOutputName: String?,
+        configOverride: ExportConfig? = null,
+        stateOverride: EditorState? = null,
     ): File {
         val trimmedOutputName = preferredOutputName?.trim().orEmpty()
         val baseName = trimmedOutputName
             .substringBeforeLast('.', missingDelimiterValue = trimmedOutputName)
             .takeIf { it.isNotBlank() }
             ?: "ClearCut"
-        val template = stateFlow.value.exportConfig.filenameTemplate.ifBlank { "{name}" }
-        val templated = applyFilenameTemplate(template, baseName, stateFlow.value.exportConfig)
+        val namingConfig = configOverride ?: stateFlow.value.exportConfig
+        val template = namingConfig.filenameTemplate.ifBlank { "{name}" }
+        val templated = applyFilenameTemplate(
+            template = template,
+            baseName = baseName,
+            config = namingConfig,
+            templateState = stateOverride,
+        )
         // Reserve space for an auto-increment suffix like ` (999)` so repeated
         // collisions don't force the base to shrink with every retry (which
         // would produce a different filename on each iteration and could even

@@ -357,6 +357,10 @@ data class BatchExportItem(
     val progress: Float = 0f,
     val errorMessage: String? = null,
     val createdAtEpochMs: Long = System.currentTimeMillis(),
+    /** The planned output path, persisted before an item starts. */
+    val outputPath: String? = null,
+    /** A non-empty path means the item can resume its eligible video export. */
+    val resumePartialPath: String? = null,
     /** Null keeps the historical uniform-project batch behavior. */
     val sourceRange: BatchExportSourceRange? = null,
 )
@@ -367,6 +371,7 @@ enum class BatchExportStatus {
     COMPLETED,
     FAILED,
     CANCELLED,
+    PAUSED,
     INTERRUPTED,
     REVIEW_REQUIRED
 }

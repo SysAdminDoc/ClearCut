@@ -331,7 +331,10 @@ fun BoxScope.EditorUtilityPanelHost(
             onAddItem = viewModel::addBatchExportItem,
             onAddSourceCut = viewModel::addBatchExportSourceCut,
             onRemoveItem = viewModel::removeBatchExportItem,
+            onMoveItem = viewModel::moveBatchExportItem,
             onRetryItem = viewModel::retryBatchExportItem,
+            onPauseBatch = viewModel::pauseBatchExport,
+            onCancelBatch = viewModel::cancelBatchExport,
             onStartBatch = viewModel::startBatchExport,
             onClose = viewModel::hideBatchExport
         )

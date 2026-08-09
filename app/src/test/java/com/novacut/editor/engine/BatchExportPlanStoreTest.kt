@@ -54,6 +54,8 @@ class BatchExportPlanStoreTest {
                 progress = 0.42f,
                 errorMessage = "Encoder failed",
                 createdAtEpochMs = 42L,
+                outputPath = "C:/app-private/exports/Square.mp4",
+                resumePartialPath = "C:/app-private/exports/Square.partial.mp4",
                 sourceRange = BatchExportSourceRange(
                     clipId = "source-clip",
                     sourceUri = Uri.parse("content://media/video/42"),
@@ -75,6 +77,8 @@ class BatchExportPlanStoreTest {
             assertEquals(failed.status, restored.single().status)
             assertEquals(failed.errorMessage, restored.single().errorMessage)
             assertEquals(failed.createdAtEpochMs, restored.single().createdAtEpochMs)
+            assertEquals(failed.outputPath, restored.single().outputPath)
+            assertEquals(failed.resumePartialPath, restored.single().resumePartialPath)
             assertEquals(failed.sourceRange, restored.single().sourceRange)
         } finally {
             dir.deleteRecursively()
@@ -87,6 +91,7 @@ class BatchExportPlanStoreTest {
         try {
             val store = BatchExportPlanStore.forFile(File(dir, "plan.json"))
             val context = BatchExportPlanContext("project-a", "fingerprint")
+            val partial = File(dir, "Active.mp4").apply { writeBytes(byteArrayOf(1, 2, 3)) }
             store.saveFor(
                 context,
                 listOf(
@@ -99,6 +104,7 @@ class BatchExportPlanStoreTest {
                         configFingerprint = exportConfigFingerprint(ExportConfig()),
                         status = BatchExportStatus.IN_PROGRESS,
                         progress = 0.7f,
+                        outputPath = partial.absolutePath,
                     )
                 )
             )
@@ -107,9 +113,52 @@ class BatchExportPlanStoreTest {
             assertEquals(BatchExportStatus.INTERRUPTED, restored.status)
             assertEquals(0f, restored.progress)
             assertTrue(restored.errorMessage!!.contains("interrupted", ignoreCase = true))
+            assertEquals(partial.absolutePath, restored.resumePartialPath)
         } finally {
             dir.deleteRecursively()
         }
+    }
+
+    @Test
+    fun pausedWorkRetainsItsResumePathAndQueueOrder() {
+        val dir = Files.createTempDirectory("batch-plan-paused-").toFile()
+        try {
+            val store = BatchExportPlanStore.forFile(File(dir, "plan.json"))
+            val context = BatchExportPlanContext("project-a", "fingerprint")
+            val first = BatchExportItem(
+                id = "first",
+                config = ExportConfig(),
+                outputName = "First",
+                projectId = context.projectId,
+                projectFingerprint = context.projectFingerprint,
+                configFingerprint = exportConfigFingerprint(ExportConfig()),
+                status = BatchExportStatus.PAUSED,
+                resumePartialPath = "C:/app-private/exports/First.mp4",
+            )
+            val second = first.copy(id = "second", outputName = "Second", status = BatchExportStatus.QUEUED)
+            store.saveFor(context, listOf(first, second))
+
+            val restored = store.readFor(context)
+            assertEquals(listOf("first", "second"), restored.map { it.id })
+            assertEquals(BatchExportStatus.PAUSED, restored.first().status)
+            assertEquals(first.resumePartialPath, restored.first().resumePartialPath)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun reorderMovesOnlyNonActiveItemsAndPreservesStableQueueOrder() {
+        val first = BatchExportItem(id = "first", config = ExportConfig(), outputName = "First")
+        val active = first.copy(id = "active", outputName = "Active", status = BatchExportStatus.IN_PROGRESS)
+        val last = first.copy(id = "last", outputName = "Last")
+        val items = listOf(first, active, last)
+
+        assertEquals(
+            listOf("last", "first", "active"),
+            reorderBatchExportItems(items, id = "last", targetIndex = 0).map { it.id },
+        )
+        assertEquals(items, reorderBatchExportItems(items, id = "active", targetIndex = 0))
     }
 
     @Test

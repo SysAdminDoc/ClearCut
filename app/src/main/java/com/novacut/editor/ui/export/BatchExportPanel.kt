@@ -8,13 +8,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,7 +60,10 @@ fun BatchExportPanel(
     onAddItem: (ExportConfig, String) -> Unit,
     onAddSourceCut: (ExportConfig, BatchExportSourceRange) -> Unit,
     onRemoveItem: (String) -> Unit,
+    onMoveItem: (String, Int) -> Unit,
     onRetryItem: (String) -> Unit,
+    onPauseBatch: () -> Unit,
+    onCancelBatch: () -> Unit,
     onStartBatch: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -70,6 +77,7 @@ fun BatchExportPanel(
     val completedCount = queue.count { it.status == BatchExportStatus.COMPLETED }
     val failedCount = queue.count { it.status == BatchExportStatus.FAILED }
     val cancelledCount = queue.count { it.status == BatchExportStatus.CANCELLED }
+    val pausedCount = queue.count { it.status == BatchExportStatus.PAUSED }
     val interruptedCount = queue.count { it.status == BatchExportStatus.INTERRUPTED }
     val reviewCount = queue.count { it.status == BatchExportStatus.REVIEW_REQUIRED }
     val reviewOrInterruptedCount = reviewCount + interruptedCount
@@ -81,6 +89,7 @@ fun BatchExportPanel(
             reviewOrInterruptedCount
         )
         failedCount > 0 -> pluralStringResource(R.plurals.batch_export_needs_attention, failedCount, failedCount)
+        pausedCount > 0 -> stringResource(R.string.batch_export_status_paused)
         completedCount > 0 -> pluralStringResource(R.plurals.batch_export_done, completedCount, completedCount)
         else -> stringResource(R.string.batch_export_status_ready)
     }
@@ -175,6 +184,12 @@ fun BatchExportPanel(
                         accent = ClearCutAccents.Yellow
                     )
                 }
+                if (pausedCount > 0) {
+                    PremiumPanelPill(
+                        text = stringResource(R.string.batch_export_status_paused),
+                        accent = ClearCutAccents.Yellow
+                    )
+                }
                 if (interruptedCount > 0) {
                     PremiumPanelPill(
                         text = pluralStringResource(R.plurals.batch_export_interrupted, interruptedCount, interruptedCount),
@@ -185,6 +200,27 @@ fun BatchExportPanel(
                     PremiumPanelPill(
                         text = pluralStringResource(R.plurals.batch_export_review, reviewCount, reviewCount),
                         accent = ClearCutAccents.Red
+                    )
+                }
+            }
+            if (inProgressCount > 0) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    PremiumPanelIconButton(
+                        icon = Icons.Default.Pause,
+                        contentDescription = stringResource(R.string.batch_export_pause_cd),
+                        onClick = onPauseBatch,
+                        tint = ClearCutAccents.Yellow,
+                    )
+                    PremiumPanelIconButton(
+                        icon = Icons.Default.Stop,
+                        contentDescription = stringResource(R.string.batch_export_cancel_cd),
+                        onClick = onCancelBatch,
+                        tint = ClearCutAccents.Red,
                     )
                 }
             }
@@ -347,18 +383,31 @@ fun BatchExportPanel(
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    queue.forEach { item ->
+                    queue.forEachIndexed { index, item ->
                         BatchExportItemRow(
                             item = item,
                             onRemove = { onRemoveItem(item.id) },
                             onRetry = { onRetryItem(item.id) },
+                            canMoveUp = index > 0 &&
+                                item.status != BatchExportStatus.IN_PROGRESS &&
+                                item.status != BatchExportStatus.COMPLETED &&
+                                queue[index - 1].status != BatchExportStatus.IN_PROGRESS &&
+                                queue[index - 1].status != BatchExportStatus.COMPLETED,
+                            canMoveDown = index < queue.lastIndex &&
+                                item.status != BatchExportStatus.IN_PROGRESS &&
+                                item.status != BatchExportStatus.COMPLETED &&
+                                queue[index + 1].status != BatchExportStatus.IN_PROGRESS &&
+                                queue[index + 1].status != BatchExportStatus.COMPLETED,
+                            onMoveUp = { onMoveItem(item.id, index - 1) },
+                            onMoveDown = { onMoveItem(item.id, index + 1) },
                         )
                     }
                 }
             }
         }
 
-        if (queuedCount > 0) {
+        val runnableCount = queuedCount + pausedCount + interruptedCount
+        if (runnableCount > 0) {
             Spacer(modifier = Modifier.height(12.dp))
 
             PremiumPanelCard(accent = ClearCutAccents.Green) {
@@ -384,7 +433,7 @@ fun BatchExportPanel(
                         contentDescription = stringResource(R.string.cd_batch_export)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.batch_export_export_all, queuedCount))
+                    Text(text = stringResource(R.string.batch_export_export_all, runnableCount))
                 }
             }
         }
@@ -420,6 +469,10 @@ private fun BatchExportItemRow(
     item: BatchExportItem,
     onRemove: () -> Unit,
     onRetry: () -> Unit,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
 ) {
     val semanticColors = LocalClearCutColors.current
     val accent = when (item.status) {
@@ -428,6 +481,7 @@ private fun BatchExportItemRow(
         BatchExportStatus.COMPLETED -> ClearCutAccents.Green
         BatchExportStatus.FAILED -> ClearCutAccents.Red
         BatchExportStatus.CANCELLED -> ClearCutAccents.Yellow
+        BatchExportStatus.PAUSED -> ClearCutAccents.Yellow
         BatchExportStatus.INTERRUPTED -> ClearCutAccents.Yellow
         BatchExportStatus.REVIEW_REQUIRED -> ClearCutAccents.Red
     }
@@ -437,6 +491,7 @@ private fun BatchExportItemRow(
         BatchExportStatus.COMPLETED -> stringResource(R.string.batch_export_done_cd)
         BatchExportStatus.FAILED -> stringResource(R.string.batch_export_failed_cd)
         BatchExportStatus.CANCELLED -> stringResource(R.string.batch_export_cancelled_cd)
+        BatchExportStatus.PAUSED -> stringResource(R.string.batch_export_paused_cd)
         BatchExportStatus.INTERRUPTED -> stringResource(R.string.batch_export_interrupted_cd)
         BatchExportStatus.REVIEW_REQUIRED -> stringResource(R.string.batch_export_review_required_cd)
     }
@@ -444,6 +499,7 @@ private fun BatchExportItemRow(
     val retryable = item.status in setOf(
         BatchExportStatus.FAILED,
         BatchExportStatus.CANCELLED,
+        BatchExportStatus.PAUSED,
         BatchExportStatus.INTERRUPTED,
         BatchExportStatus.REVIEW_REQUIRED,
     )
@@ -512,6 +568,29 @@ private fun BatchExportItemRow(
                             contentDescription = stringResource(R.string.batch_export_retry_cd),
                             onClick = onRetry,
                             tint = ClearCutAccents.Green,
+                        )
+                    }
+
+                    if (canMoveUp) {
+                        PremiumPanelIconButton(
+                            icon = Icons.Default.ArrowUpward,
+                            contentDescription = stringResource(
+                                R.string.batch_export_move_up_cd,
+                                item.outputName,
+                            ),
+                            onClick = onMoveUp,
+                            tint = ClearCutAccents.Blue,
+                        )
+                    }
+                    if (canMoveDown) {
+                        PremiumPanelIconButton(
+                            icon = Icons.Default.ArrowDownward,
+                            contentDescription = stringResource(
+                                R.string.batch_export_move_down_cd,
+                                item.outputName,
+                            ),
+                            onClick = onMoveDown,
+                            tint = ClearCutAccents.Blue,
                         )
                     }
 

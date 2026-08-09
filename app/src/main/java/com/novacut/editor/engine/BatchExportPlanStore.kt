@@ -39,6 +39,29 @@ data class BatchExportPlanContext(
     val projectFingerprint: String
 )
 
+internal fun reorderBatchExportItems(
+    items: List<BatchExportItem>,
+    id: String,
+    targetIndex: Int,
+): List<BatchExportItem> {
+    val fromIndex = items.indexOfFirst { it.id == id }
+    if (fromIndex < 0) return items
+    val movableStatuses = setOf(
+        BatchExportStatus.QUEUED,
+        BatchExportStatus.FAILED,
+        BatchExportStatus.CANCELLED,
+        BatchExportStatus.PAUSED,
+        BatchExportStatus.INTERRUPTED,
+        BatchExportStatus.REVIEW_REQUIRED,
+    )
+    if (items[fromIndex].status !in movableStatuses) return items
+    val boundedTarget = targetIndex.coerceIn(0, items.lastIndex)
+    if (boundedTarget == fromIndex || items[boundedTarget].status !in movableStatuses) return items
+    return items.toMutableList().apply {
+        add(boundedTarget, removeAt(fromIndex))
+    }
+}
+
 /**
  * Persistent queue for work that has not yet become export history.
  *
@@ -136,11 +159,16 @@ class BatchExportPlanStore(
             configChanged -> "The export settings changed after this job was queued."
             else -> null
         }
+        val recoverableOutputPath = resumePartialPath ?: outputPath?.takeIf { path ->
+            val file = File(path)
+            file.isFile && file.length() > 0L
+        }
         return when {
             status == BatchExportStatus.IN_PROGRESS -> copy(
                 status = BatchExportStatus.INTERRUPTED,
                 progress = 0f,
-                errorMessage = reason ?: "This export was interrupted when ClearCut closed."
+                errorMessage = reason ?: "This export was interrupted when ClearCut closed.",
+                resumePartialPath = recoverableOutputPath,
             )
             reason != null -> copy(
                 status = BatchExportStatus.REVIEW_REQUIRED,
@@ -179,6 +207,8 @@ private fun itemToJson(item: BatchExportItem): JSONObject = JSONObject().apply {
     put("progress", item.progress.coerceIn(0f, 1f).toDouble())
     item.errorMessage?.take(MAX_TEXT_LENGTH)?.let { put("errorMessage", it) }
     put("createdAtEpochMs", item.createdAtEpochMs.coerceAtLeast(0L))
+    item.outputPath?.take(MAX_URI_LENGTH)?.let { put("outputPath", it) }
+    item.resumePartialPath?.take(MAX_URI_LENGTH)?.let { put("resumePartialPath", it) }
     put("config", exportConfigToJson(item.config))
     item.sourceRange?.let { source ->
         put("sourceRange", JSONObject().apply {
@@ -216,6 +246,8 @@ private fun parseItem(json: JSONObject?): BatchExportItem? {
         progress = json.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f),
         errorMessage = json.optString("errorMessage").take(MAX_TEXT_LENGTH).takeIf { it.isNotBlank() },
         createdAtEpochMs = json.optLong("createdAtEpochMs").coerceAtLeast(0L),
+        outputPath = json.optString("outputPath").take(MAX_URI_LENGTH).takeIf { it.isNotBlank() },
+        resumePartialPath = json.optString("resumePartialPath").take(MAX_URI_LENGTH).takeIf { it.isNotBlank() },
         sourceRange = sourceRange,
     )
 }

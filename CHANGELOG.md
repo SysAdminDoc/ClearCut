@@ -2,6 +2,7 @@
 
 ## v3.78.1
 
+- Batch export queues now persist priority order and planned outputs, support reorder controls plus active pause/cancel, retain eligible partial video paths for resume after interruption, and detect already-complete outputs to avoid duplicate work.
 - Export completion now verifies requested versus actual video/audio codecs, container, dimensions, frame rate, duration, and MP4 layout; Media3 fallback callbacks and rejected stream-copy artifacts remain in export diagnostics/history, while unavailable encoder probes fail closed.
 - Export audio-codec choices now expose only the device-verified AAC path; legacy Opus/FLAC config values remain readable but fail before encoding instead of producing AAC output under a false codec label.
 - Added a CFR export toggle that normalizes VFR visual clips through the bundled FFmpeg cadence pass before Media3 rendering, persists in batch plans, discloses the rendered-only path in the export UI, and verifies constant sample intervals on an Android 16 device.

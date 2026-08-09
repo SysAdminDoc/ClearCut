@@ -962,7 +962,7 @@
     <string name="batch_export_suffix_audio_only">Audio Only</string>
     <string name="batch_export_suffix_stems">Stems</string>
     <string name="batch_export_queue_title">Delivery Queue</string>
-    <string name="batch_export_queue_description">Build a stack of exports for different platforms and let ClearCut run them back-to-back.</string>
+    <string name="batch_export_queue_description">Build a stack of exports, move queued items to set priority, and let ClearCut run them back-to-back.</string>
     <string name="batch_export_add_targets_description">Tap any preset to add it to the queue, then keep stacking utility exports for audio-only or stems if you need them.</string>
     <string name="batch_export_source_cuts_title">Source-file cuts</string>
     <string name="batch_export_source_cuts_description">Queue an existing timeline clip as an independent source range. Each cut exports its own file with the current delivery settings.</string>
@@ -972,10 +972,16 @@
     <string name="batch_export_empty_title">Nothing queued yet</string>
     <string name="batch_export_empty_description">Leave the add panel open and tap the targets you want to stack up.</string>
     <string name="batch_export_run_title">Run the Batch</string>
-    <string name="batch_export_run_description">ClearCut will export each item in order and keep its status here.</string>
+    <string name="batch_export_run_description">ClearCut runs items in the saved order. Pause keeps an eligible partial video for resume; encoders that cannot pause restart from the beginning.</string>
     <string name="batch_export_status_ready">Ready</string>
     <string name="batch_export_status_queued">Queued</string>
     <string name="batch_export_status_in_progress">Export in progress</string>
+    <string name="batch_export_status_paused">Paused</string>
+    <string name="batch_export_pause_cd">Pause batch after the current encoder item</string>
+    <string name="batch_export_cancel_cd">Cancel active batch export</string>
+    <string name="batch_export_paused_cd">Paused</string>
+    <string name="batch_export_move_up_cd">Move %1$s earlier in the batch</string>
+    <string name="batch_export_move_down_cd">Move %1$s later in the batch</string>
     <plurals name="batch_export_total">
         <item quantity="one">%1$d total</item>
         <item quantity="other">%1$d total</item>
