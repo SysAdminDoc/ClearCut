@@ -917,7 +917,9 @@ data class AutoSaveState(
     }
 
     companion object {
-        const val FORMAT_VERSION = 1
+        // v2 adds bounded local media-bin notes and tags. Older payloads remain
+        // readable because the new fields are optional during deserialization.
+        const val FORMAT_VERSION = 2
 
         /** Collector for the in-flight [deserializeWithReport] call on this thread. */
         private val activeDropSink = ThreadLocal<MutableList<DroppedElement>?>()
@@ -1360,6 +1362,8 @@ data class AutoSaveState(
                         asset.quickFingerprint?.let { put("quickFingerprint", it) }
                         put("importStatus", asset.importStatus)
                         put("lastVerifiedAtEpochMs", asset.lastVerifiedAtEpochMs)
+                        put("notes", normalizeMediaAssetNotes(asset.notes))
+                        put("tags", mediaAssetTagsToJson(asset.tags))
                     })
                 }
             }
@@ -1388,7 +1392,9 @@ data class AutoSaveState(
                         height = asset.optInt("height", 0).takeIf { it > 0 },
                         quickFingerprint = asset.optString("quickFingerprint", "").takeIf { it.isNotEmpty() },
                         importStatus = asset.optString("importStatus", "unknown"),
-                        lastVerifiedAtEpochMs = asset.optLong("lastVerifiedAtEpochMs", 0L).coerceAtLeast(0L)
+                        lastVerifiedAtEpochMs = asset.optLong("lastVerifiedAtEpochMs", 0L).coerceAtLeast(0L),
+                        notes = normalizeMediaAssetNotes(asset.optString("notes", "")),
+                        tags = mediaAssetTagsFromJson(asset),
                     )
                 } catch (e: Exception) {
                     dropped("media asset", i, e)

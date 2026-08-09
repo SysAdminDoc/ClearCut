@@ -260,6 +260,7 @@ fun BoxScope.EditorUtilityPanelHost(
     ) {
         MediaManagerPanel(
             tracks = state.tracks,
+            persistedMediaAssets = state.media.mediaAssets,
             relinkReports = state.mediaRelinkReports,
             mediaHealthReport = state.media.healthReport,
             metadataSidecarExport = state.media.metadataSidecarExport,
@@ -268,6 +269,7 @@ fun BoxScope.EditorUtilityPanelHost(
             onRelinkMedia = onRelinkMedia,
             onBulkRelinkMissing = onBulkRelinkMissing,
             onRemoveUnused = viewModel::removeUnusedMedia,
+            onUpdateAssetMetadata = viewModel::updateMediaAssetMetadata,
             onExportMetadataSidecar = viewModel::exportMetadataSidecar,
             onShareMetadataSidecar = { export ->
                 shareMetadataSidecar(

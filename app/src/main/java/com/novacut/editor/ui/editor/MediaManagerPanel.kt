@@ -10,17 +10,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +54,8 @@ import com.novacut.editor.engine.SyncFrameDirection
 import com.novacut.editor.engine.MetadataSidecarFormat
 import com.novacut.editor.engine.MetadataSidecarKind
 import com.novacut.editor.engine.MetadataSidecarTrack
+import com.novacut.editor.engine.ProjectMediaAsset
+import com.novacut.editor.engine.normalizeMediaAssetTags
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +64,7 @@ import java.io.File
 import java.util.Locale
 
 data class MediaAsset(
+    val assetId: String,
     val uri: Uri,
     val fileName: String,
     val fileSize: Long,
@@ -69,12 +78,15 @@ data class MediaAsset(
     },
     val relinkMessage: String? = null,
     val diagnostic: MediaDiagnostic? = null,
+    val notes: String = "",
+    val tags: List<String> = emptyList(),
 )
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MediaManagerPanel(
     tracks: List<Track>,
+    persistedMediaAssets: List<ProjectMediaAsset>,
     relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
     mediaHealthReport: MediaHealthReport?,
     metadataSidecarExport: MetadataSidecarExportUiState,
@@ -83,6 +95,7 @@ fun MediaManagerPanel(
     onRelinkMedia: (Uri) -> Unit,
     onBulkRelinkMissing: () -> Unit,
     onRemoveUnused: () -> Unit,
+    onUpdateAssetMetadata: (Uri, String, List<String>) -> Unit,
     onExportMetadataSidecar: (Uri, MetadataSidecarTrack, MetadataSidecarFormat) -> Unit,
     onShareMetadataSidecar: (MetadataSidecarExportFile) -> Unit,
     onDismissMetadataSidecarExport: () -> Unit,
@@ -92,15 +105,21 @@ fun MediaManagerPanel(
     val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
     val diagnostics = mediaHealthReport?.diagnostics.orEmpty()
-    var assets by remember(tracks, relinkReports, diagnostics) { mutableStateOf(emptyList<MediaAsset>()) }
-    var isAnalyzing by remember(tracks, relinkReports, diagnostics) { mutableStateOf(true) }
+    var assets by remember(tracks, persistedMediaAssets, relinkReports, diagnostics) {
+        mutableStateOf(emptyList<MediaAsset>())
+    }
+    var isAnalyzing by remember(tracks, persistedMediaAssets, relinkReports, diagnostics) {
+        mutableStateOf(true)
+    }
+    var query by remember { mutableStateOf(MediaBinQuery()) }
 
-    LaunchedEffect(context, tracks, relinkReports, diagnostics) {
+    LaunchedEffect(context, tracks, persistedMediaAssets, relinkReports, diagnostics) {
         isAnalyzing = true
         assets = withContext(Dispatchers.IO) {
             analyzeMediaAssets(
                 context = context,
                 tracks = tracks,
+                persistedMediaAssets = persistedMediaAssets,
                 relinkReports = relinkReports,
                 diagnosticsByUri = diagnostics.associateBy { it.uri },
             )
@@ -161,6 +180,9 @@ fun MediaManagerPanel(
         assets.size,
         assets.size
     )
+    val visibleAssets = remember(assets, query) {
+        filterAndSortMediaAssets(assets, query)
+    }
     val emptyTrackLabel = pluralStringResource(
         R.plurals.media_manager_empty_tracks_count,
         emptyTrackCount,
@@ -396,6 +418,72 @@ fun MediaManagerPanel(
                 )
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = query.search,
+                onValueChange = { value -> query = query.copy(search = value) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                leadingIcon = {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                    )
+                },
+                label = { Text(text = stringResource(R.string.media_bin_search_label)) },
+                placeholder = { Text(text = stringResource(R.string.media_bin_search_placeholder)) },
+            )
+            Text(
+                text = stringResource(
+                    R.string.media_bin_visible_summary,
+                    visibleAssets.size,
+                    assets.size,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = semanticColors.subtext,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                MediaBinFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = query.filter == filter,
+                        onClick = { query = query.copy(filter = filter) },
+                        label = { Text(text = filter.localizedLabel()) },
+                        leadingIcon = if (query.filter == filter) {
+                            {
+                                androidx.compose.material3.Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                )
+                            }
+                        } else null,
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = ClearCutAccents.Blue.copy(alpha = 0.16f),
+                            selectedLabelColor = ClearCutAccents.Blue,
+                            selectedLeadingIconColor = ClearCutAccents.Blue,
+                        ),
+                    )
+                }
+            }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                MediaBinSort.entries.forEach { sort ->
+                    FilterChip(
+                        selected = query.sort == sort,
+                        onClick = { query = query.copy(sort = sort) },
+                        label = { Text(text = sort.localizedLabel()) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = ClearCutAccents.Teal.copy(alpha = 0.16f),
+                            selectedLabelColor = ClearCutAccents.Teal,
+                        ),
+                    )
+                }
+            }
+
             when {
                 isAnalyzing -> Unit
                 assets.isEmpty() -> {
@@ -407,18 +495,28 @@ fun MediaManagerPanel(
                     )
                 }
 
+                visibleAssets.isEmpty() -> {
+                    MediaManagerMessageCard(
+                        title = stringResource(R.string.media_bin_no_matches_title),
+                        body = stringResource(R.string.media_bin_no_matches_body),
+                        accent = ClearCutAccents.Peach,
+                        icon = Icons.Default.Search,
+                    )
+                }
+
                 else -> {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        assets.forEach { asset ->
+                        visibleAssets.forEach { asset ->
                             MediaAssetCard(
                                 asset = asset,
                                 onJumpToClip = onJumpToClip,
                                 onJumpToSyncFrame = onJumpToSyncFrame,
                                 onRelinkMedia = onRelinkMedia,
                                 onExportMetadataSidecar = onExportMetadataSidecar,
+                                onUpdateAssetMetadata = onUpdateAssetMetadata,
                             )
                         }
                     }
@@ -680,8 +778,14 @@ private fun MediaAssetCard(
     onJumpToSyncFrame: (String, SyncFrameDirection) -> Unit,
     onRelinkMedia: (Uri) -> Unit,
     onExportMetadataSidecar: (Uri, MetadataSidecarTrack, MetadataSidecarFormat) -> Unit,
+    onUpdateAssetMetadata: (Uri, String, List<String>) -> Unit,
 ) {
     val semanticColors = LocalClearCutColors.current
+    var isEditingMetadata by remember(asset.assetId, asset.notes, asset.tags) { mutableStateOf(false) }
+    var notesDraft by remember(asset.assetId, asset.notes) { mutableStateOf(asset.notes) }
+    var tagsDraft by remember(asset.assetId, asset.tags) {
+        mutableStateOf(asset.tags.joinToString(", "))
+    }
     val accent = when (asset.relinkState) {
         MediaRelinkProbe.RelinkState.OK -> ClearCutAccents.Blue
         MediaRelinkProbe.RelinkState.MISSING -> ClearCutAccents.Red
@@ -787,6 +891,108 @@ private fun MediaAssetCard(
                     accent = accent,
                     icon = Icons.Default.BrokenImage
                 )
+            }
+
+            if (isEditingMetadata) {
+                OutlinedTextField(
+                    value = notesDraft,
+                    onValueChange = { notesDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    maxLines = 4,
+                    label = { Text(text = stringResource(R.string.media_bin_notes_label)) },
+                )
+                OutlinedTextField(
+                    value = tagsDraft,
+                    onValueChange = { tagsDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(text = stringResource(R.string.media_bin_tags_label)) },
+                    supportingText = {
+                        Text(text = stringResource(R.string.media_bin_tags_supporting))
+                    },
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            onUpdateAssetMetadata(
+                                asset.uri,
+                                notesDraft,
+                                normalizeMediaAssetTags(listOf(tagsDraft)),
+                            )
+                            isEditingMetadata = false
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, ClearCutAccents.Teal.copy(alpha = 0.25f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Teal),
+                    ) {
+                        Text(text = stringResource(R.string.media_bin_save))
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            notesDraft = asset.notes
+                            tagsDraft = asset.tags.joinToString(", ")
+                            isEditingMetadata = false
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, semanticColors.cardStroke),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext),
+                    ) {
+                        Text(text = stringResource(R.string.cancel))
+                    }
+                }
+            } else {
+                if (asset.notes.isNotBlank() || asset.tags.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = semanticColors.surface,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, semanticColors.cardStroke),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            asset.notes.takeIf { it.isNotBlank() }?.let { notes ->
+                                Text(
+                                    text = notes,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = semanticColors.subtext,
+                                )
+                            }
+                            if (asset.tags.isNotEmpty()) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    asset.tags.forEach { tag ->
+                                        Text(
+                                            text = "#$tag",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = ClearCutAccents.Teal,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                OutlinedButton(
+                    onClick = { isEditingMetadata = true },
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, ClearCutAccents.Teal.copy(alpha = 0.25f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Teal),
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.media_bin_edit_cd),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = stringResource(R.string.media_bin_edit))
+                }
             }
 
             asset.diagnostic?.let { diagnostic ->
@@ -1073,6 +1279,7 @@ private fun MediaDiagnosticCard(
 private fun analyzeMediaAssets(
     context: Context,
     tracks: List<Track>,
+    persistedMediaAssets: List<ProjectMediaAsset>,
     relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
     diagnosticsByUri: Map<String, MediaDiagnostic>,
 ): List<MediaAsset> {
@@ -1085,51 +1292,18 @@ private fun analyzeMediaAssets(
         }
     }
 
-    return clipsByUri.map { (_, clips) ->
+    val persistedByUri = persistedMediaAssets
+        .flatMap { asset ->
+            listOf(asset.managedUri, asset.originalUri)
+                .filter { it.isNotBlank() }
+                .map { uri -> uri to asset }
+        }
+        .toMap()
+
+    val referenced = clipsByUri.map { (_, clips) ->
         val uri = clips.first().sourceUri
-        var fileName = "Unknown"
-        var fileSize = 0L
-        var accessible = false
-
-        try {
-            if (uri.scheme == "file") {
-                val localFile = uri.path?.let(::File)
-                if (localFile != null) {
-                    if (localFile.name.isNotBlank()) {
-                        fileName = localFile.name
-                    }
-                    accessible = localFile.exists()
-                    if (accessible) {
-                        fileSize = localFile.length()
-                    }
-                }
-            } else {
-                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
-                        if (nameIdx >= 0) fileName = cursor.getString(nameIdx) ?: fileName
-                        if (sizeIdx >= 0) fileSize = cursor.getLong(sizeIdx)
-                        accessible = true
-                    }
-                }
-
-                if (!accessible) {
-                    context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
-                        accessible = true
-                        if (fileSize <= 0L && descriptor.length > 0L) {
-                            fileSize = descriptor.length
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            fileName = uri.lastPathSegment ?: "Unknown"
-        }
-
-        if (fileName == "Unknown") {
-            fileName = uri.lastPathSegment ?: fileName
-        }
+        val persisted = persistedByUri[uri.toString()]
+        val probe = probeMediaAsset(context, uri)
 
         val relinkReport = clips.asSequence()
             .mapNotNull { relinkReports[it.id] }
@@ -1141,7 +1315,7 @@ private fun analyzeMediaAssets(
                 }
             }
             .firstOrNull()
-        val relinkState = relinkReport?.state ?: if (accessible) {
+        val relinkState = relinkReport?.state ?: if (probe.accessible) {
             MediaRelinkProbe.RelinkState.OK
         } else {
             MediaRelinkProbe.RelinkState.MISSING
@@ -1149,9 +1323,10 @@ private fun analyzeMediaAssets(
         val effectiveAccessible = relinkState == MediaRelinkProbe.RelinkState.OK
 
         MediaAsset(
+            assetId = persisted?.assetId ?: uri.toString(),
             uri = uri,
-            fileName = fileName,
-            fileSize = fileSize,
+            fileName = persisted?.displayName ?: probe.fileName,
+            fileSize = probe.fileSize.takeIf { it > 0L } ?: persisted?.sizeBytes ?: 0L,
             durationMs = clips.first().sourceDurationMs,
             usedInClipIds = clips.map { it.id },
             isAccessible = effectiveAccessible,
@@ -1160,8 +1335,88 @@ private fun analyzeMediaAssets(
                 ?.takeIf { it.state != MediaRelinkProbe.RelinkState.OK }
                 ?.userMessage,
             diagnostic = diagnosticsByUri[uri.toString()],
+            notes = persisted?.notes.orEmpty(),
+            tags = persisted?.tags.orEmpty(),
         )
-    }.sortedWith(compareBy<MediaAsset> { it.isAccessible }.thenByDescending { it.usedInClipIds.size })
+    }
+
+    val referencedUris = clipsByUri.keys
+    val unused = persistedMediaAssets
+        .distinctBy { it.assetId }
+        .filter { asset ->
+            asset.managedUri !in referencedUris && asset.originalUri !in referencedUris
+        }
+        .map { persisted ->
+            val uri = Uri.parse(persisted.managedUri.ifBlank { persisted.originalUri })
+            val probe = probeMediaAsset(context, uri)
+            val accessible = probe.accessible && persisted.importStatus != "missing"
+            MediaAsset(
+                assetId = persisted.assetId,
+                uri = uri,
+                fileName = persisted.displayName ?: probe.fileName,
+                fileSize = probe.fileSize.takeIf { it > 0L } ?: persisted.sizeBytes,
+                durationMs = persisted.durationMs ?: 0L,
+                usedInClipIds = emptyList(),
+                isAccessible = accessible,
+                relinkState = if (accessible) {
+                    MediaRelinkProbe.RelinkState.OK
+                } else {
+                    MediaRelinkProbe.RelinkState.MISSING
+                },
+                relinkMessage = if (accessible) null else persisted.importStatus,
+                diagnostic = diagnosticsByUri[uri.toString()],
+                notes = persisted.notes,
+                tags = persisted.tags,
+            )
+        }
+
+    return (referenced + unused)
+        .distinctBy { it.assetId }
+        .sortedWith(compareBy<MediaAsset> { it.isAccessible }.thenByDescending { it.usedInClipIds.size })
+}
+
+private data class MediaAssetProbe(
+    val fileName: String,
+    val fileSize: Long,
+    val accessible: Boolean,
+)
+
+private fun probeMediaAsset(context: Context, uri: Uri): MediaAssetProbe {
+    var fileName = uri.lastPathSegment ?: "Unknown"
+    var fileSize = 0L
+    var accessible = false
+
+    try {
+        if (uri.scheme == "file") {
+            val localFile = uri.path?.let(::File)
+            if (localFile != null) {
+                if (localFile.name.isNotBlank()) fileName = localFile.name
+                accessible = localFile.exists()
+                if (accessible) fileSize = localFile.length()
+            }
+        } else {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (nameIdx >= 0) fileName = cursor.getString(nameIdx) ?: fileName
+                    if (sizeIdx >= 0) fileSize = cursor.getLong(sizeIdx)
+                    accessible = true
+                }
+            }
+            if (!accessible) {
+                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { descriptor ->
+                    accessible = true
+                    if (fileSize <= 0L && descriptor.length > 0L) fileSize = descriptor.length
+                }
+            }
+        }
+    } catch (_: Exception) {
+        // The asset remains visible as missing so the user can search/filter it
+        // and choose a relink action; provider errors are not silently discarded.
+    }
+
+    return MediaAssetProbe(fileName = fileName, fileSize = fileSize, accessible = accessible)
 }
 
 private fun formatFileSize(bytes: Long): String = when {
@@ -1169,6 +1424,25 @@ private fun formatFileSize(bytes: Long): String = when {
     bytes < 1024 * 1024 -> String.format(Locale.getDefault(), "%.1fKB", bytes / 1024f)
     bytes < 1024 * 1024 * 1024 -> String.format(Locale.getDefault(), "%.1fMB", bytes / (1024f * 1024f))
     else -> String.format(Locale.getDefault(), "%.2fGB", bytes / (1024f * 1024f * 1024f))
+}
+
+@Composable
+private fun MediaBinFilter.localizedLabel(): String = when (this) {
+    MediaBinFilter.ALL -> stringResource(R.string.media_bin_filter_all)
+    MediaBinFilter.MISSING -> stringResource(R.string.media_bin_filter_missing)
+    MediaBinFilter.RELINK_NEEDED -> stringResource(R.string.media_bin_filter_relink)
+    MediaBinFilter.USED -> stringResource(R.string.media_bin_filter_used)
+    MediaBinFilter.UNUSED -> stringResource(R.string.media_bin_filter_unused)
+    MediaBinFilter.TAGGED -> stringResource(R.string.media_bin_filter_tagged)
+}
+
+@Composable
+private fun MediaBinSort.localizedLabel(): String = when (this) {
+    MediaBinSort.STATUS -> stringResource(R.string.media_bin_sort_status)
+    MediaBinSort.NAME -> stringResource(R.string.media_bin_sort_name)
+    MediaBinSort.SIZE -> stringResource(R.string.media_bin_sort_size)
+    MediaBinSort.DURATION -> stringResource(R.string.media_bin_sort_duration)
+    MediaBinSort.USAGE -> stringResource(R.string.media_bin_sort_usage)
 }
 
 private fun formatDuration(ms: Long): String {

@@ -12,6 +12,9 @@ class ProjectMediaAssetEntityTest {
         assertTrue(ProjectDatabase.ALL_MIGRATIONS.any {
             it.startVersion == 7 && it.endVersion == 8
         })
+        assertTrue(ProjectDatabase.ALL_MIGRATIONS.any {
+            it.startVersion == 9 && it.endVersion == 10
+        })
     }
 
     @Test
@@ -29,7 +32,9 @@ class ProjectMediaAssetEntityTest {
             height = 1080,
             quickFingerprint = "fingerprint",
             importStatus = "ready",
-            lastVerifiedAtEpochMs = 42L
+            lastVerifiedAtEpochMs = 42L,
+            notes = "Keep interview selects",
+            tags = listOf("interview", "selects")
         )
 
         val entity = asset.toProjectMediaAssetEntity(projectId = "project")

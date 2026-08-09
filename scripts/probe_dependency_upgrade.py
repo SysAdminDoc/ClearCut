@@ -88,7 +88,10 @@ def write_probe_result(snapshot: dict, dependency: str, candidate: str, command:
         "status": "passed",
         "version": candidate,
         "verifiedOn": dt.date.today().isoformat(),
-        "command": " ".join(command),
+        # Keep the recorded command directly rerunnable through this gate;
+        # retain the exact Gradle subprocess separately for audit evidence.
+        "command": f"python scripts/probe_dependency_upgrade.py --dependency {dependency} --version {candidate}",
+        "gradleCommand": " ".join(command),
     }
     if entry.get("latestStable") == candidate:
         entry["state"] = "current"

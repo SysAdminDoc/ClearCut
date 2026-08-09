@@ -198,6 +198,15 @@ class ProjectDatabaseMigrationTest {
                 assertEquals(1, cursor.getInt(1))
             }
         }
+
+        if (schemaVersion >= 10) {
+            db.query("PRAGMA table_info(project_media_assets)").use { cursor ->
+                val columns = generateSequence { if (cursor.moveToNext()) cursor.getString(1) else null }
+                    .toSet()
+                assertTrue("project_media_assets.notes missing after v10", "notes" in columns)
+                assertTrue("project_media_assets.tagsJson missing after v10", "tagsJson" in columns)
+            }
+        }
     }
 
     private fun assertProjectMediaAssetsTableReady(db: SupportSQLiteDatabase) {
@@ -224,7 +233,7 @@ class ProjectDatabaseMigrationTest {
 
     companion object {
         private const val FIRST_SCHEMA_VERSION = 1
-        private const val CURRENT_SCHEMA_VERSION = 9
+        private const val CURRENT_SCHEMA_VERSION = 10
         private const val DELETED_AT = 12_345L
     }
 }

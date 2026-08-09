@@ -475,7 +475,7 @@ Planning files are local-only in the development checkout:
 | Startup performance | AndroidX Baseline Profile / Macrobenchmark 1.5.0-beta01 |
 | Timeline Exchange | OpenTimelineIO / FCPXML / EDL export and guarded import preview |
 | DI | Hilt / Dagger |
-| Database | Room 2.8.4 (schema v9, migration chain 1→9) |
+| Database | Room 2.8.4 (schema v10, migration chain 1→10) |
 | Settings | DataStore Preferences |
 | Architecture | MVVM, single-activity Compose navigation, StateFlow |
 
@@ -484,7 +484,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (91 injectable singletons across 207 files)
+├── engine/                 # Core engines (91 injectable singletons across 208 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)

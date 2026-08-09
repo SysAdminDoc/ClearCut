@@ -91,6 +91,9 @@ import com.novacut.editor.engine.timelineMediaJobIdentity
 import com.novacut.editor.engine.OverlayAssetImportResult
 import com.novacut.editor.engine.OverlayAssetStore
 import com.novacut.editor.engine.ProjectMediaAsset
+import com.novacut.editor.engine.normalizeMediaAssetNotes
+import com.novacut.editor.engine.normalizeMediaAssetTags
+import com.novacut.editor.engine.writeManagedMediaAssetAnnotations
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.VoiceoverRecorderEngine
 import com.novacut.editor.engine.TemplateManager
@@ -1304,7 +1307,10 @@ class EditorViewModel @Inject constructor(
                 export = current.export.copy(
                     config = current.export.config.copy(watermark = recovery.exportWatermark)
                 ),
-                media = current.media.copy(healthReport = mediaHealthReport),
+                media = current.media.copy(
+                    healthReport = mediaHealthReport,
+                    mediaAssets = recovery.mediaAssets,
+                ),
                 totalDurationMs = recovery.tracks.maxOfOrNull { t ->
                     t.clips.maxOfOrNull { c -> t.effectiveTimelineEndMs(c) } ?: 0L
                 }?.coerceAtLeast(0L) ?: 0L
@@ -1326,6 +1332,9 @@ class EditorViewModel @Inject constructor(
     private fun backfillRecoveredManagedMediaAssets(recovery: AutoSaveState) {
         viewModelScope.launch(Dispatchers.IO) {
             val result = backfillManagedMediaAssetSidecars(appContext, recovery)
+            recovery.mediaAssets.forEach { asset ->
+                writeManagedMediaAssetAnnotations(appContext, asset)
+            }
             if (result.sidecarsCreated > 0) {
                 invalidateProjectMediaManifestCache()
                 Log.i(
@@ -2722,7 +2731,8 @@ class EditorViewModel @Inject constructor(
                     v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
                     export = it.export.copy(
                         config = it.export.config.copy(watermark = recovery.exportWatermark)
-                    )
+                    ),
+                    media = it.media.copy(mediaAssets = recovery.mediaAssets),
                 )
             }
             _playheadMs.value = recovery.playheadMs
@@ -2918,7 +2928,8 @@ class EditorViewModel @Inject constructor(
                                     playheadMs = state.playheadMs,
                                     export = s.export.copy(
                                         config = s.export.config.copy(watermark = state.exportWatermark)
-                                    )
+                                    ),
+                                    media = s.media.copy(mediaAssets = state.mediaAssets),
                                 )
                             )
                         )
@@ -4644,6 +4655,52 @@ class EditorViewModel @Inject constructor(
     }
     fun hideMediaManager() = hidePanel(PanelId.MEDIA_MANAGER)
 
+    fun updateMediaAssetMetadata(
+        uri: Uri,
+        notes: String,
+        tags: List<String>,
+    ) {
+        val normalizedNotes = normalizeMediaAssetNotes(notes)
+        val normalizedTags = normalizeMediaAssetTags(tags)
+        var updatedAsset: ProjectMediaAsset? = null
+        _state.update { current ->
+            val uriString = uri.toString()
+            val existing = current.media.mediaAssets.firstOrNull { asset ->
+                asset.managedUri == uriString || asset.originalUri == uriString
+            }
+            val base = existing ?: ProjectMediaAsset(
+                assetId = uriString,
+                managedUri = uriString,
+                originalUri = uriString,
+                displayName = uri.lastPathSegment,
+                mediaType = "video",
+                mimeType = null,
+                sizeBytes = 0L,
+                durationMs = null,
+                width = null,
+                height = null,
+                quickFingerprint = null,
+                importStatus = "external",
+                lastVerifiedAtEpochMs = System.currentTimeMillis(),
+            )
+            val next = base.copy(notes = normalizedNotes, tags = normalizedTags)
+            updatedAsset = next
+            current.copyMedia { media ->
+                media.copy(
+                    mediaAssets = (media.mediaAssets.filterNot { asset ->
+                        asset.managedUri == uriString || asset.originalUri == uriString
+                    } + next).distinctBy { it.assetId }
+                )
+            }
+        }
+        updatedAsset?.let { asset ->
+            viewModelScope.launch(Dispatchers.IO) {
+                writeManagedMediaAssetAnnotations(appContext, asset)
+            }
+        }
+        saveProject()
+    }
+
     fun exportMetadataSidecar(
         uri: Uri,
         track: MetadataSidecarTrack,
@@ -6037,6 +6094,7 @@ class EditorViewModel @Inject constructor(
         transcript = state.v369.transcript,
         trackedObjects = state.trackedObjects,
         aiUsageLedger = state.aiUsageLedger,
+        mediaAssets = state.media.mediaAssets,
         storyboardCards = state.storyboardCards,
         globalTransitions = state.globalTransitions,
         exportWatermark = state.exportConfig.watermark,
@@ -6057,7 +6115,7 @@ class EditorViewModel @Inject constructor(
 
     private fun projectMediaAssetsFor(state: EditorState): List<ProjectMediaAsset> {
         val cacheKey = mediaManifestCacheKey(state.tracks, state.imageOverlays)
-        return synchronized(projectMediaManifestCacheLock) {
+        val generated = synchronized(projectMediaManifestCacheLock) {
             val cached = projectMediaManifestCache
             if (cached?.key == cacheKey) {
                 cached.mediaAssets
@@ -6070,6 +6128,28 @@ class EditorViewModel @Inject constructor(
                 }
             }
         }
+        val stored = state.media.mediaAssets
+        if (stored.isEmpty()) return generated
+
+        val merged = generated.map { current ->
+            val saved = stored.firstOrNull { candidate ->
+                candidate.assetId == current.assetId ||
+                    candidate.managedUri == current.managedUri ||
+                    candidate.originalUri == current.originalUri
+            }
+            if (saved == null) current else current.copy(
+                notes = normalizeMediaAssetNotes(saved.notes),
+                tags = normalizeMediaAssetTags(saved.tags),
+            )
+        }
+        val unused = stored.filterNot { saved ->
+            generated.any { current ->
+                current.assetId == saved.assetId ||
+                    current.managedUri == saved.managedUri ||
+                    current.originalUri == saved.originalUri
+            }
+        }
+        return merged + unused
     }
 
     private fun invalidateProjectMediaManifestCache() {

@@ -16,7 +16,7 @@ import java.security.MessageDigest
 import java.util.Locale
 
 private const val MEDIA_ASSET_TAG = "MediaAssetManifest"
-private const val MEDIA_ASSET_SCHEMA_VERSION = 1
+private const val MEDIA_ASSET_SCHEMA_VERSION = 2
 private const val FINGERPRINT_WINDOW_BYTES = 1024 * 1024
 private const val MAX_MEDIA_ASSET_SIDECAR_BYTES = 64L * 1024L
 
@@ -43,7 +43,9 @@ data class ProjectMediaAsset(
     val height: Int?,
     val quickFingerprint: String?,
     val importStatus: String,
-    val lastVerifiedAtEpochMs: Long
+    val lastVerifiedAtEpochMs: Long,
+    val notes: String = "",
+    val tags: List<String> = emptyList()
 )
 
 internal data class MediaAssetRecord(
@@ -59,7 +61,9 @@ internal data class MediaAssetRecord(
     val height: Int?,
     val quickFingerprint: String,
     val importedAtEpochMs: Long,
-    val lastVerifiedAtEpochMs: Long
+    val lastVerifiedAtEpochMs: Long,
+    val notes: String = "",
+    val tags: List<String> = emptyList()
 ) {
     fun toJson(): JSONObject {
         return JSONObject().apply {
@@ -81,6 +85,8 @@ internal data class MediaAssetRecord(
             put("importStatus", "ready")
             put("importedAtEpochMs", importedAtEpochMs)
             put("lastVerifiedAtEpochMs", lastVerifiedAtEpochMs)
+            put("notes", normalizeMediaAssetNotes(notes))
+            put("tags", mediaAssetTagsToJson(tags))
         }
     }
 }
@@ -109,6 +115,47 @@ internal fun writeManagedMediaAssetSidecar(
         true
     }.getOrElse { err ->
         android.util.Log.w(MEDIA_ASSET_TAG, "Failed to write media asset sidecar for ${managedUri.redacted()}", err)
+        false
+    }
+}
+
+internal fun writeManagedMediaAssetAnnotations(
+    context: Context,
+    asset: ProjectMediaAsset,
+): Boolean {
+    val managedFile = managedMediaFileForReference(
+        uri = Uri.parse(asset.managedUri),
+        managedDir = managedMediaDir(context),
+    ) ?: return false
+    val normalizedAsset = asset.copy(
+        notes = normalizeMediaAssetNotes(asset.notes),
+        tags = normalizeMediaAssetTags(asset.tags),
+    )
+    return runCatching {
+        val sidecar = mediaAssetSidecarFileFor(managedFile)
+        val json = runCatching {
+            if (sidecar.isFile) {
+                sidecar.inputStream().use { input ->
+                    JSONObject(readUtf8WithByteLimit(input, MAX_MEDIA_ASSET_SIDECAR_BYTES))
+                }
+            } else {
+                normalizedAsset.toSidecarJson()
+            }
+        }.getOrElse { normalizedAsset.toSidecarJson() }
+        json.put("schemaVersion", MEDIA_ASSET_SCHEMA_VERSION)
+        json.put("notes", normalizedAsset.notes)
+        json.put("tags", mediaAssetTagsToJson(normalizedAsset.tags))
+        writeUtf8TextAtomically(
+            targetFile = sidecar,
+            contents = json.toString(2),
+        )
+        true
+    }.getOrElse { err ->
+        android.util.Log.w(
+            MEDIA_ASSET_TAG,
+            "Failed to update media asset annotations for ${Uri.parse(asset.managedUri).redacted()}",
+            err,
+        )
         false
     }
 }
@@ -302,8 +349,31 @@ internal fun projectMediaAssetFromJson(json: JSONObject): ProjectMediaAsset? {
         height = json.optNullableInt("height"),
         quickFingerprint = json.optNullableString("quickFingerprint"),
         importStatus = json.optString("importStatus", "ready"),
-        lastVerifiedAtEpochMs = json.optLong("lastVerifiedAtEpochMs", System.currentTimeMillis())
+        lastVerifiedAtEpochMs = json.optLong("lastVerifiedAtEpochMs", System.currentTimeMillis()),
+        notes = normalizeMediaAssetNotes(json.optString("notes", "")),
+        tags = mediaAssetTagsFromJson(json),
     )
+}
+
+private fun ProjectMediaAsset.toSidecarJson(): JSONObject {
+    return JSONObject().apply {
+        put("schemaVersion", MEDIA_ASSET_SCHEMA_VERSION)
+        put("assetId", assetId)
+        put("managedUri", managedUri)
+        put("originalUri", originalUri)
+        putNullable("displayName", displayName)
+        put("mediaType", mediaType)
+        putNullable("mimeType", mimeType)
+        put("sizeBytes", sizeBytes)
+        putNullable("durationMs", durationMs)
+        putNullable("width", width)
+        putNullable("height", height)
+        putNullable("quickFingerprint", quickFingerprint)
+        put("importStatus", importStatus)
+        put("lastVerifiedAtEpochMs", lastVerifiedAtEpochMs)
+        put("notes", normalizeMediaAssetNotes(notes))
+        put("tags", mediaAssetTagsToJson(tags))
+    }
 }
 
 private fun MediaAssetRecord.toProjectMediaAsset(): ProjectMediaAsset {
@@ -320,7 +390,9 @@ private fun MediaAssetRecord.toProjectMediaAsset(): ProjectMediaAsset {
         height = height,
         quickFingerprint = quickFingerprint,
         importStatus = "ready",
-        lastVerifiedAtEpochMs = lastVerifiedAtEpochMs
+        lastVerifiedAtEpochMs = lastVerifiedAtEpochMs,
+        notes = notes,
+        tags = tags,
     )
 }
 

@@ -73,13 +73,15 @@ class MediaAssetManifestTest {
         )
 
         val json = JSONObject(record.toJson().toString())
-        assertEquals(1, json.getInt("schemaVersion"))
+        assertEquals(2, json.getInt("schemaVersion"))
         assertEquals("asset-123", json.getString("assetId"))
         assertTrue(json.has("displayName"))
         assertTrue(json.has("mimeType"))
         assertTrue(json.has("sha256"))
         assertEquals("pending", json.getString("hashStatus"))
         assertEquals("sha256:size:first-last-1m", json.getString("fingerprintAlgorithm"))
+        assertTrue(json.has("notes"))
+        assertTrue(json.has("tags"))
     }
 
     @Test
@@ -148,6 +150,20 @@ class MediaAssetManifestTest {
         )
 
         assertEquals("file:///clip.mp4", asset?.originalUri)
+    }
+
+    @Test
+    fun projectMediaAssetFromJsonBoundsAndNormalizesAnnotations() {
+        val asset = projectMediaAssetFromJson(
+            JSONObject()
+                .put("assetId", "asset-1")
+                .put("managedUri", "file:///clip.mp4")
+                .put("notes", "  local note  ")
+                .put("tags", org.json.JSONArray().put("#B-roll").put("b-roll").put("  interview  "))
+        )
+
+        assertEquals("local note", asset?.notes)
+        assertEquals(listOf("B-roll", "interview"), asset?.tags)
     }
 
     @Test

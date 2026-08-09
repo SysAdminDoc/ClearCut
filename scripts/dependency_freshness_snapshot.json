@@ -121,7 +121,8 @@
         "status": "passed",
         "version": "1.11.0",
         "verifiedOn": "2026-08-08",
-        "command": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
+        "command": "python scripts/probe_dependency_upgrade.py --dependency media3 --version 1.11.0",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
       }
     },
     "hilt": {

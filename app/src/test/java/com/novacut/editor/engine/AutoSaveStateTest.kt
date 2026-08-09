@@ -403,7 +403,9 @@ class AutoSaveStateTest {
                     height = 1080,
                     quickFingerprint = "fingerprint",
                     importStatus = "ready",
-                    lastVerifiedAtEpochMs = 99L
+                    lastVerifiedAtEpochMs = 99L,
+                    notes = "Interview selects",
+                    tags = listOf("interview", "b-roll")
                 )
             ),
             tracks = listOf(
@@ -432,6 +434,10 @@ class AutoSaveStateTest {
         assertEquals("asset-media", asset.getString("assetId"))
         assertEquals("file:///managed/clip.mp4", asset.getString("managedUri"))
         assertEquals("ready", asset.getString("importStatus"))
+        assertEquals("Interview selects", asset.getString("notes"))
+        assertEquals(listOf("b-roll", "interview"), (0 until asset.getJSONArray("tags").length()).map {
+            asset.getJSONArray("tags").getString(it)
+        })
         assertEquals("asset-media", clip.getString("assetId"))
     }
 
@@ -446,6 +452,8 @@ class AutoSaveStateTest {
                 put("originalUri", "content://source/clip")
                 put("mediaType", "video")
                 put("importStatus", "ready")
+                put("notes", "Keep this")
+                put("tags", JSONArray().put("selects"))
             }))
             put("tracks", JSONArray().put(JSONObject().apply {
                 put("type", TrackType.VIDEO.name)
@@ -466,6 +474,8 @@ class AutoSaveStateTest {
         val state = AutoSaveState.deserialize(root.toString(), uriParser = { FakeUri })
 
         assertEquals("asset-media", state.mediaAssets.single().assetId)
+        assertEquals("Keep this", state.mediaAssets.single().notes)
+        assertEquals(listOf("selects"), state.mediaAssets.single().tags)
         assertEquals("asset-media", state.tracks.single().clips.single().assetId)
     }
 

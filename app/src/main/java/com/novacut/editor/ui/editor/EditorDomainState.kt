@@ -148,7 +148,12 @@ data class EditorMediaState(
     val diagnostics: Map<String, MediaDiagnostic> = emptyMap(),
     val healthReport: MediaHealthReport? = null,
     val metadataSidecarExport: MetadataSidecarExportUiState = MetadataSidecarExportUiState(),
-    val pendingIngests: List<PendingIngest> = emptyList()
+    val pendingIngests: List<PendingIngest> = emptyList(),
+    /**
+     * The persisted local media-bin catalog, including assets no longer used by
+     * the timeline so triage can distinguish unused from missing.
+     */
+    val mediaAssets: List<com.novacut.editor.engine.ProjectMediaAsset> = emptyList()
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.MEDIA
 }

@@ -5,12 +5,15 @@ import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.novacut.editor.engine.ProjectMediaAsset
+import com.novacut.editor.engine.decodeMediaAssetTags
+import com.novacut.editor.engine.encodeMediaAssetTags
+import com.novacut.editor.engine.normalizeMediaAssetNotes
 import com.novacut.editor.model.Project
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.Resolution
 import kotlinx.coroutines.flow.Flow
 
-@Database(entities = [Project::class, ProjectMediaAssetEntity::class], version = 9, exportSchema = true)
+@Database(entities = [Project::class, ProjectMediaAssetEntity::class], version = 10, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class ProjectDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
@@ -111,6 +114,13 @@ abstract class ProjectDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE project_media_assets ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE project_media_assets ADD COLUMN tagsJson TEXT NOT NULL DEFAULT '[]'")
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -119,7 +129,8 @@ abstract class ProjectDatabase : RoomDatabase() {
             MIGRATION_5_6,
             MIGRATION_6_7,
             MIGRATION_7_8,
-            MIGRATION_8_9
+            MIGRATION_8_9,
+            MIGRATION_9_10
         )
     }
 }
@@ -155,7 +166,9 @@ data class ProjectMediaAssetEntity(
     val height: Int?,
     val quickFingerprint: String?,
     val importStatus: String,
-    val lastVerifiedAtEpochMs: Long
+    val lastVerifiedAtEpochMs: Long,
+    val notes: String = "",
+    val tagsJson: String = "[]"
 )
 
 fun ProjectMediaAsset.toProjectMediaAssetEntity(projectId: String): ProjectMediaAssetEntity {
@@ -173,7 +186,9 @@ fun ProjectMediaAsset.toProjectMediaAssetEntity(projectId: String): ProjectMedia
         height = height,
         quickFingerprint = quickFingerprint,
         importStatus = importStatus,
-        lastVerifiedAtEpochMs = lastVerifiedAtEpochMs
+        lastVerifiedAtEpochMs = lastVerifiedAtEpochMs,
+        notes = normalizeMediaAssetNotes(notes),
+        tagsJson = encodeMediaAssetTags(tags)
     )
 }
 
@@ -191,7 +206,9 @@ fun ProjectMediaAssetEntity.toProjectMediaAsset(): ProjectMediaAsset {
         height = height,
         quickFingerprint = quickFingerprint,
         importStatus = importStatus,
-        lastVerifiedAtEpochMs = lastVerifiedAtEpochMs
+        lastVerifiedAtEpochMs = lastVerifiedAtEpochMs,
+        notes = normalizeMediaAssetNotes(notes),
+        tags = decodeMediaAssetTags(tagsJson)
     )
 }
 

@@ -4,6 +4,7 @@
 
 - Added a secret-free GitHub Actions PR/master gate covering JVM tests, lint, QA/debug packaging, package/release identity, dependency/native SBOM checks, 16 KB alignment, deterministic artifact hashes, and build provenance evidence.
 - Upgraded the pinned Media3 runtime to 1.11.0 after the QA compatibility probe, full release-gate matrix, generated dependency evidence, and APK alignment checks passed.
+- Media Manager now provides local name/note/tag search, missing/relink/used/unused triage filters, deterministic sorting, and persisted per-asset notes/tags across autosave, Room migration 9→10, archives, and managed-media sidecars.
 - Batch export queues now persist priority order and planned outputs, support reorder controls plus active pause/cancel, retain eligible partial video paths for resume after interruption, and detect already-complete outputs to avoid duplicate work.
 - Export completion now verifies requested versus actual video/audio codecs, container, dimensions, frame rate, duration, and MP4 layout; Media3 fallback callbacks and rejected stream-copy artifacts remain in export diagnostics/history, while unavailable encoder probes fail closed.
 - Export audio-codec choices now expose only the device-verified AAC path; legacy Opus/FLAC config values remain readable but fail before encoding instead of producing AAC output under a false codec label.
