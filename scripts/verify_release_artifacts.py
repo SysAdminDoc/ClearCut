@@ -292,6 +292,7 @@ def run_self_tests() -> None:
                 ("write_apk_signing_fingerprints.py", "--root", str(APK_ROOT), "--check"),
                 ("check_apk_size.py",),
                 ("validate_play_listing_assets.py", "--quiet"),
+                ("validate_package_identity.py",),
                 ("validate_distribution_readiness.py",),
                 ("validate_public_claims.py",),
                 ("validate_android_audio_api_policy.py",),

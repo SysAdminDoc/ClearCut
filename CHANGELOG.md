@@ -2,6 +2,7 @@
 
 ## v3.78.1
 
+- Added a secret-free GitHub Actions PR/master gate covering JVM tests, lint, QA/debug packaging, package/release identity, dependency/native SBOM checks, 16 KB alignment, deterministic artifact hashes, and build provenance evidence.
 - Batch export queues now persist priority order and planned outputs, support reorder controls plus active pause/cancel, retain eligible partial video paths for resume after interruption, and detect already-complete outputs to avoid duplicate work.
 - Export completion now verifies requested versus actual video/audio codecs, container, dimensions, frame rate, duration, and MP4 layout; Media3 fallback callbacks and rejected stream-copy artifacts remain in export diagnostics/history, while unavailable encoder probes fail closed.
 - Export audio-codec choices now expose only the device-verified AAC path; legacy Opus/FLAC config values remain readable but fail before encoding instead of producing AAC output under a false codec label.

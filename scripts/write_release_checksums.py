@@ -102,12 +102,13 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="verify existing .sha256 sidecars without rewriting them")
     parser.add_argument("--self-test", action="store_true", help="run built-in checksum fixture checks")
     args = parser.parse_args()
+    root = args.root.resolve()
     try:
         if args.self_test:
             run_self_tests()
             print("release checksum self-tests passed.")
             return 0
-        sidecars = verify_checksums(args.root) if args.check else write_checksums(args.root)
+        sidecars = verify_checksums(root) if args.check else write_checksums(root)
     except ChecksumError as error:
         print(f"release checksum validation failed: {error}", file=sys.stderr)
         return 1

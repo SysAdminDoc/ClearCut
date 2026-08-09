@@ -193,6 +193,7 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="verify existing sidecars without rewriting them")
     parser.add_argument("--self-test", action="store_true", help="run built-in parser and discovery checks")
     args = parser.parse_args()
+    root = args.root.resolve()
 
     try:
         if args.self_test:
@@ -200,7 +201,7 @@ def main() -> int:
             print("APK signing fingerprint self-tests passed.")
             return 0
         apksigner = locate_apksigner(args.apksigner)
-        sidecars = verify_fingerprints(args.root, apksigner) if args.check else write_fingerprints(args.root, apksigner)
+        sidecars = verify_fingerprints(root, apksigner) if args.check else write_fingerprints(root, apksigner)
     except FingerprintError as error:
         print(f"APK signing fingerprint validation failed: {error}", file=sys.stderr)
         return 1
