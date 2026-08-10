@@ -28,6 +28,8 @@ class ProductHealthLedger @Inject constructor(
         val exportCancelled: Int = 0,
         val exportFailed: Int = 0,
         val exportFailureClasses: Map<String, Int> = emptyMap(),
+        val exportGpuDegradationEvents: Int = 0,
+        val lastExportGpuDegradation: String? = null,
         val coldStartCount: Int = 0,
         val warmStartCount: Int = 0,
         val modelDownloadAttempts: Int = 0,
@@ -51,6 +53,10 @@ class ProductHealthLedger @Inject constructor(
                     val key = event.failureClass.take(64)
                     put(key, (get(key) ?: 0) + 1)
                 }
+            )
+            is HealthEvent.ExportGpuEffectDegraded -> current.copy(
+                exportGpuDegradationEvents = current.exportGpuDegradationEvents + 1,
+                lastExportGpuDegradation = event.summary.take(512),
             )
             HealthEvent.COLD_START -> current.copy(coldStartCount = current.coldStartCount + 1)
             HealthEvent.WARM_START -> current.copy(warmStartCount = current.warmStartCount + 1)
@@ -90,6 +96,8 @@ class ProductHealthLedger @Inject constructor(
                         .forEach { (k, v) -> put(k, v) }
                 })
             }
+            put("exportGpuDegradationEvents", data.exportGpuDegradationEvents)
+            data.lastExportGpuDegradation?.let { put("lastExportGpuDegradation", it) }
             put("coldStartCount", data.coldStartCount)
             put("warmStartCount", data.warmStartCount)
             put("modelDownloadAttempts", data.modelDownloadAttempts)
@@ -120,6 +128,10 @@ class ProductHealthLedger @Inject constructor(
                 exportCancelled = json.optInt("exportCancelled", 0),
                 exportFailed = json.optInt("exportFailed", 0),
                 exportFailureClasses = failureClasses,
+                exportGpuDegradationEvents = json.optInt("exportGpuDegradationEvents", 0),
+                lastExportGpuDegradation = if (
+                    json.has("lastExportGpuDegradation") && !json.isNull("lastExportGpuDegradation")
+                ) json.optString("lastExportGpuDegradation") else null,
                 coldStartCount = json.optInt("coldStartCount", 0),
                 warmStartCount = json.optInt("warmStartCount", 0),
                 modelDownloadAttempts = json.optInt("modelDownloadAttempts", 0),
@@ -149,9 +161,11 @@ class ProductHealthLedger @Inject constructor(
                         data.exportFailureClasses.entries
                             .sortedByDescending { it.value }
                             .take(MAX_FAILURE_CLASSES)
-                            .forEach { (k, v) -> put(k, v) }
-                    })
-                }
+                        .forEach { (k, v) -> put(k, v) }
+                })
+            }
+            put("exportGpuDegradationEvents", data.exportGpuDegradationEvents)
+            data.lastExportGpuDegradation?.let { put("lastExportGpuDegradation", it) }
                 put("coldStartCount", data.coldStartCount)
                 put("warmStartCount", data.warmStartCount)
                 put("modelDownloadAttempts", data.modelDownloadAttempts)
@@ -179,6 +193,7 @@ sealed class HealthEvent {
     data object EXPORT_COMPLETE : HealthEvent()
     data object EXPORT_CANCELLED : HealthEvent()
     data class ExportFailed(val failureClass: String) : HealthEvent()
+    data class ExportGpuEffectDegraded(val summary: String) : HealthEvent()
     data object COLD_START : HealthEvent()
     data object WARM_START : HealthEvent()
     data object MODEL_DOWNLOAD_ATTEMPT : HealthEvent()

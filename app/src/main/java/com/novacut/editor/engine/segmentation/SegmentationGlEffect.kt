@@ -8,6 +8,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BaseGlShaderProgram
 import androidx.media3.effect.GlEffect
 import androidx.media3.effect.GlShaderProgram
+import com.novacut.editor.engine.RenderDegradationLedger
+import com.novacut.editor.engine.RenderDegradationType
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -19,10 +21,12 @@ import java.nio.ByteOrder
 @UnstableApi
 class SegmentationGlEffect(
     private val engine: SegmentationEngine,
-    private val threshold: Float = 0.5f
+    private val threshold: Float = 0.5f,
+    private val degradationLedger: RenderDegradationLedger? = null,
+    private val effectName: String = "Background removal",
 ) : GlEffect {
     override fun toGlShaderProgram(context: Context, useHdr: Boolean): GlShaderProgram {
-        return SegmentationShaderProgram(engine, threshold, useHdr)
+        return SegmentationShaderProgram(engine, threshold, useHdr, degradationLedger, effectName)
     }
 }
 
@@ -30,7 +34,9 @@ class SegmentationGlEffect(
 private class SegmentationShaderProgram(
     private val engine: SegmentationEngine,
     private val threshold: Float,
-    useHdr: Boolean
+    useHdr: Boolean,
+    private val degradationLedger: RenderDegradationLedger?,
+    private val effectName: String,
 ) : BaseGlShaderProgram(useHdr, 1) {
 
     private var glProgram = 0
@@ -99,9 +105,11 @@ private class SegmentationShaderProgram(
             if (result != null) {
                 uploadMaskTexture(result)
             } else {
+                degradationLedger?.record(RenderDegradationType.SEGMENTATION_FRAME, effectName)
                 uploadFallbackMask()
             }
         } else {
+            degradationLedger?.record(RenderDegradationType.SEGMENTATION_FRAME, effectName)
             uploadFallbackMask()
         }
 

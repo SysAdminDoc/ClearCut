@@ -27,6 +27,7 @@ import com.novacut.editor.engine.expectedContainerForExtension
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportStoragePolicy
 import com.novacut.editor.engine.ExportStageException
+import com.novacut.editor.engine.RenderDegradationException
 import com.novacut.editor.engine.ExportStorageException
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportResumePolicy
@@ -129,6 +130,10 @@ class ExportDelegate(
         val copy = exportFailureCopyFor(cause)
         return text(copy.messageRes) + " " + text(copy.remediationRes)
     }
+
+    private fun renderDegradationFailureText(e: RenderDegradationException): String =
+        text(R.string.export_failure_gpu_degraded) + " " +
+            text(R.string.export_failure_gpu_degraded_fix) + "\n" + e.outcome.summary
 
     // --- Export ---
     private val progressSamples = mutableListOf<Float>()
@@ -1789,6 +1794,7 @@ class ExportDelegate(
                     // which clip and stage failed — say so instead of collapsing
                     // it into the generic "export failed" copy.
                     is ExportStageException -> e.message
+                    is RenderDegradationException -> renderDegradationFailureText(e)
                     // The engine recorded exactly why it stopped. Turning that into
                     // its own sentence plus a remediation line is the whole point of
                     // the typed cause; the generic string is the last resort, not the
@@ -1938,7 +1944,10 @@ class ExportDelegate(
                 activeResumeSession = null
                 outputFile.delete()
                 deleteOwnedResumeFile(resumeSourceFile)
-                val message = exportFailureText(videoEngine.exportFailureCause.value)
+                val message = when (e) {
+                    is RenderDegradationException -> renderDegradationFailureText(e)
+                    else -> exportFailureText(videoEngine.exportFailureCause.value)
+                }
                 val technicalMessage = e.message ?: e::class.java.simpleName
                 updateExport {
                     it.copy(
@@ -3013,6 +3022,9 @@ internal fun exportFailureCopyFor(cause: VideoEngine.ExportFailureCause?): Expor
         )
         VideoEngine.ExportFailureCause.STAGE_REFUSED -> ExportFailureCopy(
             R.string.export_failure_stage_refused, R.string.export_failure_stage_refused_fix
+        )
+        VideoEngine.ExportFailureCause.GPU_EFFECT_DEGRADED -> ExportFailureCopy(
+            R.string.export_failure_gpu_degraded, R.string.export_failure_gpu_degraded_fix
         )
         VideoEngine.ExportFailureCause.UNKNOWN, null -> ExportFailureCopy(
             R.string.export_video_failed_message, R.string.export_failure_unknown_fix

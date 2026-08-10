@@ -66,6 +66,7 @@ class ExportFailureCopyTest {
             VideoEngine.ExportFailureCause.AUDIO_ENCODE_FAILED,
             VideoEngine.ExportFailureCause.SUBTITLE_BURN_IN_FAILED,
             VideoEngine.ExportFailureCause.STORAGE,
+            VideoEngine.ExportFailureCause.GPU_EFFECT_DEGRADED,
         )
 
         assertTrue(VideoEngine.ExportFailureCause.entries.containsAll(required))

@@ -280,8 +280,12 @@ class SegmentationEngine @Inject constructor(
      * Create a GlEffect for the Media3 export pipeline that applies per-frame segmentation.
      */
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-    fun createExportEffect(threshold: Float = 0.5f): SegmentationGlEffect {
-        return SegmentationGlEffect(this, threshold)
+    fun createExportEffect(
+        threshold: Float = 0.5f,
+        degradationLedger: com.novacut.editor.engine.RenderDegradationLedger? = null,
+        effectName: String = "Background removal",
+    ): SegmentationGlEffect {
+        return SegmentationGlEffect(this, threshold, degradationLedger, effectName)
     }
 
     @Synchronized

@@ -3140,6 +3140,8 @@
     <string name="export_failure_subtitle_burn_fix">Exporta sin subtítulos incrustados y usa un archivo de subtítulos aparte, o simplifica el estilo de los subtítulos.</string>
     <string name="export_failure_stage_refused">Una etapa del renderizado se negó a continuar.</string>
     <string name="export_failure_stage_refused_fix">Abre los detalles del clip indicado arriba y deshaz la edición que no se pudo renderizar.</string>
+    <string name="export_failure_gpu_degraded">No se pudo renderizar fielmente un efecto de GPU, así que se detuvo la exportación.</string>
+    <string name="export_failure_gpu_degraded_fix">Quita o simplifica el efecto indicado y vuelve a exportar. Los detalles muestran el efecto afectado y el número de sustituciones.</string>
     <string name="export_failure_unknown_fix">Inténtalo de nuevo y, si se repite, usa «Copiar informe» en la tarjeta de error de exportación.</string>
     <string name="vm_snapshot_deleted_toast">Se eliminó la instantánea «%1$s». Ahora puedes restaurarla.</string>
     <string name="vm_snapshot_restored_toast">Se restauró la instantánea «%1$s».</string>

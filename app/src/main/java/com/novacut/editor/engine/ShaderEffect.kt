@@ -45,14 +45,28 @@ class ShaderEffect(
     private val fragmentShader: String,
     private val uniforms: Map<String, Float> = emptyMap(),
     private val dynamicUniforms: ((Long) -> Map<String, Float>)? = null,
-    private val transitionEasing: TransitionEasing = TransitionEasing.LINEAR
+    private val transitionEasing: TransitionEasing = TransitionEasing.LINEAR,
+    private val degradationLedger: RenderDegradationLedger? = null,
+    private val effectName: String = "GPU effect",
 ) : GlEffect {
     override fun toGlShaderProgram(context: Context, useHdr: Boolean): GlShaderProgram {
-        return ShaderProgram(fragmentShader, uniforms, dynamicUniforms, useHdr, transitionEasing)
+        return ShaderProgram(
+            fragmentShader,
+            uniforms,
+            dynamicUniforms,
+            useHdr,
+            transitionEasing,
+            degradationLedger,
+            effectName,
+        )
     }
 
     fun withEasing(easing: TransitionEasing): ShaderEffect =
-        ShaderEffect(fragmentShader, uniforms, dynamicUniforms, easing)
+        ShaderEffect(fragmentShader, uniforms, dynamicUniforms, easing, degradationLedger, effectName)
+
+    fun withDegradationLedger(ledger: RenderDegradationLedger, name: String): ShaderEffect =
+        if (degradationLedger != null) this
+        else ShaderEffect(fragmentShader, uniforms, dynamicUniforms, transitionEasing, ledger, name)
 }
 
 @UnstableApi
@@ -61,7 +75,9 @@ private class ShaderProgram(
     private val uniforms: Map<String, Float>,
     private val dynamicUniforms: ((Long) -> Map<String, Float>)?,
     useHdr: Boolean,
-    private val transitionEasing: TransitionEasing = TransitionEasing.LINEAR
+    private val transitionEasing: TransitionEasing = TransitionEasing.LINEAR,
+    private val degradationLedger: RenderDegradationLedger? = null,
+    private val effectName: String = "GPU effect",
 ) : BaseGlShaderProgram(useHdr, 1) {
 
     private var glProgram = 0
@@ -121,12 +137,13 @@ private class ShaderProgram(
 
     private fun setupGl() {
         val vs = compile(GLES30.GL_VERTEX_SHADER, VERT)
-        val fs = try {
-            compile(GLES30.GL_FRAGMENT_SHADER, fragmentShaderSource)
-        } catch (e: RuntimeException) {
-            android.util.Log.e("ShaderEffect", "Fragment shader compile failed, using passthrough", e)
-            compile(GLES30.GL_FRAGMENT_SHADER, FRAG_PASSTHROUGH)
-        }
+        val fs = compileFragmentWithFallback(
+            source = fragmentShaderSource,
+            fallback = FRAG_PASSTHROUGH,
+            effectName = effectName,
+            ledger = degradationLedger,
+            compile = { source -> compile(GLES30.GL_FRAGMENT_SHADER, source) },
+        )
         glProgram = GLES30.glCreateProgram()
         GLES30.glAttachShader(glProgram, vs)
         GLES30.glAttachShader(glProgram, fs)
@@ -194,6 +211,26 @@ private class ShaderProgram(
             "uniform sampler2D uTexSampler;\nin vec2 vTexCoord;\nout vec4 fragColor;\n" +
             "void main() { fragColor = texture(uTexSampler, vTexCoord); }"
     }
+}
+
+/**
+ * Compile with a known visual fallback while recording the loss of intent.
+ * The compiler is injected so this policy can be unit-tested without a GL
+ * context.
+ */
+internal fun <T> compileFragmentWithFallback(
+    source: String,
+    fallback: String,
+    effectName: String,
+    ledger: RenderDegradationLedger?,
+    compile: (String) -> T,
+    onFallback: () -> Unit = {},
+): T = try {
+    compile(source)
+} catch (e: RuntimeException) {
+    ledger?.record(RenderDegradationType.SHADER_COMPILE, effectName)
+    onFallback()
+    compile(fallback)
 }
 
 // ─── Factory for all GLSL-based effects ─────────────────────────────────────

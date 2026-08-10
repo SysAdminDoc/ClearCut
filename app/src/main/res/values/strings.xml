@@ -3413,6 +3413,8 @@
     <string name="export_failure_subtitle_burn_fix">Export without burned-in subtitles and use a separate subtitle file, or simplify the caption styling.</string>
     <string name="export_failure_stage_refused">A render stage refused to continue.</string>
     <string name="export_failure_stage_refused_fix">Open the details for the clip named above and undo the edit it could not render.</string>
+    <string name="export_failure_gpu_degraded">A GPU effect could not be rendered faithfully, so the export was stopped.</string>
+    <string name="export_failure_gpu_degraded_fix">Remove or simplify the named effect, then export again. The details below show the affected effect and fallback count.</string>
     <string name="export_failure_unknown_fix">Try again, then use Copy report in the export error card if it repeats.</string>
     <string name="vm_snapshot_deleted_toast">Snapshot “%1$s” deleted. Restore is available now.</string>
     <string name="vm_snapshot_restored_toast">Snapshot “%1$s” restored.</string>

@@ -52,6 +52,7 @@ class AudioOnlyExportContractTest {
             ffmpegEngine = FFmpegEngine(context),
             fontRegistry = FontRegistry(context),
             memoryTrimRegistry = MemoryTrimRegistry(),
+            productHealthLedger = ProductHealthLedger(context),
         )
     }
 

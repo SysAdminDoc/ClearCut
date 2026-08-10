@@ -630,14 +630,18 @@ fun EditorScreen(
         // v3.69 DESKTOP layout — fixed 260 dp left sidebar (Media Bin + quick
         // actions + v3.69 hub entry). Absent on PHONE / ONE_HANDED so the
         // existing layout is untouched when no desktop surface is present.
-        val desktopSidebarWidth = if (layoutMode == LayoutMode.DESKTOP && !isImmersivePreview) {
-            260.dp
-        } else {
-            0.dp
+        val compactDesktop = layoutMode == LayoutMode.DESKTOP &&
+            !isImmersivePreview &&
+            configuration.screenWidthDp < 600
+        val desktopSidebarWidth = when {
+            layoutMode != LayoutMode.DESKTOP || isImmersivePreview -> 0.dp
+            compactDesktop -> 84.dp
+            else -> 260.dp
         }
         if (layoutMode == LayoutMode.DESKTOP && !isImmersivePreview) {
             DesktopSidebar(
                 viewModel = viewModel,
+                compact = compactDesktop,
                 modifier = Modifier.align(Alignment.TopStart)
             )
         }
@@ -1386,12 +1390,12 @@ private fun EditorTopBar(
     var showAddTrackMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     // v3.69: honour layout mode. ONE_HANDED forces compact even on wider
-    // screens (user opted in). DESKTOP leaves the bar at its generous size
-    // — we would rather pad out on large screens than fake compact.
+    // screens (user opted in). A forced desktop layout on a phone uses the
+    // same compact action density so its responsive rail remains usable.
     val layoutMode = LocalLayoutMode.current
     val isCompactBar = when (layoutMode) {
         LayoutMode.ONE_HANDED -> true
-        LayoutMode.DESKTOP -> false
+        LayoutMode.DESKTOP -> LocalConfiguration.current.screenWidthDp < 600
         LayoutMode.PHONE -> LocalConfiguration.current.screenWidthDp < 430
     }
 
@@ -1669,7 +1673,7 @@ private fun EditorTopBar(
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier
-                            .size(if (isCompactBar) 40.dp else 44.dp)
+                            .size(TouchTarget.minimum)
                             .testTag(ClearCutTestTags.EDITOR_BACK)
                     ) {
                         Icon(
@@ -1753,7 +1757,7 @@ private fun EditorTopBar(
                             onClick = onUndo,
                             enabled = canUndo,
                             modifier = Modifier
-                                .size(if (isCompactBar) 32.dp else 34.dp)
+                                .size(TouchTarget.minimum)
                                 .testTag(ClearCutTestTags.EDITOR_UNDO)
                         ) {
                             Icon(
@@ -1767,7 +1771,7 @@ private fun EditorTopBar(
                             onClick = onRedo,
                             enabled = canRedo,
                             modifier = Modifier
-                                .size(if (isCompactBar) 32.dp else 34.dp)
+                                .size(TouchTarget.minimum)
                                 .testTag(ClearCutTestTags.EDITOR_REDO)
                         ) {
                             Icon(
@@ -1790,7 +1794,7 @@ private fun EditorTopBar(
                     ) {
                         IconButton(
                             onClick = { showOverflow = true },
-                            modifier = Modifier.size(if (isCompactBar) 36.dp else 38.dp)
+                            modifier = Modifier.size(TouchTarget.minimum)
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
@@ -1986,7 +1990,7 @@ private fun EditorTopBar(
                 if (!isCompactBar) {
                     IconButton(
                         onClick = onSearch,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(TouchTarget.minimum)
                     ) {
                         Icon(
                             Icons.Default.Search,
@@ -2008,7 +2012,7 @@ private fun EditorTopBar(
                     shape = RoundedCornerShape(Radius.md),
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .height(if (isCompactBar) 40.dp else 44.dp)
+                        .height(TouchTarget.minimum)
                         .testTag(ClearCutTestTags.EDITOR_EXPORT)
                 ) {
                     Icon(

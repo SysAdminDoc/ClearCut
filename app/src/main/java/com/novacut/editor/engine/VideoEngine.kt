@@ -195,6 +195,7 @@ class VideoEngine @Inject constructor(
     private val ffmpegEngine: FFmpegEngine,
     private val fontRegistry: FontRegistry,
     memoryTrimRegistry: MemoryTrimRegistry,
+    private val productHealthLedger: ProductHealthLedger,
 ) {
     private data class MediaCharacteristics(
         val isStillImage: Boolean,
@@ -287,6 +288,7 @@ class VideoEngine @Inject constructor(
     @Volatile private var activeExportOutputFile: File? = null
     @Volatile private var activeResumeSourceFile: File? = null
     private val preservedCancelledOutputPaths = ConcurrentHashMap.newKeySet<String>()
+    private val healthScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val mediaCharacteristicsCache = ConcurrentHashMap<String, MediaCharacteristics>()
 
@@ -302,6 +304,9 @@ class VideoEngine @Inject constructor(
     /** Latest non-fatal export disclosure, such as an accepted reverse fallback. */
     private val _exportWarningMessage = MutableStateFlow<String?>(null)
     val exportWarningMessage: StateFlow<String?> = _exportWarningMessage
+
+    private val _exportDegradationOutcome = MutableStateFlow<RenderDegradationOutcome?>(null)
+    val exportDegradationOutcome: StateFlow<RenderDegradationOutcome?> = _exportDegradationOutcome
 
     /**
      * Why the last export ended in ERROR. Every terminal path below already computes
@@ -343,6 +348,9 @@ class VideoEngine @Inject constructor(
         /** A stage refused to change render intent and stopped the export. */
         STAGE_REFUSED,
 
+        /** A GPU effect used a visual fallback during export. */
+        GPU_EFFECT_DEGRADED,
+
         /** No cause was recorded — the only outcome that may use generic copy. */
         UNKNOWN,
     }
@@ -354,6 +362,13 @@ class VideoEngine @Inject constructor(
     private fun failExport(cause: ExportFailureCause, message: String) {
         _exportErrorMessage.value = message
         _exportFailureCause.value = cause
+    }
+
+    private fun publishRenderDegradation(outcome: RenderDegradationOutcome) {
+        _exportDegradationOutcome.value = outcome
+        healthScope.launch {
+            productHealthLedger.record(HealthEvent.ExportGpuEffectDegraded(outcome.summary))
+        }
     }
 
     /** Keep every runtime fallback visible when several clips share one export. */
@@ -713,8 +728,10 @@ class VideoEngine @Inject constructor(
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
         _exportWarningMessage.value = null
+        _exportDegradationOutcome.value = null
 
         val preRenderTempFiles = mutableListOf<File>()
+        val degradationLedger = RenderDegradationLedger()
         try {
             val trimOptimizationDecision = evaluateTrimOptimization(
                 tracks = tracks,
@@ -758,6 +775,7 @@ class VideoEngine @Inject constructor(
                 durationOverrideMs = timelineDurationMsOverride,
                 trimOptimizationEnabled = trimOptimizationDecision.eligible,
                 mp4EditListTrimEnabled = trimOptimizationDecision.mp4EditListTrimEligible,
+                degradationLedger = degradationLedger,
             )
 
             startTransformerWithPolling(
@@ -775,6 +793,7 @@ class VideoEngine @Inject constructor(
                 resumeFromFile = resumeFromFile,
                 trimOptimizationEnabled = transformerPlan.trimOptimizationEnabled,
                 mp4EditListTrimEnabled = transformerPlan.mp4EditListTrimEnabled,
+                degradationLedger = degradationLedger,
                 metadataEntries = sourceMetadataEntries,
                 onProgress = onProgress,
                 onComplete = {
@@ -1275,6 +1294,7 @@ class VideoEngine @Inject constructor(
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
         _exportWarningMessage.value = null
+        _exportDegradationOutcome.value = null
 
         val parentDir = outputFile.parentFile ?: context.cacheDir
         val tempDir = File(
@@ -1285,6 +1305,7 @@ class VideoEngine @Inject constructor(
         val runWeightSum = plan.runs.sumOf { it.run.durationMs.coerceAtLeast(1L) }
         val concatWeight = (runWeightSum / 20L).coerceAtLeast(1L)
         val totalWeight = (runWeightSum + concatWeight).coerceAtLeast(1L)
+        val degradationLedger = RenderDegradationLedger()
         var completedWeight = 0L
 
         fun publishMixedProgress(baseWeight: Long, stepWeight: Long, progress: Float) {
@@ -1350,7 +1371,8 @@ class VideoEngine @Inject constructor(
                             textOverlays = emptyList(),
                             imageOverlays = emptyList(),
                             lottieOverlays = emptyList(),
-                            trackedObjects = emptyList()
+                            trackedObjects = emptyList(),
+                            degradationLedger = degradationLedger,
                         )
                         var segmentError: Exception? = null
                         startTransformerWithPolling(
@@ -1365,6 +1387,7 @@ class VideoEngine @Inject constructor(
                                 sourceSizeBytes = { clip -> querySourceSize(context, clip.sourceUri).takeIf { it > 0L } },
                             ),
                             expectedDurationMs = execution.run.durationMs,
+                            degradationLedger = degradationLedger,
                             metadataEntries = sourceMetadataEntries,
                             onProgress = { progress ->
                                 publishMixedProgress(completedWeight, stepWeight, progress)
@@ -1623,6 +1646,7 @@ class VideoEngine @Inject constructor(
         durationOverrideMs: Long? = null,
         trimOptimizationEnabled: Boolean = false,
         mp4EditListTrimEnabled: Boolean = false,
+        degradationLedger: RenderDegradationLedger? = null,
     ): TransformerExportPlan {
         val compositionPlan = CompositionPlanBuilder.build(
             tracks = tracks,
@@ -1660,7 +1684,8 @@ class VideoEngine @Inject constructor(
             textOverlays = textOverlays,
             imageOverlays = imageOverlays,
             lottieOverlays = lottieOverlays,
-            trackedObjects = trackedObjects
+            trackedObjects = trackedObjects,
+            degradationLedger = degradationLedger,
         )
         val unsupportedTrackBlendModes = visualTrackSequences
             .count { it.compositorLayer.blendMode != BlendMode.NORMAL }
@@ -1803,6 +1828,7 @@ class VideoEngine @Inject constructor(
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
         previewMode: Boolean = false,
+        degradationLedger: RenderDegradationLedger? = null,
     ): List<VisualTrackSequence> {
         return visibleVideoTracks.mapIndexed { inputId, track ->
             val includesEmbeddedAudio = track.clips.any { clip ->
@@ -1831,6 +1857,7 @@ class VideoEngine @Inject constructor(
                     trackedObjects = trackedObjects,
                     globalTransitions = globalTransitions,
                     previewMode = previewMode,
+                    degradationLedger = degradationLedger,
                 ),
                 hasEmbeddedAudio = hasEmbeddedAudio,
                 compositorLayer = ClearCutCompositorLayer(
@@ -1861,6 +1888,7 @@ class VideoEngine @Inject constructor(
         trackedObjects: List<TrackedObject>,
         globalTransitions: List<GlobalTransition> = emptyList(),
         previewMode: Boolean = false,
+        degradationLedger: RenderDegradationLedger? = null,
     ): EditedMediaItemSequence {
         val sortedClips = shiftedTimelineClips(clips, audioTrack.timelineOffsetMs)
         val trackTypes = if (videoMuted) {
@@ -1900,6 +1928,7 @@ class VideoEngine @Inject constructor(
                             nextClipTransition = nextTransition,
                             globalTransitions = globalTransitions,
                             previewMode = previewMode,
+                            degradationLedger = degradationLedger,
                         )
                     )
                     clipIndex++
@@ -1927,6 +1956,7 @@ class VideoEngine @Inject constructor(
         nextClipTransition: Transition? = null,
         globalTransitions: List<GlobalTransition> = emptyList(),
         previewMode: Boolean = false,
+        degradationLedger: RenderDegradationLedger? = null,
     ): EditedMediaItem {
         val mediaItem = buildMediaItemForClip(clip, clip.sourceUri)
         val safeDimensions = Media3ExportRobustnessPolicy.encoderSafeDimensions(targetW, targetH)
@@ -1945,7 +1975,8 @@ class VideoEngine @Inject constructor(
                     effect = effect,
                     segmentationEngine = segmentationEngine,
                     trackedObjects = clipTrackedObjects,
-                    sourceTimeOffsetMs = clip.trimStartMs
+                    sourceTimeOffsetMs = clip.trimStartMs,
+                    degradationLedger = degradationLedger,
                 )?.let { add(it) }
             }
             addColorGradingEffects(clip)
@@ -1981,8 +2012,12 @@ class VideoEngine @Inject constructor(
             }
 
             if (!previewMode) {
-                clip.headTransition?.let { add(EffectBuilder.buildTransitionEffect(it)) }
-                nextClipTransition?.let { add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs)) }
+                clip.headTransition?.let {
+                    add(EffectBuilder.buildTransitionEffect(it, degradationLedger))
+                }
+                nextClipTransition?.let {
+                    add(EffectBuilder.buildTransitionOutEffect(it, clip.durationMs, degradationLedger))
+                }
                 GlobalTransitionEffect.forClip(globalTransitions, clip.timelineStartMs, clip.timelineEndMs)
                     ?.let { add(it) }
             }
@@ -2106,7 +2141,11 @@ class VideoEngine @Inject constructor(
                 for (adjClip in adjTrack.clips) {
                     if (adjClip.timelineStartMs < clipEnd && adjClip.timelineEndMs > clipStart) {
                         for (effect in adjClip.effects.filter { it.enabled }) {
-                            EffectBuilder.buildVideoEffect(effect, segmentationEngine)?.let { add(it) }
+                            EffectBuilder.buildVideoEffect(
+                                effect = effect,
+                                segmentationEngine = segmentationEngine,
+                                degradationLedger = degradationLedger,
+                            )?.let { add(it) }
                         }
                     }
                 }
@@ -2132,9 +2171,16 @@ class VideoEngine @Inject constructor(
             muted = videoMuted || linkedAudioTrackPresent,
             trackAudioGain = trackAudioGain,
         )
+        val exportVideoEffects = if (degradationLedger != null) {
+            videoEffects.map { effect ->
+                if (effect is ShaderEffect) {
+                    effect.withDegradationLedger(degradationLedger, "clip ${clip.id}")
+                } else effect
+            }
+        } else videoEffects
 
         val itemBuilder = EditedMediaItem.Builder(mediaItem)
-            .setEffects(Effects(audioProcessors, videoEffects))
+            .setEffects(Effects(audioProcessors, exportVideoEffects))
             // Media3 applies clipping to this declared input duration. Supplying
             // the retained duration makes any non-zero trim start invalid.
             .setDurationUs(durationMsToUs(clip.sourceDurationMs.coerceAtLeast(1L)))
@@ -2524,6 +2570,7 @@ class VideoEngine @Inject constructor(
         resumeFromFile: File? = null,
         trimOptimizationEnabled: Boolean = false,
         mp4EditListTrimEnabled: Boolean = false,
+        degradationLedger: RenderDegradationLedger? = null,
         metadataEntries: List<androidx.media3.common.Metadata.Entry> = emptyList(),
     ) {
         if (!AudioCodec.isSupportedForExport(config.audioCodec)) {
@@ -2600,6 +2647,19 @@ class VideoEngine @Inject constructor(
                         runCatching { outputFile.delete() }
                         runCatching { resumeFromFile?.delete() }
                         onError(IllegalStateException("Empty output file"))
+                        return
+                    }
+                    degradationLedger?.outcome()?.let { outcome ->
+                        Log.e(TAG, "GPU effect degradation detected: ${outcome.summary}")
+                        publishRenderDegradation(outcome)
+                        failExport(ExportFailureCause.GPU_EFFECT_DEGRADED, outcome.summary)
+                        _exportState.value = ExportState.ERROR
+                        _exportProgress.value = 0f
+                        activeExportOutputFile = null
+                        runCatching { outputFile.delete() }
+                        runCatching { resumeFromFile?.delete() }
+                        terminalReached = true
+                        onError(RenderDegradationException(outcome))
                         return
                     }
                     val verification = ExportOutputVerifier.verify(
@@ -2921,6 +2981,7 @@ class VideoEngine @Inject constructor(
         _exportState.value = ExportState.IDLE
         _exportProgress.value = 0f
         _exportWarningMessage.value = null
+        _exportDegradationOutcome.value = null
     }
 
     fun release() {
@@ -2936,6 +2997,7 @@ class VideoEngine @Inject constructor(
         previewTracks = emptyList()
         previewCompositionPlan = PreviewCompositionPlan.create(emptyList())
         clearThumbnailCache()
+        healthScope.cancel()
     }
 
 }

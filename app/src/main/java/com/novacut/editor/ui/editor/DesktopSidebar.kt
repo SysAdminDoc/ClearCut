@@ -21,6 +21,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +32,7 @@ import com.novacut.editor.model.TrackType
 import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 
 /**
  * Desktop-class left sidebar. Rendered beside the editor column when
@@ -51,6 +54,7 @@ import com.novacut.editor.ui.theme.Spacing
 @Composable
 fun DesktopSidebar(
     viewModel: EditorViewModel,
+    compact: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val semanticColors = LocalClearCutColors.current
@@ -59,20 +63,45 @@ fun DesktopSidebar(
     Column(
         modifier = modifier
             .fillMaxHeight()
-            .width(260.dp)
+            .width(if (compact) 84.dp else 260.dp)
             .testTag(ClearCutTestTags.EDITOR_DESKTOP_SIDEBAR)
             .background(semanticColors.backgroundMid)
-            .padding(horizontal = Spacing.md, vertical = 14.dp),
+            .padding(horizontal = if (compact) 8.dp else Spacing.md, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        ProjectHeaderBlock(
-            name = state.project.name,
-            resolution = state.project.resolution.label,
-            fps = state.project.frameRate,
-            totalDurationMs = state.totalDurationMs
+        if (compact) {
+            CompactSidebarHeader(projectName = state.project.name)
+            QuickActionsBlock(viewModel = viewModel, compact = true)
+        } else {
+            ProjectHeaderBlock(
+                name = state.project.name,
+                resolution = state.project.resolution.label,
+                fps = state.project.frameRate,
+                totalDurationMs = state.totalDurationMs
+            )
+            QuickActionsBlock(viewModel = viewModel)
+            MediaLibraryBlock(viewModel = viewModel, state = state)
+        }
+    }
+}
+
+@Composable
+private fun CompactSidebarHeader(projectName: String) {
+    val semanticColors = LocalClearCutColors.current
+    Box(
+        modifier = Modifier
+            .size(TouchTarget.minimum)
+            .clip(RoundedCornerShape(Radius.md))
+            .background(semanticColors.panelRaised)
+            .semantics { contentDescription = projectName },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.VideoLibrary,
+            contentDescription = null,
+            tint = ClearCutAccents.Sky,
+            modifier = Modifier.size(22.dp)
         )
-        QuickActionsBlock(viewModel = viewModel)
-        MediaLibraryBlock(viewModel = viewModel, state = state)
     }
 }
 
@@ -108,25 +137,27 @@ private fun ProjectHeaderBlock(
 }
 
 @Composable
-private fun QuickActionsBlock(viewModel: EditorViewModel) {
+private fun QuickActionsBlock(viewModel: EditorViewModel, compact: Boolean = false) {
     val semanticColors = LocalClearCutColors.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = stringResource(R.string.desktop_sidebar_quick),
-            color = semanticColors.overlayStrong,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold
-        )
-        SidebarAction(icon = Icons.Default.Add, label = stringResource(R.string.editor_add_media), tint = ClearCutAccents.Blue) {
+        if (!compact) {
+            Text(
+                text = stringResource(R.string.desktop_sidebar_quick),
+                color = semanticColors.overlayStrong,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        SidebarAction(icon = Icons.Default.Add, label = stringResource(R.string.editor_add_media), tint = ClearCutAccents.Blue, compact = compact) {
             viewModel.showMediaPicker()
         }
-        SidebarAction(icon = Icons.Default.Videocam, label = stringResource(R.string.desktop_sidebar_record), tint = ClearCutAccents.Green) {
+        SidebarAction(icon = Icons.Default.Videocam, label = stringResource(R.string.desktop_sidebar_record), tint = ClearCutAccents.Green, compact = compact) {
             viewModel.showMediaPicker()
         }
-        SidebarAction(icon = Icons.Default.FileDownload, label = stringResource(R.string.editor_export), tint = ClearCutAccents.Rosewater) {
+        SidebarAction(icon = Icons.Default.FileDownload, label = stringResource(R.string.editor_export), tint = ClearCutAccents.Rosewater, compact = compact) {
             viewModel.showExportSheet()
         }
-        SidebarAction(icon = Icons.Default.AutoAwesome, label = stringResource(R.string.v369_features_label), tint = ClearCutAccents.Mauve) {
+        SidebarAction(icon = Icons.Default.AutoAwesome, label = stringResource(R.string.v369_features_label), tint = ClearCutAccents.Mauve, compact = compact) {
             viewModel.showV369Features()
         }
     }
@@ -137,21 +168,29 @@ private fun SidebarAction(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     tint: androidx.compose.ui.graphics.Color,
+    compact: Boolean = false,
     onClick: () -> Unit
 ) {
     val semanticColors = LocalClearCutColors.current
     Row(
         modifier = Modifier
-            .fillMaxWidth()
+            .then(
+                if (compact) Modifier.size(TouchTarget.minimum)
+                else Modifier.fillMaxWidth().heightIn(min = TouchTarget.minimum)
+            )
             .clip(RoundedCornerShape(Radius.md))
             .background(tint.copy(alpha = 0.06f))
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = Spacing.sm, vertical = Spacing.sm),
+            .semantics { contentDescription = label }
+            .padding(horizontal = if (compact) 0.dp else Spacing.sm, vertical = if (compact) 0.dp else Spacing.sm),
+        horizontalArrangement = if (compact) Arrangement.Center else Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(Spacing.sm))
-        Text(label, color = semanticColors.text, fontSize = 13.sp)
+        if (!compact) {
+            Spacer(Modifier.width(Spacing.sm))
+            Text(label, color = semanticColors.text, fontSize = 13.sp)
+        }
     }
 }
 

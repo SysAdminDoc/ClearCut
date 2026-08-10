@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
@@ -111,6 +112,12 @@ private fun TimelineThumbnailStrip(
             )
         }
     }
+}
+
+private fun timelineTrackHeight(track: Track, compact: Boolean): Dp = when {
+    track.isCollapsed -> if (compact) 56.dp else 64.dp
+    compact -> track.trackHeight.coerceAtLeast(108).dp
+    else -> track.trackHeight.coerceAtLeast(120).dp
 }
 
 // Allocation-free clip lookup for drag handlers — they fire per pointer event
@@ -516,7 +523,9 @@ fun Timeline(
             (timelineWidthPx / pixelsPerMs).toLong().coerceAtLeast(0L)
         }
     }
-    val headerWidth = if (isCompactTimeline) 80.dp else 96.dp
+    // The compact rail still needs room for the track icon, label, and a pair
+    // of 48dp track targets (visibility plus more-options).
+    val headerWidth = if (isCompactTimeline) 120.dp else 96.dp
     val chromePadding = if (isCompactTimeline) 4.dp else 10.dp
     val contentPadding = if (isCompactTimeline) 2.dp else 8.dp
     val trimHandleVisualWidth = 14.dp
@@ -1003,11 +1012,7 @@ fun Timeline(
 
                     tracks.forEach { track ->
                         key(track.id) {
-                            val currentTrackHeight = when {
-                                track.isCollapsed -> if (isCompactTimeline) 24.dp else 28.dp
-                                isCompactTimeline -> track.trackHeight.coerceAtMost(56).dp
-                                else -> track.trackHeight.dp
-                            }
+                            val currentTrackHeight = timelineTrackHeight(track, isCompactTimeline)
                             val trackColor = trackAccentColor(track.type)
                             var trackMenuExpanded by remember(track.id) { mutableStateOf(false) }
                             val trackOffsetStatusLabel = if (track.timelineOffsetMs != 0L) {
@@ -1583,11 +1588,7 @@ fun Timeline(
 
                     // Tracks
                     for (track in tracks) {
-                    val currentTrackHeight = when {
-                        track.isCollapsed -> if (isCompactTimeline) 24.dp else 28.dp
-                        isCompactTimeline -> track.trackHeight.coerceAtMost(56).dp
-                        else -> track.trackHeight.dp
-                    }
+                    val currentTrackHeight = timelineTrackHeight(track, isCompactTimeline)
                     key(track.id) {
                         val trackColor = trackAccentColor(track.type)
                         Box(

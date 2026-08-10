@@ -36,9 +36,10 @@ internal object EffectBuilder {
         effect: Effect,
         segmentationEngine: SegmentationEngine,
         trackedObjects: List<TrackedObject> = emptyList(),
-        sourceTimeOffsetMs: Long = 0L
+        sourceTimeOffsetMs: Long = 0L,
+        degradationLedger: RenderDegradationLedger? = null,
     ): androidx.media3.common.Effect? {
-        return when (effect.type) {
+        val built = when (effect.type) {
             EffectType.BRIGHTNESS -> {
                 val value = effect.params.safeParam("value", 0f, -1f, 1f)
                 RgbMatrix { _, _ ->
@@ -307,8 +308,12 @@ internal object EffectBuilder {
             }
             EffectType.BG_REMOVAL -> {
                 val threshold = effect.params.safeParam("threshold", 0.5f, 0.1f, 0.9f)
-                if (segmentationEngine.isReady()) {
-                    segmentationEngine.createExportEffect(threshold)
+                if (segmentationEngine.isReady() || degradationLedger != null) {
+                    segmentationEngine.createExportEffect(
+                        threshold = threshold,
+                        degradationLedger = degradationLedger,
+                        effectName = effect.type.name,
+                    )
                 } else null
             }
             EffectType.VHS_RETRO -> {
@@ -320,6 +325,11 @@ internal object EffectBuilder {
                 EffectShaders.lightLeak(intensity)
             }
             EffectType.SPEED, EffectType.REVERSE -> null
+        }
+        return if (built is ShaderEffect && degradationLedger != null) {
+            built.withDegradationLedger(degradationLedger, effect.type.name)
+        } else {
+            built
         }
     }
 
@@ -380,7 +390,10 @@ internal object EffectBuilder {
     /**
      * Build transition-in effect for a clip.
      */
-    fun buildTransitionEffect(transition: Transition): androidx.media3.common.Effect {
+    fun buildTransitionEffect(
+        transition: Transition,
+        degradationLedger: RenderDegradationLedger? = null,
+    ): androidx.media3.common.Effect {
         // Clamp durationMs before multiplying to avoid Float overflow at
         // pathological values (anything above ~25 days multiplied by 1000f
         // lands on Float.POSITIVE_INFINITY, which poisons every division
@@ -428,9 +441,12 @@ internal object EffectBuilder {
             TransitionType.SQUARES_WIRE -> EffectShaders.transitionSquaresWire(durationUs)
             TransitionType.COLOR_PHASE -> EffectShaders.transitionColorPhase(durationUs)
         }
-        return if (transition.easing != com.novacut.editor.model.TransitionEasing.LINEAR) {
+        val eased = if (transition.easing != com.novacut.editor.model.TransitionEasing.LINEAR) {
             (effect as ShaderEffect).withEasing(transition.easing)
         } else effect
+        return if (eased is ShaderEffect && degradationLedger != null) {
+            eased.withDegradationLedger(degradationLedger, "transition ${transition.type.name}")
+        } else eased
     }
 
     /**
@@ -438,7 +454,11 @@ internal object EffectBuilder {
      * Activates near the end of the clip to create a matching exit animation
      * for the next clip's incoming transition.
      */
-    fun buildTransitionOutEffect(transition: Transition, clipDurationMs: Long): androidx.media3.common.Effect {
+    fun buildTransitionOutEffect(
+        transition: Transition,
+        clipDurationMs: Long,
+        degradationLedger: RenderDegradationLedger? = null,
+    ): androidx.media3.common.Effect {
         // Clamp durationMs before multiplying to avoid Float overflow at
         // pathological values (anything above ~25 days multiplied by 1000f
         // lands on Float.POSITIVE_INFINITY, which poisons every division
@@ -466,9 +486,12 @@ internal object EffectBuilder {
                 EffectShaders.transitionCircleClose(durationUs, clipDurationUs)
             else -> EffectShaders.transitionFadeOut(durationUs, clipDurationUs)
         }
-        return if (transition.easing != com.novacut.editor.model.TransitionEasing.LINEAR) {
+        val eased = if (transition.easing != com.novacut.editor.model.TransitionEasing.LINEAR) {
             (effect as ShaderEffect).withEasing(transition.easing)
         } else effect
+        return if (eased is ShaderEffect && degradationLedger != null) {
+            eased.withDegradationLedger(degradationLedger, "transition ${transition.type.name}")
+        } else eased
     }
 
     /**

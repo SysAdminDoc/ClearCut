@@ -332,6 +332,7 @@ class Media3ExportRobustnessInstrumentationTest {
             ffmpegEngine = FFmpegEngine(context),
             fontRegistry = FontRegistry(context),
             memoryTrimRegistry = MemoryTrimRegistry(),
+            productHealthLedger = ProductHealthLedger(context),
         )
     }
 }

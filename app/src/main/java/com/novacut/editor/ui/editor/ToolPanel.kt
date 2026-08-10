@@ -515,6 +515,7 @@ private fun BottomTabBarItem(
             )
             .testTag(ClearCutTestTags.EDITOR_TOOL_TAB_PREFIX + tab.id)
             .semantics { contentDescription = itemDescription }
+            .defaultMinSize(minWidth = TouchTarget.minimum)
             .height(itemHeight)
             .background(itemContainerColor)
             .border(BorderStroke(1.dp, itemBorderColor), itemShape)
