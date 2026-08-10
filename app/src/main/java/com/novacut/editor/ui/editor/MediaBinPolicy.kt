@@ -26,6 +26,79 @@ data class MediaBinQuery(
     val sort: MediaBinSort = MediaBinSort.STATUS,
 )
 
+enum class MediaScanIssueKind {
+    PROVIDER_FAILURE,
+    SKIPPED,
+}
+
+data class MediaScanIssue(
+    val assetId: String,
+    val fileName: String,
+    val kind: MediaScanIssueKind,
+)
+
+data class MediaScanResult(
+    val assets: List<MediaAsset> = emptyList(),
+    val issues: List<MediaScanIssue> = emptyList(),
+) {
+    val providerFailureCount: Int
+        get() = issues.count { it.kind == MediaScanIssueKind.PROVIDER_FAILURE }
+
+    val skippedCount: Int
+        get() = issues.count { it.kind == MediaScanIssueKind.SKIPPED }
+
+    val hasPartialResults: Boolean
+        get() = issues.isNotEmpty()
+}
+
+enum class MediaScanStatus {
+    IDLE,
+    SCANNING,
+    READY,
+    READY_WITH_PARTIAL_RESULTS,
+    FAILED,
+    CANCELLED,
+}
+
+sealed interface MediaScanState {
+    val result: MediaScanResult
+
+    data object Idle : MediaScanState {
+        override val result: MediaScanResult = MediaScanResult()
+    }
+
+    data class Scanning(
+        override val result: MediaScanResult = MediaScanResult(),
+    ) : MediaScanState
+
+    data class Ready(
+        override val result: MediaScanResult,
+    ) : MediaScanState
+
+    data class Failed(
+        override val result: MediaScanResult,
+    ) : MediaScanState
+
+    data class Cancelled(
+        override val result: MediaScanResult,
+    ) : MediaScanState
+}
+
+internal fun MediaScanState.status(): MediaScanStatus = when (this) {
+    MediaScanState.Idle -> MediaScanStatus.IDLE
+    is MediaScanState.Scanning -> MediaScanStatus.SCANNING
+    is MediaScanState.Ready -> if (result.hasPartialResults) {
+        MediaScanStatus.READY_WITH_PARTIAL_RESULTS
+    } else {
+        MediaScanStatus.READY
+    }
+    is MediaScanState.Failed -> MediaScanStatus.FAILED
+    is MediaScanState.Cancelled -> MediaScanStatus.CANCELLED
+}
+
+internal fun nextMediaScanGeneration(current: Long): Long =
+    if (current == Long.MAX_VALUE) 1L else current + 1L
+
 internal fun filterAndSortMediaAssets(
     assets: List<MediaAsset>,
     query: MediaBinQuery,

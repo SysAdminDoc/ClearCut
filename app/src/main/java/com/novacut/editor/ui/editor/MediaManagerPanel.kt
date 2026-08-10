@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,7 +59,10 @@ import com.novacut.editor.engine.ProjectMediaAsset
 import com.novacut.editor.engine.normalizeMediaAssetTags
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
@@ -105,28 +109,62 @@ fun MediaManagerPanel(
     val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
     val diagnostics = mediaHealthReport?.diagnostics.orEmpty()
-    var assets by remember(tracks, persistedMediaAssets, relinkReports, diagnostics) {
-        mutableStateOf(emptyList<MediaAsset>())
-    }
-    var isAnalyzing by remember(tracks, persistedMediaAssets, relinkReports, diagnostics) {
-        mutableStateOf(true)
-    }
+    val scanScope = androidx.compose.runtime.rememberCoroutineScope()
+    var scanState by remember { mutableStateOf<MediaScanState>(MediaScanState.Idle) }
+    var scanJob by remember { mutableStateOf<Job?>(null) }
+    var scanGeneration by remember { mutableLongStateOf(0L) }
     var query by remember { mutableStateOf(MediaBinQuery()) }
 
-    LaunchedEffect(context, tracks, persistedMediaAssets, relinkReports, diagnostics) {
-        isAnalyzing = true
-        assets = withContext(Dispatchers.IO) {
-            analyzeMediaAssets(
-                context = context,
-                tracks = tracks,
-                persistedMediaAssets = persistedMediaAssets,
-                relinkReports = relinkReports,
-                diagnosticsByUri = diagnostics.associateBy { it.uri },
-            )
+    fun startScan() {
+        val generation = nextMediaScanGeneration(scanGeneration)
+        val previousResult = scanState.result
+        scanGeneration = generation
+        scanJob?.cancel()
+        scanState = MediaScanState.Scanning(previousResult)
+        scanJob = scanScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    analyzeMediaAssets(
+                        context = context,
+                        tracks = tracks,
+                        persistedMediaAssets = persistedMediaAssets,
+                        relinkReports = relinkReports,
+                        diagnosticsByUri = diagnostics.associateBy { it.uri },
+                    )
+                }
+                if (scanGeneration == generation) {
+                    scanState = MediaScanState.Ready(result)
+                    scanJob = null
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                if (scanGeneration == generation) {
+                    scanState = MediaScanState.Failed(previousResult)
+                    scanJob = null
+                }
+            }
         }
-        isAnalyzing = false
     }
 
+    fun cancelScan() {
+        if (scanState.status() == MediaScanStatus.SCANNING) {
+            scanGeneration = nextMediaScanGeneration(scanGeneration)
+            scanJob?.cancel()
+            scanJob = null
+            scanState = MediaScanState.Cancelled(scanState.result)
+        }
+    }
+
+    LaunchedEffect(context, tracks, persistedMediaAssets, relinkReports, diagnostics) {
+        startScan()
+    }
+
+    val scanStatus = scanState.status()
+    val scanResult = scanState.result
+    val assets = scanResult.assets
+    val scanIssues = scanResult.issues
+    val isAnalyzing = scanStatus == MediaScanStatus.SCANNING
     val totalSize = assets.sumOf { it.fileSize }
     val missingCount = assets.count { !it.isAccessible }
     val healthBlockingCount = mediaHealthReport?.blockingCount ?: 0
@@ -135,7 +173,15 @@ fun MediaManagerPanel(
         tracks.count { it.index >= 2 && it.clips.isEmpty() }
     }
     val statusLabel = when {
+        scanStatus == MediaScanStatus.IDLE -> stringResource(R.string.media_manager_status_idle)
         isAnalyzing -> stringResource(R.string.media_manager_status_scanning)
+        scanStatus == MediaScanStatus.FAILED -> stringResource(R.string.media_manager_status_scan_failed)
+        scanStatus == MediaScanStatus.CANCELLED -> stringResource(R.string.media_manager_status_scan_cancelled)
+        scanStatus == MediaScanStatus.READY_WITH_PARTIAL_RESULTS -> pluralStringResource(
+            R.plurals.media_manager_status_scan_partial,
+            scanIssues.size,
+            scanIssues.size,
+        )
         healthBlockingCount > 0 -> pluralStringResource(
             R.plurals.media_health_blocking_count,
             healthBlockingCount,
@@ -154,6 +200,9 @@ fun MediaManagerPanel(
         else -> stringResource(R.string.media_manager_status_healthy)
     }
     val statusAccent = when {
+        scanStatus == MediaScanStatus.FAILED -> ClearCutAccents.Red
+        scanStatus == MediaScanStatus.CANCELLED -> ClearCutAccents.Peach
+        scanStatus == MediaScanStatus.READY_WITH_PARTIAL_RESULTS -> ClearCutAccents.Peach
         isAnalyzing -> ClearCutAccents.Blue
         healthBlockingCount > 0 -> ClearCutAccents.Red
         missingCount > 0 -> ClearCutAccents.Red
@@ -290,7 +339,7 @@ fun MediaManagerPanel(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    ) {
                         CircularProgressIndicator(
                             modifier = Modifier
                                 .height(18.dp)
@@ -314,11 +363,26 @@ fun MediaManagerPanel(
                                 color = semanticColors.subtext
                             )
                         }
+                        OutlinedButton(
+                            onClick = ::cancelScan,
+                            shape = RoundedCornerShape(14.dp),
+                        ) {
+                            Text(text = stringResource(R.string.media_manager_scan_cancel))
+                        }
                     }
                 }
             } else {
                 MediaManagerMessageCard(
                     title = when {
+                        scanStatus == MediaScanStatus.FAILED -> stringResource(
+                            R.string.media_manager_scan_failed_title
+                        )
+                        scanStatus == MediaScanStatus.CANCELLED -> stringResource(
+                            R.string.media_manager_scan_cancelled_title
+                        )
+                        scanStatus == MediaScanStatus.READY_WITH_PARTIAL_RESULTS -> stringResource(
+                            R.string.media_manager_scan_partial_title
+                        )
                         missingCount > 0 -> pluralStringResource(
                             R.plurals.media_manager_missing_title,
                             missingCount,
@@ -328,22 +392,55 @@ fun MediaManagerPanel(
                         else -> stringResource(R.string.media_manager_ready_title)
                     },
                     body = when {
+                        scanStatus == MediaScanStatus.FAILED -> stringResource(
+                            R.string.media_manager_scan_failed_body
+                        )
+                        scanStatus == MediaScanStatus.CANCELLED -> stringResource(
+                            R.string.media_manager_scan_cancelled_body
+                        )
+                        scanStatus == MediaScanStatus.READY_WITH_PARTIAL_RESULTS -> stringResource(
+                            R.string.media_manager_scan_partial_body
+                        )
                         missingCount > 0 -> stringResource(R.string.media_manager_missing_body)
                         assets.isEmpty() -> stringResource(R.string.media_manager_empty_body)
                         else -> stringResource(R.string.media_manager_ready_body)
                     },
                     accent = when {
+                        scanStatus == MediaScanStatus.FAILED -> ClearCutAccents.Red
+                        scanStatus == MediaScanStatus.CANCELLED -> ClearCutAccents.Peach
+                        scanStatus == MediaScanStatus.READY_WITH_PARTIAL_RESULTS -> ClearCutAccents.Peach
                         missingCount > 0 -> ClearCutAccents.Red
                         assets.isEmpty() -> ClearCutAccents.Blue
                         else -> ClearCutAccents.Green
                     },
                     icon = when {
+                        scanStatus == MediaScanStatus.FAILED -> Icons.Default.BrokenImage
+                        scanStatus == MediaScanStatus.CANCELLED -> Icons.Default.PermMedia
+                        scanStatus == MediaScanStatus.READY_WITH_PARTIAL_RESULTS -> Icons.Default.Link
                         missingCount > 0 -> Icons.Default.BrokenImage
                         assets.isEmpty() -> Icons.Default.PermMedia
                         else -> Icons.Default.Link
                     }
                 )
+                if (scanStatus == MediaScanStatus.FAILED || scanStatus == MediaScanStatus.CANCELLED) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = ::startScan,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
+                        Text(text = stringResource(R.string.media_manager_scan_retry))
+                    }
+                }
             }
+        }
+
+        if (!isAnalyzing && scanIssues.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            MediaScanIssueCard(
+                issues = scanIssues,
+                onRetry = ::startScan,
+            )
         }
 
         if (!isAnalyzing && missingCount > 0) {
@@ -653,6 +750,93 @@ private fun MediaManagerMessageCard(
                     style = MaterialTheme.typography.bodyMedium,
                     color = semanticColors.subtext
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MediaScanIssueCard(
+    issues: List<MediaScanIssue>,
+    onRetry: () -> Unit,
+) {
+    val semanticColors = LocalClearCutColors.current
+    val providerFailureCount = issues.count { it.kind == MediaScanIssueKind.PROVIDER_FAILURE }
+    val skippedCount = issues.count { it.kind == MediaScanIssueKind.SKIPPED }
+    val accent = ClearCutAccents.Peach
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = accent.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.media_manager_scan_issue_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = accent,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (providerFailureCount > 0) {
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.media_manager_scan_provider_failure_count,
+                        providerFailureCount,
+                        providerFailureCount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = semanticColors.subtext,
+                )
+            }
+            if (skippedCount > 0) {
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.media_manager_scan_skipped_count,
+                        skippedCount,
+                        skippedCount,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = semanticColors.subtext,
+                )
+            }
+            issues.take(3).forEach { issue ->
+                Text(
+                    text = stringResource(
+                        R.string.media_manager_scan_issue_asset,
+                        issue.fileName,
+                        issue.kind.localizedLabel(),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = semanticColors.text,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (issues.size > 3) {
+                Text(
+                    text = pluralStringResource(
+                        R.plurals.media_manager_scan_issue_more,
+                        issues.size - 3,
+                        issues.size - 3,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = semanticColors.subtext,
+                )
+            }
+            Text(
+                text = stringResource(R.string.media_manager_scan_issue_action),
+                style = MaterialTheme.typography.bodySmall,
+                color = semanticColors.subtext,
+            )
+            OutlinedButton(
+                onClick = onRetry,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Text(text = stringResource(R.string.media_manager_scan_retry))
             }
         }
     }
@@ -1282,8 +1466,9 @@ private fun analyzeMediaAssets(
     persistedMediaAssets: List<ProjectMediaAsset>,
     relinkReports: Map<String, MediaRelinkProbe.ClipRelinkReport>,
     diagnosticsByUri: Map<String, MediaDiagnostic>,
-): List<MediaAsset> {
+): MediaScanResult {
     val clipsByUri = mutableMapOf<String, MutableList<Clip>>()
+    val issues = mutableListOf<MediaScanIssue>()
 
     tracks.forEach { track ->
         track.clips.forEach { clip ->
@@ -1322,7 +1507,7 @@ private fun analyzeMediaAssets(
         }
         val effectiveAccessible = relinkState == MediaRelinkProbe.RelinkState.OK
 
-        MediaAsset(
+        val asset = MediaAsset(
             assetId = persisted?.assetId ?: uri.toString(),
             uri = uri,
             fileName = persisted?.displayName ?: probe.fileName,
@@ -1338,6 +1523,14 @@ private fun analyzeMediaAssets(
             notes = persisted?.notes.orEmpty(),
             tags = persisted?.tags.orEmpty(),
         )
+        probe.issueKind?.let { issueKind ->
+            issues += MediaScanIssue(
+                assetId = asset.assetId,
+                fileName = asset.fileName,
+                kind = issueKind,
+            )
+        }
+        asset
     }
 
     val referencedUris = clipsByUri.keys
@@ -1350,7 +1543,7 @@ private fun analyzeMediaAssets(
             val uri = Uri.parse(persisted.managedUri.ifBlank { persisted.originalUri })
             val probe = probeMediaAsset(context, uri)
             val accessible = probe.accessible && persisted.importStatus != "missing"
-            MediaAsset(
+            val asset = MediaAsset(
                 assetId = persisted.assetId,
                 uri = uri,
                 fileName = persisted.displayName ?: probe.fileName,
@@ -1368,31 +1561,50 @@ private fun analyzeMediaAssets(
                 notes = persisted.notes,
                 tags = persisted.tags,
             )
+            probe.issueKind?.let { issueKind ->
+                issues += MediaScanIssue(
+                    assetId = asset.assetId,
+                    fileName = asset.fileName,
+                    kind = issueKind,
+                )
+            }
+            asset
         }
 
-    return (referenced + unused)
-        .distinctBy { it.assetId }
-        .sortedWith(compareBy<MediaAsset> { it.isAccessible }.thenByDescending { it.usedInClipIds.size })
+    return MediaScanResult(
+        assets = (referenced + unused)
+            .distinctBy { it.assetId }
+            .sortedWith(compareBy<MediaAsset> { it.isAccessible }.thenByDescending { it.usedInClipIds.size }),
+        issues = issues
+            .distinctBy { issue -> issue.assetId to issue.kind }
+            .sortedWith(compareBy<MediaScanIssue> { it.kind }.thenBy { it.fileName.lowercase(Locale.ROOT) }),
+    )
 }
 
 private data class MediaAssetProbe(
     val fileName: String,
     val fileSize: Long,
     val accessible: Boolean,
+    val issueKind: MediaScanIssueKind? = null,
 )
 
 private fun probeMediaAsset(context: Context, uri: Uri): MediaAssetProbe {
     var fileName = uri.lastPathSegment ?: "Unknown"
     var fileSize = 0L
     var accessible = false
+    var issueKind: MediaScanIssueKind? = null
 
     try {
-        if (uri.scheme == "file") {
+        if (uri.toString().isBlank()) {
+            issueKind = MediaScanIssueKind.SKIPPED
+        } else if (uri.scheme == "file") {
             val localFile = uri.path?.let(::File)
             if (localFile != null) {
                 if (localFile.name.isNotBlank()) fileName = localFile.name
                 accessible = localFile.exists()
                 if (accessible) fileSize = localFile.length()
+            } else {
+                issueKind = MediaScanIssueKind.SKIPPED
             }
         } else {
             context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -1410,13 +1622,21 @@ private fun probeMediaAsset(context: Context, uri: Uri): MediaAssetProbe {
                     if (fileSize <= 0L && descriptor.length > 0L) fileSize = descriptor.length
                 }
             }
+            if (!accessible) issueKind = MediaScanIssueKind.SKIPPED
         }
     } catch (_: Exception) {
         // The asset remains visible as missing so the user can search/filter it
-        // and choose a relink action; provider errors are not silently discarded.
+        // and choose a relink action. The issue is surfaced separately so a
+        // provider failure is not mistaken for an ordinary missing file.
+        issueKind = MediaScanIssueKind.PROVIDER_FAILURE
     }
 
-    return MediaAssetProbe(fileName = fileName, fileSize = fileSize, accessible = accessible)
+    return MediaAssetProbe(
+        fileName = fileName,
+        fileSize = fileSize,
+        accessible = accessible,
+        issueKind = issueKind,
+    )
 }
 
 private fun formatFileSize(bytes: Long): String = when {
@@ -1434,6 +1654,12 @@ private fun MediaBinFilter.localizedLabel(): String = when (this) {
     MediaBinFilter.USED -> stringResource(R.string.media_bin_filter_used)
     MediaBinFilter.UNUSED -> stringResource(R.string.media_bin_filter_unused)
     MediaBinFilter.TAGGED -> stringResource(R.string.media_bin_filter_tagged)
+}
+
+@Composable
+private fun MediaScanIssueKind.localizedLabel(): String = when (this) {
+    MediaScanIssueKind.PROVIDER_FAILURE -> stringResource(R.string.media_manager_scan_issue_provider)
+    MediaScanIssueKind.SKIPPED -> stringResource(R.string.media_manager_scan_issue_skipped)
 }
 
 @Composable
