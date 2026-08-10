@@ -1760,7 +1760,10 @@
     <string name="media_manager_subtitle">Revise los archivos fuente vinculados, detecte metraje faltante y mantenga la línea de tiempo optimizada antes de exportar.</string>
     <string name="media_manager_health_title">Estado de los medios del proyecto</string>
     <string name="media_manager_health_description">Compruebe qué está vinculado, qué está fuera de línea y si se pueden eliminar pistas vacías de la pila.</string>
+    <string name="media_manager_status_idle">En espera</string>
     <string name="media_manager_status_scanning">Escaneo</string>
+    <string name="media_manager_status_scan_failed">Falló el escaneo</string>
+    <string name="media_manager_status_scan_cancelled">Escaneo cancelado</string>
     <string name="media_manager_status_healthy">saludable</string>
     <string name="media_health_ready">Listo</string>
     <string name="media_health_unavailable">No verificado</string>
@@ -1782,6 +1785,39 @@
     </plurals>
     <string name="media_manager_scanning_title">Revisar medios vinculados</string>
     <string name="media_manager_scanning_body">ClearCut está verificando cada fuente en la línea de tiempo para que las imágenes faltantes y las oportunidades de limpieza salgan a la luz antes de la exportación.</string>
+    <string name="media_manager_scan_cancel">Cancelar escaneo</string>
+    <string name="media_manager_scan_retry">Reintentar escaneo</string>
+    <string name="media_manager_scan_failed_title">Falló el escaneo de medios</string>
+    <string name="media_manager_scan_failed_body">El escaneo no pudo terminar. Reinténtelo; si continúa fallando, vuelva a vincular los archivos afectados y pruebe de nuevo.</string>
+    <string name="media_manager_scan_cancelled_title">Escaneo de medios cancelado</string>
+    <string name="media_manager_scan_cancelled_body">El escaneo se detuvo de forma segura. Los resultados existentes siguen disponibles y puede reintentarlo cuando quiera.</string>
+    <string name="media_manager_scan_partial_title">Listo con resultados parciales</string>
+    <string name="media_manager_scan_partial_body">No se pudieron inspeccionar algunas fuentes. Siguen visibles para la revinculación y los detalles siguientes explican qué hacer.</string>
+    <string name="media_manager_scan_issue_title">La cobertura del escaneo necesita atención</string>
+    <plurals name="media_manager_scan_provider_failure_count">
+        <item quantity="one">Falló la lectura de %1$d proveedor de medios.</item>
+        <item quantity="other">Falló la lectura de %1$d proveedores de medios.</item>
+        <item quantity="many">Falló la lectura de %1$d proveedores de medios.</item>
+    </plurals>
+    <plurals name="media_manager_scan_skipped_count">
+        <item quantity="one">Se omitió %1$d recurso porque no devolvió metadatos legibles.</item>
+        <item quantity="other">Se omitieron %1$d recursos porque no devolvieron metadatos legibles.</item>
+        <item quantity="many">Se omitieron %1$d recursos porque no devolvieron metadatos legibles.</item>
+    </plurals>
+    <plurals name="media_manager_status_scan_partial">
+        <item quantity="one">Listo con %1$d problema de escaneo</item>
+        <item quantity="other">Listo con %1$d problemas de escaneo</item>
+        <item quantity="many">Listo con %1$d problemas de escaneo</item>
+    </plurals>
+    <string name="media_manager_scan_issue_asset">%1$s — %2$s</string>
+    <plurals name="media_manager_scan_issue_more">
+        <item quantity="one">…y %1$d más</item>
+        <item quantity="other">…y %1$d más</item>
+        <item quantity="many">…y %1$d más</item>
+    </plurals>
+    <string name="media_manager_scan_issue_provider">Fallo del proveedor</string>
+    <string name="media_manager_scan_issue_skipped">Omitido</string>
+    <string name="media_manager_scan_issue_action">Conceda acceso o vuelva a vincular los recursos listados y reintente el escaneo. No se sube nada.</string>
     <plurals name="media_manager_missing_title">
         <item quantity="one">%1$d fuente necesita atención</item>
         <item quantity="other">%1$d fuentes necesitan atención</item>

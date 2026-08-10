@@ -59,6 +59,34 @@ class MediaBinPolicyTest {
         )
     }
 
+    @Test
+    fun scanStatesDistinguishEmptyPartialFailureAndCancellation() {
+        val empty = MediaScanResult()
+        val partial = MediaScanResult(
+            issues = listOf(
+                MediaScanIssue("provider", "provider.mp4", MediaScanIssueKind.PROVIDER_FAILURE),
+                MediaScanIssue("skipped", "skipped.wav", MediaScanIssueKind.SKIPPED),
+            ),
+        )
+
+        assertEquals(MediaScanStatus.READY, MediaScanState.Ready(empty).status())
+        assertEquals(
+            MediaScanStatus.READY_WITH_PARTIAL_RESULTS,
+            MediaScanState.Ready(partial).status(),
+        )
+        assertEquals(1, partial.providerFailureCount)
+        assertEquals(1, partial.skippedCount)
+        assertEquals(MediaScanStatus.FAILED, MediaScanState.Failed(empty).status())
+        assertEquals(MediaScanStatus.CANCELLED, MediaScanState.Cancelled(empty).status())
+    }
+
+    @Test
+    fun retryGenerationAdvancesAndWrapsWithoutReusingAStaleRequest() {
+        assertEquals(1L, nextMediaScanGeneration(0L))
+        assertEquals(2L, nextMediaScanGeneration(1L))
+        assertEquals(1L, nextMediaScanGeneration(Long.MAX_VALUE))
+    }
+
     private fun ids(filter: MediaBinFilter, assets: List<MediaAsset>): List<String> =
         filterAndSortMediaAssets(assets, MediaBinQuery(filter = filter)).map { it.assetId }
 

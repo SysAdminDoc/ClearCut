@@ -1859,7 +1859,10 @@
     <string name="media_manager_subtitle">Review linked source files, spot missing footage, and keep the timeline stack lean before export.</string>
     <string name="media_manager_health_title">Project media health</string>
     <string name="media_manager_health_description">Check what is linked, what is offline, and whether any empty tracks can be trimmed out of the stack.</string>
+    <string name="media_manager_status_idle">Waiting</string>
     <string name="media_manager_status_scanning">Scanning</string>
+    <string name="media_manager_status_scan_failed">Scan failed</string>
+    <string name="media_manager_status_scan_cancelled">Scan cancelled</string>
     <string name="media_manager_status_healthy">Healthy</string>
     <string name="media_health_ready">Ready</string>
     <string name="media_health_unavailable">Not checked</string>
@@ -1881,6 +1884,39 @@
     </plurals>
     <string name="media_manager_scanning_title">Reviewing linked media</string>
     <string name="media_manager_scanning_body">ClearCut is checking every source on the timeline so missing footage and cleanup opportunities are surfaced before export.</string>
+    <string name="media_manager_scan_cancel">Cancel scan</string>
+    <string name="media_manager_scan_retry">Retry scan</string>
+    <string name="media_manager_scan_failed_title">Media scan failed</string>
+    <string name="media_manager_scan_failed_body">The scan could not finish. Retry the scan; if it keeps failing, relink the affected source files and try again.</string>
+    <string name="media_manager_scan_cancelled_title">Media scan cancelled</string>
+    <string name="media_manager_scan_cancelled_body">The scan stopped safely. Existing results remain available, and you can retry whenever you are ready.</string>
+    <string name="media_manager_scan_partial_title">Ready with partial results</string>
+    <string name="media_manager_scan_partial_body">Some sources could not be inspected. They remain visible for relink triage, and the details below explain what to do next.</string>
+    <string name="media_manager_scan_issue_title">Scan coverage needs attention</string>
+    <plurals name="media_manager_scan_provider_failure_count">
+        <item quantity="one">%1$d media provider failed while being read.</item>
+        <item quantity="other">%1$d media providers failed while being read.</item>
+        <item quantity="many">%1$d media providers failed while being read.</item>
+    </plurals>
+    <plurals name="media_manager_scan_skipped_count">
+        <item quantity="one">%1$d asset was skipped because no readable metadata was returned.</item>
+        <item quantity="other">%1$d assets were skipped because no readable metadata was returned.</item>
+        <item quantity="many">%1$d assets were skipped because no readable metadata was returned.</item>
+    </plurals>
+    <plurals name="media_manager_status_scan_partial">
+        <item quantity="one">Ready with %1$d scan issue</item>
+        <item quantity="other">Ready with %1$d scan issues</item>
+        <item quantity="many">Ready with %1$d scan issues</item>
+    </plurals>
+    <string name="media_manager_scan_issue_asset">%1$s — %2$s</string>
+    <plurals name="media_manager_scan_issue_more">
+        <item quantity="one">…and %1$d more</item>
+        <item quantity="other">…and %1$d more</item>
+        <item quantity="many">…and %1$d more</item>
+    </plurals>
+    <string name="media_manager_scan_issue_provider">Provider failure</string>
+    <string name="media_manager_scan_issue_skipped">Skipped</string>
+    <string name="media_manager_scan_issue_action">Grant access or relink the listed assets, then retry the scan. Nothing is uploaded.</string>
     <plurals name="media_manager_missing_title">
         <item quantity="one">%1$d source needs attention</item>
         <item quantity="other">%1$d sources need attention</item>
