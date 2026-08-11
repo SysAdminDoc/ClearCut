@@ -215,6 +215,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             aspectRatio = state.project.aspectRatio,
             errorMessage = state.exportErrorMessage,
             exportWarning = state.exportWarningMessage,
+            trimOptimizationDisclosure = state.export.trimOptimizationDisclosure,
             exportStartTime = state.exportStartTime,
             totalDurationMs = state.totalDurationMs,
             playheadMs = playheadMs,

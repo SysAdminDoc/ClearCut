@@ -220,7 +220,6 @@ class VideoEngine @Inject constructor(
         val composition: Composition,
         val mimeType: String,
         val trimOptimizationEnabled: Boolean = false,
-        val mp4EditListTrimEnabled: Boolean = false,
     )
 
     private var player: CompositionPlayer? = null
@@ -308,6 +307,12 @@ class VideoEngine @Inject constructor(
     /** Latest non-fatal export disclosure, such as an accepted reverse fallback. */
     private val _exportWarningMessage = MutableStateFlow<String?>(null)
     val exportWarningMessage: StateFlow<String?> = _exportWarningMessage
+
+    /** The trim strategy selected for the active export and Media3's terminal result. */
+    private val _trimOptimizationDisclosure =
+        MutableStateFlow<Media3TrimOptimizationPolicy.Disclosure?>(null)
+    val trimOptimizationDisclosure: StateFlow<Media3TrimOptimizationPolicy.Disclosure?> =
+        _trimOptimizationDisclosure
 
     private val _exportDegradationOutcome = MutableStateFlow<RenderDegradationOutcome?>(null)
     val exportDegradationOutcome: StateFlow<RenderDegradationOutcome?> = _exportDegradationOutcome
@@ -736,6 +741,7 @@ class VideoEngine @Inject constructor(
         _exportFailureCause.value = null
         _exportWarningMessage.value = null
         _exportDegradationOutcome.value = null
+        _trimOptimizationDisclosure.value = null
 
         val preRenderTempFiles = mutableListOf<File>()
         val degradationLedger = RenderDegradationLedger()
@@ -754,9 +760,10 @@ class VideoEngine @Inject constructor(
             AppLog.d(
                 TAG,
                 "Media3 trim optimization eligible=${trimOptimizationDecision.eligible} " +
-                    "editList=${trimOptimizationDecision.mp4EditListTrimEligible} " +
                     "reason=${trimOptimizationDecision.reason}",
             )
+            _trimOptimizationDisclosure.value =
+                Media3TrimOptimizationPolicy.disclosureFor(trimOptimizationDecision)
             val sourceMetadataEntries = sourceMetadataEntries(tracks, config)
             val reversedTracks = preRenderReversedClips(tracks, preRenderTempFiles, onProgress)
             val processedTracks = if (config.forceConstantFrameRate) {
@@ -781,7 +788,6 @@ class VideoEngine @Inject constructor(
                 globalTransitions = globalTransitions,
                 durationOverrideMs = timelineDurationMsOverride,
                 trimOptimizationEnabled = trimOptimizationDecision.eligible,
-                mp4EditListTrimEnabled = trimOptimizationDecision.mp4EditListTrimEligible,
                 degradationLedger = degradationLedger,
             )
 
@@ -799,7 +805,6 @@ class VideoEngine @Inject constructor(
                 expectedDurationMs = requestedDurationMs,
                 resumeFromFile = resumeFromFile,
                 trimOptimizationEnabled = transformerPlan.trimOptimizationEnabled,
-                mp4EditListTrimEnabled = transformerPlan.mp4EditListTrimEnabled,
                 degradationLedger = degradationLedger,
                 metadataEntries = sourceMetadataEntries,
                 onProgress = onProgress,
@@ -1032,6 +1037,7 @@ class VideoEngine @Inject constructor(
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
         _exportWarningMessage.value = null
+        _trimOptimizationDisclosure.value = null
         return true
     }
 
@@ -1304,6 +1310,7 @@ class VideoEngine @Inject constructor(
         _exportFailureCause.value = null
         _exportWarningMessage.value = null
         _exportDegradationOutcome.value = null
+        _trimOptimizationDisclosure.value = null
 
         val parentDir = outputFile.parentFile ?: context.cacheDir
         val tempDir = File(
@@ -1570,78 +1577,19 @@ class VideoEngine @Inject constructor(
         resumeRequested: Boolean,
     ): Media3TrimOptimizationPolicy.Decision {
         val inputMimeType = resolveTrimOptimizationInputMimeType(tracks)
-        val (outputWidth, outputHeight) = encoderSafeOutputDimensions(config)
-
-        fun evaluateWith(inputFormat: Media3TrimOptimizationPolicy.InputFormat?) =
-            Media3TrimOptimizationPolicy.evaluate(
-                tracks = tracks,
-                config = config,
-                inputMimeType = inputMimeType,
-                inputFormat = inputFormat,
-                outputExtension = outputExtension,
-                outputWidth = outputWidth,
-                outputHeight = outputHeight,
-                outputFrameRate = config.frameRate,
-                textOverlayCount = textOverlayCount,
-                imageOverlayCount = imageOverlayCount,
-                lottieOverlayCount = lottieOverlayCount,
-                trackedObjectCount = trackedObjectCount,
-                globalTransitionCount = globalTransitionCount,
-                resumeRequested = resumeRequested,
-            )
-
-        val baseDecision = evaluateWith(inputFormat = null)
-        if (!baseDecision.eligible) return baseDecision
-        return probeTrimOptimizationInputFormat(tracks)?.let(::evaluateWith) ?: baseDecision
+        return Media3TrimOptimizationPolicy.evaluate(
+            tracks = tracks,
+            config = config,
+            inputMimeType = inputMimeType,
+            outputExtension = outputExtension,
+            textOverlayCount = textOverlayCount,
+            imageOverlayCount = imageOverlayCount,
+            lottieOverlayCount = lottieOverlayCount,
+            trackedObjectCount = trackedObjectCount,
+            globalTransitionCount = globalTransitionCount,
+            resumeRequested = resumeRequested,
+        )
     }
-
-    private fun probeTrimOptimizationInputFormat(
-        tracks: List<Track>,
-    ): Media3TrimOptimizationPolicy.InputFormat? {
-        val clip = tracks
-            .filter { it.clips.isNotEmpty() }
-            .flatMap { it.clips }
-            .singleOrNull()
-            ?: return null
-        val extractor = MediaExtractor()
-        return try {
-            extractor.setDataSource(context, clip.sourceUri, null)
-            var videoFormat: MediaFormat? = null
-            var audioMimeType: String? = null
-            for (index in 0 until extractor.trackCount) {
-                val format = extractor.getTrackFormat(index)
-                val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
-                when {
-                    mime.startsWith("video/") && videoFormat == null -> videoFormat = format
-                    mime.startsWith("audio/") && audioMimeType == null -> audioMimeType = mime
-                }
-            }
-            val format = videoFormat ?: return null
-            val width = format.getIntegerOrNull(MediaFormat.KEY_WIDTH) ?: return null
-            val height = format.getIntegerOrNull(MediaFormat.KEY_HEIGHT) ?: return null
-            Media3TrimOptimizationPolicy.InputFormat(
-                videoMimeType = format.getString(MediaFormat.KEY_MIME) ?: return null,
-                videoWidth = width,
-                videoHeight = height,
-                videoFrameRate = format.getFloatOrNull(MediaFormat.KEY_FRAME_RATE),
-                audioMimeType = audioMimeType,
-            )
-        } catch (e: Exception) {
-            AppLog.d(TAG, "Unable to probe MP4 format for trim optimization", e)
-            null
-        } finally {
-            runCatching { extractor.release() }
-        }
-    }
-
-    private fun MediaFormat.getIntegerOrNull(key: String): Int? =
-        runCatching { if (containsKey(key)) getInteger(key) else null }.getOrNull()
-
-    private fun MediaFormat.getFloatOrNull(key: String): Float? =
-        runCatching {
-            if (!containsKey(key)) null
-            else runCatching { getFloat(key) }.getOrElse { getInteger(key).toFloat() }
-        }.getOrNull()
 
     @androidx.annotation.OptIn(UnstableApi::class)
     private fun buildTransformerExportPlan(
@@ -1654,7 +1602,6 @@ class VideoEngine @Inject constructor(
         globalTransitions: List<GlobalTransition> = emptyList(),
         durationOverrideMs: Long? = null,
         trimOptimizationEnabled: Boolean = false,
-        mp4EditListTrimEnabled: Boolean = false,
         degradationLedger: RenderDegradationLedger? = null,
     ): TransformerExportPlan {
         val compositionPlan = CompositionPlanBuilder.build(
@@ -1756,7 +1703,6 @@ class VideoEngine @Inject constructor(
             composition = composition,
             mimeType = mimeType,
             trimOptimizationEnabled = trimOptimizationEnabled,
-            mp4EditListTrimEnabled = mp4EditListTrimEnabled,
         )
     }
 
@@ -2583,7 +2529,6 @@ class VideoEngine @Inject constructor(
         expectedDurationMs: Long = 0L,
         resumeFromFile: File? = null,
         trimOptimizationEnabled: Boolean = false,
-        mp4EditListTrimEnabled: Boolean = false,
         degradationLedger: RenderDegradationLedger? = null,
         metadataEntries: List<androidx.media3.common.Metadata.Entry> = emptyList(),
     ) {
@@ -2627,9 +2572,6 @@ class VideoEngine @Inject constructor(
             if (trimOptimizationEnabled) {
                 transformerBuilder.experimentalSetTrimOptimizationEnabled(true)
             }
-            if (trimOptimizationEnabled && mp4EditListTrimEnabled) {
-                transformerBuilder.experimentalSetMp4EditListTrimEnabled(true)
-            }
             transformerBuilder.setMuxerFactory(
                 MetadataPreservingMuxerFactory(
                     delegate = DefaultMuxer.Factory(),
@@ -2643,9 +2585,14 @@ class VideoEngine @Inject constructor(
                     // Guard against callbacks arriving after cancellation or timeout
                     if (_exportState.value != ExportState.EXPORTING) return
                     if (trimOptimizationEnabled) {
+                        val optimizationOutcome =
+                            Media3TrimOptimizationPolicy.optimizationOutcome(exportResult.optimizationResult)
+                        _trimOptimizationDisclosure.value =
+                            _trimOptimizationDisclosure.value?.copy(outcome = optimizationOutcome)
                         AppLog.d(
                             TAG,
-                            "Media3 trim optimization result=${exportResult.optimizationResult}",
+                            "Media3 trim optimization result=$optimizationOutcome " +
+                                "(${exportResult.optimizationResult})",
                         )
                     }
                     // Defensive: a 0-byte file means encoding silently produced nothing usable
@@ -2999,6 +2946,7 @@ class VideoEngine @Inject constructor(
         _exportProgress.value = 0f
         _exportWarningMessage.value = null
         _exportDegradationOutcome.value = null
+        _trimOptimizationDisclosure.value = null
     }
 
     fun release() {

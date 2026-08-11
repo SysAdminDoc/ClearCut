@@ -9,6 +9,7 @@ import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.MediaRelinkProbe
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaDiagnostic
+import com.novacut.editor.engine.Media3TrimOptimizationPolicy
 import com.novacut.editor.engine.MetadataSidecarFormat
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.ExportState
@@ -77,6 +78,7 @@ data class EditorExportDomainState(
     val lastExportedFilePath: String? = null,
     val errorMessage: String? = null,
     val warningMessage: String? = null,
+    val trimOptimizationDisclosure: Media3TrimOptimizationPolicy.Disclosure? = null,
     val startTime: Long = 0L,
     val encoderName: String? = null,
     val etaMs: Long? = null,

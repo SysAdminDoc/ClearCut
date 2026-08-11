@@ -87,6 +87,7 @@ import com.novacut.editor.engine.HdrOverlayAssetInspector
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
 import com.novacut.editor.engine.CodecInstanceBudget
+import com.novacut.editor.engine.Media3TrimOptimizationPolicy
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
@@ -144,6 +145,63 @@ internal fun exportEtaRemainingMs(elapsedMs: Long, exportProgress: Float): Long?
     return (totalEstimateMs - elapsedMs).coerceAtLeast(0L)
 }
 
+@Composable
+private fun trimOptimizationDisclosureText(
+    disclosure: Media3TrimOptimizationPolicy.Disclosure,
+): String {
+    if (disclosure.strategy == Media3TrimOptimizationPolicy.Strategy.FULL_TRANSCODE) {
+        val reason = when (disclosure.reason) {
+            Media3TrimOptimizationPolicy.Reason.ELIGIBLE ->
+                stringResource(R.string.export_trim_reason_eligible)
+            Media3TrimOptimizationPolicy.Reason.NOT_MP4_OUTPUT ->
+                stringResource(R.string.export_trim_reason_not_mp4_output)
+            Media3TrimOptimizationPolicy.Reason.NOT_MP4_INPUT ->
+                stringResource(R.string.export_trim_reason_not_mp4_input)
+            Media3TrimOptimizationPolicy.Reason.NOT_SINGLE_VIDEO_ASSET ->
+                stringResource(R.string.export_trim_reason_not_single_video_asset)
+            Media3TrimOptimizationPolicy.Reason.NO_TRIM ->
+                stringResource(R.string.export_trim_reason_no_trim)
+            Media3TrimOptimizationPolicy.Reason.TIMELINE_NOT_CONTINUOUS ->
+                stringResource(R.string.export_trim_reason_timeline_not_continuous)
+            Media3TrimOptimizationPolicy.Reason.SPECIAL_EXPORT ->
+                stringResource(R.string.export_trim_reason_special_export)
+            Media3TrimOptimizationPolicy.Reason.OVERLAYS_OR_AUTOMATION ->
+                stringResource(R.string.export_trim_reason_overlays_or_automation)
+            Media3TrimOptimizationPolicy.Reason.SPEED_CHANGE ->
+                stringResource(R.string.export_trim_reason_speed_change)
+            Media3TrimOptimizationPolicy.Reason.AUDIO_EDIT ->
+                stringResource(R.string.export_trim_reason_audio_edit)
+            Media3TrimOptimizationPolicy.Reason.VIDEO_EDIT ->
+                stringResource(R.string.export_trim_reason_video_edit)
+            Media3TrimOptimizationPolicy.Reason.UNSUPPORTED_ROTATION ->
+                stringResource(R.string.export_trim_reason_unsupported_rotation)
+            Media3TrimOptimizationPolicy.Reason.RESUME_REQUESTED ->
+                stringResource(R.string.export_trim_reason_resume_requested)
+        }
+        return stringResource(R.string.export_trim_full_render_reason, reason)
+    }
+
+    return when (disclosure.outcome) {
+        null -> stringResource(R.string.export_trim_smart_pending)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.NONE ->
+            stringResource(R.string.export_trim_result_none)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.SUCCEEDED ->
+            stringResource(R.string.export_trim_result_succeeded)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.ABANDONED_KEYFRAME_PLACEMENT_OPTIMAL_FOR_TRIM ->
+            stringResource(R.string.export_trim_result_keyframes_optimal)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.ABANDONED_TRIM_AND_TRANSCODING_TRANSFORMATION_REQUESTED ->
+            stringResource(R.string.export_trim_result_transcoding_requested)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.ABANDONED_OTHER ->
+            stringResource(R.string.export_trim_result_abandoned_other)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.FAILED_EXTRACTION_FAILED ->
+            stringResource(R.string.export_trim_result_extraction_failed)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.FAILED_FORMAT_MISMATCH ->
+            stringResource(R.string.export_trim_result_format_mismatch)
+        Media3TrimOptimizationPolicy.OptimizationOutcome.UNKNOWN ->
+            stringResource(R.string.export_trim_result_unknown)
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExportSheet(
@@ -154,6 +212,7 @@ fun ExportSheet(
     aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
     errorMessage: String? = null,
     exportWarning: String? = null,
+    trimOptimizationDisclosure: Media3TrimOptimizationPolicy.Disclosure? = null,
     exportStartTime: Long = 0L,
     totalDurationMs: Long = 0L,
     playheadMs: Long = 0L,
@@ -327,6 +386,11 @@ fun ExportSheet(
             projectColorPolicy = projectColorPolicy,
             overlaySummary = hdrOverlaySummary,
         )
+    }
+    val trimOptimizationLine = if (trimOptimizationDisclosure != null) {
+        trimOptimizationDisclosureText(trimOptimizationDisclosure)
+    } else {
+        null
     }
 
     val bitrateDescription = when {
@@ -519,6 +583,7 @@ fun ExportSheet(
                 encoderLine,
                 stallLine,
                 warningLine,
+                trimOptimizationLine,
             ).joinToString("\n")
             val attentionNeeded = stallWarning || warningLine != null
 
@@ -545,6 +610,7 @@ fun ExportSheet(
             val completionBody = listOfNotNull(
                 stringResource(R.string.export_subtitle),
                 exportWarning?.takeIf { it.isNotBlank() },
+                trimOptimizationLine,
             ).joinToString("\n")
             ExportStateCard(
                 icon = Icons.Default.CheckCircle,

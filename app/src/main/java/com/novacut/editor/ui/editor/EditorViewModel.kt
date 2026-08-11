@@ -83,6 +83,7 @@ import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.MediaHealth
 import com.novacut.editor.engine.MediaDiagnosticsProbe
 import com.novacut.editor.engine.MediaRelinkProbe
+import com.novacut.editor.engine.Media3TrimOptimizationPolicy
 import com.novacut.editor.engine.MetadataSidecarEngine
 import com.novacut.editor.engine.MetadataSidecarExportResult
 import com.novacut.editor.engine.MetadataSidecarFormat
@@ -454,6 +455,8 @@ data class EditorState(
     val lastExportedFilePath: String? get() = export.lastExportedFilePath
     val exportErrorMessage: String? get() = export.errorMessage
     val exportWarningMessage: String? get() = export.warningMessage
+    val trimOptimizationDisclosure: Media3TrimOptimizationPolicy.Disclosure?
+        get() = export.trimOptimizationDisclosure
     val exportStartTime: Long get() = export.startTime
     val renderSegments: List<SmartRenderEngine.RenderSegment> get() = export.renderSegments
     val renderSummary: SmartRenderEngine.SmartRenderSummary? get() = export.renderSummary
@@ -1098,6 +1101,13 @@ class EditorViewModel @Inject constructor(
                 }
                 warningMessage?.takeIf { it.isNotBlank() }?.let { message ->
                     showToast(message, ToastSeverity.Warning)
+                }
+            }
+        }
+        viewModelScope.launch {
+            videoEngine.trimOptimizationDisclosure.collect { disclosure ->
+                _state.update {
+                    it.copyExport { export -> export.copy(trimOptimizationDisclosure = disclosure) }
                 }
             }
         }

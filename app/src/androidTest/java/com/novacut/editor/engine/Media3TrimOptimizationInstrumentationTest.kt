@@ -15,7 +15,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -65,6 +67,10 @@ class Media3TrimOptimizationInstrumentationTest {
 
             assertNull("trim export reported an error: ${error?.message}", error)
             assertTrue("trim export did not complete", completed)
+            val disclosure = engine.trimOptimizationDisclosure.value
+            assertNotNull("trim strategy was not published", disclosure)
+            assertEquals(Media3TrimOptimizationPolicy.Strategy.SMART_TRIM, disclosure?.strategy)
+            assertNotNull("Media3 optimization result was not published", disclosure?.outcome)
             val verification = ExportOutputVerifier.verify(
                 outputFile = output,
                 expectVideo = true,

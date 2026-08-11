@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.net.FakeUri
+import androidx.media3.transformer.ExportResult
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
@@ -28,37 +29,28 @@ class Media3TrimOptimizationPolicyTest {
     }
 
     @Test
-    fun enablesEditListOnlyWhenTheSourceCanBeTransmuxed() {
-        val sourceFormat = Media3TrimOptimizationPolicy.InputFormat(
-            videoMimeType = "video/avc",
-            videoWidth = 854,
-            videoHeight = 480,
-            videoFrameRate = 30f,
-            audioMimeType = "audio/mp4a-latm",
-        )
-        val compatible = Media3TrimOptimizationPolicy.evaluate(
-            tracks = listOf(videoTrack(clip(trimStartMs = 1_000L, trimEndMs = 9_000L))),
-            config = ExportConfig(),
-            inputMimeType = "video/mp4",
-            inputFormat = sourceFormat,
-            outputWidth = 854,
-            outputHeight = 480,
-            outputFrameRate = 30,
-        )
-        val resizing = Media3TrimOptimizationPolicy.evaluate(
-            tracks = listOf(videoTrack(clip(trimStartMs = 1_000L, trimEndMs = 9_000L))),
-            config = ExportConfig(),
-            inputMimeType = "video/mp4",
-            inputFormat = sourceFormat,
-            outputWidth = 1_920,
-            outputHeight = 1_080,
-            outputFrameRate = 30,
+    fun mapsEveryMedia3OptimizationResult() {
+        val expected = mapOf(
+            ExportResult.OPTIMIZATION_NONE to Media3TrimOptimizationPolicy.OptimizationOutcome.NONE,
+            ExportResult.OPTIMIZATION_SUCCEEDED to Media3TrimOptimizationPolicy.OptimizationOutcome.SUCCEEDED,
+            ExportResult.OPTIMIZATION_ABANDONED_KEYFRAME_PLACEMENT_OPTIMAL_FOR_TRIM to
+                Media3TrimOptimizationPolicy.OptimizationOutcome.ABANDONED_KEYFRAME_PLACEMENT_OPTIMAL_FOR_TRIM,
+            ExportResult.OPTIMIZATION_ABANDONED_TRIM_AND_TRANSCODING_TRANSFORMATION_REQUESTED to
+                Media3TrimOptimizationPolicy.OptimizationOutcome.ABANDONED_TRIM_AND_TRANSCODING_TRANSFORMATION_REQUESTED,
+            ExportResult.OPTIMIZATION_ABANDONED_OTHER to Media3TrimOptimizationPolicy.OptimizationOutcome.ABANDONED_OTHER,
+            ExportResult.OPTIMIZATION_FAILED_EXTRACTION_FAILED to
+                Media3TrimOptimizationPolicy.OptimizationOutcome.FAILED_EXTRACTION_FAILED,
+            ExportResult.OPTIMIZATION_FAILED_FORMAT_MISMATCH to
+                Media3TrimOptimizationPolicy.OptimizationOutcome.FAILED_FORMAT_MISMATCH,
         )
 
-        assertTrue(compatible.eligible)
-        assertTrue(compatible.mp4EditListTrimEligible)
-        assertTrue(resizing.eligible)
-        assertFalse(resizing.mp4EditListTrimEligible)
+        expected.forEach { (result, outcome) ->
+            assertEquals(outcome, Media3TrimOptimizationPolicy.optimizationOutcome(result))
+        }
+        assertEquals(
+            Media3TrimOptimizationPolicy.OptimizationOutcome.UNKNOWN,
+            Media3TrimOptimizationPolicy.optimizationOutcome(Int.MAX_VALUE),
+        )
     }
 
     @Test
@@ -177,7 +169,8 @@ class Media3TrimOptimizationPolicyTest {
             .substringAfter("if (trimOptimizationEnabled) {")
             .substringBefore("val transformer = transformerBuilder.build()")
         assertTrue(flagBlock.contains("experimentalSetTrimOptimizationEnabled(true)"))
-        assertTrue(flagBlock.contains("experimentalSetMp4EditListTrimEnabled(true)"))
+        assertFalse(flagBlock.contains("experimentalSetMp4EditListTrimEnabled"))
+        assertFalse(source.contains("mp4EditListTrim"))
 
         val completion = source
             .substringAfter("override fun onCompleted(composition: Composition, exportResult: ExportResult)")

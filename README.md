@@ -12,6 +12,7 @@
 
 - Distribution metadata now includes a translated Spanish listing and current changelog; Play screenshots are derived from checked-in API 37 device captures and the release helper scripts work from a clean checkout.
 - Project persistence now runs on Room 3.0.1 and SQLite driver APIs, with the full v1–v10 migration chain validated on the API 37 device lane.
+- Pure single-source MP4 trims use Media3's GOP optimization when eligible, and the export sheet explains whether smart trim or a full render was chosen and why.
 - CFR export normalization now turns irregular VFR source cadence into the selected delivery rate before the final Media3 render.
 - Batch Export can queue independent source-file trim ranges with persisted URIs and per-item settings while retaining uniform project exports.
 

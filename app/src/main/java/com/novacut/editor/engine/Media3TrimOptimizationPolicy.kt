@@ -1,5 +1,7 @@
 package com.novacut.editor.engine
 
+import androidx.media3.transformer.ExportResult
+import androidx.media3.common.util.UnstableApi
 import com.novacut.editor.model.AudioCodec
 import com.novacut.editor.model.BlendMode
 import com.novacut.editor.model.EffectType
@@ -11,11 +13,10 @@ import com.novacut.editor.model.TrackType
  * Conservative gate for Media3's trim-only optimizations.
  *
  * Media3 can stitch a small re-encoded trim boundary to the original encoded
- * samples, or describe an MP4 trim with an edit list. Both optimizations are
- * deliberately opt-in here: a timeline must still be a single MP4 asset with
- * no edit that changes its decoded content. Media3 remains responsible for
- * checking codec/profile compatibility and falling back to the normal encoder
- * when the source cannot be optimized.
+ * samples. The optimization is deliberately opt-in here: a timeline must
+ * still be a single MP4 asset with no edit that changes its decoded content.
+ * Media3 remains responsible for checking codec/profile compatibility and
+ * falling back to the normal encoder when the source cannot be optimized.
  */
 object Media3TrimOptimizationPolicy {
     enum class Reason {
@@ -37,32 +38,57 @@ object Media3TrimOptimizationPolicy {
     data class Decision(
         val eligible: Boolean,
         val reason: Reason,
-        val mp4EditListTrimEligible: Boolean = false,
     )
 
-    /**
-     * The edit-list mode is stricter than trim optimization: it is only safe
-     * when the Transformer can transmux every track without decoding. The
-     * caller supplies the probed source format and the requested output shape
-     * so this remains a pure, JVM-testable decision.
-     */
-    data class InputFormat(
-        val videoMimeType: String,
-        val videoWidth: Int,
-        val videoHeight: Int,
-        val videoFrameRate: Float?,
-        val audioMimeType: String?,
+    /** The seven result codes emitted by Media3's trim optimizer. */
+    enum class OptimizationOutcome {
+        NONE,
+        SUCCEEDED,
+        ABANDONED_KEYFRAME_PLACEMENT_OPTIMAL_FOR_TRIM,
+        ABANDONED_TRIM_AND_TRANSCODING_TRANSFORMATION_REQUESTED,
+        ABANDONED_OTHER,
+        FAILED_EXTRACTION_FAILED,
+        FAILED_FORMAT_MISMATCH,
+        UNKNOWN,
+    }
+
+    enum class Strategy {
+        SMART_TRIM,
+        FULL_TRANSCODE,
+    }
+
+    /** State shown in the export sheet before and after Transformer completes. */
+    data class Disclosure(
+        val strategy: Strategy,
+        val reason: Reason,
+        val outcome: OptimizationOutcome? = null,
     )
+
+    fun disclosureFor(decision: Decision): Disclosure = Disclosure(
+        strategy = if (decision.eligible) Strategy.SMART_TRIM else Strategy.FULL_TRANSCODE,
+        reason = decision.reason,
+    )
+
+    /** Map every current Media3 result code without leaking an integer into the UI. */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    fun optimizationOutcome(result: Int): OptimizationOutcome = when (result) {
+        ExportResult.OPTIMIZATION_NONE -> OptimizationOutcome.NONE
+        ExportResult.OPTIMIZATION_SUCCEEDED -> OptimizationOutcome.SUCCEEDED
+        ExportResult.OPTIMIZATION_ABANDONED_KEYFRAME_PLACEMENT_OPTIMAL_FOR_TRIM ->
+            OptimizationOutcome.ABANDONED_KEYFRAME_PLACEMENT_OPTIMAL_FOR_TRIM
+        ExportResult.OPTIMIZATION_ABANDONED_TRIM_AND_TRANSCODING_TRANSFORMATION_REQUESTED ->
+            OptimizationOutcome.ABANDONED_TRIM_AND_TRANSCODING_TRANSFORMATION_REQUESTED
+        ExportResult.OPTIMIZATION_ABANDONED_OTHER -> OptimizationOutcome.ABANDONED_OTHER
+        ExportResult.OPTIMIZATION_FAILED_EXTRACTION_FAILED -> OptimizationOutcome.FAILED_EXTRACTION_FAILED
+        ExportResult.OPTIMIZATION_FAILED_FORMAT_MISMATCH -> OptimizationOutcome.FAILED_FORMAT_MISMATCH
+        else -> OptimizationOutcome.UNKNOWN
+    }
 
     fun evaluate(
         tracks: List<Track>,
         config: ExportConfig,
         inputMimeType: String? = null,
-        inputFormat: InputFormat? = null,
         outputExtension: String = "mp4",
-        outputWidth: Int? = null,
-        outputHeight: Int? = null,
-        outputFrameRate: Int? = null,
         textOverlayCount: Int = 0,
         imageOverlayCount: Int = 0,
         lottieOverlayCount: Int = 0,
@@ -155,20 +181,9 @@ object Media3TrimOptimizationPolicy {
             return Decision(false, Reason.UNSUPPORTED_ROTATION)
         }
 
-        val editListTrimEligible = inputFormat != null &&
-            inputFormat.videoMimeType.equals(config.codec.mimeType, ignoreCase = true) &&
-            inputFormat.videoWidth > 0 && inputFormat.videoWidth == outputWidth &&
-            inputFormat.videoHeight > 0 && inputFormat.videoHeight == outputHeight &&
-            inputFormat.videoFrameRate != null && outputFrameRate != null &&
-            inputFormat.videoFrameRate <= outputFrameRate.toFloat() + 0.01f &&
-            (inputFormat.audioMimeType == null ||
-                inputFormat.audioMimeType.equals(config.audioCodec.mimeType, ignoreCase = true)) &&
-            clip.rotation == 0f
-
         return Decision(
             eligible = true,
             reason = Reason.ELIGIBLE,
-            mp4EditListTrimEligible = editListTrimEligible,
         )
     }
 }
