@@ -1,2 +1,7 @@
+* text=auto eol=lf
 *.aar binary
+*.jks binary
+*.onnx binary
+*.png binary
+*.ttf binary
 app/src/test/screenshots/** binary
