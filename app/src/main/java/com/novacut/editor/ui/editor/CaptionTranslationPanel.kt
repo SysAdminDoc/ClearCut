@@ -75,6 +75,7 @@ fun CaptionTranslationPanel(
     onRegenerate: (rowIndex: Int) -> Unit,
     modifier: Modifier = Modifier,
     unavailable: Boolean = false,
+    offline: Boolean = false,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -87,8 +88,11 @@ fun CaptionTranslationPanel(
             availableTargets = availableTargets,
             currentQuality = currentQuality,
             onTargetSelected = onTargetSelected,
+            enabled = !offline,
         )
-        if (unavailable) {
+        if (offline) {
+            OfflineState()
+        } else if (unavailable) {
             UnavailableState()
         } else if (rows.isEmpty() || targetLang.isNullOrBlank()) {
             EmptyState()
@@ -102,6 +106,7 @@ fun CaptionTranslationPanel(
                         row = row,
                         onUserEdit = { newText -> onUserEdit(row.index, newText) },
                         onRegenerate = { onRegenerate(row.index) },
+                        offline = offline,
                     )
                 }
             }
@@ -138,6 +143,7 @@ private fun TargetPicker(
     availableTargets: List<String>,
     currentQuality: LanguagePairQuality?,
     onTargetSelected: (String) -> Unit,
+    enabled: Boolean,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         FlowRow(
@@ -149,6 +155,7 @@ private fun TargetPicker(
                 LanguageChip(
                     code = target,
                     selected = target == targetLang,
+                    enabled = enabled,
                     onClick = { onTargetSelected(target) },
                 )
             }
@@ -161,11 +168,20 @@ private fun TargetPicker(
 }
 
 @Composable
-private fun LanguageChip(code: String, selected: Boolean, onClick: () -> Unit) {
+private fun LanguageChip(
+    code: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
     val semanticColors = LocalClearCutColors.current
     val container = if (selected) ClearCutAccents.Mauve.copy(alpha = 0.18f) else semanticColors.panelHighest.copy(alpha = 0.5f)
     val border = if (selected) ClearCutAccents.Mauve.copy(alpha = 0.62f) else semanticColors.cardStrokeStrong.copy(alpha = 0.5f)
-    val textColor = if (selected) semanticColors.text else semanticColors.subtext
+    val textColor = when {
+        !enabled -> semanticColors.disabledText
+        selected -> semanticColors.text
+        else -> semanticColors.subtext
+    }
     Text(
         text = code.uppercase(),
         color = textColor,
@@ -175,7 +191,7 @@ private fun LanguageChip(code: String, selected: Boolean, onClick: () -> Unit) {
             .clip(RoundedCornerShape(Radius.lg))
             .border(BorderStroke(1.dp, border), RoundedCornerShape(Radius.lg))
             .background(container)
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
     )
 }
@@ -248,10 +264,31 @@ private fun UnavailableState() {
 }
 
 @Composable
+private fun OfflineState() {
+    val semanticColors = LocalClearCutColors.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clip(RoundedCornerShape(Radius.md))
+            .background(semanticColors.panelHighest.copy(alpha = 0.42f))
+            .padding(horizontal = 14.dp, vertical = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.caption_translation_offline),
+            color = semanticColors.subtext,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
 private fun TranslationRow(
     row: EditorRow,
     onUserEdit: (String) -> Unit,
     onRegenerate: () -> Unit,
+    offline: Boolean,
 ) {
     val semanticColors = LocalClearCutColors.current
     val seg = row.segment
@@ -283,7 +320,7 @@ private fun TranslationRow(
             RowStatusChip(seg.editorState)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RegenerateButton(enabled = !row.isPendingRegenerate, onClick = onRegenerate)
+            RegenerateButton(enabled = !row.isPendingRegenerate && !offline, onClick = onRegenerate)
         }
     }
 }

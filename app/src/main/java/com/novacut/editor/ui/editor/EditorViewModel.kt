@@ -44,6 +44,7 @@ import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.SpeakerSwitchPlanner
 import com.novacut.editor.engine.SubtitleExporter
 import com.novacut.editor.engine.CaptionImportEngine
+import com.novacut.editor.engine.ConnectivityObserver
 import com.novacut.editor.engine.IncomingDocumentImportRouter
 import com.novacut.editor.engine.IncomingDocumentIntentParser
 import com.novacut.editor.engine.IncomingDocumentItem
@@ -490,6 +491,7 @@ data class EditorState(
     val captionTranslationVariant: com.novacut.editor.engine.CaptionTranslationEngine.ModelVariant
         get() = caption.variant
     val captionTranslationUnavailable: Boolean get() = caption.translationUnavailable
+    val captionTranslationOffline: Boolean get() = caption.translationOffline
     val captionImportPreview: CaptionImportEngine.Preview? get() = caption.captionImportPreview
 }
 
@@ -701,6 +703,7 @@ class EditorViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val savedStateHandle: SavedStateHandle,
     private val productHealthLedger: ProductHealthLedger,
+    private val connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
     private val documentCoordinator get() = editorCoordinatorSet.document
@@ -741,6 +744,9 @@ class EditorViewModel @Inject constructor(
     val playheadMs: StateFlow<Long> = _playheadMs.asStateFlow()
 
     val engine get() = videoEngine
+
+    /** Live internet state used to gate model downloads and caption translation controls. */
+    val networkAvailable: StateFlow<Boolean> = connectivityObserver.isOnline
 
     private fun text(resId: Int, vararg args: Any): String =
         appContext.getString(resId, *args)
@@ -6521,13 +6527,30 @@ class EditorViewModel @Inject constructor(
 
     fun runCaptionTranslation(targetLang: String) {
         setCaptionTranslationTarget(targetLang)
+        if (!networkAvailable.value) {
+            captionTranslationJob?.cancel()
+            _state.update {
+                it.copyCaption { caption ->
+                    caption.copy(
+                        translationRows = emptyList(),
+                        translationUnavailable = true,
+                        translationOffline = true,
+                    )
+                }
+            }
+            return
+        }
         // No translation model is installed yet: never present untranslated
         // captions as a translation. Surface an explicit unavailable state.
         if (!captionTranslationEngine.isModelReady()) {
             captionTranslationJob?.cancel()
             _state.update {
                 it.copyCaption { caption ->
-                    caption.copy(translationRows = emptyList(), translationUnavailable = true)
+                    caption.copy(
+                        translationRows = emptyList(),
+                        translationUnavailable = true,
+                        translationOffline = false,
+                    )
                 }
             }
             return
@@ -6542,7 +6565,11 @@ class EditorViewModel @Inject constructor(
             captionTranslationJob?.cancel()
             _state.update {
                 it.copyCaption { caption ->
-                    caption.copy(translationRows = emptyList(), translationUnavailable = false)
+                    caption.copy(
+                        translationRows = emptyList(),
+                        translationUnavailable = false,
+                        translationOffline = false,
+                    )
                 }
             }
             return
@@ -6561,7 +6588,11 @@ class EditorViewModel @Inject constructor(
             } catch (e: com.novacut.editor.engine.CaptionTranslationEngine.TranslationUnavailableException) {
                 _state.update { current ->
                     current.copyCaption { caption ->
-                        caption.copy(translationRows = emptyList(), translationUnavailable = true)
+                        caption.copy(
+                            translationRows = emptyList(),
+                            translationUnavailable = true,
+                            translationOffline = false,
+                        )
                     }
                 }
                 return@launch
@@ -6580,6 +6611,7 @@ class EditorViewModel @Inject constructor(
                         caption.copy(
                             translationRows = rows,
                             translationUnavailable = false,
+                            translationOffline = false,
                             quality = rows.firstOrNull()?.quality ?: current.captionTranslationQuality,
                         )
                     }
@@ -6639,10 +6671,22 @@ class EditorViewModel @Inject constructor(
      * source text so callers wire a self-completing loop.
      */
     fun regenerateCaptionTranslation(rowIndex: Int) {
+        if (!networkAvailable.value) {
+            _state.update {
+                it.copyCaption { caption ->
+                    caption.copy(translationUnavailable = true, translationOffline = true)
+                }
+            }
+            return
+        }
         // No translation backend is installed: do not mark rows pending or call
         // translate() (which fails fast); surface the unavailable state instead.
         if (!captionTranslationEngine.isModelReady()) {
-            _state.update { it.copyCaption { caption -> caption.copy(translationUnavailable = true) } }
+            _state.update {
+                it.copyCaption { caption ->
+                    caption.copy(translationUnavailable = true, translationOffline = false)
+                }
+            }
             return
         }
         val rows = _state.value.captionTranslationRows

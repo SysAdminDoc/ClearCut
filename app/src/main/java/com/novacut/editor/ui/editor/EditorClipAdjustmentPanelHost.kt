@@ -20,7 +20,8 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
     viewModel: EditorViewModel,
     selectedClip: Clip?,
     playheadMs: Long,
-    context: Context
+    context: Context,
+    networkAvailable: Boolean,
 ) {
     val captionImportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -379,6 +380,7 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
             translationQuality = state.captionTranslationQuality,
             translationTargets = viewModel.captionTranslationTargets(),
             translationUnavailable = state.captionTranslationUnavailable,
+            translationOffline = !networkAvailable || state.caption.translationOffline,
             onTranslationTargetSelected = viewModel::runCaptionTranslation,
             onTranslationUserEdit = viewModel::applyCaptionTranslationEdit,
             onTranslationRegenerate = viewModel::regenerateCaptionTranslation,

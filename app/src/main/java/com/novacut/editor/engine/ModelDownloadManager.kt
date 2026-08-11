@@ -24,8 +24,16 @@ import kotlin.coroutines.coroutineContext
 @Singleton
 class ModelDownloadManager @Inject constructor(
     @ApplicationContext private val appContext: Context,
-    private val productHealthLedger: ProductHealthLedger? = null,
+    private val productHealthLedger: ProductHealthLedger?,
+    private val connectivityObserver: ConnectivityObserver,
 ) {
+
+    /** Compatibility constructor for isolated engine tests and device fixtures. */
+    constructor(appContext: Context) : this(
+        appContext = appContext,
+        productHealthLedger = null,
+        connectivityObserver = ConnectivityObserver(appContext),
+    )
 
     data class ModelFile(
         val url: String,
@@ -58,6 +66,9 @@ class ModelDownloadManager @Inject constructor(
      */
     class MeteredNetworkException(message: String) : IOException(message)
 
+    /** Raised before any transfer when the device has no validated internet path. */
+    class OfflineNetworkException(message: String) : IOException(message)
+
     suspend fun downloadFiles(
         files: List<ModelFile>,
         totalEstimateBytes: Long = estimateTotalBytes(files),
@@ -79,6 +90,11 @@ class ModelDownloadManager @Inject constructor(
                         minimumBytes = it.minimumBytes,
                         expectedSha256 = it.sha256,
                         requireChecksum = it.checksumRequired,
+                    )
+                }
+                if (needsNetwork && !isNetworkAvailable()) {
+                    throw OfflineNetworkException(
+                        "A validated internet connection is required to download models"
                     )
                 }
                 if (needsNetwork && wifiOnly && isMeteredNetwork()) {
@@ -183,6 +199,9 @@ class ModelDownloadManager @Inject constructor(
         // marked as metered. Cellular and metered Wi-Fi both lack it.
         return !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     }
+
+    /** True only when a model transfer has a validated internet path to use. */
+    fun isNetworkAvailable(): Boolean = connectivityObserver.isOnline.value
 
     private suspend fun downloadOne(
         request: ModelFile,

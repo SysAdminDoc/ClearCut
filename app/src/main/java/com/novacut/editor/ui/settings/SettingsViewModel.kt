@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.novacut.editor.R
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.AppearanceMode
+import com.novacut.editor.engine.ConnectivityObserver
 import com.novacut.editor.engine.DiagnosticExportEngine
 import com.novacut.editor.engine.ModelDownloadManager
 import com.novacut.editor.engine.ProjectAutoSave
@@ -90,11 +91,15 @@ class SettingsViewModel @Inject constructor(
     private val projectDao: ProjectDao,
     private val autoSave: ProjectAutoSave,
     private val updateChecker: UpdateChecker,
-    private val proxyEngine: ProxyEngine
+    private val proxyEngine: ProxyEngine,
+    private val connectivityObserver: ConnectivityObserver,
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = repo.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
+
+    /** Live internet state used to gate model downloads and update checks before they fail. */
+    val networkAvailable: StateFlow<Boolean> = connectivityObserver.isOnline
 
     val whisperModelState = whisperEngine.modelState
     val segmentationModelState = segmentationEngine.modelState
@@ -169,6 +174,13 @@ class SettingsViewModel @Inject constructor(
      */
     fun checkForUpdate() {
         if (_updateCheck.value.isChecking) return
+        if (!networkAvailable.value) {
+            _updateCheck.value = UpdateCheckUiState(
+                message = appContext.getString(R.string.settings_update_offline),
+                isError = false,
+            )
+            return
+        }
         viewModelScope.launch {
             val enabled = repo.settings.first().updateCheckEnabled
             _updateCheck.update { it.copy(isChecking = true, message = null, isError = false) }
@@ -184,6 +196,10 @@ class SettingsViewModel @Inject constructor(
                 )
                 UpdateChecker.Result.Unavailable -> UpdateCheckUiState(
                     message = appContext.getString(R.string.settings_update_enable_prompt)
+                )
+                UpdateChecker.Result.Offline -> UpdateCheckUiState(
+                    message = appContext.getString(R.string.settings_update_offline),
+                    isError = false,
                 )
                 is UpdateChecker.Result.Failed -> UpdateCheckUiState(
                     message = appContext.getString(R.string.settings_update_check_failed),
@@ -398,6 +414,8 @@ class SettingsViewModel @Inject constructor(
                 _aiModelStorage.update {
                     it.copy(
                         feedbackMessage = when (error) {
+                            is ModelDownloadManager.OfflineNetworkException ->
+                                appContext.getString(R.string.settings_model_offline)
                             is ModelDownloadManager.MeteredNetworkException ->
                                 appContext.getString(R.string.settings_model_wifi_only_feedback)
                             else ->
@@ -432,6 +450,8 @@ class SettingsViewModel @Inject constructor(
                 _aiModelStorage.update {
                     it.copy(
                         feedbackMessage = when (error) {
+                            is ModelDownloadManager.OfflineNetworkException ->
+                                appContext.getString(R.string.settings_model_offline)
                             is ModelDownloadManager.MeteredNetworkException ->
                                 appContext.getString(R.string.settings_model_wifi_only_feedback)
                             else ->

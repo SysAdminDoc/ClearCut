@@ -115,6 +115,7 @@ fun EditorScreen(
     val segmentationProgress by viewModel.segmentationDownloadProgress.collectAsStateWithLifecycle()
     val inpaintingState by viewModel.inpaintingModelState.collectAsStateWithLifecycle()
     val inpaintingProgress by viewModel.inpaintingDownloadProgress.collectAsStateWithLifecycle()
+    val networkAvailable by viewModel.networkAvailable.collectAsStateWithLifecycle()
     val scopeFrame by viewModel.scopeFrame.collectAsStateWithLifecycle()
     val showLutPicker by viewModel.showLutPicker.collectAsStateWithLifecycle()
     val autoSaveTopPadding by animateDpAsState(
@@ -1295,7 +1296,8 @@ fun EditorScreen(
             segmentationModelState = segmentationState,
             segmentationDownloadProgress = segmentationProgress,
             inpaintingModelState = inpaintingState,
-            inpaintingDownloadProgress = inpaintingProgress
+            inpaintingDownloadProgress = inpaintingProgress,
+            networkAvailable = networkAvailable,
         )
 
         if (!isImmersivePreview) EditorClipAdjustmentPanelHost(
@@ -1303,7 +1305,8 @@ fun EditorScreen(
             viewModel = viewModel,
             selectedClip = selectedClip,
             playheadMs = playheadMs,
-            context = context
+            context = context,
+            networkAvailable = networkAvailable,
         )
 
         if (!isImmersivePreview) EditorUtilityPanelHost(

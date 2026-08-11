@@ -118,6 +118,7 @@ fun SettingsScreen(
     val diagnosticExport by viewModel.diagnosticExport.collectAsStateWithLifecycle()
     val settingsResetNotice by viewModel.settingsResetNotice.collectAsStateWithLifecycle()
     val updateCheck by viewModel.updateCheck.collectAsStateWithLifecycle()
+    val networkAvailable by viewModel.networkAvailable.collectAsStateWithLifecycle()
     val whisperModelState by viewModel.whisperModelState.collectAsStateWithLifecycle()
     val segmentationModelState by viewModel.segmentationModelState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -177,6 +178,13 @@ fun SettingsScreen(
             SettingsFeedbackBanner(
                 message = message,
                 onDismiss = viewModel::dismissAiModelStorageFeedback
+            )
+        }
+        if (!networkAvailable) {
+            SettingsFeedbackBanner(
+                message = stringResource(R.string.settings_network_offline_description),
+                accentOverride = ClearCutAccents.Yellow,
+                iconOverride = Icons.Default.CloudOff,
             )
         }
         (diagnosticExport.message ?: diagnosticExport.errorMessage)?.let { message ->
@@ -412,6 +420,7 @@ fun SettingsScreen(
                     stateLabel = whisperModelState.displayLabel(),
                     storageLabel = modelStorageLabel(aiModelStorage.whisperBytes, stringResource(R.string.settings_whisper_size)),
                     canRemove = canRemoveWhisperModel,
+                    networkAvailable = networkAvailable,
                     isError = whisperModelState == WhisperModelState.ERROR,
                     isBusy = aiModelStorage.isRemovingWhisper || whisperModelState == WhisperModelState.DOWNLOADING,
                     actionLabel = if (canRemoveWhisperModel) {
@@ -438,6 +447,7 @@ fun SettingsScreen(
                     stateLabel = segmentationModelState.displayLabel(),
                     storageLabel = modelStorageLabel(aiModelStorage.segmentationBytes, stringResource(R.string.settings_segmentation_size)),
                     canRemove = canRemoveSegmentationModel,
+                    networkAvailable = networkAvailable,
                     isError = segmentationModelState == SegmentationModelState.ERROR,
                     isBusy = aiModelStorage.isRemovingSegmentation || segmentationModelState == SegmentationModelState.DOWNLOADING,
                     actionLabel = if (canRemoveSegmentationModel) {
@@ -725,10 +735,17 @@ fun SettingsScreen(
                                 R.string.settings_update_available_label,
                                 updateCheck.latestVersion.orEmpty()
                             ),
-                            description = stringResource(R.string.settings_update_available_description),
+                            description = stringResource(
+                                if (networkAvailable) {
+                                    R.string.settings_update_available_description
+                                } else {
+                                    R.string.settings_update_offline
+                                }
+                            ),
                             actionLabel = stringResource(R.string.settings_update_view_action),
                             actionIcon = Icons.AutoMirrored.Filled.OpenInNew,
-                            onClick = { updateCheck.releaseUrl?.let { uriHandler.openUri(it) } }
+                            onClick = { updateCheck.releaseUrl?.let { uriHandler.openUri(it) } },
+                            enabled = networkAvailable,
                         )
                     } else {
                         SettingsActionRow(
@@ -742,7 +759,8 @@ fun SettingsScreen(
                                 stringResource(R.string.settings_update_check_now_action)
                             },
                             actionIcon = Icons.Default.Refresh,
-                            onClick = { if (!updateCheck.isChecking) viewModel.checkForUpdate() }
+                            onClick = { if (!updateCheck.isChecking) viewModel.checkForUpdate() },
+                            enabled = networkAvailable && !updateCheck.isChecking,
                         )
                     }
                 }
@@ -1061,7 +1079,7 @@ private fun SettingsFeedbackBanner(
     isError: Boolean = false,
     accentOverride: androidx.compose.ui.graphics.Color? = null,
     iconOverride: ImageVector? = null,
-    onDismiss: () -> Unit
+    onDismiss: (() -> Unit)? = null
 ) {
     val colors = LocalClearCutColors.current
     val accent = accentOverride ?: if (isError) ClearCutAccents.Red else ClearCutAccents.Green
@@ -1098,11 +1116,13 @@ private fun SettingsFeedbackBanner(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
-            ClearCutChromeIconButton(
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.close),
-                onClick = onDismiss
-            )
+            onDismiss?.let { dismiss ->
+                ClearCutChromeIconButton(
+                    icon = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.close),
+                    onClick = dismiss
+                )
+            }
         }
     }
 }
@@ -1334,17 +1354,27 @@ private fun SettingsAiModelRow(
     stateLabel: String,
     storageLabel: String,
     canRemove: Boolean,
+    networkAvailable: Boolean,
     isError: Boolean,
     isBusy: Boolean,
     actionLabel: String,
     actionIcon: ImageVector,
     onAction: () -> Unit
 ) {
+    val effectiveDescription = if (!canRemove && !networkAvailable) {
+        "$description ${stringResource(R.string.settings_model_offline_description)}"
+    } else {
+        description
+    }
     SettingsTile(
         icon = icon,
         accent = accent,
         label = label,
-        description = stringResource(R.string.settings_model_description_with_size, description, storageLabel)
+        description = stringResource(
+            R.string.settings_model_description_with_size,
+            effectiveDescription,
+            storageLabel,
+        )
     ) {
         Column(
             horizontalAlignment = Alignment.End,
@@ -1374,7 +1404,7 @@ private fun SettingsAiModelRow(
             ClearCutSecondaryButton(
                 text = actionLabel,
                 onClick = onAction,
-                enabled = !isBusy,
+                enabled = !isBusy && (canRemove || networkAvailable),
                 contentColor = if (canRemove) ClearCutAccents.Red else accent,
                 icon = actionIcon
             )
@@ -1665,6 +1695,7 @@ private fun SettingsActionRow(
     actionLabel: String,
     actionIcon: ImageVector = Icons.Default.ChevronRight,
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     SettingsTile(
@@ -1672,12 +1703,12 @@ private fun SettingsActionRow(
         accent = accent,
         label = label,
         description = description,
-        onClick = onClick,
+        onClick = onClick.takeIf { enabled },
         modifier = modifier
     ) {
         Text(
             text = actionLabel,
-            color = accent,
+            color = if (enabled) accent else LocalClearCutColors.current.disabledText,
             style = MaterialTheme.typography.labelLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -1685,7 +1716,7 @@ private fun SettingsActionRow(
         Icon(
             imageVector = actionIcon,
             contentDescription = null,
-            tint = accent,
+            tint = if (enabled) accent else LocalClearCutColors.current.disabledText,
             modifier = Modifier.size(18.dp)
         )
     }

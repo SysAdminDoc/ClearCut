@@ -17,7 +17,8 @@ fun BoxScope.EditorAiPanelHost(
     segmentationModelState: SegmentationModelState,
     segmentationDownloadProgress: Float,
     inpaintingModelState: InpaintingModelState,
-    inpaintingDownloadProgress: Float
+    inpaintingDownloadProgress: Float,
+    networkAvailable: Boolean,
 ) {
     BottomSheetSlot(
         visible = state.panels.isOpen(PanelId.AI_TOOLS),
@@ -51,7 +52,8 @@ fun BoxScope.EditorAiPanelHost(
             inpaintingModelState = inpaintingModelState,
             inpaintingDownloadProgress = inpaintingDownloadProgress,
             onDownloadInpainting = viewModel::downloadInpaintingModel,
-            onDeleteInpainting = viewModel::deleteInpaintingModel
+            onDeleteInpainting = viewModel::deleteInpaintingModel,
+            networkAvailable = networkAvailable,
         )
     }
 

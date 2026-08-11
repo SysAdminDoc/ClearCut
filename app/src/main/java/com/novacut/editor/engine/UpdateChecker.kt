@@ -27,7 +27,9 @@ import javax.inject.Singleton
  * are sent.
  */
 @Singleton
-class UpdateChecker @Inject constructor() {
+class UpdateChecker @Inject constructor(
+    private val connectivityObserver: ConnectivityObserver,
+) {
 
     sealed interface Result {
         /** Feature compiled out, or the user has not opted in. No call made. */
@@ -35,6 +37,9 @@ class UpdateChecker @Inject constructor() {
 
         /** The installed version is current. */
         data object UpToDate : Result
+
+        /** No validated internet connection was available, so no request was made. */
+        data object Offline : Result
 
         /** A newer release exists; [releaseUrl] points at its GitHub page. */
         data class UpdateAvailable(val latestVersion: String, val releaseUrl: String) : Result
@@ -63,6 +68,9 @@ class UpdateChecker @Inject constructor() {
         if (!UpdateCheckPolicy.mayCheckNetwork(buildSupportsUpdateCheck, userEnabled)) {
             return Result.Unavailable
         }
+        if (!connectivityObserver.isOnline.value) {
+            return Result.Offline
+        }
         return withContext(Dispatchers.IO) {
             try {
                 val request = Request.Builder()
@@ -85,7 +93,11 @@ class UpdateChecker @Inject constructor() {
                     }
                 }
             } catch (e: Exception) {
-                Result.Failed(e.message ?: "network error")
+                if (!connectivityObserver.isOnline.value) {
+                    Result.Offline
+                } else {
+                    Result.Failed(e.message ?: "network error")
+                }
             }
         }
     }

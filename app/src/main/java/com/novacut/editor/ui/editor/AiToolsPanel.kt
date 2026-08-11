@@ -252,7 +252,8 @@ fun AiToolsPanel(
     inpaintingModelState: InpaintingModelState = InpaintingModelState.NOT_DOWNLOADED,
     inpaintingDownloadProgress: Float = 0f,
     onDownloadInpainting: () -> Unit = {},
-    onDeleteInpainting: () -> Unit = {}
+    onDeleteInpainting: () -> Unit = {},
+    networkAvailable: Boolean = true,
 ) {
     val semanticColors = LocalClearCutColors.current
     val readyTools = aiTools.filter { !it.requiresClip || hasSelectedClip }
@@ -344,6 +345,7 @@ fun AiToolsPanel(
                 WhisperModelState.NOT_DOWNLOADED, WhisperModelState.ERROR -> onDownloadWhisper
                 else -> null
             },
+            networkAvailable = networkAvailable,
             secondaryActionLabel = if (whisperModelState == WhisperModelState.READY) {
                 stringResource(R.string.ai_model_remove_action)
             } else {
@@ -382,6 +384,7 @@ fun AiToolsPanel(
                 SegmentationModelState.NOT_DOWNLOADED, SegmentationModelState.ERROR -> onDownloadSegmentation
                 else -> null
             },
+            networkAvailable = networkAvailable,
             secondaryActionLabel = if (segmentationModelState == SegmentationModelState.READY) {
                 stringResource(R.string.ai_model_remove_action)
             } else {
@@ -424,6 +427,7 @@ fun AiToolsPanel(
                 InpaintingModelState.NOT_DOWNLOADED, InpaintingModelState.ERROR -> onDownloadInpainting
                 else -> null
             },
+            networkAvailable = networkAvailable,
             secondaryActionLabel = if (inpaintingModelState == InpaintingModelState.READY) {
                 stringResource(R.string.ai_model_remove_action)
             } else {
@@ -740,11 +744,17 @@ private fun ModelStatusCard(
     primaryActionLabel: String?,
     onPrimaryAction: (() -> Unit)?,
     secondaryActionLabel: String?,
-    onSecondaryAction: (() -> Unit)?
+    onSecondaryAction: (() -> Unit)?,
+    networkAvailable: Boolean,
 ) {
     val semanticColors = LocalClearCutColors.current
     val hasPrimaryAction = primaryActionLabel != null && onPrimaryAction != null
     val hasSecondaryAction = secondaryActionLabel != null && onSecondaryAction != null
+    val displayDescription = if (!networkAvailable && hasPrimaryAction) {
+        "$description ${stringResource(R.string.ai_model_offline_description)}"
+    } else {
+        description
+    }
 
     PremiumPanelCard(accent = accent) {
         Row(
@@ -780,7 +790,7 @@ private fun ModelStatusCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = description,
+                    text = displayDescription,
                     style = MaterialTheme.typography.bodyMedium,
                     color = semanticColors.subtext
                 )
@@ -830,7 +840,8 @@ private fun ModelStatusCard(
                         text = primaryActionLabel,
                         onClick = onPrimaryAction,
                         icon = Icons.Default.Download,
-                        modifier = Modifier.widthIn(min = 112.dp)
+                        modifier = Modifier.widthIn(min = 112.dp),
+                        enabled = networkAvailable,
                     )
                 }
 

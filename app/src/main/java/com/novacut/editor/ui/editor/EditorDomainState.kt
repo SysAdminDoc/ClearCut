@@ -56,7 +56,9 @@ data class EditorCaptionState(
     // True when the user requested a translation but no translation model is
     // installed, so the panel shows "model required" instead of untranslated
     // rows presented as a translation.
-    val translationUnavailable: Boolean = false
+    val translationUnavailable: Boolean = false,
+    // True when a translation action was blocked by the live connectivity gate.
+    val translationOffline: Boolean = false,
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.CAPTION
 }

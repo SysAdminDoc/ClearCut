@@ -149,6 +149,7 @@
     <string name="caption_translation_subtitle">Translate captions to a target language. Edit any row inline.</string>
     <string name="caption_translation_no_target">Pick a target language to begin.</string>
     <string name="caption_translation_unavailable">Translation model required. Install a translation model to translate captions; captions are never shown as translated until one is active.</string>
+    <string name="caption_translation_offline">Caption translation is unavailable offline. Reconnect to download or use its translation model.</string>
     <string name="caption_translation_quality_chip_format">Quality · %1$s</string>
     <string name="caption_translation_regenerate">Regenerate</string>
     <string name="caption_translation_status_translated">Translated</string>
@@ -644,6 +645,7 @@
     <string name="settings_model_not_installed">Not installed</string>
     <string name="settings_model_downloading">Downloading</string>
     <string name="settings_model_error">Needs attention</string>
+    <string name="settings_model_offline_description">Connect to the internet to download this model.</string>
     <string name="settings_tutorial">Tutorial</string>
     <string name="settings_tutorial_description">Replay the editor walkthrough whenever you need a refresher.</string>
     <string name="settings_replay_tutorial">Replay Editor Walkthrough</string>
@@ -685,12 +687,16 @@
     <string name="settings_update_up_to_date">ClearCut is up to date.</string>
     <string name="settings_update_enable_prompt">Turn on update checks to look for new releases.</string>
     <string name="settings_update_check_failed">Couldn\'t check for updates. Try again later.</string>
+    <string name="settings_update_offline">No internet connection. Reconnect to check for updates.</string>
     <string name="settings_update_available_label">Update available: %1$s</string>
     <string name="settings_update_available_description">Opens the GitHub releases page so you can download the new version.</string>
     <string name="settings_update_view_action">View</string>
     <string name="settings_whisper_installed_feedback">Whisper installed. Captions can now use local speech-to-text.</string>
     <string name="settings_whisper_verify_failed_feedback">Whisper could not be verified. Retry the download before using local speech-to-text.</string>
     <string name="settings_model_wifi_only_feedback">Wi-Fi-only model downloads are on. Connect to Wi-Fi or change the setting.</string>
+    <string name="settings_model_offline">No internet connection. Reconnect to download the model.</string>
+    <string name="settings_network_offline_description">No internet connection. Model downloads, caption translation, and update checks will resume automatically when you reconnect.</string>
+    <string name="ai_model_offline_description">Reconnect to the internet to download this model.</string>
     <string name="settings_whisper_download_failed_feedback">Whisper could not be downloaded. Check your connection and try again.</string>
     <string name="settings_segmentation_installed_feedback">Segmentation installed. Background tools can now run locally.</string>
     <string name="settings_segmentation_verify_failed_feedback">Segmentation could not be verified. Retry the download before using AI matte tools.</string>

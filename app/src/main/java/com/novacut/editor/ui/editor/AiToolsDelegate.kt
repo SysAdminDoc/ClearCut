@@ -126,6 +126,8 @@ class AiToolsDelegate(
                         }
                     )
                 )
+            } catch (_: ModelDownloadManager.OfflineNetworkException) {
+                showToast(text(R.string.settings_model_offline))
             } catch (_: ModelDownloadManager.MeteredNetworkException) {
                 showToast(text(R.string.settings_model_wifi_only_feedback))
             }
@@ -167,6 +169,8 @@ class AiToolsDelegate(
                         }
                     )
                 )
+            } catch (_: ModelDownloadManager.OfflineNetworkException) {
+                showToast(text(R.string.settings_model_offline))
             } catch (_: ModelDownloadManager.MeteredNetworkException) {
                 showToast(text(R.string.settings_model_wifi_only_feedback))
             }
@@ -208,6 +212,8 @@ class AiToolsDelegate(
                         }
                     )
                 )
+            } catch (_: ModelDownloadManager.OfflineNetworkException) {
+                showToast(text(R.string.settings_model_offline))
             } catch (_: ModelDownloadManager.MeteredNetworkException) {
                 showToast(text(R.string.settings_model_wifi_only_feedback))
             }
