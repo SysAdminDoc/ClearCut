@@ -7,6 +7,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.CrashRecordStore
+import com.novacut.editor.engine.DebugRuntimePolicy
 import com.novacut.editor.engine.HealthEvent
 import com.novacut.editor.engine.MemoryTrimDispatcher
 import com.novacut.editor.engine.MediaStorePendingRowSweeper
@@ -55,6 +56,7 @@ class ClearCutApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        DebugRuntimePolicy.install()
         CrashRecordStore(this).installGlobalHandler(VERSION)
         processExitRecorder.recordStartupExitReasons()
         createNotificationChannels()

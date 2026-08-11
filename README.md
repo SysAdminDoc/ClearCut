@@ -536,6 +536,9 @@ com.novacut.editor/
 ./gradlew :app:assembleQa :app:assembleQaAndroidTest
 # JVM/lint gate for the QA-targeted test graph
 ./gradlew :app:testQaUnitTest :app:lintDebug
+
+# Debug builds install detect-all StrictMode policies. Violations are log-only
+# and are routed through AppLog; release builds do not install the policies.
 # Headless JVM visual and accessibility verification (record or compare committed goldens)
 ./gradlew :app:recordJvmVisualVerification
 ./gradlew :app:verifyJvmVisualVerification
