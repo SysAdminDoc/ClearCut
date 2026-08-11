@@ -645,7 +645,8 @@ fun ExportSheet(
 
         if (exportState == ExportState.ERROR) {
             val clipboard = LocalClipboardManager.current
-            var reportCopied by remember(incidentReport) { mutableStateOf(false) }
+            val copyableIncidentReport = incidentReport?.takeIf { it.isNotBlank() }
+            var reportCopied by remember(copyableIncidentReport) { mutableStateOf(false) }
             val latestFailureDiagnostic = exportHistory.firstOrNull {
                 it.status == ExportHistoryStatus.FAILED || it.status == ExportHistoryStatus.BLOCKED
             }?.diagnosticSummary
@@ -661,12 +662,12 @@ fun ExportSheet(
                 onSecondary = onClose,
                 // The report the engine already built for exactly this failure. Without
                 // this the card could only say "check diagnostics" and give no way there.
-                tertiaryLabel = incidentReport?.let {
+                tertiaryLabel = copyableIncidentReport?.let {
                     stringResource(
                         if (reportCopied) R.string.export_copy_report_done else R.string.export_copy_report
                     )
                 },
-                onTertiary = incidentReport?.let { report ->
+                onTertiary = copyableIncidentReport?.let { report ->
                     {
                         clipboard.setText(AnnotatedString(report))
                         reportCopied = true

@@ -5,6 +5,7 @@ import com.novacut.editor.engine.CaptionTranslationEngine
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ProjectArchive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -129,5 +130,30 @@ class EditorDomainStateTest {
         assertEquals("Noise profile ready", domains.ai.noiseAnalysisResult)
         assertSame(backupFeedback, domains.media.backupImportFeedback)
         assertTrue(domains.media.relinkReports.isEmpty())
+    }
+
+    @Test
+    fun exportAttemptCannotReuseOrReceiveAReportFromAnotherRun() {
+        val failed = EditorExportDomainState(
+            state = ExportState.ERROR,
+            startTime = 123L,
+            lastIncidentReport = "old report",
+        )
+
+        val prepared = failed.prepareForExportAttempt()
+        assertEquals(0L, prepared.startTime)
+        assertNull(prepared.lastIncidentReport)
+
+        assertEquals(
+            "current report",
+            failed.copy(lastIncidentReport = null)
+                .attachIncidentReport(123L, "current report")
+                .lastIncidentReport,
+        )
+        assertNull(
+            failed.copy(state = ExportState.EXPORTING, startTime = 456L, lastIncidentReport = null)
+                .attachIncidentReport(123L, "old report")
+                .lastIncidentReport,
+        )
     }
 }

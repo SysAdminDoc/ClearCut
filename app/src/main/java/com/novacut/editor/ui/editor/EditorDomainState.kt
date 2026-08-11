@@ -95,15 +95,28 @@ data class EditorExportDomainState(
      */
     val pendingConfirmation: ExportConfirmationRequest? = null,
     /**
-     * The copyable failure report for the most recent failed export. The report
-     * builder existed and was exercised only by its own test -- the error card offered
-     * Retry and Close, and its fallback copy told the user to check diagnostics it gave
-     * no way to open.
+     * The copyable failure report for the current failed export. It is cleared before
+     * every attempt so an unreported failure cannot inherit another run's diagnosis.
      */
     val lastIncidentReport: String? = null
 ) : EditorDomainState {
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.EXPORT
 }
+
+/** Clear report state before preflight starts a new export attempt. */
+internal fun EditorExportDomainState.prepareForExportAttempt(): EditorExportDomainState =
+    copy(startTime = 0L, lastIncidentReport = null)
+
+/** Attach a report only while the failed run it describes is still the current run. */
+internal fun EditorExportDomainState.attachIncidentReport(
+    runStartedAtMs: Long,
+    report: String,
+): EditorExportDomainState =
+    if (state == ExportState.ERROR && startTime == runStartedAtMs) {
+        copy(lastIncidentReport = report)
+    } else {
+        this
+    }
 
 data class StabilizationPreview(
     val clipId: String,

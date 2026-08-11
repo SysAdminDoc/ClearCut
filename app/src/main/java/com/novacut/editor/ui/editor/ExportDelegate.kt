@@ -247,7 +247,7 @@ class ExportDelegate(
         lastProgressTime = startedAtMs
         lastProgressValue = 0f
         updateExport {
-            it.copy(
+            it.prepareForExportAttempt().copy(
                 startTime = startedAtMs,
                 progress = 0f,
                 state = ExportState.EXPORTING,
@@ -358,9 +358,8 @@ class ExportDelegate(
                 )
                 store.save(bundle)
                 // Surface the report where the failure is: the export error card.
-                updateExport {
-                    it.copy(lastIncidentReport = bundle.toCopyableReport(includeRawErrorText))
-                }
+                val report = bundle.toCopyableReport(includeRawErrorText)
+                updateExport { it.attachIncidentReport(startedAtMs, report) }
             }
         }
     }
@@ -770,6 +769,7 @@ class ExportDelegate(
             showToast(appContext.getString(R.string.export_already_in_progress_toast))
             return
         }
+        updateExport { it.prepareForExportAttempt() }
         if (currentState.tracks.flatMap { it.clips }.isEmpty()) {
             showToast(appContext.getString(R.string.export_no_clips_toast))
             return
@@ -797,6 +797,7 @@ class ExportDelegate(
             showToast(appContext.getString(R.string.export_already_in_progress_toast))
             return
         }
+        updateExport { it.prepareForExportAttempt() }
         val partialFile = entry.resumePartialPath?.let(::File)
         val decision = partialFile?.let { resumeEligibility(currentState, outputExtension = it.extension) }
         val fingerprintsMatch = entry.projectId == currentState.project.id &&
@@ -813,7 +814,7 @@ class ExportDelegate(
             deleteOwnedResumeFile(partialFile)
             val message = text(R.string.export_resume_unavailable)
             updateExport {
-                it.copy(
+                it.prepareForExportAttempt().copy(
                     state = ExportState.ERROR,
                     progress = 0f,
                     errorMessage = message,
@@ -847,7 +848,7 @@ class ExportDelegate(
      */
     fun confirmPendingExport() {
         val request = stateFlow.value.export.pendingConfirmation ?: return
-        updateExport { it.copy(pendingConfirmation = null) }
+        updateExport { it.prepareForExportAttempt().copy(pendingConfirmation = null) }
         val currentState = stateFlow.value
         scope.launch {
             startExportAsync(
@@ -924,6 +925,7 @@ class ExportDelegate(
         outputFileOverride: File? = null,
         batchResumePartialPath: String? = null,
     ) {
+        updateExport { it.prepareForExportAttempt() }
         acceptedFallbackNote = acceptedConfirmation?.acceptedFallbackSummary()
         runtimeExportNote = null
         val healthReport = mediaHealthPreflight(currentState)
