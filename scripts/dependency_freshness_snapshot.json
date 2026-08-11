@@ -180,6 +180,24 @@
         "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
       }
     },
+    "coreKtx": {
+      "coordinate": "androidx.core:core-ktx",
+      "pinnedVersion": "1.19.0",
+      "latestStable": "1.19.0",
+      "source": "https://developer.android.com/jetpack/androidx/releases/core",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/maven-metadata.xml",
+      "reviewedOn": "2026-08-11",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "passed",
+        "version": "1.19.0",
+        "verifiedOn": "2026-08-11",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency coreKtx --version 1.19.0",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
+      }
+    },
     "coroutines": {
       "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
       "pinnedVersion": "1.11.0",

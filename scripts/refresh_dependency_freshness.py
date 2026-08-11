@@ -71,6 +71,11 @@ SOURCE_SPECS: dict[str, dict[str, str]] = {
         "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/sqlite/sqlite-framework/maven-metadata.xml",
         "source": "https://developer.android.com/jetpack/androidx/releases/sqlite",
     },
+    "coreKtx": {
+        "coordinate": "androidx.core:core-ktx",
+        "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/maven-metadata.xml",
+        "source": "https://developer.android.com/jetpack/androidx/releases/core",
+    },
     "coroutines": {
         "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
         "metadataSource": "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-android/maven-metadata.xml",

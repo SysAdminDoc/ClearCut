@@ -29,6 +29,7 @@ class DependencyFreshnessTest {
         "hilt",
         "room",
         "coroutines",
+        "coreKtx",
         "lifecycle",
         "navigation",
         "coil",
