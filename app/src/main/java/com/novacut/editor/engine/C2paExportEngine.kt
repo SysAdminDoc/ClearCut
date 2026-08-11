@@ -189,7 +189,7 @@ class C2paExportEngine @Inject constructor() {
     /**
      * Build the full manifest spec for a project export. The spec is
      * structured but unsigned; the caller picks a [SigningMode] and hands
-     * the result to [signAndEmbed] when the c2pa AAR is wired.
+     * the result to a future signer bridge when the c2pa AAR is wired.
      *
      * @param projectTitle Optional human title (`null` when redacted).
      * @param novaCutVersionName Pulled from `BuildConfig.VERSION_NAME`.
@@ -437,43 +437,6 @@ class C2paExportEngine @Inject constructor() {
                 }
             }
         }
-    }
-
-    /**
-     * Sign and embed the manifest into the exported MP4 at [outputPath].
-     * Returns a [SignResult] describing what happened.
-     *
-     * Returns `UNAVAILABLE` until both a C2PA library and signer credentials
-     * are configured. The signing bridge must embed a manifest store into the
-     * MP4 and leave a verifiable BMFF hard binding; a draft sidecar is not
-     * enough to return [SignResult.Signed].
-     */
-    suspend fun signAndEmbed(
-        manifest: C2paManifest,
-        outputPath: String
-    ): SignResult {
-        require(outputPath.isNotBlank()) { "outputPath must not be blank" }
-        val availability = signingAvailability(manifest.signingMode)
-        if (!availability.canSignEmbeddedManifest) {
-            Log.d(
-                TAG,
-                "signAndEmbed unavailable: ${availability.status} (target=$outputPath, mode=${manifest.signingMode})"
-            )
-            return SignResult.Unavailable(reason = availability.message)
-        }
-        Log.d(TAG, "signAndEmbed: signer bridge not implemented (target=$outputPath, mode=${manifest.signingMode})")
-        return SignResult.Unavailable(
-            reason = "C2PA signer bridge is not implemented in this build"
-        )
-    }
-
-    sealed class SignResult {
-        /** Manifest was signed + embedded into the MP4 file. */
-        data class Signed(val signedBytes: Long, val manifestId: String) : SignResult()
-        /** c2pa library not available on classpath. */
-        data class Unavailable(val reason: String) : SignResult()
-        /** Signing attempted but failed (key error, file IO, etc.). */
-        data class Failed(val reason: String, val cause: Throwable? = null) : SignResult()
     }
 
     companion object {

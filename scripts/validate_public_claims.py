@@ -200,10 +200,12 @@ def active_caption_model(source: str) -> str | None:
 
 
 def c2pa_signing_ready(source: str) -> bool:
-    # A future implementation must contain an actual Signed-result return;
-    # the READY enum alone only describes a planned capability. The current
-    # build intentionally keeps the bridge unavailable.
-    return "SignResult.Signed(" in source and "SIGNER_BRIDGE_UNAVAILABLE" not in source
+    # The READY enum alone only describes a planned capability. A future
+    # implementation must also expose the embedded-signing gate.
+    return (
+        "status = AvailabilityStatus.READY" in source
+        and "canSignEmbeddedManifest = true" in source
+    )
 
 
 def direct_api_upload_ready(source: str) -> bool:

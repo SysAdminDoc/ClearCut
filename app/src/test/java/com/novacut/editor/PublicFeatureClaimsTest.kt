@@ -144,14 +144,7 @@ class PublicFeatureClaimsTest {
         val fastlane = locate("fastlane/metadata/android/en-US/full_description.txt").readText()
 
         val stubbedEngines = mapOf(
-            "TemplateMarketplaceEngine" to listOf("template marketplace", "community marketplace", "browse templates online"),
-            "StockAssetEngine" to listOf("stock library", "stock footage", "Pexels integration", "Pixabay integration"),
-            "CameraCaptureEngine" to listOf("in-app camera", "CameraX recorder", "built-in recorder"),
             "CaptionTranslationEngine" to listOf("caption translation ready", "translate captions automatically", "real-time translation"),
-            "StemSeparationEngine" to listOf("stem separation ready", "isolate vocals", "Demucs integration"),
-            "VoiceCloneEngine" to listOf("voice cloning ready", "clone your voice", "XTTS integration"),
-            "LipSyncEngine" to listOf("lip sync ready", "automatic lip sync", "Wav2Lip integration"),
-            "EquirectangularEngine" to listOf("360 video editing", "VR editing ready", "equirectangular projection"),
             "ContentIdEngine" to listOf("content ID ready", "AcoustID fingerprint", "music identification"),
         )
 
@@ -187,22 +180,6 @@ class PublicFeatureClaimsTest {
             assertTrue(
                 "CaptionTranslationEngine.isModelReady() must return false while stubbed",
                 engineSource.contains("fun isModelReady(): Boolean = false")
-            )
-        }
-    }
-
-    @Test
-    fun stockAssetEngineReportsNotConfigured() {
-        val engineSource = locate(
-            "app/src/main/java/com/novacut/editor/engine/StockAssetEngine.kt"
-        ).readText()
-
-        if (engineSource.contains("stub", ignoreCase = true)
-            || engineSource.contains("not configured", ignoreCase = true)
-        ) {
-            assertTrue(
-                "StockAssetEngine.isProviderConfigured() must return false while stubbed",
-                engineSource.contains("fun isProviderConfigured(provider: Provider): Boolean = false")
             )
         }
     }

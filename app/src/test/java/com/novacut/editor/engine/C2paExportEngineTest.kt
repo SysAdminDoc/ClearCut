@@ -1,6 +1,5 @@
 package com.novacut.editor.engine
 
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -414,32 +413,4 @@ class C2paExportEngineTest {
         assertEquals(false, engine.isAvailable())
     }
 
-    @Test
-    fun signAndEmbed_returnsUnavailableWhenLibraryAbsent() {
-        runBlocking {
-            val manifest = engine.buildManifest(
-                projectTitle = "Project",
-                novaCutVersionName = "3.74.9",
-                signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
-                ledger = emptyList(),
-                exporterCreationTimeMs = 0L
-            )
-            val result = engine.signAndEmbed(manifest, outputPath = "/tmp/foo.mp4")
-            assertTrue(result is C2paExportEngine.SignResult.Unavailable)
-        }
-    }
-
-    @Test
-    fun signAndEmbed_rejectsBlankPath() {
-        val manifest = engine.buildManifest(
-            projectTitle = "Project",
-            novaCutVersionName = "3.74.9",
-            signingMode = C2paExportEngine.SigningMode.ANDROID_KEYSTORE,
-            ledger = emptyList(),
-            exporterCreationTimeMs = 0L
-        )
-        assertThrows(IllegalArgumentException::class.java) {
-            runBlocking { engine.signAndEmbed(manifest, outputPath = "") }
-        }
-    }
 }

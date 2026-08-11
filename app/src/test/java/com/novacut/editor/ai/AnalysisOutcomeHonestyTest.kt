@@ -25,16 +25,6 @@ class AnalysisOutcomeHonestyTest {
     }
 
     @Test
-    fun aDefaultStabilizationResultIsNotAMeasurementOfSteadiness() {
-        val notRun = StabilizationResult()
-        val measured = StabilizationResult(shakeMagnitude = 0f, confidence = 0.9f, analyzed = true)
-
-        assertFalse("a default result must not read as analysed", notRun.analyzed)
-        assertTrue("genuinely steady footage is analysed with zero shake", measured.analyzed)
-        assertTrue(measured.shakeMagnitude == 0f)
-    }
-
-    @Test
     fun captionConfidenceIsAbsentRatherThanInvented() {
         val transcribed = CaptionEntry(startMs = 0, endMs = 500, text = "hello")
 

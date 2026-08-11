@@ -11,7 +11,7 @@ import javax.inject.Singleton
 /**
  * R6.17 — Live streaming output engine for the future Live Studio mode (R4.6).
  *
- * Composes against [CameraCaptureEngine] (already stubbed) and the planned
+ * Composes against the media-picker camera flow and the planned
  * scene/source graph: a configured `OutputDestination` consumes encoded
  * H.264 / HEVC packets and pushes them to an RTMP / SRT / WebRTC sink.
  *

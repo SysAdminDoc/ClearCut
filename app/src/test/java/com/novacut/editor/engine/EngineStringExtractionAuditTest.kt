@@ -1,6 +1,5 @@
 package com.novacut.editor.engine
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -47,52 +46,6 @@ class EngineStringExtractionAuditTest {
                 "route the message through a delegate / ViewModel so the UI layer " +
                 "owns presentation and localization. Offenders: $offenders",
             offenders.isEmpty()
-        )
-    }
-
-    /**
-     * Locks the count of engine source files at the time of the audit. If a new
-     * engine is added without an entry in [docs/models.md] (when applicable),
-     * this test will fail and prompt the author to update the documentation.
-     */
-    @Test
-    fun engineSourceFileCountIsTracked() {
-        val engineDir = locateEngineSourceDir() ?: return
-        val count = engineDir.walkTopDown()
-            .filter { it.isFile && it.extension == "kt" }
-            .count()
-        // 2026-05-16: 102 engine .kt files.
-        // 2026-06-04: 138 after the local-network permission policy.
-        // 2026-06-11: 142 after FFmpeg reverse-export, animated-overlay, and
-        //             font-import engines landed (the cap had drifted red).
-        // 2026-06-20: 161 after AiDisclosurePolicy and recent engine additions.
-        // 2026-08-02: 186 after the project composition planning and builder boundaries.
-        // 2026-08-03: 188 after the declarative pack contract and LUT registry.
-        // 2026-08-03: 189 after the track-level blend capability policy.
-        // 2026-08-03: 190 after the GIF export geometry policy.
-        // 2026-08-03: 191 after media codec and sync-frame diagnostics.
-        // 2026-08-03: 193 after the multi-asset sequence ordering policy.
-        // 2026-08-03: 194 after the streaming GIF encoder.
-        // 2026-08-04: 195 after the persistent batch export plan store.
-        // 2026-08-04: 196 after guarded SRT/WebVTT caption import.
-        // 2026-08-04: 197 after frame-quantized timeline range export.
-        // 2026-08-04: 198 after constrained Media3 export resume support.
-        // 2026-08-04: 199 after shared ONNX Runtime XNNPACK session ownership.
-        // 2026-08-04: 200 after the Media3 pure-trim optimization gate.
-        // 2026-08-04: 201 after Media3 export robustness settings.
-        // 2026-08-04: 202 after startup cleanup for orphaned MediaStore rows.
-        // 2026-08-03: 204 after source metadata policy and muxer pass-through.
-        // 2026-08-03: 205 after local metadata sidecar export.
-        // 2026-08-03: 206 after portable edit-decision JSON interchange.
-        // 2026-08-03: 207 after Android 15 media platform policy hooks.
-        // 2026-08-09: 208 after local media-bin metadata persistence.
-        // Bump intentionally when adding new engines so the
-        // docs/models.md registry and the ROADMAP stay in sync. This assertion
-        // is a checkpoint, not a hard cap.
-        assertTrue(
-            "Engine file count drifted from the audit baseline (was 161, now $count). " +
-                "If you added an engine, update docs/models.md and bump this number.",
-            count in 95..208
         )
     }
 

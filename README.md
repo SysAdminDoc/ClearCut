@@ -484,7 +484,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (91 injectable singletons across 208 files)
+├── engine/                 # Core engines (76 injectable singletons across 195 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)
@@ -499,10 +499,9 @@ com.novacut.editor/
 │   ├── InpaintingEngine     # LaMa object removal (ONNX Runtime; frame/video output with audio retention)
 │   ├── UpscaleEngine        # Real-ESRGAN video upscaling (stub)
 │   ├── VideoMattingEngine   # RVM AI green screen (stub)
-│   ├── StabilizationEngine  # OpenCV optical flow (stub)
+│   ├── StabilizationEngine  # Offline bounded motion analysis and shared transforms
 │   ├── StyleTransferEngine  # AnimeGAN + Fast NST (stub)
 │   ├── SmartReframeEngine   # Subject-tracking auto-crop
-│   ├── TapSegmentEngine     # SAM 2.1 / MobileSAM target metadata (stub)
 │   ├── TtsEngine            # Android System TTS voiceover synthesis
 │   ├── LottieTemplateEngine # Animated title rendering
 │   ├── FFmpegEngine         # FFmpegKitNext fallback processing engine

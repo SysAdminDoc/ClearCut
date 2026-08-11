@@ -37,7 +37,6 @@ class AiToolsDelegate(
     private val upscaleEngine: UpscaleEngine,
     private val videoMattingEngine: VideoMattingEngine,
     private val stabilizationEngine: StabilizationEngine,
-    private val styleTransferEngine: StyleTransferEngine,
     private val appContext: Context,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,

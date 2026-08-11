@@ -35,7 +35,7 @@ import javax.inject.Singleton
  *      zero-shaped tensors.
  *   4. Default downsample ratio 0.5 for preview, 1.0 for export — same
  *      pattern as the FrameInterpolationEngine quality enum.
- *   5. Add a tap-to-refine path that bridges to TapSegmentEngine (R6.4) so
+ *   5. Add a tap-to-refine path that bridges to a segmentation engine (R6.4) so
  *      a user can correct a misclassified region.
  *
  * ## License
