@@ -2,6 +2,7 @@
 
 ## v3.78.1
 
+- Replaced source-text contract tests with executable JVM behavior coverage: Compose layout measurements, playback/effect policy, export-storage preflight, snapshot recovery, undo/restore, and a documented limitation for the remaining static settings audit.
 - Removed the unreferenced engine layer, stale AI analysis APIs, unused editor injections, and the unimplemented C2PA signer stub; the clean x86_64 debug APK fell from 140,218,263 to 137,133,686 bytes.
 - Added offline hardware-aware stabilization: bounded platform motion analysis with low-RAM and thermal gates, live progress and cancellation, source-preserving review/apply UI, persistent motion/lens/sync/crop data, shared preview/export transforms, and API 37 device acceptance.
 - Completed the AGP 9/API 37 acceptance lane: the managed Pixel 6 benchmark/profile tasks, detector ratchet, lint, advisory-floor, debug, and baseline-profile package gates are green; the connected QA baseline remains 17 tests with seven known emulator codec, accessibility-tree, preview, and migration-fixture failures.
