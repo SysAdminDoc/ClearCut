@@ -92,18 +92,20 @@
     },
     "composeBom": {
       "coordinate": "androidx.compose:compose-bom",
-      "pinnedVersion": "2026.06.00",
+      "pinnedVersion": "2026.06.01",
       "latestStable": "2026.06.01",
       "source": "https://developer.android.com/develop/ui/compose/bom/bom-mapping",
       "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/maven-metadata.xml",
       "reviewedOn": "2026-08-03",
-      "state": "held",
-      "reason": "The catalog pin 2026.06.00 is below the 2026.06.01 stable version reported by authoritative metadata; no compatibility probe has approved the change.",
-      "unblockCondition": "Run `python scripts/probe_dependency_upgrade.py --dependency composeBom --version 2026.06.01` and retain the new pin only after the local compatibility probe passes.",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
       "compatibilityProbe": {
-        "status": "not-run",
-        "version": null,
-        "command": "python scripts/probe_dependency_upgrade.py --dependency composeBom --version 2026.06.01"
+        "status": "passed",
+        "version": "2026.06.01",
+        "verifiedOn": "2026-08-11",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency composeBom --version 2026.06.01",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
       },
       "lintReviewRequired": true
     },
