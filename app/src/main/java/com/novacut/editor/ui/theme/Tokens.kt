@@ -4,6 +4,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
@@ -86,6 +87,17 @@ object Elevation {
 
     /** Snackbars, transient floating affordances. */
     val toast = 8.dp
+}
+
+/**
+ * Fixed colours for controls that edit media content rather than the application chrome.
+ * These values intentionally remain stable across appearance modes so a saved chroma-key
+ * preset keeps the same meaning when it is reopened.
+ */
+object ClearCutContentColors {
+    val ChromaGreen = Color(0xFF00FF00)
+    val ChromaBlue = Color(0xFF0044FF)
+    val ChromaRed = Color(0xFFFF0000)
 }
 
 /**

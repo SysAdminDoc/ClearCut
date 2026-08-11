@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- The Android view fallback is deliberately dark-only, matching the Compose themes. -->
     <style name="Theme.ClearCut" parent="android:Theme.Material.NoActionBar">
         <item name="android:colorBackground">@color/base</item>
         <item name="android:statusBarColor">@color/crust</item>

@@ -1,6 +1,7 @@
 package com.novacut.editor.ui.editor
 
 import com.novacut.editor.ui.theme.ClearCutAccents
+import com.novacut.editor.ui.theme.ClearCutContentColors
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -266,19 +267,19 @@ fun ChromaKeyPanel(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KeyColorSwatch(
                     label = stringResource(R.string.chroma_green),
-                    color = Color(0xFF00FF00),
+                    color = ClearCutContentColors.ChromaGreen,
                     selected = keyColorG > 0.8f && keyColorR < 0.3f && keyColorB < 0.3f,
                     onClick = { onKeyColorChanged(0f, 1f, 0f) }
                 )
                 KeyColorSwatch(
                     label = stringResource(R.string.chroma_blue),
-                    color = Color(0xFF0044FF),
+                    color = ClearCutContentColors.ChromaBlue,
                     selected = keyColorB > 0.8f && keyColorR < 0.3f && keyColorG < 0.3f,
                     onClick = { onKeyColorChanged(0f, 0f, 1f) }
                 )
                 KeyColorSwatch(
                     label = stringResource(R.string.chroma_red),
-                    color = Color(0xFFFF0000),
+                    color = ClearCutContentColors.ChromaRed,
                     selected = keyColorR > 0.8f && keyColorG < 0.3f && keyColorB < 0.3f,
                     onClick = { onKeyColorChanged(1f, 0f, 0f) }
                 )

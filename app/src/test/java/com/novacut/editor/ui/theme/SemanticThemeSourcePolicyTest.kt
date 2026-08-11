@@ -36,7 +36,7 @@ class SemanticThemeSourcePolicyTest {
             }
         }
         rawColorFiles.forEach { file ->
-            val allowedRawColors = CONTENT_DRIVEN_COLOR_ALLOWLIST[file.name].orEmpty()
+            val allowedRawColors = INSTRUMENT_COLOR_ALLOWLIST[file.name].orEmpty()
             val violations = RAW_COLOR_LITERAL.findAll(file.readText())
                 .map { it.value }
                 .filterNot { it in allowedRawColors }
@@ -64,15 +64,12 @@ class SemanticThemeSourcePolicyTest {
         val APPROVED_ACCENT = Regex("ClearCutAccents\\.([A-Za-z0-9_]+)")
         val RAW_COLOR_LITERAL = Regex("Color\\(0x[0-9A-Fa-f]+\\)")
         /**
-         * Signal/preset colors are intentionally independent of the UI theme. Every
-         * structural editor color must still resolve through semantic or accent tokens.
+         * Scope traces are instrument colours with fixed signal meaning, so they are
+         * intentionally independent of the UI theme. Every structural editor colour
+         * and content-control colour must resolve through semantic, accent, or content
+         * tokens instead.
          */
-        val CONTENT_DRIVEN_COLOR_ALLOWLIST = mapOf(
-            "PipPresetsPanel.kt" to setOf(
-                "Color(0xFF00FF00)",
-                "Color(0xFF0044FF)",
-                "Color(0xFFFF0000)",
-            ),
+        val INSTRUMENT_COLOR_ALLOWLIST = mapOf(
             "VideoScopes.kt" to setOf(
                 "Color(0xFFFF4444)",
                 "Color(0xFF44FF44)",

@@ -652,9 +652,9 @@
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_description">Create a local support bundle only when you choose to share one.</string>
     <string name="settings_appearance">Appearance</string>
-    <string name="settings_appearance_description">Choose the editor contrast policy. ClearCut keeps a dark video-neutral canvas until a light palette has full screenshot QA.</string>
+    <string name="settings_appearance_description">Choose the editor contrast policy. ClearCut currently offers dark palettes so the video canvas stays neutral and readable.</string>
     <string name="settings_appearance_mode">Appearance mode</string>
-    <string name="settings_appearance_mode_description">System and Dark use the standard dark canvas; High Contrast boosts strokes, chips, and text indicators.</string>
+    <string name="settings_appearance_mode_description">Dark uses the standard dark canvas; High Contrast Dark boosts strokes, chips, and text indicators.</string>
     <string name="settings_appearance_dark">Dark</string>
     <string name="settings_appearance_high_contrast">High Contrast Dark</string>
     <string name="settings_diagnostic_timeline_shape">Include timeline shape</string>

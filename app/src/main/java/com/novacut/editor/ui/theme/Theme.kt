@@ -192,9 +192,9 @@ val LocalClearCutColors = staticCompositionLocalOf {
 
 object ClearCutThemeDefaults {
     /**
-     * ClearCut ships dark schemes only, so every mode resolves to itself. Kept as a
-     * seam for the day a light palette passes its contrast audit -- but it no longer
-     * pretends to consult a system preference it cannot honour.
+     * ClearCut intentionally ships dark schemes only. Each selectable appearance mode
+     * resolves to its own implemented scheme; there is no unsupported system-following
+     * or light-mode branch hidden behind the settings control.
      */
     fun resolveMode(mode: AppearanceMode): AppearanceMode = mode
 
