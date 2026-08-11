@@ -484,7 +484,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (76 injectable singletons across 195 files)
+├── engine/                 # Core engines (76 injectable singletons across 197 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)
