@@ -508,6 +508,7 @@
     <string name="ai_tool_scene_detect_desc">Detectar automáticamente cambios de escena</string>
     <string name="ai_tool_track_motion">Seguimiento del movimiento</string>
     <string name="ai_tool_track_motion_desc">Seguimiento de objetos a través de fotogramas</string>
+    <string name="ai_tool_face_track_desc">Seguimiento de rostros a través de fotogramas</string>
     <string name="ai_tool_smart_crop">Cultivo inteligente</string>
     <string name="ai_tool_smart_crop_desc">Encuadre impulsado por IA</string>
     <string name="ai_tool_auto_color">Color automático</string>
@@ -518,8 +519,10 @@
     <string name="ai_tool_denoise_desc">Eliminar el ruido de fondo</string>
     <string name="ai_tool_ai_upscale">IA de lujo</string>
     <string name="ai_tool_ai_upscale_desc">Vídeo exclusivo con Real-ESRGAN</string>
+    <string name="ai_tool_frame_interp_desc">Generar fotogramas intermedios para un movimiento más fluido</string>
     <string name="ai_tool_ai_background">Antecedentes de la IA</string>
     <string name="ai_tool_ai_background_desc">Pantalla verde AI con estera RVM</string>
+    <string name="ai_tool_bg_replace_desc">Reemplazar el fondo con una imagen personalizada</string>
     <string name="ai_tool_ai_stabilize">Estabilización de IA</string>
     <string name="ai_tool_ai_stabilize_desc">Estabilización de flujo óptico OpenCV</string>
     <string name="ai_tool_style_transfer">Transferencia de estilo</string>

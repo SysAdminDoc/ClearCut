@@ -17,6 +17,7 @@ Current version: **v3.78.1** (`versionCode` 296).
 - Prevented export error cards from carrying a prior run's incident report into a new or unreported failure.
 - Corrected Spanish orthography and completed the locale's plural quantity contracts, including the `many` fallback where Android lint requires it.
 - Made batch media imports report required and available storage, show determinate file progress, and cancel safely while releasing URI grants.
+- Corrected AI tool descriptions for face tracking, frame interpolation, and custom background replacement, with a uniqueness test guarding the tool grid.
 - Pure single-source MP4 trims now use Media3's GOP trim optimization when eligible, disclose the full-render reason when they are not, and report all seven optimizer outcomes in English and Spanish; the unsafe MP4 edit-list path is no longer enabled.
 - Added validated-internet awareness across model downloads, AI model controls, caption translation, and opt-in update checks; offline controls explain the dependency, disable before a request, and recover from connectivity callbacks.
 - Made the appearance contract explicit: the menu now documents the implemented Dark and High Contrast Dark schemes only, and chroma-key colours live in content tokens while RGB scope traces remain documented instrument colours.

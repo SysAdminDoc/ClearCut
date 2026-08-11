@@ -523,6 +523,7 @@
     <string name="ai_tool_scene_detect_desc">Auto-detect scene changes</string>
     <string name="ai_tool_track_motion">Track Motion</string>
     <string name="ai_tool_track_motion_desc">Track objects across frames</string>
+    <string name="ai_tool_face_track_desc">Track faces across frames</string>
     <string name="ai_tool_smart_crop">Smart Crop</string>
     <string name="ai_tool_smart_crop_desc">AI-powered framing</string>
     <string name="ai_tool_auto_color">Auto Color</string>
@@ -533,8 +534,10 @@
     <string name="ai_tool_denoise_desc">Remove background noise</string>
     <string name="ai_tool_ai_upscale">AI Upscale</string>
     <string name="ai_tool_ai_upscale_desc">Upscale video with Real-ESRGAN</string>
+    <string name="ai_tool_frame_interp_desc">Generate intermediate frames for smoother motion</string>
     <string name="ai_tool_ai_background">AI Background</string>
     <string name="ai_tool_ai_background_desc">AI green screen with RVM matting</string>
+    <string name="ai_tool_bg_replace_desc">Replace the background with a custom image</string>
     <string name="ai_tool_ai_stabilize">AI Stabilize</string>
     <string name="ai_tool_ai_stabilize_desc">OpenCV optical flow stabilization</string>
     <string name="ai_tool_style_transfer">Style Transfer</string>

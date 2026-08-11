@@ -113,7 +113,7 @@ val aiTools = listOf(
     AiToolConfig(
         "bg_replace",
         R.string.tool_replace_bg,
-        R.string.ai_tool_ai_background_desc,
+        R.string.ai_tool_bg_replace_desc,
         Icons.Default.PhotoFilter,
         ClearCutAccents.Lavender,
         readinessResId = R.string.ai_tool_status_model_gated,
@@ -137,7 +137,7 @@ val aiTools = listOf(
     AiToolConfig(
         "face_track",
         R.string.tool_face_track,
-        R.string.ai_tool_track_motion_desc,
+        R.string.ai_tool_face_track_desc,
         Icons.Default.Face,
         ClearCutAccents.Mauve
     ),
@@ -182,7 +182,7 @@ val aiTools = listOf(
     AiToolConfig(
         "frame_interp",
         R.string.tool_frame_interp,
-        R.string.ai_tool_ai_upscale_desc,
+        R.string.ai_tool_frame_interp_desc,
         Icons.Default.SlowMotionVideo,
         ClearCutAccents.Sky,
         readinessResId = R.string.ai_tool_status_model_gated,
