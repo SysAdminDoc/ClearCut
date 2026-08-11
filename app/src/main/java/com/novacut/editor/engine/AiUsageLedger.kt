@@ -55,6 +55,7 @@ object AiUsageLedger {
         INPAINTING_CLOUD,             // A.12 ProPainter cloud variant
         AUTO_EDIT_LOCAL,              // R6.13 AI Auto-Edit composer
         INPAINTING_LOCAL_LARGE,       // LaMa multi-second range
+        STABILIZATION_LOCAL,          // Offline camera-motion correction
         STYLE_TRANSFER_LOCAL,         // A.11 AnimeGAN / Fast NST
         UPSCALING_LOCAL,              // A.5 Real-ESRGAN
         FRAME_INTERPOLATION_LOCAL,    // A.4 RIFE
@@ -107,6 +108,7 @@ object AiUsageLedger {
         EffectKind.AUTO_EDIT_LOCAL -> Severity.DISCLOSURE_REQUIRED
 
         EffectKind.INPAINTING_LOCAL_LARGE,
+        EffectKind.STABILIZATION_LOCAL,
         EffectKind.STYLE_TRANSFER_LOCAL,
         EffectKind.UPSCALING_LOCAL,
         EffectKind.FRAME_INTERPOLATION_LOCAL,

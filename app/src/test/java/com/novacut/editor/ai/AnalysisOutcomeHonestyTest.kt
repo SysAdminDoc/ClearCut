@@ -55,11 +55,12 @@ class AnalysisOutcomeHonestyTest {
             "the scaleX/scaleY path applies no counter-motion and must not claim stabilization",
             delegate.contains("ai_basic_stabilization_applied_toast")
         )
-        assertTrue(delegate.contains("ai_shake_crop_applied_toast"))
-        val copy = Regex("<string name=\"ai_shake_crop_applied_toast\">(.*?)</string>")
-            .find(strings)?.groupValues?.get(1)
-            .orEmpty()
-        assertTrue("the copy must say it is a crop", copy.contains("crop", ignoreCase = true))
+        assertTrue("stabilization must expose a reviewable motion result", delegate.contains("StabilizationPreview"))
+        assertTrue("stabilization must persist motion data instead of baking a source", delegate.contains("StabilizationData"))
+        val copy = strings
+            .substringAfter("<plurals name=\"ai_stabilization_preview_body\">")
+            .substringBefore("</plurals>")
+        assertTrue("the preview copy must say the source is unchanged", copy.contains("unchanged", ignoreCase = true))
     }
 
     @Test

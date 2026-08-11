@@ -2,6 +2,7 @@
 
 ## v3.78.1
 
+- Added offline hardware-aware stabilization: bounded platform motion analysis with low-RAM and thermal gates, live progress and cancellation, source-preserving review/apply UI, persistent motion/lens/sync/crop data, shared preview/export transforms, and API 37 device acceptance.
 - Completed the AGP 9/API 37 acceptance lane: the managed Pixel 6 benchmark/profile tasks, detector ratchet, lint, advisory-floor, debug, and baseline-profile package gates are green; the connected QA baseline remains 17 tests with seven known emulator codec, accessibility-tree, preview, and migration-fixture failures.
 - Completed LaMa object-removal acceptance on the API 37 AVD with the pinned 174 MiB model: still inference and an audio-bearing video both produced usable outputs, and FFmpeg now rejects zero-sample hardware artifacts before retrying with its MPEG-4 software floor.
 - Completed the Room v1–v10 migration matrix on the API 37 AVD; each hop now preserves the project row, frame-rate values, media-asset table/indexes, and v10 manifest columns, including a corrected v9 fixture for the non-null frame-rate pair.

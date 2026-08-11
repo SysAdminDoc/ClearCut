@@ -12,6 +12,7 @@ import com.novacut.editor.engine.MediaDiagnostic
 import com.novacut.editor.engine.MetadataSidecarFormat
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.ExportState
+import com.novacut.editor.engine.StabilizationEngine
 import com.novacut.editor.ai.AutoEditResult
 import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.ExportConfig
@@ -100,10 +101,19 @@ data class EditorExportDomainState(
     override val kind: EditorDomainState.Kind = EditorDomainState.Kind.EXPORT
 }
 
+data class StabilizationPreview(
+    val clipId: String,
+    val sourceName: String,
+    val motionData: StabilizationEngine.MotionData,
+    val config: StabilizationEngine.StabilizationConfig,
+)
+
 data class EditorAiState(
     val requirementPrompt: AiRequirementPrompt? = null,
     val modelRequirement: AiToolRequirements.ToolRequirement? = null,
     val processingTool: String? = null,
+    val processingProgress: Float = 0f,
+    val stabilizationPreview: StabilizationPreview? = null,
     val suggestion: AiSuggestion? = null,
     val usageLedger: List<AiUsageLedger.Entry> = emptyList(),
     val cutAssistantReview: CutAssistantEngine.ReviewSet? = null,

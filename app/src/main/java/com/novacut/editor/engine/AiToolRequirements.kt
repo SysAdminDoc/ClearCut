@@ -28,7 +28,7 @@ object AiToolRequirements {
         /** AI Background — RVM full matting. */
         AI_BACKGROUND("ai_background"),
 
-        /** AI Stabilize — OpenCV optical flow. */
+        /** AI Stabilize — built-in offline motion analysis. */
         AI_STABILIZE("ai_stabilize"),
 
         /** Advanced Style Transfer — AnimeGAN / Fast NST. */
@@ -137,6 +137,7 @@ object AiToolRequirements {
     }
 
     enum class DeliveryMode {
+        BUILT_IN,
         EXPLICIT_DOWNLOAD,
         BUNDLED_DEPENDENCY,
         DEPENDENCY_NOT_BUNDLED,
@@ -216,16 +217,16 @@ object AiToolRequirements {
         ),
         Tool.AI_STABILIZE to ToolRequirement(
             tool = Tool.AI_STABILIZE,
-            modelDisplayName = "OpenCV Android (arm64)",
-            estimatedBytes = 40_000_000L,
-            license = "Apache-2.0",
-            sourceUrl = "https://opencv.org",
+            modelDisplayName = "ClearCut offline motion analysis",
+            estimatedBytes = 0L,
+            license = "Android platform APIs",
+            sourceUrl = "https://developer.android.com/reference/android/media/MediaMetadataRetriever",
             modelRegistryId = null,
-            deliveryMode = DeliveryMode.DEPENDENCY_NOT_BUNDLED,
-            fdroidPosture = FdroidPosture.REVIEW_REQUIRED,
-            runtimeChecksum = RuntimeChecksumBehavior.BLOCKED_UNTIL_PINNED,
+            deliveryMode = DeliveryMode.BUILT_IN,
+            fdroidPosture = FdroidPosture.OK,
+            runtimeChecksum = RuntimeChecksumBehavior.NOT_APPLICABLE,
             runtimeLocation = Runtime.ON_DEVICE,
-            availability = Availability.DEPENDENCY_MISSING,
+            availability = Availability.READY,
         ),
         Tool.AI_STYLE to ToolRequirement(
             tool = Tool.AI_STYLE,

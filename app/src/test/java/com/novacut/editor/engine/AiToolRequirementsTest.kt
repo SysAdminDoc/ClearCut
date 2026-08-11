@@ -81,10 +81,14 @@ class AiToolRequirementsTest {
         }.filter { it.runtimeLocation == AiToolRequirements.Runtime.ON_DEVICE }
         assertFalse(onDevice.isEmpty())
         for (req in onDevice) {
-            assertTrue(
-                "On-device tool ${req.tool} must report a non-zero download estimate",
-                req.estimatedBytes > 0
-            )
+            if (req.deliveryMode == AiToolRequirements.DeliveryMode.BUILT_IN) {
+                assertEquals(0L, req.estimatedBytes)
+            } else {
+                assertTrue(
+                    "On-device tool ${req.tool} must report a non-zero download estimate",
+                    req.estimatedBytes > 0
+                )
+            }
         }
     }
 
@@ -140,7 +144,8 @@ class AiToolRequirementsTest {
             AiToolRequirements.requirementFor(it.toolId)
         }.filter {
             it.runtimeLocation == AiToolRequirements.Runtime.ON_DEVICE &&
-                it.availability != AiToolRequirements.Availability.DEPENDENCY_MISSING
+                it.availability != AiToolRequirements.Availability.DEPENDENCY_MISSING &&
+                it.deliveryMode != AiToolRequirements.DeliveryMode.BUILT_IN
         }
 
         assertEquals(
@@ -179,10 +184,17 @@ class AiToolRequirementsTest {
                         "On-device ${tool.toolId} must not be cloud-only",
                         req.deliveryMode != AiToolRequirements.DeliveryMode.CLOUD_ONLY
                     )
-                    assertTrue(
-                        "On-device ${tool.toolId} must declare a checksum gate",
-                        req.runtimeChecksum != AiToolRequirements.RuntimeChecksumBehavior.NOT_APPLICABLE
-                    )
+                    if (req.deliveryMode == AiToolRequirements.DeliveryMode.BUILT_IN) {
+                        assertEquals(
+                            AiToolRequirements.RuntimeChecksumBehavior.NOT_APPLICABLE,
+                            req.runtimeChecksum,
+                        )
+                    } else {
+                        assertTrue(
+                            "On-device ${tool.toolId} must declare a checksum gate",
+                            req.runtimeChecksum != AiToolRequirements.RuntimeChecksumBehavior.NOT_APPLICABLE
+                        )
+                    }
                 }
             }
         }

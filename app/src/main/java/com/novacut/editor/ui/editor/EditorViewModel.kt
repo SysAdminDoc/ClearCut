@@ -461,6 +461,8 @@ data class EditorState(
     val aiModelRequirement: com.novacut.editor.engine.AiToolRequirements.ToolRequirement?
         get() = ai.modelRequirement
     val aiProcessingTool: String? get() = ai.processingTool
+    val aiProcessingProgress: Float get() = ai.processingProgress
+    val stabilizationPreview: StabilizationPreview? get() = ai.stabilizationPreview
     val aiSuggestion: AiSuggestion? get() = ai.suggestion
     val aiUsageLedger: List<AiUsageLedger.Entry> get() = ai.usageLedger
     val cutAssistantReview: com.novacut.editor.engine.CutAssistantEngine.ReviewSet?
@@ -6450,6 +6452,8 @@ class EditorViewModel @Inject constructor(
     fun runAiTool(toolId: String) = aiToolsDelegate.runAiTool(toolId)
     fun runAiToolAfterRequirement(toolId: String) = aiToolsDelegate.runAiToolAfterRequirement(toolId)
     fun cancelAiTool() = aiToolsDelegate.cancelAiTool()
+    fun applyStabilizationPreview() = aiToolsDelegate.applyStabilizationPreview()
+    fun dismissStabilizationPreview() = aiToolsDelegate.dismissStabilizationPreview()
     fun dismissAiRequirementPrompt() {
         val current = _state.value.aiRequirementPrompt ?: return
         _state.update {

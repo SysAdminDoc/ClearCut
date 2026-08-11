@@ -100,6 +100,7 @@ object AiDisclosurePolicy {
         AiUsageLedger.EffectKind.GENERATIVE_FILL_CLOUD,
         AiUsageLedger.EffectKind.INPAINTING_CLOUD,
         AiUsageLedger.EffectKind.INPAINTING_LOCAL_LARGE,
+        AiUsageLedger.EffectKind.STABILIZATION_LOCAL,
         AiUsageLedger.EffectKind.STYLE_TRANSFER_LOCAL,
         AiUsageLedger.EffectKind.UPSCALING_LOCAL,
         AiUsageLedger.EffectKind.FRAME_INTERPOLATION_LOCAL,

@@ -208,6 +208,7 @@ data class Clip(
     val audioEffects: List<AudioEffect> = emptyList(),
     val proxyUri: Uri? = null,
     val motionTrackingData: MotionTrackingData? = null,
+    val stabilizationData: StabilizationData? = null,
     val captions: List<Caption> = emptyList(),
     val groupId: String? = null,
     val clipLabel: ClipLabel = ClipLabel.NONE,

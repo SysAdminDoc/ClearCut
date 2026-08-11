@@ -150,6 +150,7 @@ class C2paExportEngine @Inject constructor() {
 
         AiUsageLedger.EffectKind.AUTO_EDIT_LOCAL,
         AiUsageLedger.EffectKind.INPAINTING_LOCAL_LARGE,
+        AiUsageLedger.EffectKind.STABILIZATION_LOCAL,
         AiUsageLedger.EffectKind.STYLE_TRANSFER_LOCAL,
         AiUsageLedger.EffectKind.UPSCALING_LOCAL,
         AiUsageLedger.EffectKind.FRAME_INTERPOLATION_LOCAL,
@@ -173,6 +174,7 @@ class C2paExportEngine @Inject constructor() {
             "http://cv.iptc.org/newscodes/digitalsourcetype/compositedWithTrainedAlgorithmicMedia"
 
         AiUsageLedger.EffectKind.INPAINTING_LOCAL_LARGE,
+        AiUsageLedger.EffectKind.STABILIZATION_LOCAL,
         AiUsageLedger.EffectKind.STYLE_TRANSFER_LOCAL,
         AiUsageLedger.EffectKind.UPSCALING_LOCAL,
         AiUsageLedger.EffectKind.FRAME_INTERPOLATION_LOCAL ->

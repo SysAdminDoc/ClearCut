@@ -294,7 +294,7 @@
     <string name="ai_colors_ok_toast">Los colores ya se ven bien.</string>
     <string name="ai_color_corrections_applied_toast">Se aplicaron %1$d correcciones de color.</string>
     <string name="ai_video_stable_toast">El video ya está estable.</string>
-    <string name="ai_stabilized_summary_toast">Estabilizado: %1$.0f%% de movimiento corregido, %2$.0f%% de zoom aplicado.</string>
+    <string name="ai_stabilized_summary_toast">Estabilizado: %1$.0f%% de movimiento corregido, %2$.0f%% de recorte aplicado.</string>
     <string name="ai_audio_noise_analyze_failed_toast">No se pudo analizar el ruido del audio.</string>
     <string name="ai_audio_clean_toast">El audio ya está limpio (SNR: %1$.0f dB).</string>
     <string name="ai_denoised_summary_toast">Ruido reducido: SNR %1$.0f dB, reducción %2$.0f%%.</string>
@@ -327,14 +327,15 @@
     <string name="ai_object_removal_processing_toast">Eliminando el objeto seleccionado…</string>
     <string name="ai_object_removal_applied_toast">Eliminación de objetos aplicada a %1$d cuadro(s).</string>
     <string name="ai_object_removal_failed_toast">No se pudo aplicar la eliminación. Se conservó el clip original.</string>
-    <string name="ai_stabilize_fallback_toast">La estabilización avanzada no está disponible en este dispositivo. Se usará estabilización básica.</string>
-    <string name="ai_shake_crop_applied_toast">Se recortó la imagen para ocultar el temblor en los bordes (%1$.0f%% medido). Es un recorte, no una estabilización: el encuadre no se contramueve.</string>
-    <string name="ai_motion_analysis_failed_fallback_toast">El análisis de movimiento falló. La estabilización básica sigue disponible.</string>
     <string name="ai_camera_motion_analyzing_toast">Analizando movimiento de cámara…</string>
-    <string name="ai_applying_stabilization_toast">Aplicando estabilización (%1$d cuadros)…</string>
-    <string name="ai_stabilization_empty_output_toast">La estabilización falló porque el archivo de salida estaba vacío.</string>
-    <string name="ai_stabilized_crop_toast">Estabilizado con %1$.0f%% de recorte.</string>
-    <string name="ai_stabilization_unavailable_toast">No se pudo crear la salida de estabilización en este dispositivo. La estabilización básica sigue disponible.</string>
+    <string name="ai_stabilization_unavailable_toast">La estabilización sin conexión no está disponible en este dispositivo.</string>
+    <string name="ai_stabilization_unavailable_reason">La estabilización no está disponible: %1$s</string>
+    <string name="ai_motion_analysis_failed_toast">No se pudo analizar el movimiento de la cámara. Se conservó el clip original.</string>
+    <string name="ai_stabilization_preview_ready_toast">El análisis de movimiento está listo. Revise el recorte y aplíquelo cuando esté conforme.</string>
+    <string name="ai_stabilization_preview_title">Revisar estabilización</string>
+    <string name="ai_stabilization_preview_apply">Aplicar estabilización</string>
+    <string name="ai_stabilization_preview_cancel">Conservar original</string>
+    <string name="ai_tool_hint_stabilize_local">Análisis de movimiento sin conexión con una vista previa de recorte reversible; no requiere modelos ni red.</string>
     <string name="ai_model_size_not_available">La disponibilidad varía según el paquete de modelos.</string>
     <string name="audio_mastering_unknown_preset">Ese ajuste de masterización no está disponible.</string>
     <string name="audio_track_not_found">Esa pista de audio ya no está disponible.</string>
@@ -349,6 +350,12 @@
     <string name="audio_clip_deleted_during_analysis">El clip se eliminó durante el análisis.</string>
     <string name="audio_normalized_clip">Normalizado: %1$.1f a %2$.0f LUFS.</string>
     <string name="audio_normalization_failed">La normalización falló. Pruebe un clip con audio legible.</string>
+
+    <plurals name="ai_stabilization_preview_body">
+        <item quantity="one">Se analizó %1$s en %2$d cuadro. Temblor estimado: %3$.0f%%. El renderizado contramoverá el clip y usará aproximadamente un %4$.0f%% de recorte. El origen no cambia hasta que lo aplique.</item>
+        <item quantity="other">Se analizaron %1$s en %2$d cuadros. Temblor estimado: %3$.0f%%. El renderizado contramoverá el clip y usará aproximadamente un %4$.0f%% de recorte. El origen no cambia hasta que lo aplique.</item>
+        <item quantity="many">Se analizaron %1$s en %2$d cuadros. Temblor estimado: %3$.0f%%. El renderizado contramoverá el clip y usará aproximadamente un %4$.0f%% de recorte. El origen no cambia hasta que lo aplique.</item>
+    </plurals>
     <string name="audio_no_clips_to_normalize">No hay clips de audio para normalizar.</string>
     <string name="audio_measuring_loudness_all">Midiendo sonoridad en %1$d clips…</string>
     <string name="audio_normalized_clips">Se normalizaron %1$d clips a %2$.0f LUFS.</string>
@@ -463,7 +470,6 @@
     <string name="ai_tool_hint_review">Crea una lista de cortes editable antes de tocar la línea de tiempo.</string>
     <string name="ai_tool_hint_whisper_optional">Corre ahora; Whisper mejora la precisión.</string>
     <string name="ai_tool_hint_segmentation_fallback">Utiliza AI mate cuando está instalado; en caso contrario, retrocede.</string>
-    <string name="ai_tool_hint_stabilize_fallback">Utiliza OpenCV cuando está disponible; en caso contrario, utiliza el respaldo.</string>
     <string name="ai_tool_hint_model_required">Muestra los requisitos del modelo antes del procesamiento.</string>
     <string name="ai_tool_locked_hint">Seleccione un clip para desbloquear este flujo de trabajo.</string>
     <string name="ai_tool_cut_assistant">Asistente de corte</string>

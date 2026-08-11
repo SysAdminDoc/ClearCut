@@ -309,7 +309,7 @@
     <string name="ai_colors_ok_toast">Colors already look good.</string>
     <string name="ai_color_corrections_applied_toast">Applied %1$d color corrections.</string>
     <string name="ai_video_stable_toast">Video is already stable.</string>
-    <string name="ai_stabilized_summary_toast">Stabilized: %1$.0f%% shake corrected, %2$.0f%% zoom applied.</string>
+    <string name="ai_stabilized_summary_toast">Stabilized: %1$.0f%% shake corrected, %2$.0f%% crop applied.</string>
     <string name="ai_audio_noise_analyze_failed_toast">Could not analyze audio noise.</string>
     <string name="ai_audio_clean_toast">Audio is already clean (SNR: %1$.0f dB).</string>
     <string name="ai_denoised_summary_toast">Denoised: SNR %1$.0f dB, reduction %2$.0f%%.</string>
@@ -342,14 +342,15 @@
     <string name="ai_object_removal_processing_toast">Removing the selected object…</string>
     <string name="ai_object_removal_applied_toast">Object removal applied to %1$d frame(s).</string>
     <string name="ai_object_removal_failed_toast">Object removal could not be applied. The original clip was kept.</string>
-    <string name="ai_stabilize_fallback_toast">Advanced stabilization is unavailable on this device. Using basic stabilization.</string>
-    <string name="ai_shake_crop_applied_toast">Cropped in to hide edge shake (%1$.0f%% measured). This is a crop, not stabilization — the frame is not counter-moved.</string>
-    <string name="ai_motion_analysis_failed_fallback_toast">Motion analysis failed. Basic stabilization remains available.</string>
     <string name="ai_camera_motion_analyzing_toast">Analyzing camera motion…</string>
-    <string name="ai_applying_stabilization_toast">Applying stabilization (%1$d frames)…</string>
-    <string name="ai_stabilization_empty_output_toast">Stabilization failed because the output was empty.</string>
-    <string name="ai_stabilized_crop_toast">Stabilized with %1$.0f%% crop.</string>
-    <string name="ai_stabilization_unavailable_toast">Stabilization output could not be created on this device. Basic stabilization remains available.</string>
+    <string name="ai_stabilization_unavailable_toast">Offline stabilization is unavailable on this device.</string>
+    <string name="ai_stabilization_unavailable_reason">Stabilization is unavailable: %1$s</string>
+    <string name="ai_motion_analysis_failed_toast">Could not analyze camera motion. The original clip was kept.</string>
+    <string name="ai_stabilization_preview_ready_toast">Motion analysis is ready. Review the crop and apply it when satisfied.</string>
+    <string name="ai_stabilization_preview_title">Review stabilization</string>
+    <string name="ai_stabilization_preview_apply">Apply stabilization</string>
+    <string name="ai_stabilization_preview_cancel">Keep original</string>
+    <string name="ai_tool_hint_stabilize_local">Offline motion analysis with a reversible crop preview; no model download or network required.</string>
     <string name="ai_model_size_not_available">Availability varies by model pack.</string>
     <string name="audio_mastering_unknown_preset">That mastering preset is not available.</string>
     <string name="audio_track_not_found">That audio track is no longer available.</string>
@@ -364,6 +365,12 @@
     <string name="audio_clip_deleted_during_analysis">Clip was deleted during analysis.</string>
     <string name="audio_normalized_clip">Normalized: %1$.1f to %2$.0f LUFS.</string>
     <string name="audio_normalization_failed">Normalization failed. Try a clip with readable audio.</string>
+
+    <plurals name="ai_stabilization_preview_body">
+        <item quantity="one">Analyzed %1$s across %2$d frame. Estimated shake: %3$.0f%%. The render will counter-move the clip and use about %4$.0f%% crop. Your source stays unchanged until you apply it.</item>
+        <item quantity="other">Analyzed %1$s across %2$d frames. Estimated shake: %3$.0f%%. The render will counter-move the clip and use about %4$.0f%% crop. Your source stays unchanged until you apply it.</item>
+        <item quantity="many">Analyzed %1$s across %2$d frames. Estimated shake: %3$.0f%%. The render will counter-move the clip and use about %4$.0f%% crop. Your source stays unchanged until you apply it.</item>
+    </plurals>
     <string name="audio_no_clips_to_normalize">No audio clips to normalize.</string>
     <string name="audio_measuring_loudness_all">Measuring loudness across %1$d clips…</string>
     <string name="audio_normalized_clips">Normalized %1$d clips to %2$.0f LUFS.</string>
@@ -478,7 +485,6 @@
     <string name="ai_tool_hint_review">Builds an editable cut list before touching the timeline.</string>
     <string name="ai_tool_hint_whisper_optional">Runs now; Whisper improves accuracy.</string>
     <string name="ai_tool_hint_segmentation_fallback">Uses AI matte when installed, fallback otherwise.</string>
-    <string name="ai_tool_hint_stabilize_fallback">Uses OpenCV when available, fallback otherwise.</string>
     <string name="ai_tool_hint_model_required">Shows model requirements before processing.</string>
     <string name="ai_tool_locked_hint">Select a clip to unlock this workflow.</string>
     <string name="ai_tool_cut_assistant">Cut Assistant</string>

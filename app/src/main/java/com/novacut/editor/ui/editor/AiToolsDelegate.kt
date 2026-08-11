@@ -99,7 +99,6 @@ class AiToolsDelegate(
         "object_remove",
         "video_upscale",
         "ai_background",
-        "ai_stabilize",
         "ai_style_transfer"
     )
 
@@ -316,7 +315,11 @@ class AiToolsDelegate(
         // runs before we publish our new state — otherwise a trailing `aiProcessingTool = null`
         // from the cancelled job could race-overwrite our own update and hide the progress indicator.
         aiJob?.cancel()
-        stateFlow.update { it.copyAi { ai -> ai.copy(processingTool = toolId) } }
+        stateFlow.update {
+            it.copyAi { ai ->
+                ai.copy(processingTool = toolId, processingProgress = 0f)
+            }
+        }
 
         lateinit var thisJob: kotlinx.coroutines.Job
         thisJob = scope.launch {
@@ -332,7 +335,7 @@ class AiToolsDelegate(
                     "auto_captions" -> runAutoCaptions(currentClip)
                     "smart_crop" -> runSmartCrop(currentClip)
                     "auto_color" -> runAutoColor(currentClip)
-                    "stabilize" -> runStabilize(currentClip)
+                    "stabilize" -> applyStabilization(currentClip)
                     "denoise" -> runDenoise(currentClip)
                     "remove_bg" -> runRemoveBg(currentClip)
                     "track_motion" -> runTrackMotion(currentClip)
@@ -359,7 +362,11 @@ class AiToolsDelegate(
                 // Only clear progress state if we are still the active job — protects against
                 // a stale cancelled job overwriting the newly-launched one's progress indicator.
                 if (aiJob === thisJob) {
-                    stateFlow.update { it.copyAi { ai -> ai.copy(processingTool = null) } }
+                    stateFlow.update {
+                        it.copyAi { ai ->
+                            ai.copy(processingTool = null, processingProgress = 0f)
+                        }
+                    }
                     aiJob = null
                 }
             }
@@ -593,44 +600,6 @@ class AiToolsDelegate(
         rebuildPlayerTimeline()
         saveProject()
         showToast(text(R.string.ai_color_corrections_applied_toast, newEffects.size))
-    }
-
-    private suspend fun runStabilize(clip: Clip) {
-        val result = withContext(Dispatchers.Default) { aiFeatures.stabilizeVideo(clip.sourceUri) }
-        val confidence = safeConfidence(result.confidence)
-        val shakeMagnitude = safeAiFloat(result.shakeMagnitude, 0f, 0f, 1f)
-        val zoom = safeAiFloat(result.recommendedZoom, 1f, 1f, 5f)
-        if (confidence < 0.1f || shakeMagnitude < 0.001f) {
-            showToast(text(R.string.ai_video_stable_toast))
-            return
-        }
-        saveUndoState("AI stabilize")
-        stateFlow.update { state ->
-            val tracks = state.tracks.map { track ->
-                val idx = track.clips.indexOfFirst { it.id == clip.id }
-                if (idx < 0) return@map track
-                val c = track.clips[idx]
-                val keyframes = result.motionKeyframes.mapNotNull { kf ->
-                    val timeOffset = c.sourceTimeToTimelineOffsetMs(kf.timestampMs) ?: return@mapNotNull null
-                    listOf(
-                        Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_X,
-                            value = safeAiFloat(kf.offsetX, 0f, -2f, 2f), easing = Easing.EASE_IN_OUT),
-                        Keyframe(timeOffsetMs = timeOffset, property = KeyframeProperty.POSITION_Y,
-                            value = safeAiFloat(kf.offsetY, 0f, -2f, 2f), easing = Easing.EASE_IN_OUT)
-                    )
-                }.flatten()
-                val stabilized = c.copy(
-                    scaleX = safeAiFloat(c.scaleX * zoom, c.scaleX, 0.1f, 5f),
-                    scaleY = safeAiFloat(c.scaleY * zoom, c.scaleY, 0.1f, 5f),
-                    keyframes = c.keyframes + keyframes
-                )
-                track.copy(clips = track.clips.toMutableList().apply { set(idx, stabilized) })
-            }
-            recalculateDuration(state.copy(tracks = tracks))
-        }
-        rebuildPlayerTimeline()
-        saveProject()
-        showToast(text(R.string.ai_stabilized_summary_toast, shakeMagnitude * 100, (zoom - 1f) * 100))
     }
 
     private suspend fun runDenoise(clip: Clip) {
@@ -972,11 +941,7 @@ class AiToolsDelegate(
             } else {
                 requirement.availability
             }
-            "ai_stabilize" -> if (stabilizationEngine.isOpenCvAvailable()) {
-                AiToolRequirements.Availability.READY
-            } else {
-                requirement.availability
-            }
+            "ai_stabilize" -> AiToolRequirements.Availability.READY
             else -> requirement.availability
         }
         return requirement.copy(availability = availability)
@@ -1165,93 +1130,123 @@ class AiToolsDelegate(
     }
 
     private suspend fun applyStabilization(clip: Clip) {
-        if (!stabilizationEngine.isOpenCvAvailable()) {
-            showToast(text(R.string.ai_stabilize_fallback_toast))
-            val result = withContext(Dispatchers.Default) { aiFeatures.stabilizeVideo(clip.sourceUri) }
-            // A default result means the analysis never ran. Reading it as "measured,
-            // and the footage is steady" told the user their shaky clip was fine.
-            if (!result.analyzed) {
-                showToast(text(R.string.ai_stabilize_analysis_failed_toast))
-                return
-            }
-            val confidence = safeConfidence(result.confidence)
-            val shakeMagnitude = safeAiFloat(result.shakeMagnitude, 0f, 0f, 1f)
-            if (confidence < 0.1f || shakeMagnitude < 0.001f) {
-                showToast(text(R.string.ai_video_stable_toast))
-            } else {
-                // This scales the clip up and applies no counter-motion, so it hides
-                // shake at the frame edges rather than removing it. Calling it
-                // stabilization overstated what happened; it is a crop, and says so.
-                saveUndoState("Crop to hide edge shake")
-                val stabilizeScale = 1f + (shakeMagnitude * 0.5f).coerceAtMost(0.1f)
-                stateFlow.update { s ->
-                    s.copy(tracks = s.tracks.map { track ->
-                        track.copy(clips = track.clips.map { c ->
-                            if (c.id == clip.id) {
-                                c.copy(
-                                    scaleX = safeAiFloat(c.scaleX * stabilizeScale, c.scaleX, 0.1f, 5f),
-                                    scaleY = safeAiFloat(c.scaleY * stabilizeScale, c.scaleY, 0.1f, 5f)
-                                )
-                            } else {
-                                c
-                            }
-                        })
-                    })
-                }
-                showToast(text(R.string.ai_shake_crop_applied_toast, shakeMagnitude * 100))
-                rebuildPlayerTimeline()
-                saveProject()
-            }
-            return
-        }
         val config = StabilizationEngine.StabilizationConfig(
             smoothingStrength = 0.5f, cropPercentage = 0.15f,
             algorithm = StabilizationEngine.StabilizationConfig.Algorithm.LK_OPTICAL_FLOW
         )
-        showToast(text(R.string.ai_camera_motion_analyzing_toast))
-        val motionData = stabilizationEngine.analyzeMotion(uri = clip.sourceUri, config = config, onProgress = { })
-        if (motionData == null) {
-            showToast(text(R.string.ai_motion_analysis_failed_fallback_toast))
+        val capability = withContext(Dispatchers.Default) {
+            stabilizationEngine.capability(clip.sourceUri, config)
+        }
+        if (!capability.supported) {
+            showToast(
+                text(
+                    R.string.ai_stabilization_unavailable_reason,
+                    capability.reason ?: text(R.string.ai_stabilization_unavailable_toast),
+                )
+            )
             return
         }
-        val outputFiles = createStabilizedVideoOutputFiles(appContext, clip.id)
-        showToast(text(R.string.ai_applying_stabilization_toast, motionData.frameCount))
-        try {
-            val result = stabilizationEngine.stabilize(
-                uri = clip.sourceUri, motionData = motionData, config = config,
-                outputUri = Uri.fromFile(outputFiles.partialFile), onProgress = { }
-            )
-            if (result != null) {
-                val stabilizedFile = finalizeStabilizedVideoFile(
-                    partialFile = outputFiles.partialFile,
-                    outputFile = outputFiles.outputFile
-                )
-                if (stabilizedFile == null) {
-                    showToast(text(R.string.ai_stabilization_empty_output_toast))
-                    return
+        showToast(text(R.string.ai_camera_motion_analyzing_toast))
+        val motionData = stabilizationEngine.analyzeMotion(
+            uri = clip.sourceUri,
+            config = config,
+            onProgress = { progress ->
+                stateFlow.update { state ->
+                    state.copyAi { ai -> ai.copy(processingProgress = progress.coerceIn(0f, 1f)) }
                 }
-                val stabilizedUri = Uri.fromFile(stabilizedFile)
-                saveUndoState("AI stabilize (OpenCV)")
-                stateFlow.update { s ->
-                    s.copy(tracks = s.tracks.map { track ->
-                        track.copy(clips = track.clips.map { c ->
-                            if (c.id == clip.id) c.copy(sourceUri = stabilizedUri) else c
-                        })
-                    })
-                }
-                rebuildPlayerTimeline()
-                saveProject()
-                showToast(text(R.string.ai_stabilized_crop_toast, result.cropApplied * 100))
-            } else {
-                cleanupStabilizedVideoFiles(outputFiles.partialFile, outputFiles.outputFile)
-                showToast(text(R.string.ai_stabilization_unavailable_toast))
-            }
-        } catch (e: Exception) {
-            // Clean up any partial output before re-throwing (CancellationException is
-            // also an Exception subtype in coroutines, so this covers cancellation too).
-            cleanupStabilizedVideoFiles(outputFiles.partialFile, outputFiles.outputFile)
-            throw e
+            },
+        )
+        if (motionData == null) {
+            showToast(text(R.string.ai_motion_analysis_failed_toast))
+            return
         }
+        if (motionData.frameCount < 2 || motionData.smoothedTransforms.isEmpty()) {
+            showToast(text(R.string.ai_motion_analysis_failed_toast))
+            return
+        }
+        stateFlow.update {
+            it.copyAi { ai ->
+                ai.copy(
+                    stabilizationPreview = StabilizationPreview(
+                        clipId = clip.id,
+                        sourceName = clip.name ?: clip.sourceUri.lastPathSegment ?: "clip",
+                        motionData = motionData,
+                        config = config,
+                    ),
+                    processingProgress = 1f,
+                )
+            }
+        }
+        showToast(text(R.string.ai_stabilization_preview_ready_toast))
+    }
+
+    fun dismissStabilizationPreview() {
+        stateFlow.update { it.copyAi { ai -> ai.copy(stabilizationPreview = null) } }
+    }
+
+    fun applyStabilizationPreview() {
+        val preview = stateFlow.value.ai.stabilizationPreview ?: return
+        val clip = stateFlow.value.tracks
+            .asSequence()
+            .flatMap { it.clips.asSequence() }
+            .firstOrNull { it.id == preview.clipId }
+        if (clip == null) {
+            dismissStabilizationPreview()
+            showToast(text(R.string.ai_clip_missing_toast))
+            return
+        }
+
+        val stabilizationData = StabilizationData(
+            motion = preview.motionData.smoothedTransforms.map { transform ->
+                StabilizationMotionPoint(
+                    timestampMs = transform.timestampMs,
+                    dx = transform.dx.coerceIn(-1f, 1f),
+                    dy = transform.dy.coerceIn(-1f, 1f),
+                    confidence = transform.confidence.coerceIn(0f, 1f),
+                )
+            },
+            lensProfile = StabilizationLensProfile(
+                name = preview.motionData.lensProfile.name,
+                focalLengthMm = preview.motionData.lensProfile.focalLengthMm,
+                distortionK1 = preview.motionData.lensProfile.distortionK1,
+                distortionK2 = preview.motionData.lensProfile.distortionK2,
+            ),
+            syncOffsetMs = preview.motionData.syncOffsetMs,
+            cropScale = preview.motionData.recommendedCropScale.coerceIn(1f, 1.3f),
+            sourceDurationMs = preview.motionData.sourceDurationMs.coerceAtLeast(0L),
+        )
+        if (!stabilizationData.isUsable) {
+            dismissStabilizationPreview()
+            showToast(text(R.string.ai_motion_analysis_failed_toast))
+            return
+        }
+
+        saveUndoState("Apply offline stabilization")
+        stateFlow.update { state ->
+            val updatedTracks = state.tracks.map { track ->
+                track.copy(clips = track.clips.map { current ->
+                    if (current.id == clip.id) current.copy(stabilizationData = stabilizationData) else current
+                })
+            }
+            recalculateDuration(
+                state.copyAi { ai -> ai.copy(stabilizationPreview = null) }
+                    .copy(tracks = updatedTracks)
+            )
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+        recordAiUsageForClip(
+            clip = clip,
+            effectKind = AiUsageLedger.EffectKind.STABILIZATION_LOCAL,
+            modelName = "ClearCut offline motion stabilization",
+        )
+        showToast(
+            text(
+                R.string.ai_stabilized_summary_toast,
+                preview.motionData.averageShakeMagnitude * 100f,
+                (preview.motionData.recommendedCropScale - 1f) * 100f,
+            )
+        )
     }
 
     private suspend fun applyStyleTransfer(clip: Clip) {

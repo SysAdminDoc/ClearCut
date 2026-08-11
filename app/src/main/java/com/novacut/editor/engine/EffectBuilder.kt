@@ -517,6 +517,7 @@ internal object EffectBuilder {
         val hasKfPosition = clip.keyframes.any {
             it.property == KeyframeProperty.POSITION_X || it.property == KeyframeProperty.POSITION_Y
         }
+        val stabilizationData = clip.stabilizationData?.takeIf { it.isUsable }
         // Keep flips in the same matrix as the authored transform so preview,
         // Transformer export, keyframes, anchors, and overlays share one
         // coordinate path. The positive scale fields remain compatible with
@@ -534,16 +535,33 @@ internal object EffectBuilder {
         val needsStaticTransform = clip.flipHorizontal || clip.flipVertical ||
             clip.rotation != 0f || clip.scaleX != 1f || clip.scaleY != 1f ||
             clip.positionX != 0f || clip.positionY != 0f || hasAnchor
-        if (hasKfScale || hasKfRotation || hasKfPosition) {
+        if (hasKfScale || hasKfRotation || hasKfPosition || stabilizationData != null) {
             val kfs = clip.keyframes
             val ax = staticAx; val ay = staticAy
             add(MatrixTransformation { presentationTimeUs ->
                 val timeMs = presentationTimeUs / 1000L
-                val sx = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx, staticSx, 0.1f, 5f) * flipSx
-                val sy = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy, staticSy, 0.1f, 5f) * flipSy
+                val stabilization = stabilizationData?.correctionAtSourceTimeMs(
+                    clip.timelineOffsetToSourceMs(timeMs)
+                )
+                val authoredSx = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_X, timeMs) ?: staticSx
+                val authoredSy = KeyframeEngine.getValueAt(kfs, KeyframeProperty.SCALE_Y, timeMs) ?: staticSy
+                val authoredPx = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx
+                val authoredPy = KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy
+                val sx = safeEffectFloat(
+                    authoredSx * (stabilizationData?.cropScale ?: 1f),
+                    staticSx,
+                    0.1f,
+                    5f,
+                ) * flipSx
+                val sy = safeEffectFloat(
+                    authoredSy * (stabilizationData?.cropScale ?: 1f),
+                    staticSy,
+                    0.1f,
+                    5f,
+                ) * flipSy
                 val rot = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.ROTATION, timeMs) ?: staticRot, staticRot, -3600f, 3600f)
-                val px = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_X, timeMs) ?: staticPx, staticPx, -10f, 10f)
-                val py = safeEffectFloat(KeyframeEngine.getValueAt(kfs, KeyframeProperty.POSITION_Y, timeMs) ?: staticPy, staticPy, -10f, 10f)
+                val px = safeEffectFloat(authoredPx + (stabilization?.dx ?: 0f), authoredPx, -10f, 10f)
+                val py = safeEffectFloat(authoredPy + (stabilization?.dy ?: 0f), authoredPy, -10f, 10f)
                 android.graphics.Matrix().apply {
                     if (ax != 0f || ay != 0f) postTranslate(-ax, ay)
                     postScale(sx, sy)

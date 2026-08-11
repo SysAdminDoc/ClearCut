@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -204,8 +205,8 @@ val aiTools = listOf(
         R.string.ai_tool_ai_stabilize_desc,
         Icons.Default.Straighten,
         ClearCutAccents.Sky,
-        readinessResId = R.string.ai_tool_status_fallback,
-        readinessHintResId = R.string.ai_tool_hint_stabilize_fallback,
+        readinessResId = R.string.ai_tool_status_ready,
+        readinessHintResId = R.string.ai_tool_hint_stabilize_local,
         readinessAccent = ClearCutAccents.Teal
     ),
     AiToolConfig(
@@ -236,6 +237,10 @@ fun AiToolsPanel(
     onCancelProcessing: () -> Unit = {},
     onClose: () -> Unit,
     processingTool: String? = null,
+    processingProgress: Float = 0f,
+    stabilizationPreview: StabilizationPreview? = null,
+    onApplyStabilizationPreview: () -> Unit = {},
+    onDismissStabilizationPreview: () -> Unit = {},
     whisperModelState: WhisperModelState = WhisperModelState.NOT_DOWNLOADED,
     whisperDownloadProgress: Float = 0f,
     onDownloadWhisper: () -> Unit = {},
@@ -434,6 +439,12 @@ fun AiToolsPanel(
         if (processingTool != null) {
             Spacer(modifier = Modifier.height(12.dp))
 
+            val processingLabel = stringResource(
+                R.string.ai_processing_format,
+                aiTools.find { it.id == processingTool }?.let { stringResource(it.nameResId) } ?: processingTool
+            )
+            val normalizedProgress = processingProgress.coerceIn(0f, 1f)
+
             PremiumPanelCard(
                 accent = ClearCutAccents.Mauve,
                 modifier = Modifier.semantics {
@@ -445,26 +456,49 @@ fun AiToolsPanel(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        color = ClearCutAccents.Mauve,
-                        strokeWidth = 2.dp
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Processing now",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = semanticColors.text
+                    if (normalizedProgress > 0f) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Processing now",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = semanticColors.text
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = processingLabel,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = semanticColors.subtext
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { normalizedProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(5.dp)
+                                    .clip(RoundedCornerShape(Radius.sm)),
+                                color = ClearCutAccents.Mauve,
+                                trackColor = semanticColors.surface
+                            )
+                        }
+                    } else {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(22.dp),
+                            color = ClearCutAccents.Mauve,
+                            strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(
-                                R.string.ai_processing_format,
-                                aiTools.find { it.id == processingTool }?.let { stringResource(it.nameResId) } ?: processingTool
-                            ),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = semanticColors.subtext
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Processing now",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = semanticColors.text
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = processingLabel,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = semanticColors.subtext
+                            )
+                        }
                     }
                     ClearCutSecondaryButton(
                         text = stringResource(R.string.cancel),
@@ -519,6 +553,71 @@ fun AiToolsPanel(
             }
         )
     }
+
+    stabilizationPreview?.let { preview ->
+        StabilizationPreviewDialog(
+            preview = preview,
+            onDismissRequest = onDismissStabilizationPreview,
+            onApply = onApplyStabilizationPreview,
+        )
+    }
+}
+
+@Composable
+private fun StabilizationPreviewDialog(
+    preview: StabilizationPreview,
+    onDismissRequest: () -> Unit,
+    onApply: () -> Unit,
+) {
+    val semanticColors = LocalClearCutColors.current
+    val motionData = preview.motionData
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        icon = {
+            ClearCutDialogIcon(
+                icon = Icons.Default.Straighten,
+                accent = ClearCutAccents.Sapphire,
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.ai_stabilization_preview_title),
+                color = semanticColors.text,
+                style = MaterialTheme.typography.titleLarge,
+            )
+        },
+        text = {
+            Text(
+                text = pluralStringResource(
+                    R.plurals.ai_stabilization_preview_body,
+                    motionData.frameCount,
+                    preview.sourceName,
+                    motionData.frameCount,
+                    motionData.averageShakeMagnitude * 100f,
+                    (motionData.recommendedCropScale - 1f) * 100f,
+                ),
+                color = semanticColors.subtext,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            ClearCutPrimaryButton(
+                text = stringResource(R.string.ai_stabilization_preview_apply),
+                onClick = onApply,
+                icon = Icons.Default.Straighten,
+            )
+        },
+        dismissButton = {
+            ClearCutSecondaryButton(
+                text = stringResource(R.string.ai_stabilization_preview_cancel),
+                onClick = onDismissRequest,
+            )
+        },
+        containerColor = semanticColors.panelHighest,
+        titleContentColor = semanticColors.text,
+        textContentColor = semanticColors.subtext,
+        shape = RoundedCornerShape(Radius.xxl),
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

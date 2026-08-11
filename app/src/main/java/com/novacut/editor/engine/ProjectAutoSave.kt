@@ -939,6 +939,7 @@ data class AutoSaveState(
         private const val MAX_CAPTIONS_PER_CLIP = 5_000
         private const val MAX_CAPTION_WORDS = 512
         private const val MAX_MOTION_TRACK_POINTS = 10_000
+        private const val MAX_STABILIZATION_POINTS = 1_800
         private const val MAX_PROJECT_MARKERS = 5_000
         private const val MAX_IMAGE_OVERLAYS = 2_000
         private const val MAX_DRAWING_PATHS = 2_000
@@ -1537,6 +1538,29 @@ data class AutoSaveState(
                         })
                     })
                 }
+                clip.stabilizationData?.let { stabilization ->
+                    put("stabilizationData", JSONObject().apply {
+                        put("sourceDurationMs", stabilization.sourceDurationMs)
+                        put("syncOffsetMs", stabilization.syncOffsetMs)
+                        putSafeFloat("cropScale", stabilization.cropScale, default = 1f)
+                        put("lensProfile", JSONObject().apply {
+                            put("name", stabilization.lensProfile.name)
+                            stabilization.lensProfile.focalLengthMm?.let { putSafeFloat("focalLengthMm", it) }
+                            putSafeFloat("distortionK1", stabilization.lensProfile.distortionK1)
+                            putSafeFloat("distortionK2", stabilization.lensProfile.distortionK2)
+                        })
+                        put("motion", JSONArray().apply {
+                            stabilization.motion.forEach { point ->
+                                put(JSONObject().apply {
+                                    put("timestampMs", point.timestampMs)
+                                    putSafeFloat("dx", point.dx)
+                                    putSafeFloat("dy", point.dy)
+                                    putSafeFloat("confidence", point.confidence, default = 1f)
+                                })
+                            }
+                        })
+                    })
+                }
             }
         }
 
@@ -2012,8 +2036,55 @@ data class AutoSaveState(
                         targetType = safeValueOf(mtd.optString("targetType", "POINT"), TrackTargetType.POINT),
                         isActive = mtd.optBoolean("isActive", true)
                     )
-                }
+                },
+                stabilizationData = deserializeStabilizationData(json.optJSONObject("stabilizationData"))
             )
+        }
+
+        private fun deserializeStabilizationData(json: JSONObject?): StabilizationData? {
+            if (json == null) return null
+            val profile = json.optJSONObject("lensProfile")
+            val motionArr = json.optJSONArray("motion") ?: JSONArray()
+            val motion = (0 until cappedArrayLength(
+                motionArr,
+                MAX_STABILIZATION_POINTS,
+                "stabilization motion points",
+            )).mapNotNull { index ->
+                val point = motionArr.optJSONObject(index) ?: return@mapNotNull null
+                val timestampMs = point.optLong("timestampMs", -1L)
+                if (timestampMs < 0L) return@mapNotNull null
+                StabilizationMotionPoint(
+                    timestampMs = timestampMs,
+                    dx = safeFloat(point.optDouble("dx", 0.0), 0f).coerceIn(-1f, 1f),
+                    dy = safeFloat(point.optDouble("dy", 0.0), 0f).coerceIn(-1f, 1f),
+                    confidence = safeFloat(point.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f),
+                )
+            }.sortedBy { it.timestampMs }.distinctBy { it.timestampMs }
+            if (motion.isEmpty()) return null
+
+            val lensProfile = StabilizationLensProfile(
+                name = profile?.optString("name", "android-identity")
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "android-identity",
+                focalLengthMm = profile?.takeIf { it.has("focalLengthMm") }
+                    ?.let { safeFloat(it.optDouble("focalLengthMm", 0.0), 0f) }
+                    ?.takeIf { it > 0f },
+                distortionK1 = profile?.let { safeFloat(it.optDouble("distortionK1", 0.0), 0f) }
+                    ?.coerceIn(-2f, 2f)
+                    ?: 0f,
+                distortionK2 = profile?.let { safeFloat(it.optDouble("distortionK2", 0.0), 0f) }
+                    ?.coerceIn(-2f, 2f)
+                    ?: 0f,
+            )
+            return runCatching {
+                StabilizationData(
+                    motion = motion,
+                    lensProfile = lensProfile,
+                    syncOffsetMs = json.optLong("syncOffsetMs", 0L).coerceIn(-60_000L, 60_000L),
+                    cropScale = safeFloat(json.optDouble("cropScale", 1.0), 1f).coerceIn(1f, 1.3f),
+                    sourceDurationMs = json.optLong("sourceDurationMs", 0L).coerceAtLeast(0L),
+                )
+            }.getOrNull()?.takeIf { it.isUsable }
         }
 
         private fun deserializeSourceColorMetadata(json: JSONObject?): SourceColorMetadata {
