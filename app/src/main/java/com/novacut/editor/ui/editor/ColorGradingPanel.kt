@@ -22,6 +22,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.novacut.editor.R
@@ -423,6 +427,12 @@ private fun CurvesContent(
             "blue" -> ClearCutAccents.Blue
             else -> semanticColors.text
         }
+        val activeCurveLabel = when (activeCurve) {
+            "red" -> stringResource(R.string.color_curve_red)
+            "green" -> stringResource(R.string.color_curve_green)
+            "blue" -> stringResource(R.string.color_curve_blue)
+            else -> stringResource(R.string.color_curve_master)
+        }
 
         PremiumPanelCard(accent = curveColor) {
             Text(
@@ -465,6 +475,7 @@ private fun CurvesContent(
             CurveEditor(
                 points = points,
                 color = curveColor,
+                accessibilityLabel = activeCurveLabel,
                 onDragStarted = onDragStarted,
                 onDragEnded = onDragEnded,
                 onPointsChanged = { newPoints ->
@@ -486,16 +497,18 @@ private fun CurvesContent(
 }
 
 @Composable
-private fun CurveEditor(
+internal fun CurveEditor(
     points: List<CurvePoint>,
     color: Color,
+    accessibilityLabel: String,
     onPointsChanged: (List<CurvePoint>) -> Unit,
+    modifier: Modifier = Modifier,
     onDragStarted: () -> Unit = {},
     onDragEnded: () -> Unit = {},
-    modifier: Modifier = Modifier
 ) {
     val semanticColors = LocalClearCutColors.current
     var dragIndex by remember { mutableIntStateOf(-1) }
+    var accessibilityPointIndex by remember { mutableIntStateOf(0) }
     // pointerInput must NOT key on `points`: every onPointsChanged emit
     // recomposed with a new list and cancelled the gesture coroutine after
     // one frame — dragging a curve point died immediately, and touch-to-add
@@ -504,6 +517,74 @@ private fun CurveEditor(
     val currentOnPointsChanged by rememberUpdatedState(onPointsChanged)
     val currentOnDragStarted by rememberUpdatedState(onDragStarted)
     val currentOnDragEnded by rememberUpdatedState(onDragEnded)
+
+    fun moveAccessibilityPoint(deltaX: Float, deltaY: Float): Boolean {
+        val current = currentPoints
+        if (current.isEmpty()) return false
+        val index = accessibilityPointIndex.coerceIn(current.indices)
+        val point = current[index]
+        val updated = current.toMutableList()
+        updated[index] = point.copy(
+            x = clampCurvePointX(current, index, (point.x + deltaX).coerceIn(0f, 1f)),
+            y = (point.y + deltaY).coerceIn(0f, 1f),
+        )
+        currentOnDragStarted()
+        currentOnPointsChanged(updated)
+        currentOnDragEnded()
+        return true
+    }
+
+    fun selectAccessibilityPoint(delta: Int): Boolean {
+        val current = currentPoints
+        if (current.isEmpty()) return false
+        val nextIndex = (accessibilityPointIndex + delta).coerceIn(0, current.lastIndex)
+        if (nextIndex == accessibilityPointIndex) return false
+        accessibilityPointIndex = nextIndex
+        return true
+    }
+
+    fun addAccessibilityPoint(): Boolean {
+        val current = currentPoints
+        val newPoint = CurvePoint(x = 0.5f, y = 0.5f)
+        val updated = (current + newPoint).sortedBy { it.x }
+        accessibilityPointIndex = updated.indexOf(newPoint)
+        currentOnDragStarted()
+        currentOnPointsChanged(updated)
+        currentOnDragEnded()
+        return true
+    }
+
+    val selectedPoint = currentPoints.getOrNull(accessibilityPointIndex.coerceIn(0, currentPoints.lastIndex.coerceAtLeast(0)))
+    val accessibilityState = stringResource(
+        R.string.color_curve_accessibility_state,
+        accessibilityLabel,
+        currentPoints.size,
+        selectedPoint?.x ?: 0f,
+        selectedPoint?.y ?: 0f,
+    )
+    val accessibilityActions = listOf(
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_left)) {
+            moveAccessibilityPoint(deltaX = -0.05f, deltaY = 0f)
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_right)) {
+            moveAccessibilityPoint(deltaX = 0.05f, deltaY = 0f)
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_up)) {
+            moveAccessibilityPoint(deltaX = 0f, deltaY = 0.05f)
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_down)) {
+            moveAccessibilityPoint(deltaX = 0f, deltaY = -0.05f)
+        },
+        CustomAccessibilityAction(stringResource(R.string.color_curve_select_previous)) {
+            selectAccessibilityPoint(-1)
+        },
+        CustomAccessibilityAction(stringResource(R.string.color_curve_select_next)) {
+            selectAccessibilityPoint(1)
+        },
+        CustomAccessibilityAction(stringResource(R.string.color_curve_add_point)) {
+            addAccessibilityPoint()
+        },
+    )
 
     Canvas(
         modifier = modifier
@@ -521,6 +602,7 @@ private fun CurveEditor(
                         }
                         if (nearest != null && abs(nearest.value.x - x) < 0.1f && abs(nearest.value.y - y) < 0.1f) {
                             dragIndex = nearest.index
+                            accessibilityPointIndex = nearest.index
                         } else {
                             // Add new point
                             val newPoints = currentPoints.toMutableList()
@@ -528,6 +610,7 @@ private fun CurveEditor(
                             newPoints.sortBy { it.x }
                             currentOnPointsChanged(newPoints)
                             dragIndex = newPoints.indexOfFirst { it.x == x.coerceIn(0f, 1f) }
+                            accessibilityPointIndex = dragIndex
                         }
                     },
                     onDrag = { change, _ ->
@@ -549,6 +632,10 @@ private fun CurveEditor(
                         currentOnDragEnded()
                     }
                 )
+            }
+            .semantics {
+                stateDescription = accessibilityState
+                customActions = accessibilityActions
             }
     ) {
         val w = size.width

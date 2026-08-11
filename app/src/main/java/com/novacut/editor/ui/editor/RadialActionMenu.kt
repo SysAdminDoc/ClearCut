@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.LocalClearCutColors
+import com.novacut.editor.ui.theme.TouchTarget
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -122,7 +123,7 @@ fun RadialActionMenu(
                             (position.y + offsetY - buttonSizePx / 2).roundToInt()
                         )
                     }
-                    .size(48.dp)
+                    .size(TouchTarget.minimum)
                     .scale(scale)
                     .semantics { contentDescription = actionLabel }
                     .clickable(role = Role.Button) { onAction(action.id) },

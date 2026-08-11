@@ -49,6 +49,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -78,6 +82,81 @@ import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.Radius
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+private const val PREVIEW_ACCESSIBILITY_PAN_PX = 25f
+
+@Composable
+internal fun Modifier.previewTransformAccessibilityModifier(
+    canTransformPreview: Boolean,
+    positionX: Float,
+    positionY: Float,
+    scaleX: Float,
+    scaleY: Float,
+    rotation: Float,
+    onPreviewTransformStarted: () -> Unit,
+    onPreviewTransformEnded: () -> Unit,
+    onPreviewTransformChanged: (dx: Float, dy: Float, scaleChange: Float, rotationChange: Float) -> Unit,
+): Modifier {
+    val accessibilityState = if (canTransformPreview) {
+        stringResource(
+            R.string.preview_accessibility_state,
+            positionX,
+            positionY,
+            scaleX,
+            scaleY,
+            rotation,
+        )
+    } else {
+        stringResource(R.string.preview_accessibility_unavailable)
+    }
+    fun runAccessibilityTransform(
+        dx: Float = 0f,
+        dy: Float = 0f,
+        scaleChange: Float = 1f,
+        rotationChange: Float = 0f,
+    ): Boolean {
+        if (!canTransformPreview) return false
+        onPreviewTransformStarted()
+        onPreviewTransformChanged(dx, dy, scaleChange, rotationChange)
+        onPreviewTransformEnded()
+        return true
+    }
+    val accessibilityActions = if (canTransformPreview) {
+        listOf(
+            CustomAccessibilityAction(stringResource(R.string.accessibility_move_left)) {
+                runAccessibilityTransform(dx = -PREVIEW_ACCESSIBILITY_PAN_PX)
+            },
+            CustomAccessibilityAction(stringResource(R.string.accessibility_move_right)) {
+                runAccessibilityTransform(dx = PREVIEW_ACCESSIBILITY_PAN_PX)
+            },
+            CustomAccessibilityAction(stringResource(R.string.accessibility_move_up)) {
+                runAccessibilityTransform(dy = -PREVIEW_ACCESSIBILITY_PAN_PX)
+            },
+            CustomAccessibilityAction(stringResource(R.string.accessibility_move_down)) {
+                runAccessibilityTransform(dy = PREVIEW_ACCESSIBILITY_PAN_PX)
+            },
+            CustomAccessibilityAction(stringResource(R.string.accessibility_zoom_in)) {
+                runAccessibilityTransform(scaleChange = 1.1f)
+            },
+            CustomAccessibilityAction(stringResource(R.string.accessibility_zoom_out)) {
+                runAccessibilityTransform(scaleChange = 0.9f)
+            },
+            CustomAccessibilityAction(stringResource(R.string.accessibility_rotate_counterclockwise)) {
+                runAccessibilityTransform(rotationChange = -5f)
+            },
+            CustomAccessibilityAction(stringResource(R.string.accessibility_rotate_clockwise)) {
+                runAccessibilityTransform(rotationChange = 5f)
+            },
+        )
+    } else {
+        emptyList()
+    }
+
+    return semantics {
+        stateDescription = accessibilityState
+        customActions = accessibilityActions
+    }
+}
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
@@ -130,6 +209,17 @@ fun PreviewPanel(
     val activeTextOverlays = remember(textOverlays, playheadMs) {
         activePreviewTextOverlays(textOverlays, playheadMs)
     }
+    val previewAccessibilityModifier = Modifier.previewTransformAccessibilityModifier(
+        canTransformPreview = canTransformPreview,
+        positionX = currentTimelineClip?.positionX ?: 0f,
+        positionY = currentTimelineClip?.positionY ?: 0f,
+        scaleX = currentTimelineClip?.scaleX ?: 1f,
+        scaleY = currentTimelineClip?.scaleY ?: 1f,
+        rotation = currentTimelineClip?.rotation ?: 0f,
+        onPreviewTransformStarted = onPreviewTransformStarted,
+        onPreviewTransformEnded = onPreviewTransformEnded,
+        onPreviewTransformChanged = onPreviewTransformChanged,
+    )
 
     val frameDurationMs = remember(frameRate) {
         (1_000L / frameRate.coerceAtLeast(1)).coerceAtLeast(1L)
@@ -218,7 +308,8 @@ fun PreviewPanel(
                                         }
                                     }
                                 } else Modifier
-                            ),
+                            )
+                            .then(previewAccessibilityModifier),
                         contentAlignment = Alignment.Center
                     ) {
                         var isBuffering by remember { mutableStateOf(false) }

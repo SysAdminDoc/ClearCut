@@ -20,7 +20,13 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.novacut.editor.R
 import kotlin.math.*
 
 private const val HANDLE_RADIUS = 10f
@@ -57,6 +63,108 @@ fun TransformOverlay(
     var startScaleX by remember { mutableFloatStateOf(1f) }
     var startScaleY by remember { mutableFloatStateOf(1f) }
     var startRotation by remember { mutableFloatStateOf(0f) }
+
+    val accessibilityState = stringResource(
+        R.string.transform_accessibility_state,
+        positionX,
+        positionY,
+        scaleX,
+        scaleY,
+        rotation,
+        anchorX,
+        anchorY,
+        opacity,
+    )
+    fun runAccessibilityTransform(change: () -> Unit): Boolean {
+        onTransformStarted()
+        change()
+        onTransformEnded()
+        return true
+    }
+    val accessibilityActions = listOf(
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_left)) {
+            runAccessibilityTransform {
+                onPositionChanged((positionX - 0.05f).coerceIn(-1f, 1f), positionY)
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_right)) {
+            runAccessibilityTransform {
+                onPositionChanged((positionX + 0.05f).coerceIn(-1f, 1f), positionY)
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_up)) {
+            runAccessibilityTransform {
+                onPositionChanged(positionX, (positionY - 0.05f).coerceIn(-1f, 1f))
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_down)) {
+            runAccessibilityTransform {
+                onPositionChanged(positionX, (positionY + 0.05f).coerceIn(-1f, 1f))
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_increase_scale)) {
+            runAccessibilityTransform {
+                onScaleChanged(
+                    (scaleX + 0.1f).coerceIn(0.1f, 5f),
+                    (scaleY + 0.1f).coerceIn(0.1f, 5f),
+                )
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_decrease_scale)) {
+            runAccessibilityTransform {
+                onScaleChanged(
+                    (scaleX - 0.1f).coerceIn(0.1f, 5f),
+                    (scaleY - 0.1f).coerceIn(0.1f, 5f),
+                )
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_widen)) {
+            runAccessibilityTransform {
+                onScaleChanged((scaleX + 0.1f).coerceIn(0.1f, 5f), scaleY)
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_narrow)) {
+            runAccessibilityTransform {
+                onScaleChanged((scaleX - 0.1f).coerceIn(0.1f, 5f), scaleY)
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_make_taller)) {
+            runAccessibilityTransform {
+                onScaleChanged(scaleX, (scaleY + 0.1f).coerceIn(0.1f, 5f))
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_make_shorter)) {
+            runAccessibilityTransform {
+                onScaleChanged(scaleX, (scaleY - 0.1f).coerceIn(0.1f, 5f))
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_rotate_counterclockwise)) {
+            runAccessibilityTransform { onRotationChanged(rotation - 5f) }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_rotate_clockwise)) {
+            runAccessibilityTransform { onRotationChanged(rotation + 5f) }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_anchor_left)) {
+            runAccessibilityTransform {
+                onAnchorChanged((anchorX - 0.05f).coerceIn(0f, 1f), anchorY)
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_anchor_right)) {
+            runAccessibilityTransform {
+                onAnchorChanged((anchorX + 0.05f).coerceIn(0f, 1f), anchorY)
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_anchor_up)) {
+            runAccessibilityTransform {
+                onAnchorChanged(anchorX, (anchorY - 0.05f).coerceIn(0f, 1f))
+            }
+        },
+        CustomAccessibilityAction(stringResource(R.string.accessibility_move_anchor_down)) {
+            runAccessibilityTransform {
+                onAnchorChanged(anchorX, (anchorY + 0.05f).coerceIn(0f, 1f))
+            }
+        },
+    )
 
     Canvas(
         modifier = modifier
@@ -207,6 +315,10 @@ fun TransformOverlay(
                         onTransformEnded()
                     }
                 )
+            }
+            .semantics {
+                stateDescription = accessibilityState
+                customActions = accessibilityActions
             }
     ) {
         val geometry = transformOverlayGeometry(

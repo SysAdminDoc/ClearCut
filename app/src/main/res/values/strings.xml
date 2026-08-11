@@ -717,6 +717,8 @@
     <string name="preview_play">Play</string>
     <string name="preview_next_frame">Next frame</string>
     <string name="preview_forward_5s">Forward 5s</string>
+    <string name="preview_accessibility_state">Preview transform: position %1$.2f, %2$.2f; scale %3$.2f by %4$.2f; rotation %5$.1f degrees.</string>
+    <string name="preview_accessibility_unavailable">Preview transform unavailable; select a clip to pan, zoom, or rotate.</string>
     <string name="preview_disable_loop">Disable loop</string>
     <string name="preview_enable_loop">Enable loop</string>
     <string name="preview_gap_title">No frame at this moment</string>
@@ -820,6 +822,10 @@
     <string name="color_curve_red">Red</string>
     <string name="color_curve_green">Green</string>
     <string name="color_curve_blue">Blue</string>
+    <string name="color_curve_accessibility_state">%1$s curve: %2$d points; selected point X %3$.2f, Y %4$.2f.</string>
+    <string name="color_curve_select_previous">Select previous curve point</string>
+    <string name="color_curve_select_next">Select next curve point</string>
+    <string name="color_curve_add_point">Add curve point at center</string>
     <string name="color_grading_active_lut">Active LUT</string>
     <string name="color_grading_no_lut_loaded">No LUT loaded</string>
     <string name="color_grading_import_lut">Import LUT (.cube / .3dl)</string>
@@ -2371,6 +2377,16 @@
     <string name="panel_keyframes_curve_description">Tap a diamond to select it, drag to reposition it, or double-tap the graph to add a point on the first active property.</string>
     <string name="panel_keyframes_curve_description_empty">Pick a property above to light up its motion curve and make the graph interactive.</string>
     <string name="panel_keyframes_curve_unavailable">This clip does not have a usable duration yet, so the curve view cannot be drawn.</string>
+    <string name="keyframe_curve_accessibility_state">Keyframe curve: %1$s selected at %2$s, value %3$s; %4$d active keyframes.</string>
+    <string name="keyframe_curve_no_selection">no keyframe</string>
+    <string name="keyframe_curve_no_value">not set</string>
+    <string name="keyframe_move_earlier">Move keyframe earlier</string>
+    <string name="keyframe_move_later">Move keyframe later</string>
+    <string name="keyframe_increase_value">Increase keyframe value</string>
+    <string name="keyframe_decrease_value">Decrease keyframe value</string>
+    <string name="keyframe_select_previous">Select previous keyframe</string>
+    <string name="keyframe_select_next">Select next keyframe</string>
+    <string name="keyframe_add_at_playhead">Add keyframe at playhead</string>
     <string name="panel_keyframes_selection_title">Selected keyframe</string>
     <string name="panel_keyframes_selection_description">Fine-tune this point’s timing, value, and interpolation without losing the bigger curve context.</string>
     <string name="panel_keyframes_selection_empty_title">No keyframe selected</string>
@@ -2826,6 +2842,25 @@
     <!-- TransformPanel / CropPanel -->
     <string name="cd_close_transform_panel">Close transform controls</string>
     <string name="cd_close_crop_panel">Close crop and aspect controls</string>
+    <string name="transform_accessibility_state">Transform: position %1$.2f, %2$.2f; scale %3$.2f by %4$.2f; rotation %5$.1f degrees; anchor %6$.2f, %7$.2f; opacity %8$.2f.</string>
+    <string name="accessibility_move_left">Move left</string>
+    <string name="accessibility_move_right">Move right</string>
+    <string name="accessibility_move_up">Move up</string>
+    <string name="accessibility_move_down">Move down</string>
+    <string name="accessibility_increase_scale">Increase scale</string>
+    <string name="accessibility_decrease_scale">Decrease scale</string>
+    <string name="accessibility_widen">Widen</string>
+    <string name="accessibility_narrow">Narrow</string>
+    <string name="accessibility_make_taller">Make taller</string>
+    <string name="accessibility_make_shorter">Make shorter</string>
+    <string name="accessibility_zoom_in">Zoom in</string>
+    <string name="accessibility_zoom_out">Zoom out</string>
+    <string name="accessibility_rotate_counterclockwise">Rotate counterclockwise</string>
+    <string name="accessibility_rotate_clockwise">Rotate clockwise</string>
+    <string name="accessibility_move_anchor_left">Move anchor left</string>
+    <string name="accessibility_move_anchor_right">Move anchor right</string>
+    <string name="accessibility_move_anchor_up">Move anchor up</string>
+    <string name="accessibility_move_anchor_down">Move anchor down</string>
     <string name="transition_picker_close_cd">Close transitions</string>
 
     <!-- SpeedPresets -->

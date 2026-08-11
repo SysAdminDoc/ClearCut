@@ -45,6 +45,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
@@ -557,7 +561,7 @@ fun KeyframeCurveEditor(
 }
 
 @Composable
-private fun CurveCanvas(
+internal fun CurveCanvas(
     keyframes: List<Keyframe>,
     clipDurationMs: Long,
     playheadMs: Long,
@@ -608,6 +612,88 @@ private fun CurveCanvas(
         return nearest
     }
 
+    fun activeAccessibilityKeyframes(): List<Keyframe> = currentKeyframes
+        .filter { it.property in currentActiveProperties }
+        .sortedWith(compareBy<Keyframe> { it.timeOffsetMs }.thenBy { it.property.ordinal })
+
+    fun moveAccessibilityKeyframe(deltaTimeMs: Long = 0L, deltaValue: Float = 0f): Boolean {
+        val selected = currentSelectedKeyframe ?: activeAccessibilityKeyframes().firstOrNull() ?: return false
+        val range = getPropertyRange(selected.property)
+        val time = (selected.timeOffsetMs + deltaTimeMs).coerceIn(0L, clipDurationMs)
+        val value = (selected.value + deltaValue).coerceIn(range.first, range.second)
+        currentOnKeyframeSelected(selected)
+        currentOnDragStarted()
+        currentOnKeyframeMoved(selected, time, value)
+        currentOnDragEnded()
+        return true
+    }
+
+    fun selectAccessibilityKeyframe(delta: Int): Boolean {
+        val candidates = activeAccessibilityKeyframes()
+        if (candidates.isEmpty()) return false
+        val currentIndex = candidates.indexOf(currentSelectedKeyframe)
+        val targetIndex = when {
+            currentIndex < 0 -> if (delta < 0) candidates.lastIndex else 0
+            else -> (currentIndex + delta).coerceIn(0, candidates.lastIndex)
+        }
+        if (targetIndex == currentIndex) return false
+        currentOnKeyframeSelected(candidates[targetIndex])
+        return true
+    }
+
+    fun addAccessibilityKeyframe(): Boolean {
+        val property = currentActiveProperties.firstOrNull() ?: return false
+        val range = getPropertyRange(property)
+        val propertyKeyframes = currentKeyframes.filter { it.property == property }
+        val value = com.novacut.editor.engine.KeyframeEngine.getValueAt(
+            propertyKeyframes,
+            property,
+            playheadMs.coerceIn(0L, clipDurationMs),
+        ) ?: (range.first + range.second) / 2f
+        currentOnAddKeyframe(property, playheadMs.coerceIn(0L, clipDurationMs), value)
+        return true
+    }
+
+    val selectedForAccessibility = currentSelectedKeyframe
+        ?.takeIf { it.property in currentActiveProperties }
+    val accessibilityState = stringResource(
+        R.string.keyframe_curve_accessibility_state,
+        selectedForAccessibility?.property?.displayLabel()
+            ?: stringResource(R.string.keyframe_curve_no_selection),
+        selectedForAccessibility?.let { formatEditorTimestamp(it.timeOffsetMs) }
+            ?: stringResource(R.string.keyframe_curve_no_value),
+        selectedForAccessibility?.let { formatKeyframeValue(it.value) }
+            ?: stringResource(R.string.keyframe_curve_no_value),
+        activeAccessibilityKeyframes().size,
+    )
+    val keyframeTimeStepMs = (clipDurationMs / 100L).coerceAtLeast(1L)
+    val accessibilityValueStep = selectedForAccessibility?.let {
+        (getPropertyRange(it.property).second - getPropertyRange(it.property).first) * 0.05f
+    } ?: 0f
+    val accessibilityActions = listOf(
+        CustomAccessibilityAction(stringResource(R.string.keyframe_move_earlier)) {
+            moveAccessibilityKeyframe(deltaTimeMs = -keyframeTimeStepMs)
+        },
+        CustomAccessibilityAction(stringResource(R.string.keyframe_move_later)) {
+            moveAccessibilityKeyframe(deltaTimeMs = keyframeTimeStepMs)
+        },
+        CustomAccessibilityAction(stringResource(R.string.keyframe_increase_value)) {
+            moveAccessibilityKeyframe(deltaValue = accessibilityValueStep)
+        },
+        CustomAccessibilityAction(stringResource(R.string.keyframe_decrease_value)) {
+            moveAccessibilityKeyframe(deltaValue = -accessibilityValueStep)
+        },
+        CustomAccessibilityAction(stringResource(R.string.keyframe_select_previous)) {
+            selectAccessibilityKeyframe(-1)
+        },
+        CustomAccessibilityAction(stringResource(R.string.keyframe_select_next)) {
+            selectAccessibilityKeyframe(1)
+        },
+        CustomAccessibilityAction(stringResource(R.string.keyframe_add_at_playhead)) {
+            addAccessibilityKeyframe()
+        },
+    )
+
     androidx.compose.foundation.Canvas(
         modifier = modifier
             .pointerInput(Unit) {
@@ -651,6 +737,10 @@ private fun CurveCanvas(
                         dragging = false
                     }
                 )
+            }
+            .semantics {
+                stateDescription = accessibilityState
+                customActions = accessibilityActions
             }
     ) {
         val width = size.width

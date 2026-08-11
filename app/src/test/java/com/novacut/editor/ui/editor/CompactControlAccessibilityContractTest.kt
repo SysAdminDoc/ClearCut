@@ -20,10 +20,18 @@ class CompactControlAccessibilityContractTest {
     fun radial_actions_keep_their_40dp_visual_inside_a_48dp_target() {
         val source = locate("app/src/main/java/com/novacut/editor/ui/editor/RadialActionMenu.kt").readText()
 
-        assertTrue(source.contains(".size(48.dp)"))
+        assertTrue(source.contains(".size(TouchTarget.minimum)"))
         assertTrue(source.contains(".size(40.dp)"))
         assertTrue(source.contains("clickable(role = Role.Button)"))
         assertTrue(source.contains(".semantics { contentDescription = actionLabel }"))
+    }
+
+    @Test
+    fun editor_search_action_uses_the_shared_touch_target_token() {
+        val source = locate("app/src/main/java/com/novacut/editor/ui/editor/EditorScreen.kt").readText()
+
+        assertTrue(source.contains("onClick = onSearch"))
+        assertTrue(source.contains("modifier = Modifier.size(TouchTarget.minimum)"))
     }
 
     @Test
