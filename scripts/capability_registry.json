@@ -84,7 +84,7 @@
     {
       "id": "coil",
       "label": "Coil Compose",
-      "version": "3.3.0",
+      "version": "3.5.0",
       "coordinate": "io.coil-kt.coil3:coil-compose",
       "catalogKeys": ["coil"],
       "purpose": "Image and video thumbnails",

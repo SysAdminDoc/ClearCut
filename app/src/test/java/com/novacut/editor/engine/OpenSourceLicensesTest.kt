@@ -36,7 +36,7 @@ class OpenSourceLicensesTest {
             assertEquals(curated.version, current!!.version)
         }
         assertEquals("5.4.0", OpenSourceLicenses.noticeForArtifact("com.squareup.okhttp3:okhttp")?.version)
-        assertEquals("3.3.0", OpenSourceLicenses.noticeForArtifact("io.coil-kt.coil3:coil-compose")?.version)
+        assertEquals("3.5.0", OpenSourceLicenses.noticeForArtifact("io.coil-kt.coil3:coil-compose")?.version)
         assertEquals("2.60.1", OpenSourceLicenses.noticeForArtifact("com.google.dagger:hilt-android")?.version)
     }
 

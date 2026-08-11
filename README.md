@@ -699,7 +699,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | Lottie Compose | 6.7.1 | Animated title templates |
 | OkHttp | 5.4.0 | Model downloads and future opt-in provider calls |
 | Media3 | 1.11.0 | Transformer, ExoPlayer, effects, and muxing |
-| Coil Compose | 3.3.0 | Image and video thumbnails |
+| Coil Compose | 3.5.0 | Image and video thumbnails |
 | Hilt / Dagger | 2.60.1 | Dependency injection |
 | Android DeepFilterNet | 0.0.8 | On-device voiceover noise reduction |
 | FFmpegKitNext / FFmpeg | 8.1.0 (FFmpeg 8.1.2) | LGPL FFmpeg paths not covered by Media3 Transformer |

@@ -166,7 +166,7 @@ internal object CapabilityRegistryGenerated {
         PublicDependencyRecord(
             id = "coil",
             label = "Coil Compose",
-            version = "3.3.0",
+            version = "3.5.0",
             coordinate = "io.coil-kt.coil3:coil-compose",
             catalogKeys = listOf("coil"),
             purpose = "Image and video thumbnails",
@@ -286,7 +286,7 @@ internal object CapabilityRegistryGenerated {
         ),
         OpenSourceLicenseNotice(
             name = "Coil Compose",
-            version = "3.3.0",
+            version = "3.5.0",
             artifact = "io.coil-kt.coil3:coil-compose",
             licenseName = "The Apache License, Version 2.0",
             licenseText = "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",

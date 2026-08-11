@@ -229,18 +229,20 @@
     },
     "coil": {
       "coordinate": "io.coil-kt.coil3:coil-compose",
-      "pinnedVersion": "3.3.0",
+      "pinnedVersion": "3.5.0",
       "latestStable": "3.5.0",
       "source": "https://github.com/coil-kt/coil/releases",
       "metadataSource": "https://repo1.maven.org/maven2/io/coil-kt/coil3/coil-compose/maven-metadata.xml",
       "reviewedOn": "2026-08-03",
-      "state": "held",
-      "reason": "Coil 3.5.0 is stable, but this checkout has not re-run its Compose integration, media-loader, and package-size gates against the 3.x candidate.",
-      "unblockCondition": "Run `python scripts/probe_dependency_upgrade.py --dependency coil --version 3.5.0` and retain the new pin only after the local compatibility probe passes.",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
       "compatibilityProbe": {
-        "status": "not-run",
-        "version": null,
-        "command": "python scripts/probe_dependency_upgrade.py --dependency coil --version 3.5.0"
+        "status": "passed",
+        "version": "3.5.0",
+        "verifiedOn": "2026-08-11",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency coil --version 3.5.0",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
       }
     },
     "okhttp": {

@@ -6,6 +6,7 @@ Current version: **v3.78.1** (`versionCode` 296).
 
 - Added a translated Spanish Play listing with a current changelog, replaced synthetic listing screenshots with API 37 device captures, and repaired the clean-checkout changelog/checksum release scripts.
 - Migrated project persistence to Room 3.0.1 and SQLite driver APIs; the v1–v10 migration chain remains device-validated on API 37.
+- Updated Coil Compose and its video-frame decoder from 3.3.0 to 3.5.0 after the unit-test, lint, and QA packaging compatibility probe passed; the timeline and media-picker review continue to use their independent VideoEngine and metadata paths, so the dependency change does not alter those measured paths.
 - Pure single-source MP4 trims now use Media3's GOP trim optimization when eligible, disclose the full-render reason when they are not, and report all seven optimizer outcomes in English and Spanish; the unsafe MP4 edit-list path is no longer enabled.
 - Added validated-internet awareness across model downloads, AI model controls, caption translation, and opt-in update checks; offline controls explain the dependency, disable before a request, and recover from connectivity callbacks.
 - Made the appearance contract explicit: the menu now documents the implemented Dark and High Contrast Dark schemes only, and chroma-key colours live in content tokens while RGB scope traces remain documented instrument colours.
