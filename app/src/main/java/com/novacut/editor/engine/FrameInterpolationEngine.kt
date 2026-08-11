@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -103,7 +103,7 @@ class FrameInterpolationEngine @Inject constructor(
 
     /** Whether the RIFE NCNN model is downloaded and ready for inference. */
     fun isModelReady(): Boolean {
-        Log.d(TAG, "isModelReady: stub — requires RIFE NCNN model")
+        AppLog.d(TAG, "isModelReady: stub — requires RIFE NCNN model")
         return false
     }
 
@@ -115,7 +115,7 @@ class FrameInterpolationEngine @Inject constructor(
     suspend fun downloadModel(
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        Log.d(TAG, "downloadModel: stub — requires RIFE NCNN model")
+        AppLog.d(TAG, "downloadModel: stub — requires RIFE NCNN model")
         false
     }
 
@@ -135,7 +135,7 @@ class FrameInterpolationEngine @Inject constructor(
         config: SlowMotionConfig = SlowMotionConfig(),
         onProgress: (Float) -> Unit = {}
     ): InterpolationResult? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "interpolateFrames: stub — requires RIFE NCNN model")
+        AppLog.d(TAG, "interpolateFrames: stub — requires RIFE NCNN model")
         null
     }
 
@@ -153,7 +153,7 @@ class FrameInterpolationEngine @Inject constructor(
         frame2: Bitmap,
         timestep: Float = 0.5f
     ): Bitmap? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "interpolatePair: stub — requires RIFE NCNN model")
+        AppLog.d(TAG, "interpolatePair: stub — requires RIFE NCNN model")
         null
     }
 }

@@ -14,7 +14,7 @@ import java.nio.ByteOrder
 import java.nio.ShortBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.File
@@ -84,7 +84,7 @@ class AudioEngine @Inject constructor(
             tmp.renameTo(file)
             evictDiskCacheIfNeeded()
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to write waveform disk cache", e)
+            AppLog.w(TAG, "Failed to write waveform disk cache", e)
         }
     }
 
@@ -230,7 +230,7 @@ class AudioEngine @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Waveform extraction failed for ${uri.redacted()}", e)
+            AppLog.e(TAG, "Waveform extraction failed for ${uri.redacted()}", e)
             // Use `boundedSampleCount` -- matching the other early-return paths in this
             // function. Callers that pass a large `sampleCount` (e.g. 48_000) must never
             // receive an oversized array from the error path, or the 10_000-cap applied
@@ -364,7 +364,7 @@ class AudioEngine @Inject constructor(
                             val arr = readPcmSamples(outBuf, bufferInfo)
                             if (arr.isNotEmpty()) {
                                 if (AudioDecodeBudget.exceedsBudget(totalSamples, arr.size)) {
-                                    Log.w(TAG, "Decoded PCM exceeds the in-memory budget; stopping decode")
+                                    AppLog.w(TAG, "Decoded PCM exceeds the in-memory budget; stopping decode")
                                     decoder.releaseOutputBuffer(outIdx, false)
                                     return@withContext ShortArray(0)
                                 }
@@ -417,7 +417,7 @@ class AudioEngine @Inject constructor(
             }
             null
         } catch (e: Exception) {
-            Log.w(TAG, "probeAudioFormat failed for ${uri.redacted()}", e)
+            AppLog.w(TAG, "probeAudioFormat failed for ${uri.redacted()}", e)
             null
         } finally {
             extractor.release()

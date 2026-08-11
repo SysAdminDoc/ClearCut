@@ -44,7 +44,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
@@ -169,7 +169,7 @@ fun EditorScreen(
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (e: SecurityException) {
-                Log.w("EditorScreen", "Could not persist relink media permission", e)
+                AppLog.w("EditorScreen", "Could not persist relink media permission", e)
             }
             viewModel.relinkMedia(oldUri, uri)
         }
@@ -754,7 +754,7 @@ fun EditorScreen(
                 "export" -> viewModel.showExportSheet()
                 "undo" -> viewModel.undo()
                 "redo" -> viewModel.redo()
-                else -> Log.w("EditorScreen", "Unknown action: $actionId")
+                else -> AppLog.w("EditorScreen", "Unknown action: $actionId")
             }
         }
         Column(

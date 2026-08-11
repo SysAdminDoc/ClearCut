@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -82,7 +82,7 @@ class ContentIdEngine @Inject constructor() {
         val fp = fingerprint(pcm)
         val hash = fp.toHexString()
         if (apiKey.isNullOrBlank()) {
-            Log.d(TAG, "no AcoustID key — returning hash-only result")
+            AppLog.d(TAG, "no AcoustID key — returning hash-only result")
             return@withContext Match(null, null, 0f, hash, LookupOutcome.NOT_CHECKED_NO_API_KEY)
         }
         // AcoustID lookup currently requires a Chromaprint fingerprint format,
@@ -92,7 +92,7 @@ class ContentIdEngine @Inject constructor() {
         // https://api.acoustid.org/v2/lookup and parse the JSON `results`, then
         // return MATCHED or NO_MATCH from the response.
         if (!isChromaprintAvailable()) {
-            Log.i(TAG, "AcoustID lookup not wired — Chromaprint dependency pending")
+            AppLog.i(TAG, "AcoustID lookup not wired — Chromaprint dependency pending")
             return@withContext Match(null, null, 0f, hash, LookupOutcome.NOT_CHECKED_NO_FINGERPRINT_BACKEND)
         }
         Match(null, null, 0f, hash, LookupOutcome.NO_MATCH)

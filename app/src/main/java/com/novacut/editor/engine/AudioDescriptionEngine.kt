@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Caption
 import com.novacut.editor.model.WordTimestamp
 import javax.inject.Inject
@@ -65,7 +65,7 @@ class AudioDescriptionEngine @Inject constructor() {
         if (totalDurationMs - last > silenceThresholdMs) {
             events += AudioEvent(last, totalDurationMs, "music")
         }
-        return events.also { Log.d(TAG, "classify: ${it.size} non-speech events") }
+        return events.also { AppLog.d(TAG, "classify: ${it.size} non-speech events") }
     }
 
     /**

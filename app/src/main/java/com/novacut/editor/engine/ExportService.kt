@@ -6,7 +6,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import com.novacut.editor.MainActivity
@@ -55,7 +55,7 @@ class ExportService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_CANCEL) {
-            Log.d(TAG, "Cancel requested")
+            AppLog.d(TAG, "Cancel requested")
             videoEngine.cancelExport()
             stopThermalMonitoring()
             return START_NOT_STICKY
@@ -96,7 +96,7 @@ class ExportService : Service() {
     }
 
     private fun handleForegroundServiceTimeout(startId: Int, foregroundServiceType: Int?) {
-        Log.w(TAG, "Foreground service timeout: startId=$startId type=$foregroundServiceType")
+        AppLog.w(TAG, "Foreground service timeout: startId=$startId type=$foregroundServiceType")
         observeJob?.cancel()
         observeJob = null
         stopThermalMonitoring()
@@ -188,7 +188,7 @@ class ExportService : Service() {
                     file
                 )
             }.getOrElse { error ->
-                Log.w(TAG, "Export notification FileProvider handoff failed for ${file.redacted()}", error)
+                AppLog.w(TAG, "Export notification FileProvider handoff failed for ${file.redacted()}", error)
                 return Intent(Intent.ACTION_MAIN, null, this, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
@@ -256,7 +256,7 @@ class ExportService : Service() {
             powerManager.addThermalStatusListener(mainExecutor, listener)
             thermalStatusListener = listener
         }.onFailure { error ->
-            Log.w(TAG, "Unable to register thermal status listener", error)
+            AppLog.w(TAG, "Unable to register thermal status listener", error)
             thermalStatusListener = null
         }
 
@@ -279,7 +279,7 @@ class ExportService : Service() {
                 runCatching {
                     powerManager.removeThermalStatusListener(listener)
                 }.onFailure { error ->
-                    Log.w(TAG, "Unable to unregister thermal status listener", error)
+                    AppLog.w(TAG, "Unable to unregister thermal status listener", error)
                 }
             }
         }

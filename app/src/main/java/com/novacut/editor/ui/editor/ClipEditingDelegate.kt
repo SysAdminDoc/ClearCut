@@ -2,7 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.R
 import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.VideoEngine
@@ -87,7 +87,7 @@ class ClipEditingDelegate(
             val mediaInfo = try {
                 readMediaInfo(uri)
             } catch (e: Exception) {
-                Log.e("ClipEditingDelegate", "Could not read media", e)
+                AppLog.e("ClipEditingDelegate", "Could not read media", e)
                 showToast(text(R.string.editor_media_read_failed_toast))
                 return@launch
             }
@@ -143,7 +143,7 @@ class ClipEditingDelegate(
             val prepared = items.mapNotNull { item ->
                 val mediaInfo = runCatching { readMediaInfo(item.uri) }
                     .onFailure { error ->
-                        Log.e("ClipEditingDelegate", "Could not read sequence media", error)
+                        AppLog.e("ClipEditingDelegate", "Could not read sequence media", error)
                     }
                     .getOrNull()
                     ?.takeIf { it.durationMs > 0L }

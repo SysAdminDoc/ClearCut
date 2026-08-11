@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.media.MediaExtractor
 import android.media.MediaFormat
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import java.io.File
 import java.io.RandomAccessFile
 
@@ -237,7 +237,7 @@ object ExportOutputVerifier {
             if (expectedDurationMs > 0L && durationToleranceMs > 0L) {
                 val drift = kotlin.math.abs(durationMs - expectedDurationMs)
                 if (drift > durationToleranceMs && drift > expectedDurationMs / 2) {
-                    Log.w(TAG, "Duration drift: expected ${expectedDurationMs}ms, got ${durationMs}ms (drift ${drift}ms)")
+                    AppLog.w(TAG, "Duration drift: expected ${expectedDurationMs}ms, got ${durationMs}ms (drift ${drift}ms)")
                 }
             }
 
@@ -256,7 +256,7 @@ object ExportOutputVerifier {
                 fastStart = fastStart,
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Verification failed for ${outputFile.redacted()}", e)
+            AppLog.e(TAG, "Verification failed for ${outputFile.redacted()}", e)
             return ExportVerificationResult(
                 false,
                 reason = "Cannot read output: ${e.javaClass.simpleName}: ${e.message}"

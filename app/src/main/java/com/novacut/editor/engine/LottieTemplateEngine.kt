@@ -7,7 +7,7 @@ import android.net.Uri
 import android.opengl.GLES30
 import android.opengl.GLUtils
 import android.provider.Settings
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.airbnb.lottie.LottieComposition
 import com.airbnb.lottie.LottieCompositionFactory
 import com.airbnb.lottie.LottieDrawable
@@ -163,14 +163,14 @@ class LottieTemplateEngine @Inject constructor(
                 task.addListener { composition ->
                     if (cont.isActive) cont.resume(composition)
                 }.addFailureListener { e ->
-                    Log.w(TAG, "Failed to load Lottie template: $assetPath", e)
+                    AppLog.w(TAG, "Failed to load Lottie template: $assetPath", e)
                     if (cont.isActive) cont.resume(null)
                 }
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Exception loading Lottie template: $assetPath", e)
+            AppLog.w(TAG, "Exception loading Lottie template: $assetPath", e)
             null
         }
     }
@@ -183,7 +183,7 @@ class LottieTemplateEngine @Inject constructor(
     suspend fun loadDotLottie(uri: Uri): LottieComposition? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: run {
-                Log.w(TAG, "Failed to open dotLottie URI")
+                AppLog.w(TAG, "Failed to open dotLottie URI")
                 return null
             }
             // ZipInputStream.close() closes the wrapped inputStream too. Close it on
@@ -198,7 +198,7 @@ class LottieTemplateEngine @Inject constructor(
                         runCatching { zipStream.close() }
                         if (cont.isActive) cont.resume(composition)
                     }.addFailureListener { e ->
-                        Log.w(TAG, "Failed to load dotLottie", e)
+                        AppLog.w(TAG, "Failed to load dotLottie", e)
                         runCatching { zipStream.close() }
                         if (cont.isActive) cont.resume(null)
                     }
@@ -212,7 +212,7 @@ class LottieTemplateEngine @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Exception loading dotLottie", e)
+            AppLog.w(TAG, "Exception loading dotLottie", e)
             null
         }
     }

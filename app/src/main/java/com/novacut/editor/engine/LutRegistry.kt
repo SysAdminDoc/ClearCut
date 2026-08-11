@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -58,7 +58,7 @@ class LutRegistry @Inject constructor(
                 canRollback = hadExisting,
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to import LUT", e)
+            AppLog.w(TAG, "Failed to import LUT", e)
             if (!hadExisting) targetFile.delete() else restoreRollback(targetFile)
             null
         }
@@ -104,7 +104,7 @@ class LutRegistry @Inject constructor(
             rollback.delete()
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to roll back LUT: ${RedactedLog.assetId(fileName)}", e)
+            AppLog.w(TAG, "Failed to roll back LUT: ${RedactedLog.assetId(fileName)}", e)
             false
         }
     }
@@ -138,7 +138,7 @@ class LutRegistry @Inject constructor(
             }
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to preserve LUT for rollback: ${file.redacted()}", e)
+            AppLog.w(TAG, "Failed to preserve LUT for rollback: ${file.redacted()}", e)
             false
         }
     }
@@ -154,7 +154,7 @@ class LutRegistry @Inject constructor(
             }
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to restore LUT: ${file.redacted()}", e)
+            AppLog.w(TAG, "Failed to restore LUT: ${file.redacted()}", e)
             false
         }
     }

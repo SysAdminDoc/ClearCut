@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -167,7 +167,7 @@ class ProxyEngine @Inject constructor(
                             }
                         }
                         override fun onError(composition: Composition, exportResult: androidx.media3.transformer.ExportResult, exportException: androidx.media3.transformer.ExportException) {
-                            Log.e("ProxyEngine", "Proxy generation failed", exportException)
+                            AppLog.e("ProxyEngine", "Proxy generation failed", exportException)
                             outFile.delete()
                             proxyMap.remove(key)
                             if (cont.isActive) cont.resume(null)
@@ -203,7 +203,7 @@ class ProxyEngine @Inject constructor(
             proxyMap.remove(key)
             throw e
         } catch (e: Exception) {
-            Log.e("ProxyEngine", "Proxy generation error", e)
+            AppLog.e("ProxyEngine", "Proxy generation error", e)
             proxyMap.remove(key)
             null
         } finally {

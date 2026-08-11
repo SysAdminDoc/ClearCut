@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -65,7 +65,7 @@ class AiThumbnailEngine @Inject constructor(
                     ensureActive()
                     val frame = try {
                         retriever.getFrameAtTime(t * 1000L, MediaMetadataRetriever.OPTION_CLOSEST)
-                    } catch (e: Exception) { Log.w(TAG, "getFrameAtTime@${t}ms", e); null }
+                    } catch (e: Exception) { AppLog.w(TAG, "getFrameAtTime@${t}ms", e); null }
                     if (frame != null) {
                         val s = scoreFrame(frame)
                         if (heap.size < topN) {
@@ -90,7 +90,7 @@ class AiThumbnailEngine @Inject constructor(
             // cancelled job propagate.
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "thumbnail scoring failed", e)
+            AppLog.w(TAG, "thumbnail scoring failed", e)
         } finally {
             retrieverLease.close()
         }
@@ -108,7 +108,7 @@ class AiThumbnailEngine @Inject constructor(
     suspend fun saveThumbnail(bitmap: Bitmap, outputFile: File, quality: Int = 92): Boolean =
         withContext(Dispatchers.IO) {
             if (bitmap.isRecycled) {
-                Log.w(TAG, "saveThumbnail called with already-recycled bitmap")
+                AppLog.w(TAG, "saveThumbnail called with already-recycled bitmap")
                 return@withContext false
             }
             var partialFile: File? = null
@@ -126,7 +126,7 @@ class AiThumbnailEngine @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 cleanupStillImageOutputFile(partialFile)
-                Log.w(TAG, "saveThumbnail failed", e)
+                AppLog.w(TAG, "saveThumbnail failed", e)
                 false
             }
         }

@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.CaptionAccessibilityPreset
 import com.novacut.editor.model.CaptionStyleTemplate
 import com.novacut.editor.model.CaptionTemplateType
@@ -84,7 +84,7 @@ class StylePackManager @Inject constructor(
             .take(MAX_PACK_ID_CHARS)
             .joinToString("")
         if (sanitized.isEmpty() || sanitized != id) {
-            Log.w(TAG, "Rejected unsafe style pack id")
+            AppLog.w(TAG, "Rejected unsafe style pack id")
             return null
         }
         return File(packsDir, "$sanitized.json")
@@ -127,7 +127,7 @@ class StylePackManager @Inject constructor(
                 readUtf8WithByteLimit(stream, MAX_STYLE_PACK_BYTES)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to read style pack", e)
+            AppLog.w(TAG, "Failed to read style pack", e)
             return null
         }
         return json?.takeIf { it.isNotBlank() }
@@ -137,7 +137,7 @@ class StylePackManager @Inject constructor(
         return try {
             JSONObject(json)
         } catch (e: Exception) {
-            Log.w(TAG, "Style pack is not valid JSON", e)
+            AppLog.w(TAG, "Style pack is not valid JSON", e)
             null
         }
     }
@@ -151,13 +151,13 @@ class StylePackManager @Inject constructor(
                     val root = JSONObject(file.readText())
                     val envelope = DeclarativePackContract.inspect(root, DeclarativePackKind.STYLE)
                     if (envelope.issue != DeclarativePackIssue.NONE) {
-                        Log.w(TAG, "Skipping invalid installed pack: ${file.redacted()} (${envelope.issue})")
+                        AppLog.w(TAG, "Skipping invalid installed pack: ${file.redacted()} (${envelope.issue})")
                         null
                     } else {
                         parsePack(root)
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to read installed pack: ${file.redacted()}", e)
+                    AppLog.w(TAG, "Failed to read installed pack: ${file.redacted()}", e)
                     null
                 }
             }
@@ -174,8 +174,8 @@ class StylePackManager @Inject constructor(
         if (!file.exists()) return false
         if (!backupForRollback(file, packId)) return false
         return file.delete().also { ok ->
-            if (ok) Log.d(TAG, "Removed style pack with rollback available: $packId")
-            else Log.w(TAG, "Failed to delete style pack file: $packId")
+            if (ok) AppLog.d(TAG, "Removed style pack with rollback available: $packId")
+            else AppLog.w(TAG, "Failed to delete style pack file: $packId")
         }
     }
 
@@ -198,10 +198,10 @@ class StylePackManager @Inject constructor(
             if (pack.id != packId) return false
             writeUtf8TextAtomically(targetFile, root.toString(2))
             rollbackFile.delete()
-            Log.d(TAG, "Rolled back style pack: $packId")
+            AppLog.d(TAG, "Rolled back style pack: $packId")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to roll back style pack", e)
+            AppLog.e(TAG, "Failed to roll back style pack", e)
             false
         }
     }
@@ -321,7 +321,7 @@ class StylePackManager @Inject constructor(
             // Atomic: a crash mid-write leaves the previously installed pack (or no
             // pack at all) rather than a truncated file the gallery would fail to load.
             writeUtf8TextAtomically(validated.targetFile, normalizedRoot.toString(2))
-            Log.d(
+            AppLog.d(
                 TAG,
                 "Installed style pack: ${installedPack.id} " +
                     "(${installedPack.name}, ${installedPack.styles.size} styles, " +
@@ -329,7 +329,7 @@ class StylePackManager @Inject constructor(
             )
             StylePackImportResult(pack = installedPack, warnings = validated.warnings)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to write style pack", e)
+            AppLog.e(TAG, "Failed to write style pack", e)
             StylePackImportResult(failure = StylePackFailure.WRITE_FAILED)
         }
     }
@@ -405,7 +405,7 @@ class StylePackManager @Inject constructor(
             writeUtf8TextAtomically(rollbackFile, file.readText(Charsets.UTF_8))
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to preserve style pack for rollback", e)
+            AppLog.e(TAG, "Failed to preserve style pack for rollback", e)
             false
         }
     }

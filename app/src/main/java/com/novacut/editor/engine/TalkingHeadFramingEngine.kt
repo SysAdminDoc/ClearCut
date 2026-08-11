@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Easing
 import com.novacut.editor.model.Keyframe
 import com.novacut.editor.model.KeyframeProperty
@@ -55,7 +55,7 @@ class TalkingHeadFramingEngine @Inject constructor(
                 t += sampleStepMs
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Face tracking failed", e)
+            AppLog.w(TAG, "Face tracking failed", e)
         } finally {
             retrieverLease.close()
         }

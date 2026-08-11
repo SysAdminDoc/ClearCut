@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.content.Context
 import com.novacut.editor.model.ColorGrade
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +39,7 @@ object ColorMatchEngine {
             bitmap = retriever.getFrameAtTime(timeMs * 1000L, MediaMetadataRetriever.OPTION_CLOSEST)
             bitmap?.let { analyzeBitmap(it) }
         } catch (e: Exception) {
-            Log.w("ColorMatchEngine", "Frame analysis failed for ${uri.redacted()} @${timeMs}ms", e)
+            AppLog.w("ColorMatchEngine", "Frame analysis failed for ${uri.redacted()} @${timeMs}ms", e)
             null
         } finally {
             try { bitmap?.recycle() } catch (_: Exception) { /* already recycled */ }

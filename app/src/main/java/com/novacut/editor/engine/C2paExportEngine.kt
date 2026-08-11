@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
@@ -361,7 +361,7 @@ class C2paExportEngine @Inject constructor() {
             }
         }
         cachedAvailability = present
-        if (!present) Log.d(TAG, "isAvailable: no c2pa library on classpath")
+        if (!present) AppLog.d(TAG, "isAvailable: no c2pa library on classpath")
         return present
     }
 

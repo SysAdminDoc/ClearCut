@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -103,10 +103,10 @@ class EdlExporter @Inject constructor(
             val sanitized = sanitizeFileName(projectName, fallback = "ClearCut", maxLength = 50)
             val file = File(outputDir, "${sanitized}.edl")
             writeUtf8TextAtomically(file, sb.toString())
-            Log.d(TAG, "EDL exported: ${file.redacted()}")
+            AppLog.d(TAG, "EDL exported: ${file.redacted()}")
             file
         } catch (e: Exception) {
-            Log.e(TAG, "EDL export failed", e)
+            AppLog.e(TAG, "EDL export failed", e)
             null
         }
     }

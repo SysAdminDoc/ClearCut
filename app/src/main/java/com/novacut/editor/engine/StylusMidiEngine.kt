@@ -6,7 +6,7 @@ import android.media.midi.MidiManager
 import android.media.midi.MidiReceiver
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.view.MotionEvent
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -81,14 +81,14 @@ class StylusMidiEngine @Inject constructor(
         val first = devices.firstOrNull { it.inputPortCount > 0 } ?: return false
         mm.openDevice(first, { dev ->
             if (dev == null) {
-                Log.w(TAG, "midi device open returned null")
+                AppLog.w(TAG, "midi device open returned null")
                 return@openDevice
             }
             // Replace any prior connection so we never leak two open handles.
             activeDevice?.let { old -> try { old.close() } catch (_: Exception) {} }
             activeDevice = dev
             val port = try { dev.openOutputPort(0) } catch (e: Exception) {
-                Log.w(TAG, "openOutputPort failed", e); null
+                AppLog.w(TAG, "openOutputPort failed", e); null
             }
             port?.connect(midiReceiver)
         }, handler)
@@ -99,7 +99,7 @@ class StylusMidiEngine @Inject constructor(
     fun disconnect() {
         val d = activeDevice ?: return
         activeDevice = null
-        try { d.close() } catch (e: Exception) { Log.w(TAG, "midi close failed", e) }
+        try { d.close() } catch (e: Exception) { AppLog.w(TAG, "midi close failed", e) }
     }
 
     private val midiReceiver = object : MidiReceiver() {

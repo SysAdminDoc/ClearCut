@@ -6,7 +6,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Mask
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -163,7 +163,7 @@ class InpaintingEngine @Inject constructor(
                 onProgress(1f)
                 return@withContext true
             }
-            Log.d(TAG, "Downloading LaMa-Dilated model from $MODEL_URL")
+            AppLog.d(TAG, "Downloading LaMa-Dilated model from $MODEL_URL")
             modelDownloadManager.downloadFiles(
                 files = listOf(
                     ModelDownloadManager.ModelFile(
@@ -186,7 +186,7 @@ class InpaintingEngine @Inject constructor(
                     onProgress(_downloadProgress.value)
                 }
             )
-            Log.d(TAG, "LaMa model downloaded: ${modelFile.length()} bytes")
+            AppLog.d(TAG, "LaMa model downloaded: ${modelFile.length()} bytes")
             _downloadProgress.value = 1f
             onProgress(1f)
             if (isVerifiedModelReady()) {
@@ -213,7 +213,7 @@ class InpaintingEngine @Inject constructor(
             _downloadProgress.value = 0f
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to download LaMa model", e)
+            AppLog.e(TAG, "Failed to download LaMa model", e)
             _modelState.value = if (isModelReady()) {
                 InpaintingModelState.READY
             } else {
@@ -257,12 +257,12 @@ class InpaintingEngine @Inject constructor(
     ): InpaintingResult? = withContext(Dispatchers.IO) {
         val pixelBytes = bitmap.byteCount.toLong()
         if (pixelBytes > NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES) {
-            Log.w(TAG, "inpaintFrame: bitmap $pixelBytes bytes exceeds limit ${NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES}")
+            AppLog.w(TAG, "inpaintFrame: bitmap $pixelBytes bytes exceeds limit ${NativeProcessingPolicy.MAX_IMAGE_INPUT_BYTES}")
             return@withContext null
         }
 
         if (!isVerifiedModelReady()) {
-            Log.w(TAG, "LaMa model not downloaded")
+            AppLog.w(TAG, "LaMa model not downloaded")
             return@withContext null
         }
 
@@ -280,7 +280,7 @@ class InpaintingEngine @Inject constructor(
         onProgress: (Float) -> Unit
     ): InpaintingResult? {
         val startTime = System.currentTimeMillis()
-        Log.d(TAG, "Inpainting frame: ${bitmap.width}x${bitmap.height}")
+        AppLog.d(TAG, "Inpainting frame: ${bitmap.width}x${bitmap.height}")
         return try {
             // ONNX Runtime inference for LaMa-Dilated
             val env = OrtEnvironment.getEnvironment()
@@ -317,7 +317,7 @@ class InpaintingEngine @Inject constructor(
                     )
 
                     onProgress(1f)
-                    Log.d(TAG, "LaMa inference completed in ${System.currentTimeMillis() - startTime}ms")
+                    AppLog.d(TAG, "LaMa inference completed in ${System.currentTimeMillis() - startTime}ms")
                     return InpaintingResult(
                         outputBitmap = outputBitmap,
                         processingTimeMs = System.currentTimeMillis() - startTime,
@@ -335,7 +335,7 @@ class InpaintingEngine @Inject constructor(
                 if (maskBitmap != null && maskBitmap !== mask) maskBitmap.recycle()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "ONNX inference failed", e)
+            AppLog.e(TAG, "ONNX inference failed", e)
             null
         }
     }
@@ -366,7 +366,7 @@ class InpaintingEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): VideoInpaintingResult? {
         if (!InpaintingMaskRenderer.supports(mask)) {
-            Log.w(TAG, "Unsupported mask geometry for video inpainting: ${mask.type}")
+            AppLog.w(TAG, "Unsupported mask geometry for video inpainting: ${mask.type}")
             return null
         }
         return inpaintVideoInternal(
@@ -396,7 +396,7 @@ class InpaintingEngine @Inject constructor(
         // Verify once per export. Calling the public frame method here would
         // hash the whole model for every frame.
         if (!isVerifiedModelReady()) {
-            Log.w(TAG, "LaMa model not downloaded")
+            AppLog.w(TAG, "LaMa model not downloaded")
             return@withContext null
         }
 
@@ -473,7 +473,7 @@ class InpaintingEngine @Inject constructor(
                 )
 
                 if (!encodeOk || !outputFile.isFile || outputFile.length() <= 0L) {
-                    Log.w(TAG, "FFmpeg encode of inpainted frames failed")
+                    AppLog.w(TAG, "FFmpeg encode of inpainted frames failed")
                     return@withContext null
                 }
 
@@ -492,7 +492,7 @@ class InpaintingEngine @Inject constructor(
                 tempDir.deleteRecursively()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Video inpainting failed", e)
+            AppLog.e(TAG, "Video inpainting failed", e)
             null
         } finally {
             retrieverLease.close()

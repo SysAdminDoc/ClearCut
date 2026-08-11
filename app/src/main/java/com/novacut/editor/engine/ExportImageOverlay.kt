@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.media3.common.OverlaySettings
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
@@ -101,7 +101,7 @@ internal class ExportImageOverlay private constructor(
                     BitmapFactory.decodeStream(stream)
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to decode image overlay ${uri.redacted()}", e)
+                AppLog.w(TAG, "Failed to decode image overlay ${uri.redacted()}", e)
                 null
             }
         }

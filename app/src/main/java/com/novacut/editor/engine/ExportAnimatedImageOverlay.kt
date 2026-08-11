@@ -8,7 +8,7 @@ import android.graphics.Matrix
 import android.graphics.drawable.AnimatedImageDrawable
 import android.net.Uri
 import android.os.Build
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.media3.common.OverlaySettings
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
@@ -79,12 +79,12 @@ internal class ExportAnimatedImageOverlay private constructor(
             return try {
                 val inputStream = context.contentResolver.openInputStream(overlay.sourceUri)
                     ?: run {
-                        Log.w(TAG, "Cannot open animated overlay ${overlay.sourceUri.redacted()}")
+                        AppLog.w(TAG, "Cannot open animated overlay ${overlay.sourceUri.redacted()}")
                         return null
                     }
                 val movie = inputStream.use { android.graphics.Movie.decodeStream(it) }
                     ?: run {
-                        Log.w(TAG, "Movie.decodeStream returned null for ${overlay.sourceUri.redacted()}")
+                        AppLog.w(TAG, "Movie.decodeStream returned null for ${overlay.sourceUri.redacted()}")
                         return null
                     }
                 val movieW = movie.width().coerceAtLeast(1)
@@ -117,7 +117,7 @@ internal class ExportAnimatedImageOverlay private constructor(
                     visibleSettings = settings,
                 )
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to decode animated overlay ${overlay.sourceUri.redacted()}", e)
+                AppLog.w(TAG, "Failed to decode animated overlay ${overlay.sourceUri.redacted()}", e)
                 null
             }
         }

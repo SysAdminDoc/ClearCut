@@ -8,7 +8,7 @@ import android.graphics.Gainmap
 import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import kotlin.math.roundToInt
 
 /** Android 14+ gain-map helpers shared by HDR preflight and Media3 overlays. */
@@ -27,7 +27,7 @@ internal object HdrBitmapOverlaySupport {
                 }
             } ?: false
         } catch (e: Exception) {
-            Log.w(TAG, "Unable to inspect gain map ${uri.redacted()}", e)
+            AppLog.w(TAG, "Unable to inspect gain map ${uri.redacted()}", e)
             false
         }
     }
@@ -85,7 +85,7 @@ internal object HdrBitmapOverlaySupport {
             }
             target.setGainmap(Gainmap(sourceGainMap, scaledContents))
         } catch (e: Exception) {
-            Log.w(TAG, "Unable to retain gain map while scaling bitmap", e)
+            AppLog.w(TAG, "Unable to retain gain map while scaling bitmap", e)
         }
     }
 

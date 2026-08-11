@@ -25,7 +25,36 @@ class RedactedLoggingRatchetTest {
         "sourceFile", "targetFile", "displayName",
     )
 
-    private val logCall = Regex("""Log\.[dviwe]\s*\(""")
+    private val logCall = Regex("""AppLog\.[dviwe]\s*\(""")
+    private val rawLogCall = Regex(
+        """android\.util\.Log|\bLog\.(?:v|d|i|w|e|wtf|println|isLoggable)\s*\("""
+    )
+
+    @Test
+    fun productionLoggingUsesOnlyTheAppLogSeam() {
+        val sourceRoot = locateSourceRoot() ?: run {
+            assumeTrue("Kotlin sources not reachable; skipping logging seam ratchet", false)
+            return
+        }
+
+        val offenders = mutableListOf<String>()
+        sourceRoot.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.name != "AppLog.kt" }
+            .forEach { file ->
+                file.readLines().forEachIndexed { index, line ->
+                    if (rawLogCall.containsMatchIn(line)) {
+                        val relative = file.path.replace('\\', '/').substringAfter("java/")
+                        offenders += "$relative:${index + 1} uses android.util.Log directly"
+                    }
+                }
+            }
+
+        assertTrue(
+            "Production logging must route through AppLog. Offenders:\n" +
+                offenders.joinToString("\n"),
+            offenders.isEmpty()
+        )
+    }
 
     @Test
     fun noLogSiteInterpolatesARawPathOrUri() {
@@ -49,7 +78,7 @@ class RedactedLoggingRatchetTest {
             }
 
         assertTrue(
-            "Log sites must redact user paths and URIs via RedactedLog " +
+            "AppLog sites must redact user paths and URIs via RedactedLog " +
                 "(uri.redacted(), file.redacted(), RedactedLog.path(...)). Offenders:\n" +
                 offenders.joinToString("\n"),
             offenders.isEmpty()
@@ -59,10 +88,10 @@ class RedactedLoggingRatchetTest {
     @Test
     fun theRatchetActuallyDetectsAViolation() {
         // Guards against the scan silently matching nothing after a refactor.
-        assertTrue("""Log.w(TAG, "failed for ${'$'}uri")""".leaksIdentifier("uri"))
-        assertTrue("""Log.e(TAG, "bad ${'$'}{file.absolutePath}")""".leaksIdentifier("absolutePath"))
-        assertTrue(!"""Log.w(TAG, "failed for ${'$'}{uri.redacted()}")""".leaksIdentifier("uri"))
-        assertTrue(!"""Log.w(TAG, "failed for ${'$'}{RedactedLog.path(uri)}")""".leaksIdentifier("uri"))
+        assertTrue("""AppLog.w(TAG, "failed for ${'$'}uri")""".leaksIdentifier("uri"))
+        assertTrue("""AppLog.e(TAG, "bad ${'$'}{file.absolutePath}")""".leaksIdentifier("absolutePath"))
+        assertTrue(!"""AppLog.w(TAG, "failed for ${'$'}{uri.redacted()}")""".leaksIdentifier("uri"))
+        assertTrue(!"""AppLog.w(TAG, "failed for ${'$'}{RedactedLog.path(uri)}")""".leaksIdentifier("uri"))
     }
 
     /**

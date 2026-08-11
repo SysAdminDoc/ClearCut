@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Caption
 import com.novacut.editor.model.SubtitleFormat
 import java.io.File
@@ -28,7 +28,7 @@ object SubtitleExporter {
             writeUtf8TextAtomically(outputFile, content)
             true
         } catch (e: Exception) {
-            Log.e("SubtitleExporter", "Export failed", e)
+            AppLog.e("SubtitleExporter", "Export failed", e)
             false
         }
     }

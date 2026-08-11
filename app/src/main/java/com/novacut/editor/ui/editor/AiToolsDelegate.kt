@@ -3,7 +3,7 @@ package com.novacut.editor.ui.editor
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.R
 import com.novacut.editor.ai.AiFeatures
 import com.novacut.editor.ai.CaptionEntry
@@ -243,7 +243,7 @@ class AiToolsDelegate(
                 )
                 showToast(text(R.string.ai_template_saved_toast, template.name))
             } catch (e: Exception) {
-                Log.e("AiToolsDelegate", "Failed to save template", e)
+                AppLog.e("AiToolsDelegate", "Failed to save template", e)
                 showToast(text(R.string.ai_template_save_failed_toast))
             }
         }
@@ -355,7 +355,7 @@ class AiToolsDelegate(
                 showToast(text(R.string.ai_tool_cancelled_toast))
                 throw e
             } catch (e: Exception) {
-                Log.e("AiToolsDelegate", "AI tool failed", e)
+                AppLog.e("AiToolsDelegate", "AI tool failed", e)
                 showToast(text(R.string.ai_tool_failed_toast))
             } finally {
                 // Only clear progress state if we are still the active job — protects against
@@ -742,7 +742,7 @@ class AiToolsDelegate(
             addPositionKeyframes(clip, posKeyframes)
             showToast(text(R.string.ai_motion_tracking_applied_toast, results.size))
         } catch (e: Exception) {
-            Log.e("AiToolsDelegate", "Motion tracking failed", e)
+            AppLog.e("AiToolsDelegate", "Motion tracking failed", e)
             showToast(text(R.string.ai_motion_tracking_failed_toast))
         }
     }
@@ -800,7 +800,7 @@ class AiToolsDelegate(
             )
             showToast(text(R.string.ai_style_applied_toast, style.styleName, newEffects.size))
         } catch (e: Exception) {
-            Log.e("AiToolsDelegate", "Style transfer failed", e)
+            AppLog.e("AiToolsDelegate", "Style transfer failed", e)
             showToast(text(R.string.ai_style_transfer_failed_toast))
         }
     }
@@ -819,7 +819,7 @@ class AiToolsDelegate(
                 showToast(text(R.string.ai_face_not_detected_toast))
             }
         } catch (e: Exception) {
-            Log.e("AiToolsDelegate", "Face tracking failed", e)
+            AppLog.e("AiToolsDelegate", "Face tracking failed", e)
             showToast(text(R.string.ai_face_tracking_failed_toast))
         }
     }
@@ -873,7 +873,7 @@ class AiToolsDelegate(
                 showToast(text(R.string.ai_smart_reframe_region_failed_toast))
             }
         } catch (e: Exception) {
-            Log.e("AiToolsDelegate", "Smart reframe failed", e)
+            AppLog.e("AiToolsDelegate", "Smart reframe failed", e)
             showToast(text(R.string.ai_smart_reframe_failed_toast))
         }
     }
@@ -900,7 +900,7 @@ class AiToolsDelegate(
             )
             showToast(text(R.string.ai_upscale_applied_toast, result.targetResolution.label))
         } catch (e: Exception) {
-            Log.e("AiToolsDelegate", "Upscale failed", e)
+            AppLog.e("AiToolsDelegate", "Upscale failed", e)
             showToast(text(R.string.ai_upscale_failed_toast))
         }
     }

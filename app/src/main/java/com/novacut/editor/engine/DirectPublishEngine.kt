@@ -4,7 +4,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.core.content.FileProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -92,7 +92,7 @@ class DirectPublishEngine @Inject constructor(
         val uri = try {
             FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         } catch (e: Exception) {
-            Log.w(TAG, "FileProvider failed for ${RedactedLog.path(filePath)}", e)
+            AppLog.w(TAG, "FileProvider failed for ${RedactedLog.path(filePath)}", e)
             return@withContext Result(null, Method.NONE, "Export is not in a shareable ClearCut location")
         }
         val intent = buildShareIntent(uri, target, meta)

@@ -1,6 +1,6 @@
 package com.novacut.editor.ui.editor
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import com.novacut.editor.engine.VideoEngine
@@ -224,14 +224,14 @@ class EditorPlaybackCoordinator internal constructor(
             isAtPreviewTimelineEnd(currentPositionMs, beforeFailure.totalDurationMs)
         ) {
             active.onPlaybackEnded(beforeFailure.totalDurationMs)
-            Log.i(
+            AppLog.i(
                 "EditorPlaybackCoordinator",
                 "Treating a stuck-player signal at timeline end as normal completion",
             )
             return
         }
 
-        Log.w(
+        AppLog.w(
             "EditorPlaybackCoordinator",
             "Preview runtime stalled; resetting the player without blaming the clip",
             error,
@@ -266,7 +266,7 @@ class EditorPlaybackCoordinator internal constructor(
             }
 
             val recoveryPositionMs = observedPositionMs
-            Log.w(
+            AppLog.w(
                 "EditorPlaybackCoordinator",
                 "Playback did not advance after request; resetting at $recoveryPositionMs ms",
             )

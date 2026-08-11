@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
 import androidx.media3.effect.StaticOverlaySettings
@@ -72,7 +72,7 @@ internal object ExportWatermarkOverlay {
                 BitmapFactory.decodeStream(stream)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to decode watermark ${uri.redacted()}", e)
+            AppLog.w(TAG, "Failed to decode watermark ${uri.redacted()}", e)
             null
         }
     }

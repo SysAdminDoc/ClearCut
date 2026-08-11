@@ -8,7 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.webkit.MimeTypeMap
 import com.novacut.editor.model.ImageOverlayType
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -122,7 +122,7 @@ class OverlayAssetStore @Inject constructor(
                 userMessage = "Sticker image is too large. Import an image under ${MAX_OVERLAY_BYTES / (1024 * 1024)} MB.",
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to import overlay asset ${sourceUri.redacted()}", e)
+            AppLog.w(TAG, "Failed to import overlay asset ${sourceUri.redacted()}", e)
             OverlayAssetImportResult.Rejected(
                 reason = OverlayAssetRejectionReason.UNREADABLE_SOURCE,
                 userMessage = "Could not import that sticker image.",

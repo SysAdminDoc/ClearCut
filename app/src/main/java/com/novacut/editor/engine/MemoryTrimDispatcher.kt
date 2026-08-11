@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +25,7 @@ class MemoryTrimDispatcher @Inject constructor(
             runCatching {
                 breadcrumbStore.record(decision, results)
             }.onFailure { t ->
-                Log.w(MEMORY_TRIM_DISPATCHER_TAG, "Unable to write memory trim breadcrumb", t)
+                AppLog.w(MEMORY_TRIM_DISPATCHER_TAG, "Unable to write memory trim breadcrumb", t)
             }
         }
         return MemoryTrimDispatch(decision, results)

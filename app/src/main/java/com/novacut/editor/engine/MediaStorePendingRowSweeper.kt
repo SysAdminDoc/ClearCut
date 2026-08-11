@@ -8,7 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -92,12 +92,12 @@ class MediaStorePendingRowSweeper @Inject constructor(
                     val uri = ContentUris.withAppendedId(collection, id)
                     if (resolver.delete(uri, null, null) == 1) {
                         deleted++
-                        Log.i(TAG, "Removed orphaned pending row ${cursor.getString(nameIndex)}")
+                        AppLog.i(TAG, "Removed orphaned pending row ${cursor.getString(nameIndex)}")
                     }
                 }
             }
         }.onFailure { error ->
-            Log.w(TAG, "Pending MediaStore cleanup skipped", error)
+            AppLog.w(TAG, "Pending MediaStore cleanup skipped", error)
         }
         deleted
     }

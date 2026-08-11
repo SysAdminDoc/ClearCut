@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -33,14 +33,14 @@ class ProxyGenerationWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            Log.d(TAG, "Starting proxy generation for all registered media")
+            AppLog.d(TAG, "Starting proxy generation for all registered media")
 
             proxyWorkflowEngine.generateAllProxies { progress ->
                 setProgressAsync(workDataOf(KEY_PROGRESS to progress))
             }
 
             val storageBytes = proxyWorkflowEngine.getProxyStorageBytes()
-            Log.d(TAG, "Proxy generation complete. Storage used: ${storageBytes / 1024}KB")
+            AppLog.d(TAG, "Proxy generation complete. Storage used: ${storageBytes / 1024}KB")
 
             Result.success(
                 workDataOf(
@@ -49,7 +49,7 @@ class ProxyGenerationWorker @AssistedInject constructor(
                 )
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Proxy generation failed", e)
+            AppLog.e(TAG, "Proxy generation failed", e)
             if (runAttemptCount < MAX_RETRIES) {
                 Result.retry()
             } else {

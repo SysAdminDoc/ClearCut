@@ -5,7 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
 import android.provider.OpenableColumns
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -1033,7 +1033,7 @@ class EditorViewModel @Inject constructor(
                 // blank one under the same id -- the user asked for their work and
                 // got an empty timeline that looked like it. Report it instead and
                 // let the caller route back to the dashboard.
-                Log.w("EditorViewModel", "Project $projectId no longer exists; refusing to recreate it blank")
+                AppLog.w("EditorViewModel", "Project $projectId no longer exists; refusing to recreate it blank")
                 _state.update { it.copy(projectNotFound = true) }
                 recoveryOpenComplete = true
                 autoSaveBlockedByRecovery = true
@@ -1137,7 +1137,7 @@ class EditorViewModel @Inject constructor(
                 },
                 onUnrecoverableError = { error ->
                     showToast(text(R.string.vm_preview_playback_failed_toast), ToastSeverity.Error)
-                    Log.w("EditorViewModel", "Preview playback failed", error)
+                    AppLog.w("EditorViewModel", "Preview playback failed", error)
                 },
                 onFrame = { frame ->
                     _playheadMs.value = frame.positionMs
@@ -1358,7 +1358,7 @@ class EditorViewModel @Inject constructor(
             }
             if (result.sidecarsCreated > 0) {
                 invalidateProjectMediaManifestCache()
-                Log.i(
+                AppLog.i(
                     "EditorViewModel",
                     "Backfilled ${result.sidecarsCreated} media asset sidecar(s) from ${result.referencesScanned} restored reference(s)"
                 )
@@ -1412,7 +1412,7 @@ class EditorViewModel @Inject constructor(
                                     )
                                 } catch (e: Exception) {
                                     if (e is CancellationException) throw e
-                                    Log.e("EditorVM", "Periodic project save failed", e)
+                                    AppLog.e("EditorVM", "Periodic project save failed", e)
                                     applySavedStateStatus(
                                         savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
                                     )
@@ -1561,7 +1561,7 @@ class EditorViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.w("EditorViewModel", "Waveform extraction failed for $clipId", e)
+                AppLog.w("EditorViewModel", "Waveform extraction failed for $clipId", e)
             } finally {
                 waveformLoadJobs.remove(clipId, handle)
             }
@@ -1632,7 +1632,7 @@ class EditorViewModel @Inject constructor(
                 },
                 onFailed = { workId, error ->
                     removeIngest(workId)
-                    if (error != null) Log.w("EditorViewModel", "Media import failed: $error")
+                    if (error != null) AppLog.w("EditorViewModel", "Media import failed: $error")
                     showToast(text(R.string.editor_import_failed_toast))
                 },
                 onCancelled = ::removeIngest,
@@ -2766,7 +2766,7 @@ class EditorViewModel @Inject constructor(
                 )
             )
         } catch (e: Exception) {
-            Log.w("EditorViewModel", "Snapshot restore failed for ${snapshot.id}", e)
+            AppLog.w("EditorViewModel", "Snapshot restore failed for ${snapshot.id}", e)
             showToast(appContext.getString(R.string.snapshot_restore_failed))
         }
     }
@@ -2906,7 +2906,7 @@ class EditorViewModel @Inject constructor(
                     showToast(text(R.string.vm_backup_export_failed_toast))
                 }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Backup export failed", e)
+                AppLog.e("EditorViewModel", "Backup export failed", e)
                 showToast(text(R.string.editor_backup_failed_toast))
             } finally {
                 _isExportingBackup.value = false
@@ -2999,7 +2999,7 @@ class EditorViewModel @Inject constructor(
                     showToast(text(R.string.editor_backup_import_failed_toast))
                 }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Backup import failed", e)
+                AppLog.e("EditorViewModel", "Backup import failed", e)
                 showToast(text(R.string.editor_import_failed_toast))
             } finally {
                 _isImportingBackup.value = false
@@ -3409,7 +3409,7 @@ class EditorViewModel @Inject constructor(
                 hideSmartReframe()
             } catch (e: Exception) {
                 _state.update { it.copyAi { ai -> ai.copy(isReframing = false) } }
-                Log.e("EditorViewModel", "Smart reframe failed", e)
+                AppLog.e("EditorViewModel", "Smart reframe failed", e)
                 showToast(text(R.string.editor_reframe_failed_toast))
             }
         }
@@ -3493,7 +3493,7 @@ class EditorViewModel @Inject constructor(
                     _state.update { it.copyAi { ai -> ai.copy(isAutoEditing = false) } }
                 }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Auto Edit proposal failed", e)
+                AppLog.e("EditorViewModel", "Auto Edit proposal failed", e)
                 if (generationId == autoEditGenerationId) {
                     _state.update {
                         it.copyAi { ai -> ai.copy(isAutoEditing = false, autoEditProposal = null) }
@@ -3523,7 +3523,7 @@ class EditorViewModel @Inject constructor(
         val newClips = try {
             buildAutoEditExcerptClips(sourceClips, proposal)
         } catch (e: Exception) {
-            Log.w("EditorViewModel", "Auto Edit proposal became stale", e)
+            AppLog.w("EditorViewModel", "Auto Edit proposal became stale", e)
             _state.update { it.copyAi { ai -> ai.copy(autoEditProposal = null) } }
             showToast(text(R.string.vm_auto_edit_stale_toast))
             return
@@ -3866,7 +3866,7 @@ class EditorViewModel @Inject constructor(
         // Refuse degenerate inputs that would otherwise violate Clip's `trimEndMs <= sourceDurationMs`
         // invariant the moment the user touched the new clip (e.g., a TTS file reporting 0 ms).
         if (durationMs <= 0L) {
-            android.util.Log.w("EditorViewModel", "addClipToTrack ignored: non-positive durationMs=$durationMs for ${uri.redacted()}")
+            com.novacut.editor.engine.AppLog.w("EditorViewModel", "addClipToTrack ignored: non-positive durationMs=$durationMs for ${uri.redacted()}")
             return
         }
         val currentTracks = _state.value.tracks
@@ -4089,7 +4089,7 @@ class EditorViewModel @Inject constructor(
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.e("CutAssistant", "review failed", e)
+                AppLog.e("CutAssistant", "review failed", e)
                 showToast(text(R.string.editor_cut_assistant_failed_toast))
             }
         }
@@ -4200,7 +4200,7 @@ class EditorViewModel @Inject constructor(
                             }
                         )
                     }
-                    Log.d(
+                    AppLog.d(
                         "CutAssistant",
                         "Applied ${op.reason} cut ${op.timelineStartMs}..${op.timelineEndMs} on ${originalClip.id} (rightHalf=$rightHalfId, tail=$tailId)"
                     )
@@ -4419,7 +4419,7 @@ class EditorViewModel @Inject constructor(
                     showToast(text(R.string.vm_sync_failed_toast))
                 }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Multi-cam sync failed", e)
+                AppLog.e("EditorViewModel", "Multi-cam sync failed", e)
                 showToast(text(R.string.editor_multicam_sync_failed_toast))
             }
         }
@@ -5097,7 +5097,7 @@ class EditorViewModel @Inject constructor(
                     }
                 )
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Project archive export failed", e)
+                AppLog.e("EditorViewModel", "Project archive export failed", e)
                 showToast(text(R.string.editor_archive_export_failed_toast))
             }
         }
@@ -5130,7 +5130,7 @@ class EditorViewModel @Inject constructor(
                 )
                 withContext(Dispatchers.Main) { publishTimelineExportResult(result) }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "${format.name} export failed", e)
+                AppLog.e("EditorViewModel", "${format.name} export failed", e)
                 withContext(Dispatchers.Main) {
                     showToast(
                         text(
@@ -5684,7 +5684,7 @@ class EditorViewModel @Inject constructor(
                 saveProject()
                 showToast(text(R.string.vm_ducking_applied_toast, speechRegions.size))
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Auto-duck failed", e)
+                AppLog.e("EditorViewModel", "Auto-duck failed", e)
                 showToast(text(R.string.editor_auto_duck_failed_toast))
             }
         }
@@ -6057,7 +6057,7 @@ class EditorViewModel @Inject constructor(
                 }
                 showToast(text(R.string.vm_frame_saved_toast, file.name))
             } catch (e: Exception) {
-                Log.w("EditorVM", "Frame capture failed", e)
+                AppLog.w("EditorVM", "Frame capture failed", e)
                 _state.update {
                     it.copyExport { export ->
                         export.copy(
@@ -6228,7 +6228,7 @@ class EditorViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e("EditorVM", "Project save failed", e)
+                AppLog.e("EditorVM", "Project save failed", e)
                 applySavedStateStatus(
                     savedStateTracker.saveFailed(attempt, currentProjectFingerprint())
                 )
@@ -6431,7 +6431,7 @@ class EditorViewModel @Inject constructor(
                             outputFile
                         )
                     }.getOrElse { error ->
-                        Log.w("EditorViewModel", "Template export FileProvider handoff failed", error)
+                        AppLog.w("EditorViewModel", "Template export FileProvider handoff failed", error)
                         showToast(appContext.getString(R.string.editor_share_location_failed))
                         return@launch
                     }
@@ -6449,7 +6449,7 @@ class EditorViewModel @Inject constructor(
                     showToast(text(R.string.vm_template_export_failed_toast))
                 }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Template export failed", e)
+                AppLog.e("EditorViewModel", "Template export failed", e)
                 showToast(text(R.string.project_template_export_failed))
             }
         }
@@ -6465,7 +6465,7 @@ class EditorViewModel @Inject constructor(
                     showToast(text(R.string.vm_template_import_failed_toast))
                 }
             } catch (e: Exception) {
-                Log.e("EditorViewModel", "Template import failed", e)
+                AppLog.e("EditorViewModel", "Template import failed", e)
                 showToast(text(R.string.editor_import_failed_toast))
             }
         }

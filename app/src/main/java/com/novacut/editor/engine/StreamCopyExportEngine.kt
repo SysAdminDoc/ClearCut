@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.BlendMode
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
@@ -98,7 +98,7 @@ class StreamCopyExportEngine @Inject constructor(
     ): Boolean {
         val src = e.sourceUri
         if (!e.eligible || src == null || e.ranges.isEmpty()) return false
-        Log.d(TAG, "stream-copy export ${e.ranges.size} range(s) from $src -> $outputPath")
+        AppLog.d(TAG, "stream-copy export ${e.ranges.size} range(s) from $src -> $outputPath")
         return if (e.ranges.size == 1) {
             streamCopyMuxer.trim(src, e.ranges[0].startMs, e.ranges[0].endMs, outputPath, onProgress)
         } else {

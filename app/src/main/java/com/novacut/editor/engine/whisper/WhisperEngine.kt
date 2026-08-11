@@ -2,7 +2,7 @@ package com.novacut.editor.engine.whisper
 
 import android.content.Context
 import android.media.MediaCodec
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
@@ -227,7 +227,7 @@ class WhisperEngine @Inject constructor(
             _downloadProgress.value = 0f
             throw e
         } catch (e: Exception) {
-            Log.w("WhisperEngine", "Model download failed", e)
+            AppLog.w("WhisperEngine", "Model download failed", e)
             _modelState.value = if (hasVerifiedModelFiles()) {
                 WhisperModelState.READY
             } else {
@@ -283,7 +283,7 @@ class WhisperEngine @Inject constructor(
                 encoderHandle = OnnxSessionFactory.createSession(env, encoderFile.absolutePath)
                 decoderHandle = OnnxSessionFactory.createSession(env, decoderFile.absolutePath)
             } catch (e: Exception) {
-                Log.e("WhisperEngine", "Failed to create ONNX sessions (model may be corrupt)", e)
+                AppLog.e("WhisperEngine", "Failed to create ONNX sessions (model may be corrupt)", e)
                 return@withContext emptyList()
             }
             val encoderSession = requireNotNull(encoderHandle).session
@@ -313,7 +313,7 @@ class WhisperEngine @Inject constructor(
                     val segments = runDecoder(env, decoderSession, encoderOutput, v, chunkOffsetMs)
                     allSegments.addAll(segments)
                 } finally {
-                    try { encoderOutput.close() } catch (e: Exception) { Log.w("WhisperEngine", "encoderOutput close failed", e) }
+                    try { encoderOutput.close() } catch (e: Exception) { AppLog.w("WhisperEngine", "encoderOutput close failed", e) }
                 }
                 onProgress(0.20f + 0.3f * (chunk + 1f) / numChunks)
             }
@@ -351,11 +351,11 @@ class WhisperEngine @Inject constructor(
             val shape = output.info.shape
             OnnxTensor.createTensor(env, FloatBuffer.wrap(cloned), shape)
         } catch (e: Exception) {
-            Log.w("WhisperEngine", "Encoder run failed", e)
+            AppLog.w("WhisperEngine", "Encoder run failed", e)
             null
         } finally {
-            try { results?.close() } catch (e: Exception) { Log.w("WhisperEngine", "results close failed", e) }
-            try { inputTensor.close() } catch (e: Exception) { Log.w("WhisperEngine", "inputTensor close failed", e) }
+            try { results?.close() } catch (e: Exception) { AppLog.w("WhisperEngine", "results close failed", e) }
+            try { inputTensor.close() } catch (e: Exception) { AppLog.w("WhisperEngine", "inputTensor close failed", e) }
         }
     }
 
@@ -397,14 +397,14 @@ class WhisperEngine @Inject constructor(
                 // transcription silently. Bail cleanly instead.
                 val shape = logits.info.shape
                 if (shape.size < 3) {
-                    android.util.Log.e("WhisperEngine", "Decoder logits have unexpected rank ${shape.size}; aborting")
+                    com.novacut.editor.engine.AppLog.e("WhisperEngine", "Decoder logits have unexpected rank ${shape.size}; aborting")
                     break
                 }
                 val logitsData = logits.floatBuffer
                 val vocabSize = shape[2].toInt()
                 val seqLen = shape[1].toInt()
                 if (vocabSize <= 0 || seqLen <= 0) {
-                    android.util.Log.e("WhisperEngine", "Decoder logits have non-positive dims: shape=${shape.toList()}")
+                    com.novacut.editor.engine.AppLog.e("WhisperEngine", "Decoder logits have non-positive dims: shape=${shape.toList()}")
                     break
                 }
 
@@ -493,7 +493,7 @@ class WhisperEngine @Inject constructor(
             }
             vocab = map
         } catch (e: Exception) {
-            Log.w("WhisperEngine", "Failed to load vocab from $vocabFile", e)
+            AppLog.w("WhisperEngine", "Failed to load vocab from $vocabFile", e)
         }
     }
 
@@ -573,7 +573,7 @@ class WhisperEngine @Inject constructor(
                                 mono[i] = sum / channels / 32768f
                             }
                             if (AudioDecodeBudget.exceedsBudget(totalSamples, mono.size)) {
-                                Log.w("WhisperEngine", "Decoded PCM exceeds the in-memory budget; stopping decode")
+                                AppLog.w("WhisperEngine", "Decoded PCM exceeds the in-memory budget; stopping decode")
                                 decoder.releaseOutputBuffer(outIdx, false)
                                 eos = true
                                 break
@@ -602,7 +602,7 @@ class WhisperEngine @Inject constructor(
             }
             return allSamples to sampleRate
         } catch (e: Exception) {
-            Log.w("WhisperEngine", "PCM decode failed for ${uri.redacted()}", e)
+            AppLog.w("WhisperEngine", "PCM decode failed for ${uri.redacted()}", e)
             return null
         } finally {
             extractor.release()

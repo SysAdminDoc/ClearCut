@@ -96,7 +96,7 @@ private class SegmentationShaderProgram(
             val result = try {
                 engine.segment(segBitmap)
             } catch (e: Exception) {
-                android.util.Log.w("SegmentationGlEffect", "segment() failed for export frame", e)
+                com.novacut.editor.engine.AppLog.w("SegmentationGlEffect", "segment() failed for export frame", e)
                 null
             } finally {
                 try { segBitmap.recycle() } catch (_: Exception) { /* already recycled */ }

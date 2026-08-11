@@ -8,7 +8,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.engine.AudioDecodeBudget
 import com.novacut.editor.engine.CodecInstanceBudget
 import com.novacut.editor.engine.AudioEffectsEngine
@@ -93,7 +93,7 @@ class AiFeatures @Inject constructor(
         } catch (e: Exception) {
             // A crashed transcription is not silence. Reporting it as "no speech
             // detected" told the user their audio was empty when nothing was heard.
-            Log.w(TAG, "Whisper caption generation failed", e)
+            AppLog.w(TAG, "Whisper caption generation failed", e)
             CaptionOutcome.Failed(e.javaClass.simpleName)
         }
     }
@@ -168,7 +168,7 @@ class AiFeatures @Inject constructor(
                                 mono[i] = sum / channels / 32768f
                             }
                             if (AudioDecodeBudget.exceedsBudget(totalSamples, mono.size)) {
-                                Log.w(TAG, "Caption PCM exceeds the in-memory budget; stopping decode")
+                                AppLog.w(TAG, "Caption PCM exceeds the in-memory budget; stopping decode")
                                 decoder.releaseOutputBuffer(outIdx, false)
                                 return@withContext CaptionOutcome.Failed("audio exceeds the in-memory decode budget")
                             }
@@ -256,7 +256,7 @@ class AiFeatures @Inject constructor(
 
             CaptionOutcome.Analyzed(captions)
         } catch (e: Exception) {
-            Log.w(TAG, "Energy-based caption generation failed", e)
+            AppLog.w(TAG, "Energy-based caption generation failed", e)
             CaptionOutcome.Failed("decode failed")
         } finally {
             extractor.release()
@@ -411,7 +411,7 @@ class AiFeatures @Inject constructor(
                 confidence = min(1f, totalPixels / 40000f)
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Auto color correction failed", e)
+            AppLog.w(TAG, "Auto color correction failed", e)
             ColorCorrection()
         } finally {
             retrieverLease.close()
@@ -621,7 +621,7 @@ class AiFeatures @Inject constructor(
                 confidence = if (noiseCount > sampleRate / 4) 0.9f else 0.5f
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Audio noise analysis failed", e)
+            AppLog.w(TAG, "Audio noise analysis failed", e)
             NoiseProfile()
         } finally {
             extractor.release()
@@ -707,7 +707,7 @@ class AiFeatures @Inject constructor(
                 confidence = if (isGreenScreen || isBlueScreen) 0.9f else 0.5f
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Background analysis failed", e)
+            AppLog.w(TAG, "Background analysis failed", e)
             BackgroundAnalysis()
         } finally {
             retrieverLease.close()
@@ -753,7 +753,7 @@ class AiFeatures @Inject constructor(
                     val difference = try {
                         calculateFrameDifference(previousFrame, frame)
                     } catch (e: Exception) {
-                        Log.w(TAG, "Scene-diff failed at ${currentMs}ms", e)
+                        AppLog.w(TAG, "Scene-diff failed at ${currentMs}ms", e)
                         0f
                     }
                     val threshold = 0.3f + (1f - sensitivity) * 0.5f
@@ -845,7 +845,7 @@ class AiFeatures @Inject constructor(
             prevFrame?.recycle()
             results
         } catch (e: Exception) {
-            Log.w(TAG, "Scene detection failed", e)
+            AppLog.w(TAG, "Scene detection failed", e)
             emptyList()
         } finally {
             retrieverLease.close()
@@ -992,7 +992,7 @@ class AiFeatures @Inject constructor(
                 confidence = min(1f, totalWeight / 3f)
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Smart crop analysis failed", e)
+            AppLog.w(TAG, "Smart crop analysis failed", e)
             val safeRatio = targetAspectRatio.coerceAtLeast(0.01f)
             CropSuggestion(
                 centerX = 0.5f, centerY = 0.5f,
@@ -1125,7 +1125,7 @@ class AiFeatures @Inject constructor(
                 confidence = 0.85f
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Style transfer analysis failed", e)
+            AppLog.w(TAG, "Style transfer analysis failed", e)
             StyleTransferResult()
         } finally {
             retrieverLease.close()
@@ -1177,7 +1177,7 @@ class AiFeatures @Inject constructor(
                 confidence = if (targetResolution != null) 0.9f else 0f
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Upscale analysis failed", e)
+            AppLog.w(TAG, "Upscale analysis failed", e)
             UpscaleResult()
         } finally {
             retrieverLease.close()
@@ -1297,7 +1297,7 @@ class AiFeatures @Inject constructor(
                         }
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Auto-edit clip quality scoring failed", e)
+                    AppLog.w(TAG, "Auto-edit clip quality scoring failed", e)
                     // Score remains 0 — clip will be ranked low
                 }
 
@@ -1378,7 +1378,7 @@ class AiFeatures @Inject constructor(
                                             if (AudioDecodeBudget.exceedsBudget(totalPcm, arr.size)) {
                                                 // Fail closed: drop the partial PCM and proceed
                                                 // without beats (mirrors the catch below).
-                                                Log.w(TAG, "Auto-edit beat PCM exceeds the in-memory budget; proceeding without beats")
+                                                AppLog.w(TAG, "Auto-edit beat PCM exceeds the in-memory budget; proceeding without beats")
                                                 pcmChunks.clear()
                                                 totalPcm = 0
                                                 eos = true
@@ -1413,7 +1413,7 @@ class AiFeatures @Inject constructor(
                 } finally {
                     extractor.release()
                 }
-            } catch (e: Exception) { Log.w(TAG, "Beat detection for auto-edit failed, proceeding without beats", e) }
+            } catch (e: Exception) { AppLog.w(TAG, "Beat detection for auto-edit failed, proceeding without beats", e) }
         }
 
         onProgress(0.75f)

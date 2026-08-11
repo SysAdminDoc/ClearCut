@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -24,7 +24,7 @@ class MediaIngestWorker @AssistedInject constructor(
         val mediaType = inputData.getString(KEY_MEDIA_TYPE) ?: "video"
         val uri = Uri.parse(uriString)
 
-        Log.d(TAG, "Starting ingest for $uriString (type=$mediaType)")
+        AppLog.d(TAG, "Starting ingest for $uriString (type=$mediaType)")
 
         val result = importUriToManagedMediaWithProgress(
             context = applicationContext,
@@ -38,7 +38,7 @@ class MediaIngestWorker @AssistedInject constructor(
 
         return when (result) {
             is IngestResult.Success -> {
-                Log.d(TAG, "Ingest complete: ${result.managedUri.redacted()}")
+                AppLog.d(TAG, "Ingest complete: ${result.managedUri.redacted()}")
                 Result.success(
                     workDataOf(
                         KEY_MANAGED_URI to result.managedUri.toString(),
@@ -48,7 +48,7 @@ class MediaIngestWorker @AssistedInject constructor(
                 )
             }
             is IngestResult.InsufficientSpace -> {
-                Log.w(TAG, "Insufficient space: need ${result.requiredBytes}, have ${result.availableBytes}")
+                AppLog.w(TAG, "Insufficient space: need ${result.requiredBytes}, have ${result.availableBytes}")
                 Result.failure(
                     workDataOf(
                         KEY_ERROR to "Insufficient storage space",
@@ -58,11 +58,11 @@ class MediaIngestWorker @AssistedInject constructor(
                 )
             }
             is IngestResult.Cancelled -> {
-                Log.d(TAG, "Ingest cancelled for $uriString")
+                AppLog.d(TAG, "Ingest cancelled for $uriString")
                 Result.failure(workDataOf(KEY_ERROR to "Cancelled"))
             }
             is IngestResult.Failed -> {
-                Log.w(TAG, "Ingest failed for $uriString: ${result.reason}")
+                AppLog.w(TAG, "Ingest failed for $uriString: ${result.reason}")
                 if (runAttemptCount < MAX_RETRIES) {
                     Result.retry()
                 } else {

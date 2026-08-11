@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.os.Build
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.view.Window
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
@@ -58,17 +58,17 @@ private fun applyHdrWindowPolicy(window: Window, desiredHeadroom: Float): () -> 
         window.setDesiredHdrHeadroom(desiredHeadroom)
         headroomApplied = true
     } catch (error: RuntimeException) {
-        Log.w(TAG, "HDR window headroom is unavailable on this display", error)
+        AppLog.w(TAG, "HDR window headroom is unavailable on this display", error)
     }
 
     return {
         if (headroomApplied) {
             runCatching { window.setDesiredHdrHeadroom(originalHeadroom) }
-                .onFailure { error -> Log.w(TAG, "Could not restore HDR window headroom", error) }
+                .onFailure { error -> AppLog.w(TAG, "Could not restore HDR window headroom", error) }
         }
         if (colorModeChanged) {
             runCatching { window.setColorMode(originalColorMode) }
-                .onFailure { error -> Log.w(TAG, "Could not restore HDR window color mode", error) }
+                .onFailure { error -> AppLog.w(TAG, "Could not restore HDR window color mode", error) }
         }
     }
 }

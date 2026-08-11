@@ -6,7 +6,7 @@ import android.view.SurfaceView
 import android.os.Handler
 import android.os.Looper
 import kotlinx.coroutines.suspendCancellableCoroutine
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import kotlin.coroutines.resume
 
 /**
@@ -63,7 +63,7 @@ object FrameCapture {
                 null
             }
         } catch (e: Exception) {
-            Log.w("FrameCapture", "Frame capture failed", e)
+            AppLog.w("FrameCapture", "Frame capture failed", e)
             null
         }
     }

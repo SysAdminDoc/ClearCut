@@ -5,7 +5,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -115,7 +115,7 @@ class MultiCamEngine @Inject constructor(
         onProgress(1f)
 
         val offsetMs = syncOffsetMs(bestOffset, commonRate)
-        Log.d(TAG, "Sync result: offset=${offsetMs}ms, confidence=$bestCorrelation")
+        AppLog.d(TAG, "Sync result: offset=${offsetMs}ms, confidence=$bestCorrelation")
 
         SyncResult(offsetMs, bestCorrelation, clipAUri, clipBUri)
     }
@@ -216,7 +216,7 @@ class MultiCamEngine @Inject constructor(
                     while (!eos) {
                         ensureActive()
                         if (AudioDecodeBudget.exceedsBudget(samples.size, 1)) {
-                            android.util.Log.w("MultiCamEngine", "Mono PCM exceeds the in-memory budget; stopping decode")
+                            com.novacut.editor.engine.AppLog.w("MultiCamEngine", "Mono PCM exceeds the in-memory budget; stopping decode")
                             break
                         }
                         val inIdx = decoder.dequeueInputBuffer(10000)
@@ -272,7 +272,7 @@ class MultiCamEngine @Inject constructor(
 
                 MonoPcm(samples.toFloatArray(), effectiveRate)
             } catch (e: Exception) {
-                Log.e(TAG, "PCM extraction failed for ${uri.redacted()}", e)
+                AppLog.e(TAG, "PCM extraction failed for ${uri.redacted()}", e)
                 empty
             } finally {
                 extractor.release()

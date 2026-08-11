@@ -8,7 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.view.DragAndDropPermissions
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -191,7 +191,7 @@ fun MediaPickerSheet(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                Log.w("MediaPicker", "Could not prepare sequence review", error)
+                AppLog.w("MediaPicker", "Could not prepare sequence review", error)
                 permissionMessage = localCopyFailed
             } finally {
                 operationState = null
@@ -506,7 +506,7 @@ fun MediaPickerSheet(
                 videoFile
             )
         }.onFailure { error ->
-            Log.w("MediaPicker", "Failed to create camera capture content URI", error)
+            AppLog.w("MediaPicker", "Failed to create camera capture content URI", error)
             videoFile.delete()
         }.getOrNull()
 
@@ -519,7 +519,7 @@ fun MediaPickerSheet(
         cameraVideoUri = uri
         runCatching { cameraLauncher.launch(uri) }
             .onFailure { error ->
-                Log.w("MediaPicker", "Failed to launch camera capture", error)
+                AppLog.w("MediaPicker", "Failed to launch camera capture", error)
                 cameraVideoFile = null
                 cameraVideoUri = null
                 videoFile.delete()
@@ -927,7 +927,7 @@ private fun takePersistableReadPermission(
         )
         true
     } catch (error: SecurityException) {
-        android.util.Log.w("MediaPicker", "Failed to persist URI permission", error)
+        com.novacut.editor.engine.AppLog.w("MediaPicker", "Failed to persist URI permission", error)
         false
     }
 }

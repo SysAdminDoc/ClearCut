@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 
 /**
  * Centralizes ONNX Runtime execution-provider selection for on-device models.
@@ -115,16 +115,16 @@ object OnnxSessionFactory {
             val options = requireNotNull(xnnpackOptions)
             try {
                 val session = environment.createSession(modelPath, options)
-                Log.d(TAG, "Using XNNPACK for ${modelPath.substringAfterLast('/')}")
+                AppLog.d(TAG, "Using XNNPACK for ${modelPath.substringAfterLast('/')}")
                 return SessionHandle(session, ExecutionProvider.XNNPACK, options)
             } catch (failure: Throwable) {
                 if (!isRecoverableProviderFailure(failure)) throw failure
                 closeQuietly(options)
-                Log.w(TAG, "XNNPACK session creation failed; retrying on CPU", failure)
+                AppLog.w(TAG, "XNNPACK session creation failed; retrying on CPU", failure)
             }
         } else {
             closeQuietly(xnnpackOptions)
-            Log.w(TAG, "XNNPACK unavailable; using CPU for ${modelPath.substringAfterLast('/')}")
+            AppLog.w(TAG, "XNNPACK unavailable; using CPU for ${modelPath.substringAfterLast('/')}")
         }
 
         val cpuOptions = OrtSession.SessionOptions().apply {
@@ -132,7 +132,7 @@ object OnnxSessionFactory {
         }
         return try {
             val session = environment.createSession(modelPath, cpuOptions)
-            Log.d(TAG, "Using CPU for ${modelPath.substringAfterLast('/')}")
+            AppLog.d(TAG, "Using CPU for ${modelPath.substringAfterLast('/')}")
             SessionHandle(session, ExecutionProvider.CPU, cpuOptions)
         } catch (failure: Throwable) {
             closeQuietly(cpuOptions)

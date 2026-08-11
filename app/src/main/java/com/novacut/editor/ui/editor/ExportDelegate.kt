@@ -7,7 +7,7 @@ import android.media.MediaScannerConnection
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.core.content.FileProvider
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.R
@@ -220,7 +220,7 @@ class ExportDelegate(
                         }
                     }
                 } catch (e: Exception) {
-                    Log.w("ExportDelegate", "Audio conformance probe failed for clip ${clip.id}", e)
+                    AppLog.w("ExportDelegate", "Audio conformance probe failed for clip ${clip.id}", e)
                 } finally {
                     extractor.release()
                 }
@@ -584,7 +584,7 @@ class ExportDelegate(
             updateExport { it.copy(progress = progress) }
         }
         if (!ok) {
-            android.util.Log.w("ExportDelegate", "stream-copy failed, falling back to Transformer")
+            com.novacut.editor.engine.AppLog.w("ExportDelegate", "stream-copy failed, falling back to Transformer")
             runCatching { outputFile.delete() }
             return false
         }
@@ -608,7 +608,7 @@ class ExportDelegate(
                 "Stream-copy output rejected; falling back to Transformer: " +
                     (verification.reason ?: "output contract mismatch")
             )
-            android.util.Log.w(
+            com.novacut.editor.engine.AppLog.w(
                 "ExportDelegate",
                 "stream-copy output contract rejected: ${verification.reason}",
             )
@@ -1257,7 +1257,7 @@ class ExportDelegate(
                         healthReport = healthReport
                     )
                 } catch (e: Exception) {
-                    android.util.Log.w("ExportDelegate", "Contact sheet export failed", e)
+                    com.novacut.editor.engine.AppLog.w("ExportDelegate", "Contact sheet export failed", e)
                     sheetFile?.delete()
                     val message = e.message ?: "Contact sheet export failed"
                     updateExport {
@@ -1456,7 +1456,7 @@ class ExportDelegate(
                     )
                     showToast(appContext.getString(R.string.export_gif_complete_toast, finalizedGifFile.name))
                 } catch (e: kotlinx.coroutines.CancellationException) {
-                    android.util.Log.d("ExportDelegate", "GIF export cancelled")
+                    com.novacut.editor.engine.AppLog.d("ExportDelegate", "GIF export cancelled")
                     gifFile?.delete()
                     updateExport {
                         it.copy(
@@ -1478,7 +1478,7 @@ class ExportDelegate(
                 } catch (e: Exception) {
                     val noFramesExtracted = e is NoGifFramesException
                     if (!noFramesExtracted) {
-                        android.util.Log.w("ExportDelegate", "GIF export failed", e)
+                        com.novacut.editor.engine.AppLog.w("ExportDelegate", "GIF export failed", e)
                     }
                     gifFile?.delete()
                     val message = if (noFramesExtracted) "No frames extracted" else {
@@ -1647,7 +1647,7 @@ class ExportDelegate(
                         )
                         writeUtf8TextAtomically(sidecar, notes)
                     } catch (e: Exception) {
-                        android.util.Log.w("ExportDelegate", "Scratchpad sidecar write failed", e)
+                        com.novacut.editor.engine.AppLog.w("ExportDelegate", "Scratchpad sidecar write failed", e)
                     }
                 }
                 // Subtitle sidecar. Written next to the video with a matching
@@ -1679,7 +1679,7 @@ class ExportDelegate(
                             )
                         }
                     } catch (e: Exception) {
-                        android.util.Log.w("ExportDelegate", "Subtitle sidecar write failed", e)
+                        com.novacut.editor.engine.AppLog.w("ExportDelegate", "Subtitle sidecar write failed", e)
                     }
                 }
 
@@ -1719,7 +1719,7 @@ class ExportDelegate(
                                 "Could not replace the uncaptioned export"
                             }
                         } catch (e: Exception) {
-                            android.util.Log.e("ExportDelegate", "Requested subtitle burn-in failed", e)
+                            com.novacut.editor.engine.AppLog.e("ExportDelegate", "Requested subtitle burn-in failed", e)
                             assFile?.delete()
                             burnedFile?.delete()
                             outputFile.delete()
@@ -2035,7 +2035,7 @@ class ExportDelegate(
             writeC2paManifestSidecar(outputFile, entries, state)
             return true
         } catch (e: Exception) {
-            android.util.Log.w("ExportDelegate", "AI disclosure sidecar write failed", e)
+            com.novacut.editor.engine.AppLog.w("ExportDelegate", "AI disclosure sidecar write failed", e)
             return false
         }
     }
@@ -2093,7 +2093,7 @@ class ExportDelegate(
         val uri = runCatching {
             FileProvider.getUriForFile(appContext, "${appContext.packageName}.fileprovider", file)
         }.getOrElse { error ->
-            Log.w("ExportDelegate", "Export share FileProvider handoff failed for ${RedactedLog.path(filePath)}", error)
+            AppLog.w("ExportDelegate", "Export share FileProvider handoff failed for ${RedactedLog.path(filePath)}", error)
             showToast(appContext.getString(com.novacut.editor.R.string.editor_share_location_failed))
             return null
         }
@@ -2128,7 +2128,7 @@ class ExportDelegate(
                     showToast(savedMessage ?: text(R.string.export_file_not_found_toast))
                 }
             } catch (e: Exception) {
-                Log.e("ExportDelegate", "Save exported media failed", e)
+                AppLog.e("ExportDelegate", "Save exported media failed", e)
                 withContext(Dispatchers.Main) { showToast(text(R.string.export_save_failed_toast)) }
             } finally {
                 saveToGalleryGate.exit()
@@ -2158,7 +2158,7 @@ class ExportDelegate(
                 if (revision != batchPlanWriteRevision.get()) return@withLock
                 runCatching { batchExportPlanStore.saveFor(context, items) }
                     .onFailure { error ->
-                        Log.w("ExportDelegate", "Batch export plan persistence failed", error)
+                        AppLog.w("ExportDelegate", "Batch export plan persistence failed", error)
                     }
             }
         }
@@ -2176,7 +2176,7 @@ class ExportDelegate(
                 if (revision == batchPlanWriteRevision.get()) {
                     runCatching { batchExportPlanStore.saveFor(context, items) }
                         .onFailure { error ->
-                            Log.w("ExportDelegate", "Batch export plan persistence failed", error)
+                            AppLog.w("ExportDelegate", "Batch export plan persistence failed", error)
                         }
                 }
             }
@@ -2748,7 +2748,7 @@ class ExportDelegate(
             )
         }
         val technicalMessage = e.message ?: e::class.java.simpleName
-        android.util.Log.w("ExportDelegate", "Audio export failed", e)
+        com.novacut.editor.engine.AppLog.w("ExportDelegate", "Audio export failed", e)
         updateExport {
             it.copy(
                 state = ExportState.ERROR,

@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.engine.whisper.SherpaAsrEngine
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -108,7 +108,7 @@ class SilenceDetectionEngine @Inject constructor() {
                 )
             }
         }
-        Log.d(TAG, "detectSilences: ${out.size} silences proposed")
+        AppLog.d(TAG, "detectSilences: ${out.size} silences proposed")
         return out
     }
 
@@ -133,7 +133,7 @@ class SilenceDetectionEngine @Inject constructor() {
                     matchedText = token
                 )
             } else null
-        }.also { Log.d(TAG, "detectFillerWords: ${it.size} fillers proposed") }
+        }.also { AppLog.d(TAG, "detectFillerWords: ${it.size} fillers proposed") }
     }
 
     /**
@@ -185,7 +185,7 @@ class SilenceDetectionEngine @Inject constructor() {
                 i++
             }
         }
-        Log.d(TAG, "detectMultiWordFillers: ${out.size} multi-word fillers proposed")
+        AppLog.d(TAG, "detectMultiWordFillers: ${out.size} multi-word fillers proposed")
         return out
     }
 

@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import java.util.EnumMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -52,7 +52,7 @@ class MemoryTrimRegistry @Inject constructor() {
                     succeeded = true,
                 )
             } catch (t: Throwable) {
-                Log.w(MEMORY_TRIM_REGISTRY_TAG, "Memory trim target failed: ${target.name}", t)
+                AppLog.w(MEMORY_TRIM_REGISTRY_TAG, "Memory trim target failed: ${target.name}", t)
                 DispatchResult(
                     action = target.action,
                     targetName = target.name,

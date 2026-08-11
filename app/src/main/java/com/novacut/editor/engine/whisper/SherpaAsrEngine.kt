@@ -2,7 +2,7 @@ package com.novacut.editor.engine.whisper
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -168,7 +168,7 @@ class SherpaAsrEngine @Inject constructor(
         language: String = "en",
         onProgress: (Float) -> Unit = {}
     ): TranscriptionResult = withContext(Dispatchers.IO) {
-        Log.d(TAG, "transcribe: delegating to built-in WhisperEngine (Sherpa-ONNX not available)")
+        AppLog.d(TAG, "transcribe: delegating to built-in WhisperEngine (Sherpa-ONNX not available)")
         val segments = whisperEngine.transcribe(uri, onProgress)
         TranscriptionResult(
             segments = segments.map { seg ->

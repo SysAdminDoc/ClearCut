@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.core.content.FileProvider
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
@@ -176,7 +176,7 @@ class ProjectListViewModel @Inject constructor(
             val cutoffMs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
             val purged = purgeTrashedProjects(cutoffMs)
             if (purged > 0) {
-                Log.d("ProjectListVM", "Auto-purged $purged trashed projects older than 30 days")
+                AppLog.d("ProjectListVM", "Auto-purged $purged trashed projects older than 30 days")
                 sweepManagedMediaAfterDeletion()
             }
         }
@@ -209,7 +209,7 @@ class ProjectListViewModel @Inject constructor(
             // Some launchers (OEM forks) reject excess shortcuts or refuse
             // updates from a backgrounded process. The shortcut list is a
             // pure affordance — losing it is never worth a crash.
-            Log.w(TAG, "Failed to set dynamic shortcuts (${planned.size} entries)", e)
+            AppLog.w(TAG, "Failed to set dynamic shortcuts (${planned.size} entries)", e)
         }
     }
 
@@ -314,7 +314,7 @@ class ProjectListViewModel @Inject constructor(
                 }
                 showToast(appContext.getString(R.string.project_delete_success, project.name))
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Failed to soft-delete project ${project.id}", e)
+                AppLog.w("ProjectListVM", "Failed to soft-delete project ${project.id}", e)
                 showToast(appContext.getString(R.string.project_delete_failed))
             } finally {
                 endOperation(operation)
@@ -330,7 +330,7 @@ class ProjectListViewModel @Inject constructor(
                 }
                 showToast(appContext.getString(R.string.project_restore_success, project.name))
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Failed to restore project ${project.id}", e)
+                AppLog.w("ProjectListVM", "Failed to restore project ${project.id}", e)
                 showToast(appContext.getString(R.string.project_restore_failed))
             }
         }
@@ -344,7 +344,7 @@ class ProjectListViewModel @Inject constructor(
                 }
                 showToast(appContext.getString(R.string.project_delete_forever_success, project.name))
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Failed to permanently delete ${project.id}", e)
+                AppLog.w("ProjectListVM", "Failed to permanently delete ${project.id}", e)
                 showToast(appContext.getString(R.string.project_delete_forever_failed))
             }
         }
@@ -365,7 +365,7 @@ class ProjectListViewModel @Inject constructor(
                     )
                 )
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Failed to empty trash", e)
+                AppLog.w("ProjectListVM", "Failed to empty trash", e)
                 showToast(appContext.getString(R.string.trash_empty_failed))
             }
         }
@@ -384,7 +384,7 @@ class ProjectListViewModel @Inject constructor(
                     )
                 }
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Failed to rename project ${project.id}", e)
+                AppLog.w("ProjectListVM", "Failed to rename project ${project.id}", e)
                 showToast(appContext.getString(R.string.project_rename_failed))
             }
         }
@@ -421,7 +421,7 @@ class ProjectListViewModel @Inject constructor(
                     restoreTemplate = restoreOffer
                 )
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Template delete failed", e)
+                AppLog.w("ProjectListVM", "Template delete failed", e)
                 showToast(appContext.getString(R.string.project_template_delete_failed))
             } finally {
                 endOperation(operation)
@@ -484,7 +484,7 @@ class ProjectListViewModel @Inject constructor(
                     showToast(templateImportFailureMessage(importResult))
                 }
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Template import failed", e)
+                AppLog.w("ProjectListVM", "Template import failed", e)
                 showToast(appContext.getString(R.string.project_template_import_failed))
             } finally {
                 endOperation(operation)
@@ -514,7 +514,7 @@ class ProjectListViewModel @Inject constructor(
                 }
                 _documentImportPreview.value = preview
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Document import preview failed", e)
+                AppLog.w("ProjectListVM", "Document import preview failed", e)
                 showToast(appContext.getString(R.string.project_document_import_failed))
             } finally {
                 endOperation(operation)
@@ -537,7 +537,7 @@ class ProjectListViewModel @Inject constructor(
                 loadUserTemplates()
                 showToast(imported.title)
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Document import failed", e)
+                AppLog.w("ProjectListVM", "Document import failed", e)
                 showToast(appContext.getString(R.string.project_document_import_failed))
             } finally {
                 endOperation(operation)
@@ -666,7 +666,7 @@ class ProjectListViewModel @Inject constructor(
                     showToast(appContext.getString(R.string.project_create_failed))
                 }
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Failed to create project from template ${template.id}", e)
+                AppLog.w("ProjectListVM", "Failed to create project from template ${template.id}", e)
                 showToast(appContext.getString(R.string.project_create_failed))
             } finally {
                 endOperation(operation)
@@ -714,7 +714,7 @@ class ProjectListViewModel @Inject constructor(
                             false
                         }
                     } catch (e: Exception) {
-                        Log.w("ProjectListVM", "Failed to duplicate project ${project.id}", e)
+                        AppLog.w("ProjectListVM", "Failed to duplicate project ${project.id}", e)
                         runCatching { projectDao.deleteById(newId) }
                         false
                     }
@@ -809,7 +809,7 @@ class ProjectListViewModel @Inject constructor(
                     showToast(appContext.getString(R.string.project_create_failed))
                 }
             } catch (e: Exception) {
-                Log.w("ProjectListVM", "Incoming media import failed", e)
+                AppLog.w("ProjectListVM", "Incoming media import failed", e)
                 copiedManagedUris.forEach { deleteManagedMediaUri(appContext, it) }
                 showToast(appContext.getString(R.string.project_import_invalid_media))
             } finally {
@@ -959,7 +959,7 @@ class ProjectListViewModel @Inject constructor(
                 false
             }
         } catch (e: Exception) {
-            Log.w("ProjectListVM", "Failed to create project ${project.id}", e)
+            AppLog.w("ProjectListVM", "Failed to create project ${project.id}", e)
             runCatching { projectDao.deleteById(project.id) }
             false
         }
@@ -977,7 +977,7 @@ class ProjectListViewModel @Inject constructor(
         for (id in purgedIds) {
             runCatching { autoSave.clearRecoveryData(id) }
                 .onFailure { error ->
-                    Log.w("ProjectListVM", "Purged project $id, but recovery cleanup failed", error)
+                    AppLog.w("ProjectListVM", "Purged project $id, but recovery cleanup failed", error)
                 }
         }
         return count
@@ -988,12 +988,12 @@ class ProjectListViewModel @Inject constructor(
             projectDao.deleteProject(project)
             runCatching { autoSave.clearRecoveryData(project.id) }
                 .onFailure { error ->
-                    Log.w("ProjectListVM", "Deleted project ${project.id}, but recovery cleanup failed", error)
+                    AppLog.w("ProjectListVM", "Deleted project ${project.id}, but recovery cleanup failed", error)
                 }
             sweepManagedMediaAfterDeletion()
             true
         } catch (e: Exception) {
-            Log.w("ProjectListVM", "Failed to delete project ${project.id}", e)
+            AppLog.w("ProjectListVM", "Failed to delete project ${project.id}", e)
             false
         }
     }
@@ -1008,21 +1008,21 @@ class ProjectListViewModel @Inject constructor(
                 .toSet()
             val result = sweepUnreferencedManagedMedia(appContext, referenced)
             if (result.filesDeleted > 0) {
-                Log.d(
+                AppLog.d(
                     "ProjectListVM",
                     "Swept ${result.filesDeleted} orphan imports (${result.bytesFreed / 1024} KB)"
                 )
             }
             val archiveResult = sweepUnreferencedArchiveImports(appContext, referenced)
             if (archiveResult.filesDeleted > 0) {
-                Log.d(
+                AppLog.d(
                     "ProjectListVM",
                     "Swept ${archiveResult.filesDeleted} orphan archive-import files " +
                         "(${archiveResult.bytesFreed / 1024} KB)"
                 )
             }
         } catch (e: Exception) {
-            Log.w("ProjectListVM", "Managed-media sweep failed", e)
+            AppLog.w("ProjectListVM", "Managed-media sweep failed", e)
         }
     }
 

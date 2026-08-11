@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -178,7 +178,7 @@ internal fun createClearCutSettingsDataStore(
         corruptionHandler = ReplaceFileCorruptionHandler {
             resetReportStore.recordCorruptionReset(it)
             runCatching { produceFile().delete() }.onFailure { deleteError ->
-                Log.w("SettingsRepository", "Could not remove corrupt settings file before reset", deleteError)
+                AppLog.w("SettingsRepository", "Could not remove corrupt settings file before reset", deleteError)
             }
             emptyPreferences()
         },
@@ -245,7 +245,7 @@ class SettingsRepository internal constructor(
         val validated = try {
             VideoCodec.valueOf(value).name
         } catch (_: IllegalArgumentException) {
-            Log.w("SettingsRepository", "Ignoring unknown codec value: $value")
+            AppLog.w("SettingsRepository", "Ignoring unknown codec value: $value")
             return
         }
         dataStore.edit { it[SettingsPreferenceKeys.DEFAULT_CODEC] = validated }

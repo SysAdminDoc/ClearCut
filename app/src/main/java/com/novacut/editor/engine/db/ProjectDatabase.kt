@@ -1,6 +1,6 @@
 package com.novacut.editor.engine.db
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -299,7 +299,7 @@ class Converters {
     fun toAspectRatio(value: String): AspectRatio = try {
         AspectRatio.valueOf(value)
     } catch (_: IllegalArgumentException) {
-        Log.w("Converters", "Unknown aspect ratio '$value', falling back to RATIO_16_9")
+        AppLog.w("Converters", "Unknown aspect ratio '$value', falling back to RATIO_16_9")
         AspectRatio.RATIO_16_9
     }
 
@@ -310,7 +310,7 @@ class Converters {
     fun toResolution(value: String): Resolution = try {
         Resolution.valueOf(value)
     } catch (_: IllegalArgumentException) {
-        Log.w("Converters", "Unknown resolution '$value', falling back to FHD_1080P")
+        AppLog.w("Converters", "Unknown resolution '$value', falling back to FHD_1080P")
         Resolution.FHD_1080P
     }
 }

@@ -7,7 +7,7 @@ import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.core.graphics.scale
 import com.novacut.editor.model.Easing
 import com.novacut.editor.model.Keyframe
@@ -199,7 +199,7 @@ class StabilizationEngine @Inject constructor(
         val startedAt = android.os.SystemClock.elapsedRealtime()
         val capability = capability(uri, config)
         if (!capability.supported) {
-            Log.i(TAG, "Stabilization unavailable: ${capability.reason}")
+            AppLog.i(TAG, "Stabilization unavailable: ${capability.reason}")
             return@withContext null
         }
 
@@ -239,7 +239,7 @@ class StabilizationEngine @Inject constructor(
                 val frame = try {
                     decoded.scale(ANALYSIS_WIDTH, ANALYSIS_HEIGHT, true)
                 } catch (error: Throwable) {
-                    Log.w(TAG, "Could not scale stabilization frame", error)
+                    AppLog.w(TAG, "Could not scale stabilization frame", error)
                     null
                 }
                 if (frame == null) {
@@ -315,10 +315,10 @@ class StabilizationEngine @Inject constructor(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (error: StabilizationUnavailableException) {
-            Log.i(TAG, error.message.orEmpty())
+            AppLog.i(TAG, error.message.orEmpty())
             null
         } catch (error: Exception) {
-            Log.w(TAG, "Offline stabilization analysis failed", error)
+            AppLog.w(TAG, "Offline stabilization analysis failed", error)
             null
         } finally {
             previousFrame?.recycle()
@@ -392,7 +392,7 @@ class StabilizationEngine @Inject constructor(
                     ?: 0,
             )
         } catch (error: Exception) {
-            Log.w(TAG, "Could not inspect stabilization source", error)
+            AppLog.w(TAG, "Could not inspect stabilization source", error)
             null
         } finally {
             lease.close()

@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -126,7 +126,7 @@ class VideoMattingEngine @Inject constructor(
 
     /** Whether the RVM model is downloaded and ready for inference. */
     fun isModelReady(): Boolean {
-        Log.d(TAG, "isModelReady: stub — requires RVM ONNX model")
+        AppLog.d(TAG, "isModelReady: stub — requires RVM ONNX model")
         return false
     }
 
@@ -138,7 +138,7 @@ class VideoMattingEngine @Inject constructor(
     suspend fun downloadModel(
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        Log.d(TAG, "downloadModel: stub — requires RVM ONNX model")
+        AppLog.d(TAG, "downloadModel: stub — requires RVM ONNX model")
         false
     }
 
@@ -153,7 +153,7 @@ class VideoMattingEngine @Inject constructor(
         bitmap: Bitmap,
         config: MattingConfig = MattingConfig()
     ): MattingResult? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "processFrame: stub — requires RVM ONNX model")
+        AppLog.d(TAG, "processFrame: stub — requires RVM ONNX model")
         null
     }
 
@@ -172,7 +172,7 @@ class VideoMattingEngine @Inject constructor(
         config: MattingConfig = MattingConfig(),
         onProgress: (Float) -> Unit = {}
     ): VideoMattingResult? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "processVideo: stub — requires RVM ONNX model")
+        AppLog.d(TAG, "processVideo: stub — requires RVM ONNX model")
         null
     }
 }

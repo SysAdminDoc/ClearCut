@@ -7,7 +7,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BaseGlShaderProgram
 import androidx.media3.effect.GlEffect
 import androidx.media3.effect.GlShaderProgram
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -45,7 +45,7 @@ object LutEngine {
                     // float allocation (12 GB) which OOMs before the size mismatch check
                     // could reject it. Common LUT sizes are 17, 32, 33, 64.
                     if (parsedSize !in 2..256) {
-                        Log.w("LutEngine", "LUT size $parsedSize outside supported range [2..256]")
+                        AppLog.w("LutEngine", "LUT size $parsedSize outside supported range [2..256]")
                         throw IllegalArgumentException("LUT size out of range")
                     }
                     size = parsedSize
@@ -70,7 +70,7 @@ object LutEngine {
                         data.add(g.coerceIn(0f, 1f))
                         data.add(b.coerceIn(0f, 1f))
                     } else {
-                        Log.w("LutEngine", "Skipping unparseable .cube line: '$trimmed'")
+                        AppLog.w("LutEngine", "Skipping unparseable .cube line: '$trimmed'")
                     }
                 }
             }
@@ -79,7 +79,7 @@ object LutEngine {
                 Lut3D(size, data.toFloatArray())
             } else null
         } catch (e: Exception) {
-            Log.w("LutEngine", "LUT parse failed", e)
+            AppLog.w("LutEngine", "LUT parse failed", e)
             null
         }
     }
@@ -117,7 +117,7 @@ object LutEngine {
                     val g = parts[1].toFloatOrNull()
                     val b = parts[2].toFloatOrNull()
                     if (r == null || g == null || b == null) {
-                        Log.w("LutEngine", "Skipping unparseable .3dl line: '${lines[i]}'")
+                        AppLog.w("LutEngine", "Skipping unparseable .3dl line: '${lines[i]}'")
                         continue
                     }
                     val vals = listOf(r, g, b)
@@ -138,16 +138,16 @@ object LutEngine {
             // row count. Both must satisfy size^3 == entryCount.
             val size = headerSize ?: Math.round(Math.cbrt(entryCount.toDouble())).toInt()
             if (size !in 2..256) {
-                Log.w("LutEngine", "3DL inferred size $size outside supported range [2..256]")
+                AppLog.w("LutEngine", "3DL inferred size $size outside supported range [2..256]")
                 null
             } else if (size * size * size == entryCount) {
                 Lut3D(size, data.toFloatArray())
             } else {
-                Log.w("LutEngine", "3DL size $size does not match $entryCount entries")
+                AppLog.w("LutEngine", "3DL size $size does not match $entryCount entries")
                 null
             }
         } catch (e: Exception) {
-            Log.w("LutEngine", "LUT parse failed", e)
+            AppLog.w("LutEngine", "LUT parse failed", e)
             null
         }
     }

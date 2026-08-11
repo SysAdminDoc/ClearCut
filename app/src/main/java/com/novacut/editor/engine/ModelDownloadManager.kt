@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -375,7 +375,7 @@ class ModelDownloadManager @Inject constructor(
             if (!file.isFile || file.length() < minimumBytes) return false
             if (expectedSha256 == null) {
                 if (requireChecksum) {
-                    Log.w(
+                    AppLog.w(
                         "ModelDownloadManager",
                         "Checksum verification required but no SHA-256 recorded for ${file.name}; " +
                             "treating as invalid (R5.9b)"
@@ -386,7 +386,7 @@ class ModelDownloadManager @Inject constructor(
             }
             val actual = runCatching { sha256Of(file) }.getOrNull() ?: return false
             if (actual == expectedSha256.lowercase()) return true
-            Log.w(
+            AppLog.w(
                 "ModelDownloadManager",
                 "Checksum mismatch for ${file.name} — deleting corrupt cached file"
             )

@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -143,7 +143,7 @@ class ProductHealthLedger @Inject constructor(
                 lastUpdatedEpochMs = json.optLong("lastUpdatedEpochMs", 0L)
             ).also { cached = it }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to load product health ledger", e)
+            AppLog.w(TAG, "Failed to load product health ledger", e)
             LedgerData()
         }
     }
@@ -178,7 +178,7 @@ class ProductHealthLedger @Inject constructor(
             }
             writeUtf8TextAtomically(ledgerFile, json.toString(2))
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to persist product health ledger", e)
+            AppLog.w(TAG, "Failed to persist product health ledger", e)
         }
     }
 

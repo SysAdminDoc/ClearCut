@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.facedetector.FaceDetector
@@ -137,7 +137,7 @@ class SmartReframeEngine @Inject constructor(
             _downloadProgress.value = if (verified) 1f else 0f
             verified
         } catch (e: Exception) {
-            Log.e(TAG, "Face detector model download failed", e)
+            AppLog.e(TAG, "Face detector model download failed", e)
             _modelState.value = ReframeModelState.ERROR
             _downloadProgress.value = 0f
             false
@@ -162,7 +162,7 @@ class SmartReframeEngine @Inject constructor(
                 .build()
             FaceDetector.createFromOptions(context, options).also { faceDetector = it }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create FaceDetector", e)
+            AppLog.e(TAG, "Failed to create FaceDetector", e)
             null
         }
     }
@@ -174,7 +174,7 @@ class SmartReframeEngine @Inject constructor(
     ): ReframeResult? = withContext(Dispatchers.Default) {
         val detector = getOrCreateDetector()
         if (detector == null) {
-            Log.w(TAG, "analyzeForReframe: face detector model not available")
+            AppLog.w(TAG, "analyzeForReframe: face detector model not available")
             return@withContext null
         }
 
@@ -240,7 +240,7 @@ class SmartReframeEngine @Inject constructor(
                     }
                     rawCenters.add(center)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Face detection failed at ${timeMs}ms", e)
+                    AppLog.w(TAG, "Face detection failed at ${timeMs}ms", e)
                     rawCenters.add(Pair(0.5f, 0.5f))
                 } finally {
                     if (scaled !== frame) scaled.recycle()
@@ -294,7 +294,7 @@ class SmartReframeEngine @Inject constructor(
                 strategy = effectiveStrategy
             )
         } catch (e: Exception) {
-            Log.e(TAG, "analyzeForReframe failed", e)
+            AppLog.e(TAG, "analyzeForReframe failed", e)
             null
         } finally {
             retrieverLease.close()

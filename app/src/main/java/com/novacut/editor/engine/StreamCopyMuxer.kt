@@ -6,7 +6,7 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +73,7 @@ class StreamCopyMuxer @Inject constructor(
             .filter { it.endMs > it.startMs }
             .sortedBy { it.startMs }
         if (windows.isEmpty()) {
-            Log.w(TAG, "no non-empty ranges")
+            AppLog.w(TAG, "no non-empty ranges")
             return@withContext false
         }
         val outputFile = File(outputPath)
@@ -99,7 +99,7 @@ class StreamCopyMuxer @Inject constructor(
                 if (size > maxSampleSize) maxSampleSize = size
             }
             if (trackMap.isEmpty()) {
-                Log.w(TAG, "no audio/video tracks in ${inputUri.redacted()}")
+                AppLog.w(TAG, "no audio/video tracks in ${inputUri.redacted()}")
                 return@withContext false
             }
             if (maxSampleSize <= 0) maxSampleSize = 1_048_576
@@ -172,7 +172,7 @@ class StreamCopyMuxer @Inject constructor(
             runCatching { outputFile.delete() }
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "stream-copy failed for ${inputUri.redacted()}", e)
+            AppLog.e(TAG, "stream-copy failed for ${inputUri.redacted()}", e)
             runCatching { outputFile.delete() }
             false
         } finally {

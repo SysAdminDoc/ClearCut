@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.WordTimestamp
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -79,7 +79,7 @@ class AutoChapterEngine @Inject constructor(
             out += ChapterCandidate(word.startMs, title)
             if (out.size >= maxChapters) break
         }
-        out.also { Log.d(TAG, "detected ${it.size} chapters from ${words.size} words") }
+        out.also { AppLog.d(TAG, "detected ${it.size} chapters from ${words.size} words") }
     }
 
     /** Format chapters as a YouTube-description-ready clipboard block. */

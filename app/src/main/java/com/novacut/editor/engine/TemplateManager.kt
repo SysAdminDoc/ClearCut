@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -179,13 +179,13 @@ class TemplateManager @Inject constructor(
         return try {
             val report = validateTemplateCompatibility(template.compatibility)
             if (!report.canImport) {
-                Log.w("TemplateManager", "Template '${template.name}' is not compatible: ${report.issues.joinToString { it.code }}")
+                AppLog.w("TemplateManager", "Template '${template.name}' is not compatible: ${report.issues.joinToString { it.code }}")
                 return null
             }
             when (val decoded = ProjectDocumentApplicator.read(template.stateJson)) {
                 is ProjectDocumentReadResult.Loaded -> {
                     decoded.warnings.forEach { warning ->
-                        Log.w("TemplateManager", "Template '${template.name}': $warning")
+                        AppLog.w("TemplateManager", "Template '${template.name}': $warning")
                     }
                     TemplateStateLoadResult(
                         tracks = decoded.document.state.tracks,
@@ -196,7 +196,7 @@ class TemplateManager @Inject constructor(
                 else -> return null
             }
         } catch (e: Exception) {
-            Log.e("TemplateManager", "Failed to deserialize template '${template.name}'", e)
+            AppLog.e("TemplateManager", "Failed to deserialize template '${template.name}'", e)
             null
         }
     }
@@ -208,7 +208,7 @@ class TemplateManager @Inject constructor(
             writeUtf8TextAtomically(outputFile, templateToJson(template).toString(2))
             true
         } catch (e: Exception) {
-            Log.e("TemplateManager", "Failed to export template '$templateId'", e)
+            AppLog.e("TemplateManager", "Failed to export template '$templateId'", e)
             false
         }
     }
@@ -229,13 +229,13 @@ class TemplateManager @Inject constructor(
                 } else {
                     TemplateImportFailure.UNREADABLE_FILE
                 }
-                Log.w("TemplateManager", "Template import read failed", e)
+                AppLog.w("TemplateManager", "Template import read failed", e)
                 return@withContext TemplateImportResult(failure = failure)
             }
             val json = try {
                 JSONObject(text)
             } catch (e: Exception) {
-                Log.w("TemplateManager", "Template import JSON is invalid", e)
+                AppLog.w("TemplateManager", "Template import JSON is invalid", e)
                 return@withContext TemplateImportResult(failure = TemplateImportFailure.INVALID_JSON)
             }
             val parsed = parseTemplateJson(
@@ -259,7 +259,7 @@ class TemplateManager @Inject constructor(
             writeUtf8TextAtomically(templateFile, templateToJson(template).toString(2))
             TemplateImportResult(template = template, restoreReport = parsedTemplate.restoreReport)
         } catch (e: Exception) {
-            Log.e("TemplateManager", "Failed to import template from URI", e)
+            AppLog.e("TemplateManager", "Failed to import template from URI", e)
             TemplateImportResult(failure = TemplateImportFailure.WRITE_FAILED)
         }
     }
@@ -267,7 +267,7 @@ class TemplateManager @Inject constructor(
     private fun loadTemplate(file: File): UserTemplate? {
         return try {
             if (file.length() > maxTemplateBytes) {
-                Log.w("TemplateManager", "Skipping oversized template ${file.redacted()}")
+                AppLog.w("TemplateManager", "Skipping oversized template ${file.redacted()}")
                 return null
             }
             val json = JSONObject(file.inputStream().use { input ->
@@ -282,7 +282,7 @@ class TemplateManager @Inject constructor(
                 is TemplateParseResult.Failure -> null
             }
         } catch (e: Exception) {
-            Log.e("TemplateManager", "Failed to load template ${file.redacted()}", e)
+            AppLog.e("TemplateManager", "Failed to load template ${file.redacted()}", e)
             null
         }
     }
@@ -299,7 +299,7 @@ class TemplateManager @Inject constructor(
                 currentSchemaVersion = templateSchemaVersion,
                 currentVersionCode = BuildConfig.VERSION_CODE
             )
-            Log.w("TemplateManager", "Template schema $schemaVersion is newer than supported $templateSchemaVersion")
+            AppLog.w("TemplateManager", "Template schema $schemaVersion is newer than supported $templateSchemaVersion")
             return TemplateParseResult.Failure(
                 failure = TemplateImportFailure.INCOMPATIBLE,
                 compatibilityReport = report
@@ -308,7 +308,7 @@ class TemplateManager @Inject constructor(
 
         val stateJson = json.optString("stateJson", "").trim()
         if (stateJson.isBlank()) {
-            Log.w("TemplateManager", "Template JSON missing stateJson payload")
+            AppLog.w("TemplateManager", "Template JSON missing stateJson payload")
             return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
         }
 
@@ -316,16 +316,16 @@ class TemplateManager @Inject constructor(
         val loaded = when (decoded) {
             is ProjectDocumentReadResult.Loaded -> {
                 decoded.warnings.forEach { warning ->
-                    Log.w("TemplateManager", "Imported template document: $warning")
+                    AppLog.w("TemplateManager", "Imported template document: $warning")
                 }
                 decoded
             }
             is ProjectDocumentReadResult.FutureSchema -> {
-                Log.w("TemplateManager", "Template state uses a newer project document schema")
+                AppLog.w("TemplateManager", "Template state uses a newer project document schema")
                 return TemplateParseResult.Failure(TemplateImportFailure.INCOMPATIBLE)
             }
             is ProjectDocumentReadResult.Corrupt -> {
-                Log.e("TemplateManager", "Template stateJson is invalid", decoded.cause)
+                AppLog.e("TemplateManager", "Template stateJson is invalid", decoded.cause)
                 return TemplateParseResult.Failure(TemplateImportFailure.INVALID_STATE)
             }
         }
@@ -341,7 +341,7 @@ class TemplateManager @Inject constructor(
         )
         val compatibilityReport = validateTemplateCompatibility(compatibility)
         if (!compatibilityReport.canImport) {
-            Log.w("TemplateManager", "Template import blocked: ${compatibilityReport.issues.joinToString { it.code }}")
+            AppLog.w("TemplateManager", "Template import blocked: ${compatibilityReport.issues.joinToString { it.code }}")
             return TemplateParseResult.Failure(
                 failure = TemplateImportFailure.INCOMPATIBLE,
                 compatibilityReport = compatibilityReport
@@ -456,7 +456,7 @@ class TemplateManager @Inject constructor(
     private fun templateFileForId(id: String): File? {
         val sanitizedId = sanitizeFilenameSafe(id)
         if (sanitizedId.isEmpty() || sanitizedId != id) {
-            Log.w("TemplateManager", "Rejected unsafe template id")
+            AppLog.w("TemplateManager", "Rejected unsafe template id")
             return null
         }
         return File(templateDir, "$sanitizedId.json")

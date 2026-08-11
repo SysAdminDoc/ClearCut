@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -132,7 +132,7 @@ class UpscaleEngine @Inject constructor(
 
     /** Whether a given model variant is downloaded and ready. */
     fun isModelReady(variant: UpscaleConfig.ModelVariant = UpscaleConfig.ModelVariant.X4PLUS): Boolean {
-        Log.d(TAG, "isModelReady: stub — requires Real-ESRGAN ONNX model")
+        AppLog.d(TAG, "isModelReady: stub — requires Real-ESRGAN ONNX model")
         return false
     }
 
@@ -146,7 +146,7 @@ class UpscaleEngine @Inject constructor(
         variant: UpscaleConfig.ModelVariant = UpscaleConfig.ModelVariant.X4PLUS,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        Log.d(TAG, "downloadModel: stub — requires Real-ESRGAN ONNX model")
+        AppLog.d(TAG, "downloadModel: stub — requires Real-ESRGAN ONNX model")
         false
     }
 
@@ -163,7 +163,7 @@ class UpscaleEngine @Inject constructor(
         config: UpscaleConfig = UpscaleConfig(),
         onProgress: (Float) -> Unit = {}
     ): UpscaleResult? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "upscaleFrame: stub — requires Real-ESRGAN ONNX model")
+        AppLog.d(TAG, "upscaleFrame: stub — requires Real-ESRGAN ONNX model")
         null
     }
 
@@ -182,7 +182,7 @@ class UpscaleEngine @Inject constructor(
         outputUri: Uri,
         onProgress: (Float) -> Unit = {}
     ): VideoUpscaleResult? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "upscaleVideo: stub — requires Real-ESRGAN ONNX model")
+        AppLog.d(TAG, "upscaleVideo: stub — requires Real-ESRGAN ONNX model")
         null
     }
 }

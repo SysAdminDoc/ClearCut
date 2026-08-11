@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -64,7 +64,7 @@ class FlashSafetyEngine @Inject constructor(
             warnings += scanTransitions(lum, stepMs, thresh = 0.2f, Kind.GENERAL_FLASH)
             warnings += scanTransitions(red, stepMs, thresh = 0.15f, Kind.RED_FLASH)
         } catch (e: Exception) {
-            Log.w(TAG, "flash analysis failed", e)
+            AppLog.w(TAG, "flash analysis failed", e)
         } finally {
             retrieverLease.close()
         }

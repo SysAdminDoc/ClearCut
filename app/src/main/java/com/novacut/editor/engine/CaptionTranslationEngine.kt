@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.engine.whisper.SherpaAsrEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -138,7 +138,7 @@ class CaptionTranslationEngine @Inject constructor(
         variant: ModelVariant = ModelVariant.NLLB_600M,
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
-        Log.d(TAG, "downloadModel: stub -- requires ${variant.name}")
+        AppLog.d(TAG, "downloadModel: stub -- requires ${variant.name}")
         false
     }
 
@@ -163,7 +163,7 @@ class CaptionTranslationEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): List<TranslatedSegment> = withContext(Dispatchers.Default) {
         if (!isModelReady()) {
-            Log.d(TAG, "translate: model unavailable -- $sourceLang -> $targetLang")
+            AppLog.d(TAG, "translate: model unavailable -- $sourceLang -> $targetLang")
             throw TranslationUnavailableException()
         }
         // Real translation backend goes here once a model is integrated. Until

@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.kaleyra.noise_filter.DeepFilterNet
 import com.rikorose.deepfilternet.NativeDeepFilterNet
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -138,7 +138,7 @@ class NoiseReductionEngine @Inject constructor(
      */
     suspend fun analyzeNoise(uri: Uri): NoiseProfile? = withContext(Dispatchers.IO) {
         if (!ffmpegEngine.isAvailable()) {
-            Log.d(TAG, "analyzeNoise: FFmpeg unavailable, cannot measure")
+            AppLog.d(TAG, "analyzeNoise: FFmpeg unavailable, cannot measure")
             return@withContext null
         }
         val workDir = File(context.cacheDir, NOISE_REDUCED_DIR_NAME).also { it.mkdirs() }
@@ -155,7 +155,7 @@ class NoiseReductionEngine @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "analyzeNoise failed: ${e.message}")
+            AppLog.w(TAG, "analyzeNoise failed: ${e.message}")
             null
         } finally {
             pcm.delete()
@@ -198,7 +198,7 @@ class NoiseReductionEngine @Inject constructor(
 
         val useDeepFilterNet = mode != NoiseReductionMode.SPECTRAL_GATE && isDeepFilterNetAvailable()
         if (mode != NoiseReductionMode.SPECTRAL_GATE && !useDeepFilterNet) {
-            Log.d(TAG, "DeepFilterNet unavailable; using the spectral-gate backend instead")
+            AppLog.d(TAG, "DeepFilterNet unavailable; using the spectral-gate backend instead")
         }
 
         val outputDir = File(context.filesDir, NOISE_REDUCED_DIR_NAME).also { it.mkdirs() }
@@ -214,7 +214,7 @@ class NoiseReductionEngine @Inject constructor(
             NoiseReductionMode.SPECTRAL_GATE -> 15f
             NoiseReductionMode.OFF -> 0f
         }
-        Log.i(TAG, "Processing with mode=$mode, attenuation=${attenuationDb}dB, dfn=$useDeepFilterNet")
+        AppLog.i(TAG, "Processing with mode=$mode, attenuation=${attenuationDb}dB, dfn=$useDeepFilterNet")
 
         try {
             processMeasured(
@@ -230,7 +230,7 @@ class NoiseReductionEngine @Inject constructor(
             throw e
         } catch (e: Exception) {
             cleanupNoiseReductionFiles(partialFile, outputFile)
-            Log.w(TAG, "Noise reduction failed: ${e.message}", e)
+            AppLog.w(TAG, "Noise reduction failed: ${e.message}", e)
             NoiseReductionResult(
                 outcome = NoiseReductionOutcome.FAILED,
                 detail = "Noise reduction failed: ${e.message ?: e::class.java.simpleName}. " +
@@ -420,7 +420,7 @@ class NoiseReductionEngine @Inject constructor(
         } catch (_: ClassNotFoundException) {
             false
         } catch (e: Throwable) {
-            Log.w(TAG, "DeepFilterNet availability probe threw an unexpected error", e)
+            AppLog.w(TAG, "DeepFilterNet availability probe threw an unexpected error", e)
             false
         }
         cachedDeepFilterNetAvailability = available
@@ -554,7 +554,7 @@ class NoiseReductionEngine @Inject constructor(
 
     private fun reportProgress(onProgress: (Float) -> Unit, value: Float) {
         runCatching { onProgress(value) }
-            .onFailure { Log.w(TAG, "Noise reduction progress callback failed", it) }
+            .onFailure { AppLog.w(TAG, "Noise reduction progress callback failed", it) }
     }
 
     private fun isAndroidRuntime(): Boolean {

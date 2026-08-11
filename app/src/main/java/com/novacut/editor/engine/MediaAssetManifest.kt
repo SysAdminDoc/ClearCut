@@ -114,7 +114,7 @@ internal fun writeManagedMediaAssetSidecar(
         )
         true
     }.getOrElse { err ->
-        android.util.Log.w(MEDIA_ASSET_TAG, "Failed to write media asset sidecar for ${managedUri.redacted()}", err)
+        com.novacut.editor.engine.AppLog.w(MEDIA_ASSET_TAG, "Failed to write media asset sidecar for ${managedUri.redacted()}", err)
         false
     }
 }
@@ -151,7 +151,7 @@ internal fun writeManagedMediaAssetAnnotations(
         )
         true
     }.getOrElse { err ->
-        android.util.Log.w(
+        com.novacut.editor.engine.AppLog.w(
             MEDIA_ASSET_TAG,
             "Failed to update media asset annotations for ${Uri.parse(asset.managedUri).redacted()}",
             err,

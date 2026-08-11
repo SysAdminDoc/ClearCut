@@ -6,7 +6,7 @@ import android.media.AudioManager
 import android.media.MediaRecorder
 import android.net.Uri
 import android.os.Build
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,7 +34,7 @@ class VoiceoverRecorderEngine @Inject constructor(
     fun startRecording(): File? {
         discardActiveRecording("re-start")
         if (!requestVoiceoverAudioFocus()) {
-            Log.w("VoiceoverRecorder", "Voiceover audio focus request was denied")
+            AppLog.w("VoiceoverRecorder", "Voiceover audio focus request was denied")
             return null
         }
 
@@ -70,7 +70,7 @@ class VoiceoverRecorderEngine @Inject constructor(
             _isRecording.value = true
             file
         } catch (e: Exception) {
-            Log.w("VoiceoverRecorder", "Failed to start voiceover recording", e)
+            AppLog.w("VoiceoverRecorder", "Failed to start voiceover recording", e)
             runCatching { rec.release() }
             abandonVoiceoverAudioFocus()
             partialFile.delete()
@@ -99,7 +99,7 @@ class VoiceoverRecorderEngine @Inject constructor(
                 finalizeRecordedVoiceoverFile(partialFile, file)?.let { Uri.fromFile(it) }
             }
         } catch (e: Exception) {
-            Log.w("VoiceoverRecorder", "Failed to stop voiceover recording", e)
+            AppLog.w("VoiceoverRecorder", "Failed to stop voiceover recording", e)
             runCatching { recorder?.release() }
             cleanupVoiceoverFiles(partialFile, file)
             clearActiveRecorder()
@@ -123,7 +123,7 @@ class VoiceoverRecorderEngine @Inject constructor(
         val file = outputFile
         val partialFile = partialOutputFile
         if (activeRecorder != null) {
-            try { activeRecorder.stop() } catch (e: Exception) { Log.w("VoiceoverRecorder", "Failed to stop recorder on $reason", e) }
+            try { activeRecorder.stop() } catch (e: Exception) { AppLog.w("VoiceoverRecorder", "Failed to stop recorder on $reason", e) }
             runCatching { activeRecorder.release() }
         }
         cleanupVoiceoverFiles(partialFile, file)

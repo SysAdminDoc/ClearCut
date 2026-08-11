@@ -1,7 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -69,19 +69,19 @@ class MediaHashWorker @AssistedInject constructor(
                     val existing = hashIndex[sha256]
                     if (existing != null && existing != assetId) {
                         deduped++
-                        Log.d(TAG, "Duplicate detected: $assetId matches $existing (sha256=$sha256)")
+                        AppLog.d(TAG, "Duplicate detected: $assetId matches $existing (sha256=$sha256)")
                     }
                     hashIndex[sha256] = assetId
                     hashed++
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to hash sidecar ${sidecar.name}", e)
+                    AppLog.w(TAG, "Failed to hash sidecar ${sidecar.name}", e)
                 }
             }
 
-            Log.d(TAG, "Media hash pass: hashed=$hashed skipped=$skipped duplicates=$deduped")
+            AppLog.d(TAG, "Media hash pass: hashed=$hashed skipped=$skipped duplicates=$deduped")
             Result.success()
         } catch (e: Exception) {
-            Log.e(TAG, "Media hash worker failed", e)
+            AppLog.e(TAG, "Media hash worker failed", e)
             Result.failure()
         }
     }
@@ -108,7 +108,7 @@ class MediaHashWorker @AssistedInject constructor(
             }
             digest.digest().joinToString("") { "%02x".format(it) }
         } catch (e: Exception) {
-            Log.w(TAG, "SHA-256 computation failed for ${file.redacted()}", e)
+            AppLog.w(TAG, "SHA-256 computation failed for ${file.redacted()}", e)
             null
         }
     }

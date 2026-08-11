@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.content.res.AssetFileDescriptor
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.model.Track
@@ -198,7 +198,7 @@ class MediaRelinkProbe @Inject constructor(
 
     private fun androidOpener(): UriOpener = UriOpener { uri ->
         val parsed = try { Uri.parse(uri) } catch (e: Exception) {
-            Log.w(TAG, "Cannot parse URI for relink probe: ${RedactedLog.path(uri)}", e)
+            AppLog.w(TAG, "Cannot parse URI for relink probe: ${RedactedLog.path(uri)}", e)
             return@UriOpener null
         }
         val descriptor: AssetFileDescriptor? = try {

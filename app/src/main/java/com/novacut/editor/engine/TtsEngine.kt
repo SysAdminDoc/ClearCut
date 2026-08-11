@@ -6,7 +6,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -62,7 +62,7 @@ class TtsEngine @Inject constructor(
                 tts?.language = Locale.US
                 onReady()
             } else {
-                Log.e("TtsEngine", "TTS initialization failed with status $status")
+                AppLog.e("TtsEngine", "TTS initialization failed with status $status")
             }
         }
     }
@@ -117,7 +117,7 @@ class TtsEngine @Inject constructor(
 
                     fun reportProgress(value: Float) {
                         runCatching { onProgress(value) }
-                            .onFailure { Log.w("TtsEngine", "TTS progress callback failed", it) }
+                            .onFailure { AppLog.w("TtsEngine", "TTS progress callback failed", it) }
                     }
 
                     engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -130,13 +130,13 @@ class TtsEngine @Inject constructor(
                                 val finalizedFile = runCatching {
                                     finalizeSynthesizedTtsFile(partialFile, outputFile)
                                 }.onFailure {
-                                    Log.e("TtsEngine", "TTS output finalization failed for $id", it)
+                                    AppLog.e("TtsEngine", "TTS output finalization failed for $id", it)
                                     cleanupGeneratedFiles()
                                 }.getOrNull()
                                 if (finalizedFile != null) {
                                     reportProgress(1f)
                                 } else {
-                                    Log.e("TtsEngine", "TTS finished without a readable audio file for $id")
+                                    AppLog.e("TtsEngine", "TTS finished without a readable audio file for $id")
                                 }
                                 finish(finalizedFile)
                             }
@@ -145,7 +145,7 @@ class TtsEngine @Inject constructor(
                         @Deprecated("Deprecated in API")
                         override fun onError(id: String?) {
                             if (id == utteranceId) {
-                                Log.e("TtsEngine", "TTS error for utterance $id")
+                                AppLog.e("TtsEngine", "TTS error for utterance $id")
                                 cleanupGeneratedFiles()
                                 finish(null)
                             }
@@ -153,7 +153,7 @@ class TtsEngine @Inject constructor(
 
                         override fun onError(id: String?, errorCode: Int) {
                             if (id == utteranceId) {
-                                Log.e("TtsEngine", "TTS error code $errorCode for $id")
+                                AppLog.e("TtsEngine", "TTS error code $errorCode for $id")
                                 cleanupGeneratedFiles()
                                 finish(null)
                             }
@@ -181,7 +181,7 @@ class TtsEngine @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            Log.e("TtsEngine", "Synthesis failed", e)
+            AppLog.e("TtsEngine", "Synthesis failed", e)
             partialFile.delete()
             outputFile.delete()
             null

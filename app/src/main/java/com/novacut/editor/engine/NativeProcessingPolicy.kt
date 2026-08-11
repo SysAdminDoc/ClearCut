@@ -4,7 +4,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.webkit.MimeTypeMap
 import java.io.File
 import java.util.Locale
@@ -239,7 +239,7 @@ object NativeProcessingPolicy {
     }
 
     fun logAndReject(violation: PolicyViolation): Boolean {
-        Log.w(TAG, violation.diagnosticMessage())
+        AppLog.w(TAG, violation.diagnosticMessage())
         return false
     }
 

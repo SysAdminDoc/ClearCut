@@ -13,7 +13,7 @@ import android.media.MediaMetadataRetriever
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import android.webkit.MimeTypeMap
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -48,7 +48,7 @@ private fun logAndroid15LoudnessIntegration(stage: String) {
     if (Android15MediaPolicy.loudnessIntegrationForSdk(Build.VERSION.SDK_INT) ==
         Android15MediaPolicy.LoudnessIntegration.MEDIA3_PLATFORM_CONTROLLER
     ) {
-        Log.d(
+        AppLog.d(
             TAG,
             "$stage audio uses Media3 1.11.0's API-35 LoudnessCodecController integration"
         )
@@ -279,7 +279,7 @@ class VideoEngine @Inject constructor(
         val bytes = ThumbnailCachePolicy.resolveBytes(sizeMb, maxHeapBytes, isLowRamDevice)
         if (thumbnailCache.maxSize() == bytes) return
         val budgetLabel = sizeMb?.let { "${bytes / (1024 * 1024)} MB" } ?: "automatic heap/8"
-        Log.d(TAG, "Thumbnail cache resized to $budgetLabel")
+        AppLog.d(TAG, "Thumbnail cache resized to $budgetLabel")
         thumbnailCache.resize(bytes)
     }
 
@@ -618,7 +618,7 @@ class VideoEngine @Inject constructor(
             val scaled = try {
                 Bitmap.createScaledBitmap(original, width, height, true)
             } catch (t: Throwable) {
-                Log.w(TAG, "Thumbnail scale failed at ${timeUs}us for ${uri.redacted()}", t)
+                AppLog.w(TAG, "Thumbnail scale failed at ${timeUs}us for ${uri.redacted()}", t)
                 null
             }
             if (scaled == null) {
@@ -638,7 +638,7 @@ class VideoEngine @Inject constructor(
             // IO / setDataSource failure must still recycle the partial frame
             // before we return so we don't accumulate native bitmaps.
             frame?.recycle()
-            Log.w(TAG, "Thumbnail extract failed at ${timeUs}us for ${uri.redacted()}", e)
+            AppLog.w(TAG, "Thumbnail extract failed at ${timeUs}us for ${uri.redacted()}", e)
             null
         } finally {
             retrieverLease.close()
@@ -718,7 +718,7 @@ class VideoEngine @Inject constructor(
         // Atomic check-and-set to prevent two concurrent exports from racing
         synchronized(this) {
             if (_exportState.value == ExportState.EXPORTING) {
-                Log.w(TAG, "Export already in progress")
+                AppLog.w(TAG, "Export already in progress")
                 return
             }
             _exportState.value = ExportState.EXPORTING
@@ -745,7 +745,7 @@ class VideoEngine @Inject constructor(
                 globalTransitionCount = globalTransitions.size,
                 resumeRequested = resumeFromFile != null,
             )
-            Log.d(
+            AppLog.d(
                 TAG,
                 "Media3 trim optimization eligible=${trimOptimizationDecision.eligible} " +
                     "editList=${trimOptimizationDecision.mp4EditListTrimEligible} " +
@@ -813,7 +813,7 @@ class VideoEngine @Inject constructor(
             // window, so the scratch files are cleaned up here instead. Not an
             // error — don't invoke onError; rethrow so the launching coroutine
             // finishes as cancelled (ExportDelegate handles this contract).
-            Log.d(TAG, "Export cancelled during setup", e)
+            AppLog.d(TAG, "Export cancelled during setup", e)
             preRenderTempFiles.forEach { it.delete() }
             if (_exportState.value == ExportState.EXPORTING) {
                 _exportState.value = ExportState.CANCELLED
@@ -828,7 +828,7 @@ class VideoEngine @Inject constructor(
             }
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Export setup failed", e)
+            AppLog.e(TAG, "Export setup failed", e)
             preRenderTempFiles.forEach { it.delete() }
             failExport(ExportFailureCause.SETUP_FAILED, e.message ?: "Export setup failed")
             _exportState.value = ExportState.ERROR
@@ -904,7 +904,7 @@ class VideoEngine @Inject constructor(
             failExportSession(outputFile, reversedTempFiles, cancelled = true)
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Audio export setup failed", e)
+            AppLog.e(TAG, "Audio export setup failed", e)
             failExportSession(outputFile, reversedTempFiles, cancelled = false, message = e.message)
             onError(e)
         }
@@ -1000,7 +1000,7 @@ class VideoEngine @Inject constructor(
             failExportSession(firstFile, reversedTempFiles, cancelled = true)
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Stem export failed", e)
+            AppLog.e(TAG, "Stem export failed", e)
             written.forEach { runCatching { it.delete() } }
             failExportSession(firstFile, reversedTempFiles, cancelled = false, message = e.message)
             onError(e)
@@ -1014,7 +1014,7 @@ class VideoEngine @Inject constructor(
     private fun beginExportSession(outputFile: File): Boolean {
         synchronized(this) {
             if (_exportState.value == ExportState.EXPORTING) {
-                Log.w(TAG, "Export already in progress")
+                AppLog.w(TAG, "Export already in progress")
                 return false
             }
             _exportState.value = ExportState.EXPORTING
@@ -1100,7 +1100,7 @@ class VideoEngine @Inject constructor(
                 reverseRenderAvailable = true,
                 maxDurationMs = maxReverseDurationMs,
             )?.let { fallbackMessage ->
-                Log.w(TAG, fallbackMessage)
+                AppLog.w(TAG, fallbackMessage)
                 appendExportWarning(fallbackMessage)
                 continue
             }
@@ -1132,7 +1132,7 @@ class VideoEngine @Inject constructor(
                     sourceDurationMs = reversedDurationMs,
                     isReversed = false
                 )
-                Log.d(TAG, "Pre-rendered reversed clip ${clip.id} → ${tempFile.name}")
+                AppLog.d(TAG, "Pre-rendered reversed clip ${clip.id} → ${tempFile.name}")
             } else {
                 tempFile.delete()
                 // Fail closed. Continuing here would export forward video for a
@@ -1241,26 +1241,26 @@ class VideoEngine @Inject constructor(
     ): Boolean {
         if (plan.benefit != MixedRenderComposer.Benefit.Mixed || !plan.needsConcat) return false
         if (config.forceConstantFrameRate) {
-            Log.d(TAG, "Mixed export skipped: constant frame rate requires one rendered cadence")
+            AppLog.d(TAG, "Mixed export skipped: constant frame rate requires one rendered cadence")
             return false
         }
         if (tracks.any { it.timelineOffsetMs != 0L }) {
-            Log.d(TAG, "Mixed export skipped: per-track timeline offsets require full Transformer composition")
+            AppLog.d(TAG, "Mixed export skipped: per-track timeline offsets require full Transformer composition")
             return false
         }
         if (textOverlays.isNotEmpty() || imageOverlays.isNotEmpty() ||
             lottieOverlays.isNotEmpty() || trackedObjects.any { it.isEnabled }
         ) {
-            Log.d(TAG, "Mixed export skipped: overlays or tracked objects require whole-timeline Transformer")
+            AppLog.d(TAG, "Mixed export skipped: overlays or tracked objects require whole-timeline Transformer")
             return false
         }
         if (!ffmpegEngine.isAvailable()) {
-            Log.d(TAG, "Mixed export skipped: FFmpeg concat unavailable")
+            AppLog.d(TAG, "Mixed export skipped: FFmpeg concat unavailable")
             return false
         }
 
         preflightMixedStreamCopyRuns(plan, tracks)?.let { reason ->
-            Log.d(TAG, "Mixed export skipped: $reason")
+            AppLog.d(TAG, "Mixed export skipped: $reason")
             return false
         }
 
@@ -1285,7 +1285,7 @@ class VideoEngine @Inject constructor(
 
         synchronized(this) {
             if (_exportState.value == ExportState.EXPORTING) {
-                Log.w(TAG, "Export already in progress")
+                AppLog.w(TAG, "Export already in progress")
                 return true
             }
             _exportState.value = ExportState.EXPORTING
@@ -1457,7 +1457,7 @@ class VideoEngine @Inject constructor(
             onComplete()
             true
         } catch (e: CancellationException) {
-            Log.d(TAG, "Mixed export cancelled", e)
+            AppLog.d(TAG, "Mixed export cancelled", e)
             if (_exportState.value == ExportState.EXPORTING) {
                 _exportState.value = ExportState.CANCELLED
             }
@@ -1467,7 +1467,7 @@ class VideoEngine @Inject constructor(
             runCatching { outputFile.delete() }
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Mixed export failed", e)
+            AppLog.e(TAG, "Mixed export failed", e)
             failExport(ExportFailureCause.MIXED_RENDER_FAILED, e.message ?: "Mixed export failed")
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
@@ -1619,7 +1619,7 @@ class VideoEngine @Inject constructor(
                 audioMimeType = audioMimeType,
             )
         } catch (e: Exception) {
-            Log.d(TAG, "Unable to probe MP4 format for trim optimization", e)
+            AppLog.d(TAG, "Unable to probe MP4 format for trim optimization", e)
             null
         } finally {
             runCatching { extractor.release() }
@@ -1671,7 +1671,7 @@ class VideoEngine @Inject constructor(
             ?: compositionPlan.durationMs
         val reversedCount = visibleVideoTracks.sumOf { track -> track.clips.count { it.isReversed } }
         if (reversedCount > 0) {
-            Log.w(TAG, "Export: $reversedCount reversed clip(s) not pre-rendered (FFmpeg unavailable or over limit)")
+            AppLog.w(TAG, "Export: $reversedCount reversed clip(s) not pre-rendered (FFmpeg unavailable or over limit)")
         }
         val hdrOverlaySummary = HdrOverlayAssetInspector.inspect(
             context = context,
@@ -1686,7 +1686,7 @@ class VideoEngine @Inject constructor(
         )
         HdrOverlayPolicy.throwIfSamplerBudgetExceeded(hdrOverlayDecision)
         if (hdrOverlayDecision.requiresSdrFallback) {
-            Log.w(TAG, "Export: ${hdrOverlayDecision.disclosure}")
+            AppLog.w(TAG, "Export: ${hdrOverlayDecision.disclosure}")
         }
         val preserveHdr = hdrOverlayDecision.preserveHdr
         val visualTrackSequences = buildVideoSequences(
@@ -1708,7 +1708,7 @@ class VideoEngine @Inject constructor(
         val unsupportedTrackBlendModes = visualTrackSequences
             .count { it.compositorLayer.blendMode != BlendMode.NORMAL }
         if (unsupportedTrackBlendModes > 0) {
-            Log.w(
+            AppLog.w(
                 TAG,
                 "Export: $unsupportedTrackBlendModes track blend mode(s) render with normal alpha " +
                     "because Media3's public compositor settings expose alpha/transform only"
@@ -2130,7 +2130,7 @@ class VideoEngine @Inject constructor(
                         )
                     )
                     LottieOverlayBackend.CLEARCUT_SHADER -> {
-                        Log.d(TAG, "Export: keeping custom Lottie shader path (${plan.decision.reason})")
+                        AppLog.d(TAG, "Export: keeping custom Lottie shader path (${plan.decision.reason})")
                         add(LottieOverlayEffect(
                             lottieEngine = lo.engine,
                             composition = lo.composition,
@@ -2327,7 +2327,7 @@ class VideoEngine @Inject constructor(
                 hasAudio = hasAudio || fallbackHasAudio
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Unable to probe media characteristics for ${uri.redacted()}", e)
+            AppLog.w(TAG, "Unable to probe media characteristics for ${uri.redacted()}", e)
             MediaCharacteristics(
                 isStillImage = false,
                 hasVisual = fallbackHasVisual,
@@ -2521,7 +2521,7 @@ class VideoEngine @Inject constructor(
         if (isReadableMediaUri(proxyUri)) {
             return proxyUri
         }
-        Log.w(TAG, "Ignoring unreadable proxy for clip ${clip.id}: $proxyUri")
+        AppLog.w(TAG, "Ignoring unreadable proxy for clip ${clip.id}: $proxyUri")
         return clip.sourceUri
     }
 
@@ -2635,7 +2635,7 @@ class VideoEngine @Inject constructor(
                     // Guard against callbacks arriving after cancellation or timeout
                     if (_exportState.value != ExportState.EXPORTING) return
                     if (trimOptimizationEnabled) {
-                        Log.d(
+                        AppLog.d(
                             TAG,
                             "Media3 trim optimization result=${exportResult.optimizationResult}",
                         )
@@ -2645,7 +2645,7 @@ class VideoEngine @Inject constructor(
                     // Reporting COMPLETE for a 0-byte file would let the user share / save an
                     // unplayable artifact and trust that it succeeded. Surface as ERROR instead.
                     if (!outputFile.exists() || outputFile.length() <= 0L) {
-                        Log.e(TAG, "Transformer reported COMPLETE but output file is empty: ${outputFile.redacted()}")
+                        AppLog.e(TAG, "Transformer reported COMPLETE but output file is empty: ${outputFile.redacted()}")
                         failExport(ExportFailureCause.EMPTY_OUTPUT, "Export produced an empty file")
                         _exportState.value = ExportState.ERROR
                         _exportProgress.value = 0f
@@ -2657,7 +2657,7 @@ class VideoEngine @Inject constructor(
                     }
                     renderDegradationExceptionOrNull(degradationLedger?.outcome())?.let { failure ->
                         val outcome = failure.outcome
-                        Log.e(TAG, "GPU effect degradation detected: ${outcome.summary}")
+                        AppLog.e(TAG, "GPU effect degradation detected: ${outcome.summary}")
                         publishRenderDegradation(outcome)
                         failExport(ExportFailureCause.GPU_EFFECT_DEGRADED, outcome.summary)
                         _exportState.value = ExportState.ERROR
@@ -2698,7 +2698,7 @@ class VideoEngine @Inject constructor(
                         expectedContainer = expectedContainerForExtension(outputFile.extension),
                     )
                     if (!verification.valid) {
-                        Log.e(TAG, "Post-export verification failed: ${verification.reason}")
+                        AppLog.e(TAG, "Post-export verification failed: ${verification.reason}")
                         failExport(ExportFailureCause.VERIFICATION_FAILED, verification.reason ?: "Export verification failed")
                         _exportState.value = ExportState.ERROR
                         _exportProgress.value = 0f
@@ -2725,7 +2725,7 @@ class VideoEngine @Inject constructor(
                 ) {
                     // Guard against callbacks arriving after cancellation or timeout
                     if (_exportState.value != ExportState.EXPORTING) return
-                    Log.e(TAG, "Export failed", exportException)
+                    AppLog.e(TAG, "Export failed", exportException)
                     failExport(ExportFailureCause.ENCODER_FAILED, exportException.message ?: "Export encoding failed")
                     _exportState.value = ExportState.ERROR
                     _exportProgress.value = 0f
@@ -2745,7 +2745,7 @@ class VideoEngine @Inject constructor(
                         original = originalTransformationRequest,
                         fallback = fallbackTransformationRequest,
                     )
-                    Log.w(TAG, message)
+                    AppLog.w(TAG, message)
                     onFallbackApplied(message)
                 }
             }
@@ -2790,7 +2790,7 @@ class VideoEngine @Inject constructor(
                 delay(250)
             }
             if (stallPolls >= stallTimeoutPolls && _exportState.value == ExportState.EXPORTING && !terminalReached) {
-                Log.w(TAG, "Export made no progress for 10 minutes — treating as a hang")
+                AppLog.w(TAG, "Export made no progress for 10 minutes — treating as a hang")
                 cancelTransformerAndAwaitTermination(transformer)
                 failExport(ExportFailureCause.STALLED, "Export stalled — no progress for 10 minutes")
                 _exportState.value = ExportState.ERROR
@@ -2870,7 +2870,7 @@ class VideoEngine @Inject constructor(
         var preservedOutput: File? = null
         synchronized(this) {
             if (_exportState.value != ExportState.EXPORTING) return null
-            Log.d(TAG, "Cancelling export")
+            AppLog.d(TAG, "Cancelling export")
             _exportState.value = ExportState.CANCELLED
             activeTransformer?.let(::cancelTransformerAndAwaitTermination)
             activeTransformer = null
@@ -2892,7 +2892,7 @@ class VideoEngine @Inject constructor(
     fun failExportDueToForegroundServiceTimeout(message: String): Boolean {
         synchronized(this) {
             if (_exportState.value != ExportState.EXPORTING) return false
-            Log.w(TAG, "Failing export after foreground service media-processing timeout")
+            AppLog.w(TAG, "Failing export after foreground service media-processing timeout")
             failExport(ExportFailureCause.SERVICE_TIMEOUT, message)
             _exportState.value = ExportState.ERROR
             activeTransformer?.let(::cancelTransformerAndAwaitTermination)
@@ -2932,7 +2932,7 @@ class VideoEngine @Inject constructor(
             val safeSpeed = if (speed.isFinite() && speed > 0f) speed.coerceIn(0.1f, 100f) else 1f
             player?.playbackParameters = androidx.media3.common.PlaybackParameters(safeSpeed)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to set preview speed", e)
+            AppLog.w(TAG, "Failed to set preview speed", e)
         }
     }
 
@@ -2972,7 +2972,7 @@ class VideoEngine @Inject constructor(
                 frame.recycle()
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Frame extraction failed", e)
+            AppLog.w(TAG, "Frame extraction failed", e)
             null
         } finally {
             retrieverLease.close()

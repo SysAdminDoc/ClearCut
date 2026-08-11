@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.graphics.Paint
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -49,7 +49,7 @@ class FontRegistry @Inject constructor(
         // Reject anything that isn't a validated .ttf/.otf name up front, before
         // any bytes are copied.
         val fileName = resolveFileName(uri) ?: run {
-            Log.w(TAG, "Rejected font import: unsupported or unnamed file type")
+            AppLog.w(TAG, "Rejected font import: unsupported or unnamed file type")
             return null
         }
         val targetFile = fileForName(fileName) ?: return null
@@ -79,7 +79,7 @@ class FontRegistry @Inject constructor(
             if (loadTypeface(targetFile) == null) {
                 targetFile.delete()
                 if (hadExisting) restoreRollback(targetFile)
-                Log.w(TAG, "Imported font is not reloadable: ${RedactedLog.assetId(fileName)}")
+                AppLog.w(TAG, "Imported font is not reloadable: ${RedactedLog.assetId(fileName)}")
                 return null
             }
             typefaceCache.remove(targetFile.name)
@@ -91,7 +91,7 @@ class FontRegistry @Inject constructor(
                 canRollback = hadExisting,
             )
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to import font", e)
+            AppLog.w(TAG, "Failed to import font", e)
             null
         }
     }
@@ -121,7 +121,7 @@ class FontRegistry @Inject constructor(
             typefaceCache.remove(targetFile.name)
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to roll back font: ${RedactedLog.assetId(fileName)}", e)
+            AppLog.w(TAG, "Failed to roll back font: ${RedactedLog.assetId(fileName)}", e)
             false
         }
     }
@@ -186,7 +186,7 @@ class FontRegistry @Inject constructor(
     private fun loadTypeface(file: File): Typeface? = try {
         if (file.exists() && file.length() > 0) Typeface.createFromFile(file) else null
     } catch (e: Exception) {
-        Log.w(TAG, "Invalid font file: ${file.redacted()}", e)
+        AppLog.w(TAG, "Invalid font file: ${file.redacted()}", e)
         null
     }
 
@@ -206,7 +206,7 @@ class FontRegistry @Inject constructor(
             }
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to preserve font for rollback: ${file.redacted()}", e)
+            AppLog.w(TAG, "Failed to preserve font for rollback: ${file.redacted()}", e)
             false
         }
     }
@@ -222,7 +222,7 @@ class FontRegistry @Inject constructor(
             }
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to restore font after import failure: ${file.redacted()}", e)
+            AppLog.w(TAG, "Failed to restore font after import failure: ${file.redacted()}", e)
             false
         }
     }

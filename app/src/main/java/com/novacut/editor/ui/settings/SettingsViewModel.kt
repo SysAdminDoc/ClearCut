@@ -342,7 +342,7 @@ class SettingsViewModel @Inject constructor(
             } catch (error: CancellationException) {
                 throw error
             } catch (e: Exception) {
-                android.util.Log.e("SettingsViewModel", "DataStore read failed, using defaults", e)
+                com.novacut.editor.engine.AppLog.e("SettingsViewModel", "DataStore read failed, using defaults", e)
             }
             val latest = withContext(Dispatchers.IO) { repo.latestSettingsResetReport() }
             _settingsResetNotice.value = latest?.let {

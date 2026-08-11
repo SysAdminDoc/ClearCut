@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -122,7 +122,7 @@ class EffectShareEngine @Inject constructor(
 
             val serialized = json.toString(2)
             if (serialized.toByteArray(Charsets.UTF_8).size.toLong() > MAX_EFFECT_SHARE_BYTES) {
-                Log.w(TAG, "Effect share exceeds ${MAX_EFFECT_SHARE_BYTES / 1_000_000}MB limit")
+                AppLog.w(TAG, "Effect share exceeds ${MAX_EFFECT_SHARE_BYTES / 1_000_000}MB limit")
                 return@withContext null
             }
             val sanitized = sanitizeFileName(name, fallback = "effects", maxLength = 50)
@@ -130,7 +130,7 @@ class EffectShareEngine @Inject constructor(
             writeUtf8TextAtomically(file, serialized)
             file
         } catch (e: Exception) {
-            Log.e(TAG, "Export effects failed", e)
+            AppLog.e(TAG, "Export effects failed", e)
             null
         }
     }
@@ -166,7 +166,7 @@ class EffectShareEngine @Inject constructor(
             } ?: return@withContext EffectPackValidation(failure = EffectPackFailure.UNREADABLE)
             validateEffectsJson(json)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to validate effect pack", e)
+            AppLog.w(TAG, "Failed to validate effect pack", e)
             EffectPackValidation(failure = EffectPackFailure.UNREADABLE)
         }
     }
@@ -181,7 +181,7 @@ class EffectShareEngine @Inject constructor(
             } ?: return@withContext null
             validateEffectsJson(json).imported?.let(::installEmbeddedLut)
         } catch (e: Exception) {
-            Log.e(TAG, "Import effects failed", e)
+            AppLog.e(TAG, "Import effects failed", e)
             null
         }
     }
@@ -192,14 +192,14 @@ class EffectShareEngine @Inject constructor(
     suspend fun importEffects(file: File): ImportedEffects? = withContext(Dispatchers.IO) {
         try {
             if (file.length() > MAX_EFFECT_SHARE_BYTES) {
-                Log.w(TAG, "Effect share file exceeds ${MAX_EFFECT_SHARE_BYTES / 1_000_000}MB limit")
+                AppLog.w(TAG, "Effect share file exceeds ${MAX_EFFECT_SHARE_BYTES / 1_000_000}MB limit")
                 return@withContext null
             }
             validateEffectsJson(file.inputStream().use { input ->
                 readUtf8WithByteLimit(input, MAX_EFFECT_SHARE_BYTES)
             }).imported?.let(::installEmbeddedLut)
         } catch (e: Exception) {
-            Log.e(TAG, "Import effects failed", e)
+            AppLog.e(TAG, "Import effects failed", e)
             null
         }
     }
@@ -254,7 +254,7 @@ class EffectShareEngine @Inject constructor(
                     val type = try {
                         EffectType.valueOf(eo.getString("type"))
                     } catch (e: Exception) {
-                        Log.w(TAG, "Unknown effect type in JSON", e)
+                        AppLog.w(TAG, "Unknown effect type in JSON", e)
                         invalidEntries++
                         continue
                     }
@@ -328,7 +328,7 @@ class EffectShareEngine @Inject constructor(
                     val type = try {
                         AudioEffectType.valueOf(ao.getString("type"))
                     } catch (e: Exception) {
-                        Log.w(TAG, "Unknown audio effect type in JSON", e)
+                        AppLog.w(TAG, "Unknown audio effect type in JSON", e)
                         invalidEntries++
                         continue
                     }
@@ -375,7 +375,7 @@ class EffectShareEngine @Inject constructor(
                 warnings = warnings,
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Parse failed", e)
+            AppLog.e(TAG, "Parse failed", e)
             EffectPackValidation(failure = EffectPackFailure.INVALID_JSON)
         }
     }

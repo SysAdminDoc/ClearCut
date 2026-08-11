@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItemSequence
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 
 @UnstableApi
 internal data class CompositionBuildRequest(
@@ -44,7 +44,7 @@ internal object CompositionBuilder {
             try {
                 builder.setHdrMode(Composition.HDR_MODE_KEEP_HDR)
             } catch (e: Throwable) {
-                Log.w(TAG, "setHdrMode unavailable on this Media3 build", e)
+                AppLog.w(TAG, "setHdrMode unavailable on this Media3 build", e)
             }
         }
         return builder.build()

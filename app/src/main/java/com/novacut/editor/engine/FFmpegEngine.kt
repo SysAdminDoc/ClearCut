@@ -4,7 +4,7 @@ import android.content.Context
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.FFmpegKitConfig
 import com.arthenica.ffmpegkit.ReturnCode
@@ -181,7 +181,7 @@ class FFmpegEngine @Inject constructor(
             val hasAudio = !sourceHasAudio || hasUsableTrack(outputFile, "audio/")
             if (hasVideo && hasAudio) return@withContext true
 
-            Log.w(
+            AppLog.w(
                 TAG,
                 "Discarding unusable inpainting encode from ${encoder.ffmpegName}: " +
                     "exit=$exitCode video=$hasVideo audio=$hasAudio",
@@ -505,11 +505,11 @@ class FFmpegEngine @Inject constructor(
         } catch (_: ClassNotFoundException) {
             false
         } catch (e: Throwable) {
-            Log.w(TAG, "FFmpegEngine availability probe threw an unexpected error", e)
+            AppLog.w(TAG, "FFmpegEngine availability probe threw an unexpected error", e)
             false
         }
         cachedAvailability = available
-        if (!available) Log.d(TAG, "isAvailable: FFmpeg Android dependency not present")
+        if (!available) AppLog.d(TAG, "isAvailable: FFmpeg Android dependency not present")
         return available
     }
 
@@ -555,14 +555,14 @@ class FFmpegEngine @Inject constructor(
             ?: H264Encoder.MPEG4
         cachedEncoder = chosen
         if (chosen.isGpl) {
-            Log.i(
+            AppLog.i(
                 TAG,
                 "Intermediate encoder is ${chosen.ffmpegName}: this build exposes no " +
                     "licence-neutral H.264 encoder. Rebuilding FFmpeg with --enable-mediacodec " +
                     "provides h264_mediacodec and drops the GPL dependency."
             )
         } else {
-            Log.d(TAG, "Intermediate encoder: ${chosen.ffmpegName}")
+            AppLog.d(TAG, "Intermediate encoder: ${chosen.ffmpegName}")
         }
         return chosen
     }
@@ -657,7 +657,7 @@ class FFmpegEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): Int {
         if (!isAvailable()) {
-            Log.d(TAG, "executeCommand: FFmpeg Android dependency unavailable")
+            AppLog.d(TAG, "executeCommand: FFmpeg Android dependency unavailable")
             return -1
         }
         return suspendCancellableCoroutine { continuation ->
@@ -676,7 +676,7 @@ class FFmpegEngine @Inject constructor(
                 },
                 { log ->
                     val message = log.message.trim()
-                    if (message.isNotEmpty()) Log.v(TAG, message)
+                    if (message.isNotEmpty()) AppLog.v(TAG, message)
                 },
                 { stats ->
                     progressFromStats(stats.time, progressDurationMs)?.let { notifyProgress(onProgress, it) }
@@ -707,7 +707,7 @@ class FFmpegEngine @Inject constructor(
             extractor.setDataSource(context, inputUri, null)
             extractor.hasUsableTrack(mimePrefix)
         } catch (e: Exception) {
-            Log.w(TAG, "Could not inspect source track ${mimePrefix.trimEnd('/')}", e)
+            AppLog.w(TAG, "Could not inspect source track ${mimePrefix.trimEnd('/')}", e)
             false
         } finally {
             extractor.release()
@@ -721,7 +721,7 @@ class FFmpegEngine @Inject constructor(
             extractor.setDataSource(file.absolutePath)
             extractor.hasUsableTrack(mimePrefix)
         } catch (e: Exception) {
-            Log.w(TAG, "Could not inspect output track ${mimePrefix.trimEnd('/')}", e)
+            AppLog.w(TAG, "Could not inspect output track ${mimePrefix.trimEnd('/')}", e)
             false
         } finally {
             extractor.release()
@@ -771,7 +771,7 @@ class FFmpegEngine @Inject constructor(
         onProgress: (Float) -> Unit = {}
     ): Int {
         if (!isAvailable()) {
-            Log.d(TAG, "executeArguments: FFmpeg Android dependency unavailable")
+            AppLog.d(TAG, "executeArguments: FFmpeg Android dependency unavailable")
             return -1
         }
         return suspendCancellableCoroutine { continuation ->
@@ -790,7 +790,7 @@ class FFmpegEngine @Inject constructor(
                 },
                 { log ->
                     val message = log.message.trim()
-                    if (message.isNotEmpty()) Log.v(TAG, message)
+                    if (message.isNotEmpty()) AppLog.v(TAG, message)
                 },
                 { stats ->
                     progressFromStats(stats.time, progressDurationMs)?.let { notifyProgress(onProgress, it) }
@@ -814,7 +814,7 @@ class FFmpegEngine @Inject constructor(
 
     private fun notifyProgress(onProgress: (Float) -> Unit, progress: Float) {
         runCatching { onProgress(progress.coerceIn(0f, 1f)) }
-            .onFailure { Log.w(TAG, "FFmpeg progress callback failed", it) }
+            .onFailure { AppLog.w(TAG, "FFmpeg progress callback failed", it) }
     }
 
     private fun isAndroidRuntime(): Boolean {

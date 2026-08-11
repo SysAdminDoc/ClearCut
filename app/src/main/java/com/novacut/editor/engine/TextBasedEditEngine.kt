@@ -1,6 +1,6 @@
 package com.novacut.editor.engine
 
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.WordTimestamp
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +77,7 @@ class TextBasedEditEngine @Inject constructor() {
             val bigram = "${words[i].text.normalised()} ${words[i + 1].text.normalised()}"
             if (bigram in BIGRAMS) { out += i; out += i + 1 }
         }
-        Log.d(TAG, "detected ${out.size} filler indices")
+        AppLog.d(TAG, "detected ${out.size} filler indices")
         return out
     }
 

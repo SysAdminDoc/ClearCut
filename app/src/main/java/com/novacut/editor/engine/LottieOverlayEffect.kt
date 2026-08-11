@@ -189,7 +189,7 @@ private class LottieOverlayProgram(
             val log = GLES30.glGetProgramInfoLog(glProgram)
             GLES30.glDeleteProgram(glProgram)
             glProgram = 0
-            android.util.Log.e("LottieOverlay", "Program link failed: $log")
+            com.novacut.editor.engine.AppLog.e("LottieOverlay", "Program link failed: $log")
             throw RuntimeException("Lottie overlay program link failed: $log")
         }
 

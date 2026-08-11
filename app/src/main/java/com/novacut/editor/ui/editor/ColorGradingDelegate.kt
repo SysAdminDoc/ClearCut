@@ -2,7 +2,7 @@ package com.novacut.editor.ui.editor
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.R
 import com.novacut.editor.engine.LutRegistry
 import com.novacut.editor.model.ColorGrade
@@ -91,7 +91,7 @@ class ColorGradingDelegate(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    Log.e("ColorGradingDelegate", "Failed to import LUT", e)
+                    AppLog.e("ColorGradingDelegate", "Failed to import LUT", e)
                     showToast(text(R.string.color_lut_import_failed_toast))
                 }
             }

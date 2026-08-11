@@ -2,7 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.os.Build
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -115,7 +115,7 @@ class OutputStreamingEngine @Inject constructor(
             }
         }
         cachedAvailability = present
-        if (!present) Log.d(TAG, "isAvailable: no live-streaming library on classpath")
+        if (!present) AppLog.d(TAG, "isAvailable: no live-streaming library on classpath")
         return present
     }
 
@@ -322,13 +322,13 @@ class OutputStreamingEngine @Inject constructor(
      */
     suspend fun start(destination: OutputDestination): StreamStatus {
         if (!BuildConfig.LOCAL_NETWORK_STREAMING_ENABLED) {
-            Log.d(TAG, "start: local-network streaming is compiled out")
+            AppLog.d(TAG, "start: local-network streaming is compiled out")
             return StreamStatus(
                 state = StreamState.ERROR,
                 errorMessage = "Live streaming is disabled in this build",
             )
         }
-        Log.d(TAG, "start: stub — no live-streaming library wired (target=${destination.protocol})")
+        AppLog.d(TAG, "start: stub — no live-streaming library wired (target=${destination.protocol})")
         return StreamStatus(
             state = StreamState.ERROR,
             errorMessage = "Live streaming is not yet enabled in this build",
@@ -337,7 +337,7 @@ class OutputStreamingEngine @Inject constructor(
 
     /** Stop streaming. Idempotent. */
     suspend fun stop() {
-        Log.d(TAG, "stop: stub — no live-streaming library wired")
+        AppLog.d(TAG, "stop: stub — no live-streaming library wired")
     }
 
     companion object {

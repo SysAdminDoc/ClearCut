@@ -1,7 +1,7 @@
 package com.novacut.editor.ui.editor
 
 import android.content.Context
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import androidx.annotation.StringRes
 import com.novacut.editor.R
 import com.novacut.editor.engine.AiUsageLedger
@@ -399,7 +399,7 @@ class V369Delegate(
             val pcm = try {
                 audioEngine.decodeToPCM(android.net.Uri.fromFile(java.io.File(path)))
             } catch (e: Exception) {
-                Log.w(TAG, "pcm decode failed", e); null
+                AppLog.w(TAG, "pcm decode failed", e); null
             }
             if (pcm == null || pcm.isEmpty()) {
                 showToast(appContext.getString(R.string.v369_audio_decode_failed_toast))
@@ -443,7 +443,7 @@ class V369Delegate(
                 try {
                     appContext.startActivity(intent)
                 } catch (e: Exception) {
-                    Log.w(TAG, "publish intent failed", e)
+                    AppLog.w(TAG, "publish intent failed", e)
                     showToast(appContext.getString(R.string.v369_unable_to_open_toast, target.displayName))
                 }
             }

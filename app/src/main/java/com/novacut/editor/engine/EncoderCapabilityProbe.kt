@@ -5,7 +5,7 @@ import android.media.MediaCodecInfo.CodecProfileLevel
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.os.Build
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.VideoCodec
 
 /**
@@ -110,7 +110,7 @@ object EncoderCapabilityProbe {
                 .filter { it.isEncoder }
                 .filter { it.supportedTypes.any { t -> t.equals(mimeType, ignoreCase = true) } }
         } catch (e: Exception) {
-            Log.w(TAG, "MediaCodecList lookup failed for ${codec.label}", e)
+            AppLog.w(TAG, "MediaCodecList lookup failed for ${codec.label}", e)
             return Capability(
                 supported = false,
                 reason = "Encoder capability could not be queried; output will be verified after export.",
@@ -187,7 +187,7 @@ object EncoderCapabilityProbe {
             } catch (_: IllegalArgumentException) {
                 continue
             } catch (t: Throwable) {
-                Log.w(TAG, "Capability lookup failed for ${info.name} / $mimeType", t)
+                AppLog.w(TAG, "Capability lookup failed for ${info.name} / $mimeType", t)
                 continue
             }
 
@@ -318,7 +318,7 @@ object EncoderCapabilityProbe {
                         .map { supported -> info to supported }
                 }
         } catch (t: Throwable) {
-            Log.w(TAG, "MediaCodecList decoder lookup failed", t)
+            AppLog.w(TAG, "MediaCodecList decoder lookup failed", t)
             emptyList()
         }
     }
@@ -335,7 +335,7 @@ object EncoderCapabilityProbe {
                         .map { supported -> info to supported }
                 }
         } catch (t: Throwable) {
-            Log.w(TAG, "MediaCodecList lookup failed", t)
+            AppLog.w(TAG, "MediaCodecList lookup failed", t)
             emptyList()
         }
     }

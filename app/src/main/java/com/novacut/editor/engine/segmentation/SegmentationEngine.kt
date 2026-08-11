@@ -174,7 +174,7 @@ class SegmentationEngine @Inject constructor(
             _downloadProgress.value = 0f
             throw e
         } catch (e: Exception) {
-            android.util.Log.w("SegmentationEngine", "Model download failed", e)
+            com.novacut.editor.engine.AppLog.w("SegmentationEngine", "Model download failed", e)
             _modelState.value = if (hasVerifiedModelFile()) {
                 SegmentationModelState.READY
             } else {
@@ -267,7 +267,7 @@ class SegmentationEngine @Inject constructor(
 
             segment(scaled)
         } catch (e: Exception) {
-            android.util.Log.w("SegmentationEngine", "Frame segmentation failed for $videoUri", e)
+            com.novacut.editor.engine.AppLog.w("SegmentationEngine", "Frame segmentation failed for $videoUri", e)
             null
         } finally {
             try { scaled?.takeIf { it !== frame }?.recycle() } catch (_: Exception) { /* already recycled */ }

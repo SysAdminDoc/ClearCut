@@ -10,7 +10,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import java.io.File
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -178,10 +178,10 @@ class ProjectAutoSave @Inject constructor(
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     consecutiveFailures++
-                    Log.e(TAG, "Auto-save failed for $projectId (attempt $consecutiveFailures)", e)
+                    AppLog.e(TAG, "Auto-save failed for $projectId (attempt $consecutiveFailures)", e)
                     onSaveResult(false, request)
                     if (consecutiveFailures >= 3) {
-                        Log.w(TAG, "Auto-save has failed $consecutiveFailures times in a row for $projectId")
+                        AppLog.w(TAG, "Auto-save has failed $consecutiveFailures times in a row for $projectId")
                     }
                 }
             }
@@ -197,7 +197,7 @@ class ProjectAutoSave @Inject constructor(
             true
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Manual save failed for $projectId", e)
+            AppLog.e(TAG, "Manual save failed for $projectId", e)
             false
         }
     }
@@ -209,7 +209,7 @@ class ProjectAutoSave @Inject constructor(
             true
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            Log.e(TAG, "Manual document save failed for ${document.project.id}", e)
+            AppLog.e(TAG, "Manual document save failed for ${document.project.id}", e)
             false
         }
     }
@@ -255,25 +255,25 @@ class ProjectAutoSave @Inject constructor(
         saveMutex.withLock {
             val tempFile = getTempFile(projectId)
             if (tempFile.exists()) {
-                Log.w(TAG, "Cleaning up stale temp file for $projectId")
+                AppLog.w(TAG, "Cleaning up stale temp file for $projectId")
                 tempFile.delete()
             }
             val file = getAutoSaveFile(projectId)
             val backupFile = getBackupFile(projectId)
             if (!file.exists() && backupFile.exists()) {
-                Log.w(TAG, "Restoring auto-save from backup for $projectId")
+                AppLog.w(TAG, "Restoring auto-save from backup for $projectId")
                 moveFileReplacing(backupFile, file)
             }
             if (!file.exists()) return@withLock LoadOutcome.NotFound
             val raw = try {
                 readAutoSaveText(file)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to read auto-save for $projectId", e)
+                AppLog.e(TAG, "Failed to read auto-save for $projectId", e)
                 return@withLock LoadOutcome.Corrupt(e)
             }
             when (val primary = decodeLoadOutcome(raw)) {
                 is LoadOutcome.FutureSchema -> {
-                    Log.w(
+                    AppLog.w(
                         TAG,
                         "Auto-save for $projectId was written by a newer ClearCut " +
                             "(schema ${primary.fileVersion} > supported ${primary.supportedVersion}); " +
@@ -288,23 +288,23 @@ class ProjectAutoSave @Inject constructor(
                     return@withLock primary
                 }
                 is LoadOutcome.Corrupt -> {
-                    Log.e(TAG, "Failed to load recovery data for $projectId", primary.cause)
+                    AppLog.e(TAG, "Failed to load recovery data for $projectId", primary.cause)
                     if (!backupFile.exists()) return@withLock primary
                     val backupRaw = try {
                         readAutoSaveText(backupFile)
                     } catch (readErr: Exception) {
-                        Log.e(TAG, "Backup auto-save read failed for $projectId", readErr)
+                        AppLog.e(TAG, "Backup auto-save read failed for $projectId", readErr)
                         return@withLock LoadOutcome.Corrupt(readErr)
                     }
                     when (val backup = decodeLoadOutcome(backupRaw)) {
                         is LoadOutcome.Loaded -> {
-                            Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
+                            AppLog.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
                             moveFileReplacing(backupFile, file)
                             backup
                         }
                         is LoadOutcome.FutureSchema -> backup
                         is LoadOutcome.Corrupt -> {
-                            Log.e(TAG, "Backup auto-save restore failed for $projectId", backup.cause)
+                            AppLog.e(TAG, "Backup auto-save restore failed for $projectId", backup.cause)
                             backup
                         }
                         LoadOutcome.NotFound -> primary
@@ -330,7 +330,7 @@ class ProjectAutoSave @Inject constructor(
             val raw = try {
                 readAutoSaveText(backupFile)
             } catch (e: Exception) {
-                Log.e(TAG, "Backup auto-save read failed for $projectId", e)
+                AppLog.e(TAG, "Backup auto-save read failed for $projectId", e)
                 return@withLock LoadOutcome.Corrupt(e)
             }
             decodeLoadOutcome(raw)
@@ -341,7 +341,7 @@ class ProjectAutoSave @Inject constructor(
         val decoded = ProjectDocumentApplicator.read(raw)
     ) {
         is ProjectDocumentReadResult.Loaded -> {
-            decoded.warnings.forEach { warning -> Log.w(TAG, "Project document: $warning") }
+            decoded.warnings.forEach { warning -> AppLog.w(TAG, "Project document: $warning") }
             LoadOutcome.Loaded(
                 state = decoded.document.state,
                 report = decoded.report,
@@ -365,14 +365,14 @@ class ProjectAutoSave @Inject constructor(
         saveMutex.withLock {
             val tempFile = getTempFile(projectId)
             if (tempFile.exists()) {
-                Log.w(TAG, "Cleaning up stale temp file for $projectId")
+                AppLog.w(TAG, "Cleaning up stale temp file for $projectId")
                 tempFile.delete()
             }
             val file = getAutoSaveFile(projectId)
             val backupFile = getBackupFile(projectId)
             // If main file is missing but backup exists, a save was interrupted — restore
             if (!file.exists() && backupFile.exists()) {
-                Log.w(TAG, "Restoring auto-save from backup for $projectId")
+                AppLog.w(TAG, "Restoring auto-save from backup for $projectId")
                 moveFileReplacing(backupFile, file)
             }
             if (!file.exists()) return@withLock null
@@ -387,12 +387,12 @@ class ProjectAutoSave @Inject constructor(
                     LoadOutcome.NotFound -> null
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load recovery data for $projectId", e)
+                AppLog.e(TAG, "Failed to load recovery data for $projectId", e)
                 if (!backupFile.exists()) {
                     return@withLock null
                 }
                 try {
-                    Log.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
+                    AppLog.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
                     when (val outcome = decodeLoadOutcome(readAutoSaveText(backupFile))) {
                         is LoadOutcome.Loaded -> {
                             moveFileReplacing(backupFile, file)
@@ -403,7 +403,7 @@ class ProjectAutoSave @Inject constructor(
                         LoadOutcome.NotFound -> null
                     }
                 } catch (backupError: Exception) {
-                    Log.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
+                    AppLog.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
                     null
                 }
             }
@@ -447,7 +447,7 @@ class ProjectAutoSave @Inject constructor(
                     try {
                         uris += collectMediaReferenceUrisFromAutoSaveJson(readAutoSaveText(file))
                     } catch (e: Exception) {
-                        Log.w(TAG, "Failed to scan ${file.redacted()} for source URIs", e)
+                        AppLog.w(TAG, "Failed to scan ${file.redacted()} for source URIs", e)
                     }
                 }
             uris
@@ -463,14 +463,14 @@ class ProjectAutoSave @Inject constructor(
             saveMutex.withLock {
                 val fromFile = getAutoSaveFile(fromProjectId)
                 if (!fromFile.exists()) {
-                    Log.w(TAG, "No auto-save found to copy for $fromProjectId")
+                    AppLog.w(TAG, "No auto-save found to copy for $fromProjectId")
                     return@withLock false
                 }
                 val decoded = ProjectDocumentApplicator.read(readAutoSaveText(fromFile))
                 val document = when (decoded) {
                     is ProjectDocumentReadResult.Loaded -> decoded.document
                     is ProjectDocumentReadResult.FutureSchema -> {
-                        Log.w(TAG, "Refusing to copy a newer auto-save schema")
+                        AppLog.w(TAG, "Refusing to copy a newer auto-save schema")
                         return@withLock false
                     }
                     is ProjectDocumentReadResult.Corrupt -> throw decoded.cause
@@ -488,7 +488,7 @@ class ProjectAutoSave @Inject constructor(
                 true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to copy auto-save from $fromProjectId to $toProjectId", e)
+            AppLog.e(TAG, "Failed to copy auto-save from $fromProjectId to $toProjectId", e)
             false
         }
     }
@@ -509,7 +509,7 @@ class ProjectAutoSave @Inject constructor(
         // doesn't accumulate orphans across process lifetimes (filesDir has quota pressure).
         runCatching {
             autoSaveDir.listFiles { f -> f.isFile && f.name.endsWith(".tmp") }?.forEach { it.delete() }
-        }.onFailure { e -> Log.w(TAG, "Failed to sweep orphan .tmp files on release()", e) }
+        }.onFailure { e -> AppLog.w(TAG, "Failed to sweep orphan .tmp files on release()", e) }
     }
 
     private suspend fun saveDocument(
@@ -987,7 +987,7 @@ data class AutoSaveState(
 
         private fun cappedArrayLength(arr: JSONArray, max: Int, label: String): Int {
             if (arr.length() > max) {
-                Log.w(TAG, "Auto-save contains ${arr.length()} $label; loading first $max")
+                AppLog.w(TAG, "Auto-save contains ${arr.length()} $label; loading first $max")
                 recordDrop(
                     DroppedElement(
                         kind = label,
@@ -1005,7 +1005,7 @@ data class AutoSaveState(
          * Returns `null` so a `catch` block can be written as `catch (e) { dropped(...) }`.
          */
         private fun dropped(kind: String, index: Int, cause: Throwable?): Nothing? {
-            Log.w(TAG, "Failed to deserialize $kind $index", cause)
+            AppLog.w(TAG, "Failed to deserialize $kind $index", cause)
             recordDrop(
                 DroppedElement(
                     kind = kind,
@@ -1070,7 +1070,7 @@ data class AutoSaveState(
             val json = JSONObject(raw)
             val fileVersion = json.optInt("version", 0)
             if (fileVersion > FORMAT_VERSION) {
-                Log.w(TAG, "Auto-save written by newer format ($fileVersion > $FORMAT_VERSION); attempting best-effort load")
+                AppLog.w(TAG, "Auto-save written by newer format ($fileVersion > $FORMAT_VERSION); attempting best-effort load")
             }
             val mediaAssets = deserializeMediaAssets(json.optJSONArray("mediaAssets") ?: JSONArray())
             val mediaAssetUrisById = mediaAssets.associate { it.assetId to it.managedUri }
@@ -1110,7 +1110,7 @@ data class AutoSaveState(
                         return@mapNotNull skipped("image overlay", i, DropReason.BAD_URI, "no source URI")
                     }
                     val parsedUri = try { uriParser(srcUri) } catch (e: Exception) {
-                        Log.w(TAG, "Skipping image overlay with malformed URI: $srcUri", e)
+                        AppLog.w(TAG, "Skipping image overlay with malformed URI: $srcUri", e)
                         return@mapNotNull skipped("image overlay", i, DropReason.BAD_URI, "malformed source URI")
                     } ?: return@mapNotNull skipped("image overlay", i, DropReason.BAD_URI, "unparseable source URI")
                     // Coerce time range BEFORE constructing so a corrupt save with
@@ -1149,7 +1149,7 @@ data class AutoSaveState(
                         scalePercent = watermark.optInt("scalePercent", 15).coerceIn(5, 50)
                     )
                 }.onFailure {
-                    Log.w(TAG, "Skipping invalid export watermark", it)
+                    AppLog.w(TAG, "Skipping invalid export watermark", it)
                     skipped("export watermark", 0, DropReason.MALFORMED, it.javaClass.simpleName)
                 }.getOrNull()
             }
@@ -1445,7 +1445,7 @@ data class AutoSaveState(
             // any realistic nesting a user could construct (picture-in-picture-in-pip etc.);
             // beyond that something is wrong with the graph.
             if (depth > 8) {
-                Log.w(TAG, "serializeClip: compound nesting depth exceeded for ${clip.id}; truncating")
+                AppLog.w(TAG, "serializeClip: compound nesting depth exceeded for ${clip.id}; truncating")
                 return JSONObject().apply {
                     put("id", clip.id)
                     clip.assetId?.let { put("assetId", it) }
@@ -1853,7 +1853,7 @@ data class AutoSaveState(
             mediaAssetUrisById: Map<String, String>,
         ): List<Track> {
             if (arr.length() > MAX_TRACKS) {
-                Log.w(TAG, "Auto-save contains ${arr.length()} tracks; loading first $MAX_TRACKS")
+                AppLog.w(TAG, "Auto-save contains ${arr.length()} tracks; loading first $MAX_TRACKS")
             }
             return (0 until arr.length().coerceAtMost(MAX_TRACKS)).mapNotNull { i ->
                 try {
@@ -1872,7 +1872,7 @@ data class AutoSaveState(
             val clipsArr = json.optJSONArray("clips") ?: JSONArray()
             val audioFxArr = json.optJSONArray("audioEffects") ?: JSONArray()
             if (clipsArr.length() > MAX_CLIPS_PER_TRACK) {
-                Log.w(TAG, "Track ${json.optString("id", "?")} has ${clipsArr.length()} clips; loading first $MAX_CLIPS_PER_TRACK")
+                AppLog.w(TAG, "Track ${json.optString("id", "?")} has ${clipsArr.length()} clips; loading first $MAX_CLIPS_PER_TRACK")
             }
             return Track(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
@@ -1909,7 +1909,7 @@ data class AutoSaveState(
             depth: Int = 0,
         ): Clip? {
             if (depth > MAX_COMPOUND_CLIP_DEPTH) {
-                Log.w(TAG, "Skipping compound clip beyond depth $MAX_COMPOUND_CLIP_DEPTH")
+                AppLog.w(TAG, "Skipping compound clip beyond depth $MAX_COMPOUND_CLIP_DEPTH")
                 return skipped("compound clip", depth, DropReason.TOO_DEEP, "nested beyond $MAX_COMPOUND_CLIP_DEPTH levels")
             }
             val effectsArr = json.optJSONArray("effects") ?: JSONArray()
@@ -1923,16 +1923,16 @@ data class AutoSaveState(
                 ?.let { mediaAssetUrisById[it] }
                 ?: serializedSourceUri
             if (sourceUriStr.isEmpty()) {
-                Log.w(TAG, "Skipping clip ${json.optString("id", "?")} with empty sourceUri")
+                AppLog.w(TAG, "Skipping clip ${json.optString("id", "?")} with empty sourceUri")
                 return skipped("clip", depth, DropReason.BAD_URI, "no source media reference")
             }
             val parsedSourceUri = try { uriParser(sourceUriStr) } catch (e: Exception) {
-                Log.w(TAG, "Skipping clip with malformed sourceUri: $sourceUriStr", e)
+                AppLog.w(TAG, "Skipping clip with malformed sourceUri: $sourceUriStr", e)
                 return skipped("clip", depth, DropReason.BAD_URI, "malformed source URI")
             } ?: return skipped("clip", depth, DropReason.BAD_URI, "unparseable source URI")
             val sourceDurationMs = json.optLong("sourceDurationMs", 0L)
             if (sourceDurationMs <= 0L) {
-                Log.w(TAG, "Skipping clip ${json.optString("id", "?")} with non-positive sourceDurationMs=$sourceDurationMs")
+                AppLog.w(TAG, "Skipping clip ${json.optString("id", "?")} with non-positive sourceDurationMs=$sourceDurationMs")
                 return skipped("clip", depth, DropReason.MALFORMED, "sourceDurationMs=$sourceDurationMs")
             }
             val rawTrimEnd = json.optLong("trimEndMs", sourceDurationMs)
@@ -1947,7 +1947,7 @@ data class AutoSaveState(
             val fadeOutMs = rawFadeOut.coerceAtMost((clipDurationMs - fadeInMs).coerceAtLeast(0L))
             val proxyUri = json.optString("proxyUri", "").takeIf { it.isNotEmpty() }?.let { uriStr ->
                 try { uriParser(uriStr) } catch (e: Exception) {
-                    Log.w(TAG, "Discarding malformed proxyUri: $uriStr", e); null
+                    AppLog.w(TAG, "Discarding malformed proxyUri: $uriStr", e); null
                 }
             }
             return Clip(
@@ -1978,7 +1978,7 @@ data class AutoSaveState(
                 compoundClips = json.optJSONArray("compoundClips")?.let { arr ->
                     if (depth >= MAX_COMPOUND_CLIP_DEPTH) {
                         if (arr.length() > 0) {
-                            Log.w(TAG, "Dropping nested compound clips at max depth $MAX_COMPOUND_CLIP_DEPTH")
+                            AppLog.w(TAG, "Dropping nested compound clips at max depth $MAX_COMPOUND_CLIP_DEPTH")
                         }
                         return@let emptyList()
                     }
@@ -2366,7 +2366,7 @@ data class AutoSaveState(
                             confidence = safeFloat(w.optDouble("confidence", 1.0), 1f).coerceIn(0f, 1f)
                         )
                     } catch (e: Exception) {
-                        Log.w(TAG, "Skipping corrupt caption word $i", e)
+                        AppLog.w(TAG, "Skipping corrupt caption word $i", e)
                         null
                     }
                 }.sortedBy { it.startTimeMs }
@@ -2438,7 +2438,7 @@ data class AutoSaveState(
                             try {
                                 deserializeMaskPoint(tpPointsArr.getJSONObject(i))
                             } catch (e: Exception) {
-                                Log.w(TAG, "Skipping corrupt text-path point $i", e)
+                                AppLog.w(TAG, "Skipping corrupt text-path point $i", e)
                                 null
                             }
                         },

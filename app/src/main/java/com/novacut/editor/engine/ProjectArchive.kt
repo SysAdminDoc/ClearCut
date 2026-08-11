@@ -3,7 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.Uri
 import android.os.StatFs
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.model.Watermark
@@ -160,7 +160,7 @@ object ProjectArchive {
             }
             File.createTempFile("${targetFile.name}.", ".tmp", parentDir)
         } catch (e: Exception) {
-            Log.e("ProjectArchive", "Archive export failed before writing", e)
+            AppLog.e("ProjectArchive", "Archive export failed before writing", e)
             return@withContext false
         }
 
@@ -230,7 +230,7 @@ object ProjectArchive {
             tempFile.delete()
             throw e
         } catch (e: Exception) {
-            Log.e("ProjectArchive", "Archive export failed", e)
+            AppLog.e("ProjectArchive", "Archive export failed", e)
             tempFile.delete()
             false
         }
@@ -366,7 +366,7 @@ object ProjectArchive {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w("ProjectArchive", "Archive metadata preview failed", e)
+            AppLog.w("ProjectArchive", "Archive metadata preview failed", e)
             PreviewResult(
                 report = blankFailureReport(IdCollisionPolicy.REGENERATE),
                 packagedMedia = 0,
@@ -456,7 +456,7 @@ object ProjectArchive {
                 val schemaVersion = parseSchemaVersion(stateJson)
                 val schemaTooNew = schemaVersion > AutoSaveState.FORMAT_VERSION
                 if (schemaTooNew) {
-                    Log.w(
+                    AppLog.w(
                         "ProjectArchive",
                         "Archive schema v$schemaVersion is newer than supported v${AutoSaveState.FORMAT_VERSION}; refusing best-effort load"
                     )
@@ -582,7 +582,7 @@ object ProjectArchive {
             newlyInstalledFonts.forEach { it.delete() }
             throw e
         } catch (e: Exception) {
-            Log.e("ProjectArchive", "Archive import failed", e)
+            AppLog.e("ProjectArchive", "Archive import failed", e)
             extractionStage?.deleteRecursively()
             if (installedTarget) canonicalTargetDir.deleteRecursively()
             newlyInstalledFonts.forEach { it.delete() }
@@ -769,7 +769,7 @@ object ProjectArchive {
                     extractedEntryCount++
                 }
                 else -> {
-                    Log.w("ProjectArchive", "Skipping unsupported archive entry: ${entry.name}")
+                    AppLog.w("ProjectArchive", "Skipping unsupported archive entry: ${entry.name}")
                     warnings += "Skipped unsupported entry: ${entry.name}"
                 }
             }

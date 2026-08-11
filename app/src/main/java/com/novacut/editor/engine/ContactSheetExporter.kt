@@ -7,7 +7,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.net.Uri
-import android.util.Log
+import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.Clip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -58,7 +58,7 @@ object ContactSheetExporter {
         onProgress: (Float) -> Unit = {}
     ): Boolean = withContext(Dispatchers.IO) {
         if (clips.isEmpty()) {
-            Log.w(TAG, "No clips supplied")
+            AppLog.w(TAG, "No clips supplied")
             return@withContext false
         }
         val cols = columns.coerceIn(1, 8)
@@ -71,7 +71,7 @@ object ContactSheetExporter {
         val sheet = try {
             Bitmap.createBitmap(sheetW, sheetH, Bitmap.Config.ARGB_8888)
         } catch (e: OutOfMemoryError) {
-            Log.e(TAG, "OOM allocating ${sheetW}x${sheetH} contact sheet", e)
+            AppLog.e(TAG, "OOM allocating ${sheetW}x${sheetH} contact sheet", e)
             return@withContext false
         }
 
@@ -119,7 +119,7 @@ object ContactSheetExporter {
                 val thumb = try {
                     extractThumb(clip.sourceUri, midSourceMs * 1000, THUMB_W, THUMB_H)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Thumbnail extraction failed for clip $index", e)
+                    AppLog.w(TAG, "Thumbnail extraction failed for clip $index", e)
                     null
                 }
 
@@ -164,7 +164,7 @@ object ContactSheetExporter {
                 cleanupStillImageOutputFile(partialFile)
                 throw t
             }
-            Log.e(TAG, "Contact sheet render failed", t)
+            AppLog.e(TAG, "Contact sheet render failed", t)
             cleanupStillImageOutputFile(partialFile)
             false
         } finally {
