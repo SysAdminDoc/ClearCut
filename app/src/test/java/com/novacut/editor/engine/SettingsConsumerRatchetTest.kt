@@ -1,5 +1,6 @@
 package com.novacut.editor.engine
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -11,7 +12,8 @@ import java.io.File
  * be read by no consumer at all -- the user changed the setting and nothing happened.
  * This ratchet fails when an [AppSettings] property has no reader outside its own
  * definition and the settings screen that draws it, which is exactly the shape that
- * defect took.
+ * defect took. It cannot detect a consumer that reads a value and then discards or
+ * overrides it; executable behavior tests remain the authority for that defect class.
  */
 class SettingsConsumerRatchetTest {
 
@@ -47,16 +49,34 @@ class SettingsConsumerRatchetTest {
             .map { it to it.readText() }
             .toList()
 
-        val orphans = properties.filter { property ->
-            val reference = Regex("\\.$property\\b")
-            consumers.none { (_, text) -> reference.containsMatchIn(text) }
-        }
+        val orphans = unconsumedSettings(
+            properties = properties,
+            consumerSources = consumers.map { (_, text) -> text },
+        )
 
         assertTrue(
             "These settings persist and render but nothing reads them, so changing them " +
                 "does nothing. Wire each to a consumer or delete the key: $orphans",
             orphans.isEmpty()
         )
+    }
+
+    @Test
+    fun orphanScanFlagsOnlyPropertiesWithoutAConsumer() {
+        val orphans = unconsumedSettings(
+            properties = listOf("used", "unused"),
+            consumerSources = listOf("settings.used"),
+        )
+
+        assertEquals(listOf("unused"), orphans)
+    }
+
+    internal fun unconsumedSettings(
+        properties: List<String>,
+        consumerSources: List<String>,
+    ): List<String> = properties.filter { property ->
+        val reference = Regex("\\.$property\\b")
+        consumerSources.none { source -> reference.containsMatchIn(source) }
     }
 
     private fun appSettingsProperties(source: String): List<String> {

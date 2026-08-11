@@ -24,6 +24,7 @@ import com.novacut.editor.engine.projectStateFingerprint
 import com.novacut.editor.engine.ExportIncidentStore
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportStoragePolicy
+import com.novacut.editor.engine.ExportStoragePreflight
 import com.novacut.editor.engine.FRAME_CAPTURE_DIR_NAME
 import com.novacut.editor.engine.exportStorageFailureMessage
 import com.novacut.editor.engine.FontRegistry
@@ -562,6 +563,25 @@ data class UndoAction(
     val selectedClipIds: Set<String> = emptySet(),
     val aiUsageLedger: List<AiUsageLedger.Entry> = emptyList()
 )
+
+internal data class SnapshotDeletionResult(
+    val state: EditorState,
+    val deleted: ProjectSnapshot,
+)
+
+/** Pure state transition used by the editor and its recoverability tests. */
+internal fun deleteSnapshotFromState(
+    state: EditorState,
+    snapshotId: String,
+): SnapshotDeletionResult? {
+    val snapshot = state.projectSnapshots.firstOrNull { it.id == snapshotId } ?: return null
+    return SnapshotDeletionResult(
+        state = state.copy(
+            projectSnapshots = state.projectSnapshots.filterNot { it.id == snapshotId }
+        ),
+        deleted = snapshot,
+    )
+}
 
 /**
  * Restore only document-edit fields from an undo action. Project snapshots are
@@ -5321,11 +5341,11 @@ class EditorViewModel @Inject constructor(
 
     /** Delete a checkpoint while keeping the latest deletion available for restoration. */
     fun deleteSnapshot(snapshotId: String) {
-        val snapshot = _state.value.projectSnapshots.firstOrNull { it.id == snapshotId } ?: return
-        _state.update { it.copy(projectSnapshots = it.projectSnapshots.filter { s -> s.id != snapshotId }) }
-        _restorableSnapshot.value = snapshot
+        val deletion = deleteSnapshotFromState(_state.value, snapshotId) ?: return
+        _state.value = deletion.state
+        _restorableSnapshot.value = deletion.deleted
         saveProject()
-        showToast(text(R.string.vm_snapshot_deleted_toast, snapshot.label))
+        showToast(text(R.string.vm_snapshot_deleted_toast, deletion.deleted.label))
     }
 
     /** Restore the latest deleted checkpoint, matching the single-item template restore affordance. */
@@ -5982,23 +6002,31 @@ class EditorViewModel @Inject constructor(
                 val ext = config.captureFormat.extension
                 val captureTimeUs = _playheadMs.value * 1000
                 val outputDirectory = java.io.File(appContext.filesDir, FRAME_CAPTURE_DIR_NAME)
-                val storageCheck = ExportStoragePolicy.check(
-                    request = ExportStoragePolicy.request(
-                        durationMs = 0L,
-                        config = config.copy(captureFrameOnly = true),
-                        tracks = _state.value.tracks,
-                    ),
-                    outputDirectory = outputDirectory,
-                    cacheDirectory = appContext.cacheDir,
+                val storageReady = ExportStoragePreflight {
+                    ExportStoragePolicy.check(
+                        request = ExportStoragePolicy.request(
+                            durationMs = 0L,
+                            config = config.copy(captureFrameOnly = true),
+                            tracks = _state.value.tracks,
+                        ),
+                        outputDirectory = outputDirectory,
+                        cacheDirectory = appContext.cacheDir,
+                    )
+                }.run(
+                    onBlocked = { storageCheck ->
+                        val message = appContext.exportStorageFailureMessage(
+                            requireNotNull(storageCheck.failure)
+                        )
+                        _state.update {
+                            it.copyExport { export ->
+                                export.copy(state = ExportState.ERROR, errorMessage = message)
+                            }
+                        }
+                        showToast(message)
+                    },
+                    onReady = {},
                 )
-                if (!storageCheck.canProceed) {
-                    val message = appContext.exportStorageFailureMessage(requireNotNull(storageCheck.failure))
-                    _state.update {
-                        it.copyExport { export -> export.copy(state = ExportState.ERROR, errorMessage = message) }
-                    }
-                    showToast(message)
-                    return@launch
-                }
+                if (!storageReady) return@launch
                 val file = withContext(Dispatchers.IO) {
                     val bitmap = videoEngine.extractThumbnail(clip.sourceUri, captureTimeUs)
                         ?: throw IllegalStateException("No frame available at the current timestamp")

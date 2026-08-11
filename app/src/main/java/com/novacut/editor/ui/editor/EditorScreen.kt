@@ -917,14 +917,10 @@ fun EditorScreen(
             // wrap-content timeline and tool rail leave over, so the rail
             // always hugs the bottom edge with no dead panel space.
             if (hasClips || hasOpenPanel || isImmersivePreview) Box(
-                modifier = (if (isImmersivePreview) {
-                    Modifier.fillMaxSize()
-                } else {
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .heightIn(min = previewMinHeight)
-                })
+                modifier = editorPreviewModifier(
+                    immersivePreview = isImmersivePreview,
+                    previewMinHeight = previewMinHeight,
+                )
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { offset ->
@@ -1242,9 +1238,10 @@ fun EditorScreen(
                                 .keys
                         },
                         engine = viewModel.engine,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = timelineMinHeight, max = timelineMaxHeight)
+                        modifier = Modifier.editorTimelineModifier(
+                            timelineMinHeight = timelineMinHeight,
+                            timelineMaxHeight = timelineMaxHeight,
+                        )
                     )
                 }
 

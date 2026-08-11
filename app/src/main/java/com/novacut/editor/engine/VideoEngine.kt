@@ -595,9 +595,10 @@ class VideoEngine @Inject constructor(
     /**
      * Cached SDR thumbnail path.
      *
-     * R6.10c keeps this on MediaMetadataRetriever per [FrameExtractionPolicy].
-     * Migrate to media3-inspector-frame only for HDR/effect-aware thumbnails or
-     * custom decoder selection.
+     * Cached SDR thumbnails stay on MediaMetadataRetriever. A future HDR,
+     * effect-aware, or custom-decoder thumbnail path should declare and use
+     * Media3's `media3-inspector-frame` module rather than reviving the old
+     * inspector or transformer extractor imports.
      */
     fun extractThumbnail(uri: Uri, timeUs: Long, width: Int = 160, height: Int = 90): Bitmap? {
         val key = "${uri}_${timeUs}_${width}x${height}"
@@ -1978,7 +1979,7 @@ class VideoEngine @Inject constructor(
         val videoEffects = buildList<androidx.media3.common.Effect> {
             val clipTrackedObjects = trackedObjects.filter { it.sourceClipId == clip.id && it.isEnabled }
             for (effect in clip.effects.filter {
-                it.enabled && (!previewMode || it.type != EffectType.BG_REMOVAL)
+                it.enabled && PreviewRenderPolicy.includesEffect(it.type, previewMode)
             }) {
                 EffectBuilder.buildVideoEffect(
                     effect = effect,
@@ -2020,7 +2021,7 @@ class VideoEngine @Inject constructor(
                 add(EffectShaders.blendMode(clip.blendMode, clip.opacity))
             }
 
-            if (!previewMode) {
+            if (PreviewRenderPolicy.includesTransitions(previewMode)) {
                 clip.headTransition?.let {
                     add(EffectBuilder.buildTransitionEffect(it, degradationLedger))
                 }

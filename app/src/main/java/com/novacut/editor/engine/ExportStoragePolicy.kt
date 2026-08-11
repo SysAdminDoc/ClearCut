@@ -274,6 +274,28 @@ object ExportStoragePolicy {
     private fun saturatingAdd(vararg values: Long): Long = values.fold(0L, ::saturatingAdd)
 }
 
+/**
+ * Executes storage preflight before the caller enters its output-producing
+ * branch. Keeping the gate executable makes the ordering observable without
+ * coupling a unit test to the layout of a delegate's source file.
+ */
+internal class ExportStoragePreflight(
+    private val check: () -> ExportStoragePolicy.Check,
+) {
+    fun run(
+        onBlocked: (ExportStoragePolicy.Check) -> Unit,
+        onReady: () -> Unit,
+    ): Boolean {
+        val result = check()
+        if (!result.canProceed) {
+            onBlocked(result)
+            return false
+        }
+        onReady()
+        return true
+    }
+}
+
 fun Context.exportStorageFailureMessage(failure: ExportStoragePolicy.Failure): String {
     val suggestion = when (failure.suggestion) {
         ExportStoragePolicy.Suggestion.VIDEO -> getString(R.string.export_storage_suggestion_video)

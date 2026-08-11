@@ -138,34 +138,61 @@ class ExportStoragePolicyTest {
     }
 
     @Test
-    fun dispatchAndRendererBoundariesCheckBeforeCreatingOutput() {
-        val delegate = locate("app/src/main/java/com/novacut/editor/ui/editor/ExportDelegate.kt").readText()
-        val dispatch = delegate.substringAfter("private suspend fun startExportAsync")
-            .substringBefore("private fun aiDisclosureEntries")
-        val engine = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
-        val transformer = engine.substringAfter("private suspend fun startTransformerWithPolling")
-            .substringBefore("private fun requireStorageImmediatelyBeforeOutput")
-        val viewModel = locate("app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt").readText()
-        val frame = viewModel.substringAfter("fun captureFrame()")
-            .substringBefore("// Project persistence")
+    fun blockedPreflightNeverEntersTheOutputBranch() {
+        val events = mutableListOf<String>()
+        val blocked = ExportStoragePolicy.Check(
+            estimate = ExportStoragePolicy.Estimate(
+                finalOutputBytes = 100L,
+                outputTemporaryBytes = 0L,
+                cacheTemporaryBytes = 0L,
+                unbounded = false,
+                suggestion = ExportStoragePolicy.Suggestion.FRAME,
+            ),
+            requirements = emptyList(),
+            failure = ExportStoragePolicy.Failure.UnknownSize(
+                ExportStoragePolicy.Suggestion.FRAME
+            ),
+        )
 
-        assertTrue(dispatch.indexOf("ExportStoragePolicy.check(") < dispatch.indexOf("markExportStarted()"))
-        assertTrue(transformer.indexOf("requireStorageImmediatelyBeforeOutput") < transformer.indexOf("transformer.start"))
-        assertTrue(frame.indexOf("ExportStoragePolicy.check(") < frame.indexOf("createFrameCaptureOutputFiles"))
+        val ready = ExportStoragePreflight {
+            events += "check"
+            blocked
+        }.run(
+            onBlocked = { events += "blocked" },
+            onReady = { events += "output" },
+        )
+
+        assertFalse(ready)
+        assertEquals(listOf("check", "blocked"), events)
+    }
+
+    @Test
+    fun successfulPreflightEntersOutputOnlyAfterTheCheck() {
+        val events = mutableListOf<String>()
+        val ready = ExportStoragePreflight {
+            events += "check"
+            ExportStoragePolicy.Check(
+                estimate = ExportStoragePolicy.Estimate(
+                    finalOutputBytes = 100L,
+                    outputTemporaryBytes = 0L,
+                    cacheTemporaryBytes = 0L,
+                    unbounded = false,
+                    suggestion = ExportStoragePolicy.Suggestion.FRAME,
+                ),
+                requirements = emptyList(),
+                failure = null,
+            )
+        }.run(
+            onBlocked = { events += "blocked" },
+            onReady = { events += "output" },
+        )
+
+        assertTrue(ready)
+        assertEquals(listOf("check", "output"), events)
     }
 
     private fun sharedProbe(available: Long) = ExportStoragePolicy.SpaceProbe {
         ExportStoragePolicy.SpaceSnapshot("shared-volume", available)
-    }
-
-    private fun locate(relative: String): File {
-        var current = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
-        repeat(8) {
-            val candidate = File(current, relative)
-            if (candidate.isFile) return candidate
-            current = current.parentFile ?: return@repeat
-        }
-        error("Could not locate $relative")
     }
 
     private fun videoRequest(

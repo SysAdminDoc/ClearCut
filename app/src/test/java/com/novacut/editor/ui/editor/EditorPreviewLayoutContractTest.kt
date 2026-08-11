@@ -1,37 +1,60 @@
 package com.novacut.editor.ui.editor
 
-import org.junit.Assert.assertFalse
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertHeightIsEqualTo
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
-import java.io.File
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class EditorPreviewLayoutContractTest {
+    @get:Rule
+    val compose = createComposeRule()
 
     @Test
-    fun `preview owns flexible editor height while timeline remains bounded`() {
-        val source = locate("app/src/main/java/com/novacut/editor/ui/editor/EditorScreen.kt").readText()
-        val previewBlock = source.substring(
-            source.indexOf("// Preview panel with long-press radial menu"),
-            source.indexOf("// Multi-select action bar")
-        )
-        val timelineBlock = source.substring(
-            source.indexOf("// Timeline "),
-            source.indexOf("BottomToolArea(")
-        )
+    fun previewOwnsFlexibleHeightWhileTimelineIsBounded() {
+        compose.setContent {
+            Column(Modifier.size(400.dp)) {
+                Box(
+                    modifier = editorPreviewModifier(
+                        immersivePreview = false,
+                        previewMinHeight = 120.dp,
+                    )
+                        .background(Color.Black)
+                        .testTag("preview")
+                )
+                Box(
+                    modifier = Modifier
+                        .editorTimelineModifier(100.dp, 160.dp)
+                        .height(400.dp)
+                        .background(Color.DarkGray)
+                        .testTag("timeline")
+                )
+                Box(Modifier.height(40.dp).fillMaxSize().testTag("tools"))
+            }
+        }
 
-        assertTrue(previewBlock.contains(".weight(1f)"))
-        assertTrue(previewBlock.contains(".heightIn(min = previewMinHeight)"))
-        assertTrue(
-            timelineBlock.contains(
-                ".heightIn(min = timelineMinHeight, max = timelineMaxHeight)"
-            )
-        )
-        assertFalse(timelineBlock.contains(".weight(1f)"))
-    }
+        compose.onNodeWithTag("preview").assertHeightIsAtLeast(120.dp)
+        compose.onNodeWithTag("timeline").assertHeightIsEqualTo(160.dp)
 
-    private fun locate(relativePath: String): File {
-        return listOf(File(relativePath), File("../$relativePath"))
-            .firstOrNull(File::exists)
-            ?: error("$relativePath not found")
+        val previewHeight = compose.onNodeWithTag("preview").fetchSemanticsNode().boundsInRoot.height
+        val timelineHeight = compose.onNodeWithTag("timeline").fetchSemanticsNode().boundsInRoot.height
+        assertTrue("preview should receive the flexible remainder", previewHeight > timelineHeight)
     }
 }
