@@ -97,6 +97,12 @@ class ProjectDatabaseMigrationTest {
             columns += "deletedAtEpochMs"
             values += DELETED_AT
         }
+        if (version >= 9) {
+            columns += "frameRateNumerator"
+            values += 24
+            columns += "frameRateDenominator"
+            values += 1
+        }
 
         db.execSQL(
             "INSERT INTO projects (${columns.joinToString(", ")}) " +
