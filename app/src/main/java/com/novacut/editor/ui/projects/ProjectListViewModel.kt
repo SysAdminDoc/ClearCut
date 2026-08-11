@@ -22,6 +22,8 @@ import com.novacut.editor.engine.IncomingMediaItem
 import com.novacut.editor.engine.IncomingMediaKind
 import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.ProjectDocumentApplicator
+import com.novacut.editor.engine.ProductHealthLedger
+import com.novacut.editor.engine.HealthEvent
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.TemplateImportFailure
 import com.novacut.editor.engine.TemplateImportResult
@@ -84,7 +86,8 @@ class ProjectListViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
     private val mediaImportEngine: MediaImportEngine,
     private val incomingDocumentImportRouter: IncomingDocumentImportRouter,
-    @ApplicationContext private val appContext: Context
+    @ApplicationContext private val appContext: Context,
+    private val productHealthLedger: ProductHealthLedger,
 ) : ViewModel() {
     private companion object {
         private const val MAX_PROJECT_NAME_CHARS = 80
@@ -312,6 +315,7 @@ class ProjectListViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     projectDao.softDelete(project.id, System.currentTimeMillis())
                 }
+                productHealthLedger.record(HealthEvent.PROJECT_DELETED)
                 showToast(appContext.getString(R.string.project_delete_success, project.name))
             } catch (e: Exception) {
                 AppLog.w("ProjectListVM", "Failed to soft-delete project ${project.id}", e)
@@ -708,6 +712,7 @@ class ProjectListViewModel @Inject constructor(
                             projectDao.getProjectMediaAssetEntities(project.id).map { it.copy(projectId = newId) }
                         )
                         if (autoSave.copyAutoSave(project.id, newId)) {
+                            productHealthLedger.record(HealthEvent.PROJECT_CREATED)
                             true
                         } else {
                             projectDao.deleteById(newId)
@@ -953,6 +958,7 @@ class ProjectListViewModel @Inject constructor(
                 stateWithAssets.mediaAssets.toProjectMediaAssetEntities(project.id)
             )
             if (autoSave.saveNow(ProjectDocumentApplicator.capture(project, stateWithAssets))) {
+                productHealthLedger.record(HealthEvent.PROJECT_CREATED)
                 true
             } else {
                 projectDao.deleteById(project.id)
@@ -975,6 +981,7 @@ class ProjectListViewModel @Inject constructor(
         val purgedIds = projectDao.getTrashedIdsOlderThan(cutoffEpochMs)
         val count = projectDao.purgeTrashedOlderThan(cutoffEpochMs)
         for (id in purgedIds) {
+            productHealthLedger.record(HealthEvent.PROJECT_DELETED)
             runCatching { autoSave.clearRecoveryData(id) }
                 .onFailure { error ->
                     AppLog.w("ProjectListVM", "Purged project $id, but recovery cleanup failed", error)
@@ -986,6 +993,7 @@ class ProjectListViewModel @Inject constructor(
     private suspend fun deleteProjectAndCleanup(project: Project): Boolean {
         return try {
             projectDao.deleteProject(project)
+            productHealthLedger.record(HealthEvent.PROJECT_DELETED)
             runCatching { autoSave.clearRecoveryData(project.id) }
                 .onFailure { error ->
                     AppLog.w("ProjectListVM", "Deleted project ${project.id}, but recovery cleanup failed", error)

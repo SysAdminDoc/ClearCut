@@ -46,7 +46,9 @@ class CrashRecordStoreTest {
         assertFalse(raw.contains("content://"))
         assertFalse(raw.contains("/storage/"))
         assertFalse(raw.contains("private-project"))
-        assertFalse(raw.contains("failed while reading"))
+        val cause = json.getJSONObject("throwable").getJSONArray("causes").getJSONObject(0)
+        assertEquals("failed while reading <redacted>", cause.getString("message"))
+        assertTrue(cause.getBoolean("messagePresent"))
         assertTrue(raw.contains("messageSha256"))
     }
 

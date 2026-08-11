@@ -286,6 +286,7 @@ class SettingsViewModel @Inject constructor(
                 val bundle = diagnosticExportEngine.exportDiagnosticBundle(
                     modelRegistry = modelRegistry,
                     timelineShape = timelineShape,
+                    permissionSnapshots = DiagnosticExportEngine.collectRuntimePermissionSnapshots(appContext),
                     includeRawExportErrorText = settingsSnapshot.includeDiagnosticRawErrorText
                 )
                 _diagnosticExport.update {

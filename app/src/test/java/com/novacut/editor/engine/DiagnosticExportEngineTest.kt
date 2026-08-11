@@ -213,6 +213,7 @@ class DiagnosticExportBundlePrivacyTest {
             processExitRecorder = ProcessExitRecorder(context),
             settingsResetReportStore = SettingsResetReportStore(context),
             exportIncidentStore = incidentStore,
+            productHealthLedger = ProductHealthLedger(context),
         )
 
         val zip = engine.exportDiagnosticBundle(
@@ -224,6 +225,7 @@ class DiagnosticExportBundlePrivacyTest {
                     sourceUrl = "https://example.invalid/model?token=private-token",
                 )
             ),
+            permissionSnapshots = DiagnosticExportEngine.collectRuntimePermissionSnapshots(context),
             now = 1_718_200_000_000,
             retainCount = 1,
         )
@@ -247,6 +249,17 @@ class DiagnosticExportBundlePrivacyTest {
                     .bufferedReader(Charsets.UTF_8)
                     .use { it.readText() }
                 assertTrue(deviceInfo.contains("fingerprint: <redacted>"))
+
+                val permissionState = archive.getInputStream(archive.getEntry("permission-state.txt"))
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+                assertTrue(permissionState.contains("android.permission.RECORD_AUDIO"))
+                assertTrue(permissionState.contains("declared="))
+
+                val health = archive.getInputStream(archive.getEntry("product-health-ledger.json"))
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+                assertTrue(health.contains("\"exportAttempts\""))
             }
         } finally {
             zip.delete()
@@ -295,6 +308,7 @@ class DiagnosticExportBundlePrivacyTest {
             processExitRecorder = ProcessExitRecorder(context),
             settingsResetReportStore = SettingsResetReportStore(context),
             exportIncidentStore = incidentStore,
+            productHealthLedger = ProductHealthLedger(context),
         )
         val target = temp.newFile("privacy-diag.zip")
 

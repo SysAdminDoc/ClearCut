@@ -81,8 +81,20 @@ class ProductHealthLedger @Inject constructor(
         }
     }
 
-    suspend fun toJson(): JSONObject {
-        val data = read()
+    suspend fun toJson(): JSONObject = mutex.withLock {
+        ledgerJson(loadOrDefault())
+    }
+
+    /**
+     * Return a consistent, bounded snapshot for a synchronous diagnostics ZIP
+     * writer. The ledger file is replaced atomically, so this never observes a
+     * partially-written JSON document.
+     */
+    fun snapshotJson(): JSONObject = ledgerJson(loadOrDefault())
+
+    fun diagnosticJson(): String = snapshotJson().toString(2)
+
+    private fun ledgerJson(data: LedgerData): JSONObject {
         return JSONObject().apply {
             put("exportAttempts", data.exportAttempts)
             put("exportCompleted", data.exportCompleted)

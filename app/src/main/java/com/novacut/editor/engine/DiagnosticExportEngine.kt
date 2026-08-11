@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.media.MediaCodecList
 import android.os.Build
+import android.content.pm.PackageManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -44,6 +45,8 @@ import javax.inject.Singleton
  *                           counts with bundle-scoped project pseudonyms
  *  - `permission-state.txt` — optional runtime permission state snapshots,
  *                           including local-network streaming permissions
+ *  - `product-health-ledger.json` — bounded aggregate lifecycle, export,
+ *                           model, project, and AI counters
  *  - `logcat-tail.txt`    — last 200 logcat lines from the current process,
  *                           with PII / URI patterns redacted before write
  *  - `manifest.txt`       — ordered file list with sizes
@@ -79,6 +82,7 @@ class DiagnosticExportEngine @Inject constructor(
     private val processExitRecorder: ProcessExitRecorder,
     private val settingsResetReportStore: SettingsResetReportStore,
     private val exportIncidentStore: ExportIncidentStore,
+    private val productHealthLedger: ProductHealthLedger,
 ) {
 
     /** Snapshot summary of a single model from [ModelDownloadManager]. */
@@ -93,6 +97,8 @@ class DiagnosticExportEngine @Inject constructor(
         val permissionName: String,
         val granted: Boolean,
         val context: String,
+        val declared: Boolean = true,
+        val applicable: Boolean = true,
     )
 
     /**
@@ -198,14 +204,18 @@ class DiagnosticExportEngine @Inject constructor(
         now: Long = System.currentTimeMillis(),
         retainCount: Int = 3,
         includeRawExportErrorText: Boolean = false,
-    ): File = withContext(Dispatchers.IO) {
-        val outDir = File(context.filesDir, DIAGNOSTIC_SHARE_DIR).apply { mkdirs() }
-        val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
-            .format(Date(now))
-        val zipFile = File(outDir, "diagnostic-$stamp.zip")
-        writeBundle(zipFile, modelRegistry, timelineShape, permissionSnapshots, now, includeRawExportErrorText)
-        pruneOldBundles(outDir, retainCount)
-        zipFile
+    ): File {
+        val zipFile = withContext(Dispatchers.IO) {
+            val outDir = File(context.filesDir, DIAGNOSTIC_SHARE_DIR).apply { mkdirs() }
+            val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
+                .format(Date(now))
+            val output = File(outDir, "diagnostic-$stamp.zip")
+            writeBundle(output, modelRegistry, timelineShape, permissionSnapshots, now, includeRawExportErrorText)
+            pruneOldBundles(outDir, retainCount)
+            output
+        }
+        productHealthLedger.record(HealthEvent.DIAGNOSTIC_ZIP_CREATED)
+        return zipFile
     }
 
     /**
@@ -247,6 +257,7 @@ class DiagnosticExportEngine @Inject constructor(
         exportIncidentStore.buildDiagnosticJson(includeRawExportErrorText)?.let { incidentsJson ->
             entries[ExportIncidentStore.BUNDLE_ENTRY] = incidentsJson.toByteArray(Charsets.UTF_8)
         }
+        entries["product-health-ledger.json"] = productHealthLedger.diagnosticJson().toByteArray(Charsets.UTF_8)
         entries["logcat-tail.txt"] = buildLogcatTail().toByteArray(Charsets.UTF_8)
         entries["manifest.txt"] = buildManifest(entries).toByteArray(Charsets.UTF_8)
         target.outputStream().use { fos ->
@@ -386,10 +397,64 @@ class DiagnosticExportEngine @Inject constructor(
             snapshots.sortedBy { it.permissionName }.forEach { snapshot ->
                 append(snapshot.permissionName)
                 append("; granted=").append(snapshot.granted)
+                append("; declared=").append(snapshot.declared)
+                append("; applicable=").append(snapshot.applicable)
                 append("; context=").append(redactSensitive(snapshot.context))
                 appendLine()
             }
         }
+
+        /** Collect only permissions relevant to ClearCut's runtime feature gates. */
+        @Suppress("DEPRECATION")
+        fun collectRuntimePermissionSnapshots(context: Context): List<PermissionSnapshot> {
+            val declared = runCatching {
+                context.packageManager
+                    .getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+                    .requestedPermissions
+                    ?.toSet()
+                    .orEmpty()
+            }.getOrDefault(emptySet())
+            val specs = listOf(
+                PermissionSpec(
+                    permissionName = android.Manifest.permission.RECORD_AUDIO,
+                    minimumSdk = Build.VERSION_CODES.M,
+                    context = "voiceover and audio analysis",
+                ),
+                PermissionSpec(
+                    permissionName = "android.permission.POST_NOTIFICATIONS",
+                    minimumSdk = Build.VERSION_CODES.TIRAMISU,
+                    context = "export progress notifications",
+                ),
+                PermissionSpec(
+                    permissionName = LocalNetworkPermissionPolicy.ANDROID_16_PERMISSION,
+                    minimumSdk = LocalNetworkPermissionPolicy.ANDROID_16_API,
+                    context = "Android 16 local-network streaming gate",
+                ),
+                PermissionSpec(
+                    permissionName = LocalNetworkPermissionPolicy.ANDROID_17_PERMISSION,
+                    minimumSdk = LocalNetworkPermissionPolicy.ANDROID_17_API,
+                    context = "Android 17 local-network streaming gate",
+                ),
+            )
+            return specs.map { spec ->
+                val applicable = Build.VERSION.SDK_INT >= spec.minimumSdk
+                val isDeclared = spec.permissionName in declared
+                PermissionSnapshot(
+                    permissionName = spec.permissionName,
+                    granted = applicable && isDeclared &&
+                        context.checkSelfPermission(spec.permissionName) == PackageManager.PERMISSION_GRANTED,
+                    context = spec.context,
+                    declared = isDeclared,
+                    applicable = applicable,
+                )
+            }
+        }
+
+        private data class PermissionSpec(
+            val permissionName: String,
+            val minimumSdk: Int,
+            val context: String,
+        )
 
         /**
          * Build a [TimelineShape] summary from a list of project tracks. Pure

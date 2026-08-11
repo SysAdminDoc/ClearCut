@@ -29,6 +29,7 @@ import com.novacut.editor.engine.FRAME_CAPTURE_DIR_NAME
 import com.novacut.editor.engine.exportStorageFailureMessage
 import com.novacut.editor.engine.FontRegistry
 import com.novacut.editor.engine.ProjectAutoSave
+import com.novacut.editor.engine.ProductHealthLedger
 import com.novacut.editor.engine.ProjectArchive
 import com.novacut.editor.engine.ProjectDocument
 import com.novacut.editor.engine.ProjectDocumentApplicator
@@ -698,7 +699,8 @@ class EditorViewModel @Inject constructor(
     private val ffmpegEngine: com.novacut.editor.engine.FFmpegEngine,
     private val editorCoordinatorSet: EditorCoordinatorSet,
     @ApplicationContext private val appContext: Context,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val productHealthLedger: ProductHealthLedger,
 ) : ViewModel() {
 
     private val documentCoordinator get() = editorCoordinatorSet.document
@@ -818,7 +820,8 @@ class EditorViewModel @Inject constructor(
         videoEngine = videoEngine,
         recalculateDuration = ::recalculateDuration,
         settingsRepo = settingsRepo,
-        recordAiUsage = ::recordAiUsage
+        recordAiUsage = ::recordAiUsage,
+        productHealthLedger = productHealthLedger
     )
 
     val clipEditingDelegate = ClipEditingDelegate(

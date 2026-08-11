@@ -6,6 +6,7 @@ import android.net.NetworkCapabilities
 import com.novacut.editor.engine.AppLog
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.BufferedInputStream
@@ -22,7 +23,8 @@ import kotlin.coroutines.coroutineContext
 
 @Singleton
 class ModelDownloadManager @Inject constructor(
-    @ApplicationContext private val appContext: Context
+    @ApplicationContext private val appContext: Context,
+    private val productHealthLedger: ProductHealthLedger? = null,
 ) {
 
     data class ModelFile(
@@ -63,68 +65,78 @@ class ModelDownloadManager @Inject constructor(
         readTimeoutMs: Int = 60_000,
         wifiOnly: Boolean = false,
         onProgress: (Float) -> Unit = {}
-    ): DownloadResult = withContext(Dispatchers.IO) {
-        require(files.isNotEmpty()) { "At least one model file is required" }
-        validateRequests(files)
-        ensureStorageAvailable(files)
+    ): DownloadResult {
+        productHealthLedger?.record(HealthEvent.MODEL_DOWNLOAD_ATTEMPT)
+        return try {
+            withContext(Dispatchers.IO) {
+                require(files.isNotEmpty()) { "At least one model file is required" }
+                validateRequests(files)
+                ensureStorageAvailable(files)
 
-        val needsNetwork = files.any {
-            !isValidModelFile(
-                file = it.targetFile,
-                minimumBytes = it.minimumBytes,
-                expectedSha256 = it.sha256,
-                requireChecksum = it.checksumRequired,
-            )
-        }
-        if (needsNetwork && wifiOnly && isMeteredNetwork()) {
-            throw MeteredNetworkException(
-                "Wi-Fi-only is enabled and the active network is metered or unavailable"
-            )
-        }
+                val needsNetwork = files.any {
+                    !isValidModelFile(
+                        file = it.targetFile,
+                        minimumBytes = it.minimumBytes,
+                        expectedSha256 = it.sha256,
+                        requireChecksum = it.checksumRequired,
+                    )
+                }
+                if (needsNetwork && wifiOnly && isMeteredNetwork()) {
+                    throw MeteredNetworkException(
+                        "Wi-Fi-only is enabled and the active network is metered or unavailable"
+                    )
+                }
 
-        var completedEstimateBytes = 0L
-        var downloadedBytes = 0L
-        var reusedBytes = 0L
-        var filesReady = 0
-        val safeTotal = totalEstimateBytes.coerceAtLeast(1L)
+                var completedEstimateBytes = 0L
+                var downloadedBytes = 0L
+                var reusedBytes = 0L
+                var filesReady = 0
+                val safeTotal = totalEstimateBytes.coerceAtLeast(1L)
 
-        files.forEach { request ->
-            coroutineContext.ensureActive()
-            val estimatedBytes = request.estimatedBytes.coerceAtLeast(request.minimumBytes)
-            if (isValidModelFile(
-                    file = request.targetFile,
-                    minimumBytes = request.minimumBytes,
-                    expectedSha256 = request.sha256,
-                    requireChecksum = request.checksumRequired,
+                files.forEach { request ->
+                    coroutineContext.ensureActive()
+                    val estimatedBytes = request.estimatedBytes.coerceAtLeast(request.minimumBytes)
+                    if (isValidModelFile(
+                            file = request.targetFile,
+                            minimumBytes = request.minimumBytes,
+                            expectedSha256 = request.sha256,
+                            requireChecksum = request.checksumRequired,
+                        )
+                    ) {
+                        completedEstimateBytes = saturatingAdd(completedEstimateBytes, estimatedBytes)
+                        reusedBytes = saturatingAdd(reusedBytes, request.targetFile.length())
+                        filesReady++
+                        onProgress((completedEstimateBytes.toFloat() / safeTotal).coerceIn(0f, 0.99f))
+                        return@forEach
+                    }
+
+                    val result = downloadOne(
+                        request = request,
+                        completedEstimateBytes = completedEstimateBytes,
+                        safeTotalBytes = safeTotal,
+                        connectTimeoutMs = connectTimeoutMs,
+                        readTimeoutMs = readTimeoutMs,
+                        onProgress = onProgress
+                    )
+                    downloadedBytes = saturatingAdd(downloadedBytes, result.actualBytes)
+                    completedEstimateBytes = saturatingAdd(completedEstimateBytes, estimatedBytes)
+                    filesReady++
+                    onProgress((completedEstimateBytes.toFloat() / safeTotal).coerceIn(0f, 0.99f))
+                }
+
+                onProgress(1f)
+                DownloadResult(
+                    downloadedBytes = downloadedBytes,
+                    reusedBytes = reusedBytes,
+                    filesReady = filesReady
                 )
-            ) {
-                completedEstimateBytes = saturatingAdd(completedEstimateBytes, estimatedBytes)
-                reusedBytes = saturatingAdd(reusedBytes, request.targetFile.length())
-                filesReady++
-                onProgress((completedEstimateBytes.toFloat() / safeTotal).coerceIn(0f, 0.99f))
-                return@forEach
             }
-
-            val result = downloadOne(
-                request = request,
-                completedEstimateBytes = completedEstimateBytes,
-                safeTotalBytes = safeTotal,
-                connectTimeoutMs = connectTimeoutMs,
-                readTimeoutMs = readTimeoutMs,
-                onProgress = onProgress
-            )
-            downloadedBytes = saturatingAdd(downloadedBytes, result.actualBytes)
-            completedEstimateBytes = saturatingAdd(completedEstimateBytes, estimatedBytes)
-            filesReady++
-            onProgress((completedEstimateBytes.toFloat() / safeTotal).coerceIn(0f, 0.99f))
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            productHealthLedger?.record(HealthEvent.MODEL_DOWNLOAD_FAILED)
+            throw error
         }
-
-        onProgress(1f)
-        DownloadResult(
-            downloadedBytes = downloadedBytes,
-            reusedBytes = reusedBytes,
-            filesReady = filesReady
-        )
     }
 
     /**

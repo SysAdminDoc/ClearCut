@@ -1,8 +1,10 @@
 package com.novacut.editor
 
 import android.app.Application
+import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.os.Bundle
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import com.novacut.editor.BuildConfig
@@ -41,6 +43,21 @@ class ClearCutApp : Application(), Configuration.Provider {
 
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private val activityLifecycleCallbacks = object : ActivityLifecycleCallbacks {
+        override fun onActivityResumed(activity: Activity) {
+            applicationScope.launch {
+                productHealthLedger.record(HealthEvent.WARM_START)
+            }
+        }
+
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+        override fun onActivityStarted(activity: Activity) = Unit
+        override fun onActivityPaused(activity: Activity) = Unit
+        override fun onActivityStopped(activity: Activity) = Unit
+        override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+        override fun onActivityDestroyed(activity: Activity) = Unit
+    }
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
@@ -57,6 +74,7 @@ class ClearCutApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         DebugRuntimePolicy.install()
+        registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
         CrashRecordStore(this).installGlobalHandler(VERSION)
         processExitRecorder.recordStartupExitReasons()
         createNotificationChannels()
@@ -69,6 +87,7 @@ class ClearCutApp : Application(), Configuration.Provider {
     }
 
     override fun onTerminate() {
+        unregisterActivityLifecycleCallbacks(activityLifecycleCallbacks)
         applicationScope.cancel()
         super.onTerminate()
     }

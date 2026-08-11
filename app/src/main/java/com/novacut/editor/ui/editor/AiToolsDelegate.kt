@@ -49,7 +49,8 @@ class AiToolsDelegate(
     private val videoEngine: VideoEngine,
     private val recalculateDuration: (EditorState) -> EditorState,
     private val settingsRepo: SettingsRepository,
-    private val recordAiUsage: (AiUsageLedger.Entry) -> Unit
+    private val recordAiUsage: (AiUsageLedger.Entry) -> Unit,
+    private val productHealthLedger: ProductHealthLedger? = null,
 ) {
     private var aiJob: Job? = null
 
@@ -329,6 +330,7 @@ class AiToolsDelegate(
                     showToast(text(R.string.ai_clip_missing_toast))
                     return@launch
                 }
+                productHealthLedger?.record(HealthEvent.AI_TOOL_INVOKED)
                 when (toolId) {
                     "scene_detect" -> runSceneDetect(currentClip)
                     "auto_captions" -> runAutoCaptions(currentClip)

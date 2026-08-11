@@ -290,6 +290,10 @@ class VideoEngine @Inject constructor(
     private val preservedCancelledOutputPaths = ConcurrentHashMap.newKeySet<String>()
     private val healthScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private fun recordHealth(event: HealthEvent) {
+        healthScope.launch { productHealthLedger.record(event) }
+    }
+
     private val mediaCharacteristicsCache = ConcurrentHashMap<String, MediaCharacteristics>()
 
     private val _exportProgress = MutableStateFlow(0f)
@@ -362,6 +366,7 @@ class VideoEngine @Inject constructor(
     private fun failExport(cause: ExportFailureCause, message: String) {
         _exportErrorMessage.value = message
         _exportFailureCause.value = cause
+        recordHealth(HealthEvent.ExportFailed(cause.name))
     }
 
     private fun publishRenderDegradation(outcome: RenderDegradationOutcome) {
@@ -725,6 +730,7 @@ class VideoEngine @Inject constructor(
             activeExportOutputFile = outputFile
             activeResumeSourceFile = resumeFromFile
         }
+        recordHealth(HealthEvent.EXPORT_ATTEMPT)
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
@@ -1021,6 +1027,7 @@ class VideoEngine @Inject constructor(
             activeExportOutputFile = outputFile
             activeResumeSourceFile = null
         }
+        recordHealth(HealthEvent.EXPORT_ATTEMPT)
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
@@ -1291,6 +1298,7 @@ class VideoEngine @Inject constructor(
             _exportState.value = ExportState.EXPORTING
             activeExportOutputFile = outputFile
         }
+        recordHealth(HealthEvent.EXPORT_ATTEMPT)
         _exportProgress.value = 0f
         _exportErrorMessage.value = null
         _exportFailureCause.value = null
@@ -2715,6 +2723,7 @@ class VideoEngine @Inject constructor(
                         _exportProgress.value = 1f
                         activeExportOutputFile = null
                     }
+                    recordHealth(HealthEvent.EXPORT_COMPLETE)
                     onComplete()
                 }
 
@@ -2872,6 +2881,7 @@ class VideoEngine @Inject constructor(
             if (_exportState.value != ExportState.EXPORTING) return null
             AppLog.d(TAG, "Cancelling export")
             _exportState.value = ExportState.CANCELLED
+            recordHealth(HealthEvent.EXPORT_CANCELLED)
             activeTransformer?.let(::cancelTransformerAndAwaitTermination)
             activeTransformer = null
             val outputFile = activeExportOutputFile

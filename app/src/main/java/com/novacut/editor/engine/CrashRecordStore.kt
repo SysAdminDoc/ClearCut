@@ -136,6 +136,10 @@ class CrashRecordStore private constructor(
                 JSONObject()
                     .put("className", sanitizeText(current.javaClass.name, MAX_SHORT_TEXT_CHARS))
                     .put("messagePresent", current.message != null)
+                    .put(
+                        "message",
+                        current.message?.let { sanitizeText(it, MAX_LONG_TEXT_CHARS) } ?: JSONObject.NULL,
+                    )
                     .put("messageSha256", current.message?.let { sha256Hex(it) } ?: JSONObject.NULL)
                     .put("stackTrace", buildStackTraceJson(current.stackTrace))
             )
