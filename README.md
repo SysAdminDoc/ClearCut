@@ -552,7 +552,7 @@ For a reproducible headless API 37 lane, provision and launch the local
 
 ```powershell
 python scripts\ensure_api37_avd.py --launch
-.\gradlew.bat :app:connectedDebugAndroidTest
+.\gradlew.bat :app:connectedQaAndroidTest
 ```
 
 The launcher uses `-no-window` and `-no-audio`, so it does not open a window on
