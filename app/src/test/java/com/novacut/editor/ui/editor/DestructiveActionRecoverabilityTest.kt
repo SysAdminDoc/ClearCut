@@ -89,4 +89,63 @@ class DestructiveActionRecoverabilityTest {
             File(context.filesDir, "templates/trash/$templateId.json").delete()
         }
     }
+
+    @Test
+    fun deletingManyTemplatesKeepsTrashBounded() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = TemplateManager(context)
+        val templateDir = File(context.filesDir, "templates")
+        val trashDir = File(templateDir, "trash")
+        val templateIds = (0..7).map { index -> "bounded-template-$index" }
+
+        try {
+            templateIds.forEach { templateId ->
+                File(templateDir, "$templateId.json").apply {
+                    parentFile?.mkdirs()
+                    writeText("{}")
+                }
+                assertTrue(manager.deleteTemplate(templateId))
+            }
+
+            val trashedFiles = trashDir.listFiles { file ->
+                file.isFile && file.extension == "json"
+            }.orEmpty()
+            assertTrue(
+                "template trash grew to ${trashedFiles.size} files",
+                trashedFiles.size <= 5
+            )
+        } finally {
+            templateIds.forEach { templateId ->
+                File(templateDir, "$templateId.json").delete()
+                File(trashDir, "$templateId.json").delete()
+            }
+        }
+    }
+
+    @Test
+    fun deletingTemplatePrunesExpiredTrashButKeepsCurrentRestoreOffer() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = TemplateManager(context)
+        val templateDir = File(context.filesDir, "templates")
+        val trashDir = File(templateDir, "trash")
+        val staleFile = File(trashDir, "stale-template.json")
+        val currentId = "current-template"
+        val currentFile = File(templateDir, "$currentId.json")
+
+        try {
+            staleFile.parentFile?.mkdirs()
+            staleFile.writeText("{}")
+            staleFile.setLastModified(System.currentTimeMillis() - 31L * 24 * 60 * 60 * 1_000)
+            currentFile.parentFile?.mkdirs()
+            currentFile.writeText("{}")
+
+            assertTrue(manager.deleteTemplate(currentId))
+            assertFalse(staleFile.exists())
+            assertTrue(manager.isTemplateRestorable(currentId))
+        } finally {
+            currentFile.delete()
+            File(trashDir, "$currentId.json").delete()
+            staleFile.delete()
+        }
+    }
 }

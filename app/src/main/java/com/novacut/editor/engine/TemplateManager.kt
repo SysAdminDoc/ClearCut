@@ -65,6 +65,8 @@ class TemplateManager @Inject constructor(
         private const val MAX_TEMPLATE_NAME_CHARS = 80
         private const val MAX_TEMPLATE_DESCRIPTION_CHARS = 2_000
         private const val MAX_TEMPLATE_TRACK_TYPES = 16
+        private const val MAX_TRASHED_TEMPLATE_FILES = 5
+        private const val TEMPLATE_TRASH_RETENTION_MS = 30L * 24 * 60 * 60 * 1_000
     }
 
     private val templateDir = File(context.filesDir, "templates")
@@ -145,7 +147,8 @@ class TemplateManager @Inject constructor(
      * and no second copy — the confirm dialog was the only thing standing between a
      * mis-tap and permanent loss. The file is now moved aside so [restoreTemplate] can
      * put it back; [listTemplates] never looks in the trash, so it disappears from the
-     * UI exactly as before.
+     * UI exactly as before. Trash is bounded to a small recent window so recoverability
+     * does not turn into an unbounded private-storage leak.
      */
     fun deleteTemplate(id: String): Boolean {
         val templateFile = templateFileForId(id) ?: return false
@@ -155,7 +158,20 @@ class TemplateManager @Inject constructor(
         if (trashFile.exists()) trashFile.delete()
         // A failed rename must not silently leave the template in place while the UI
         // reports it gone, so fall back to the destructive delete rather than lying.
-        return templateFile.renameTo(trashFile) || templateFile.delete()
+        val movedToTrash = templateFile.renameTo(trashFile)
+        val deleted = movedToTrash || templateFile.delete()
+        if (deleted) {
+            if (movedToTrash) {
+                // A rename preserves the source file's timestamp, which may describe
+                // when the template was authored rather than when it entered trash.
+                // Refresh it so the age policy measures recoverability, not template age.
+                trashFile.setLastModified(System.currentTimeMillis())
+                pruneTemplateTrash(protectedFile = trashFile)
+            } else {
+                pruneTemplateTrash()
+            }
+        }
+        return deleted
     }
 
     /** Put a trashed template back. Returns false when nothing is there to restore. */
@@ -173,6 +189,35 @@ class TemplateManager @Inject constructor(
     private fun trashFileForId(id: String): File? {
         val templateFile = templateFileForId(id) ?: return null
         return File(File(templateDir, "trash"), templateFile.name)
+    }
+
+    /** Keep recoverable templates bounded by both count and time since deletion. */
+    private fun pruneTemplateTrash(protectedFile: File? = null) {
+        val trashDir = File(templateDir, "trash")
+        if (!trashDir.isDirectory) return
+        val protectedPath = protectedFile?.absolutePath
+        val cutoff = System.currentTimeMillis() - TEMPLATE_TRASH_RETENTION_MS
+        val files = trashDir.listFiles { file ->
+            file.isFile && file.extension == "json"
+        } ?: return
+
+        files.filter { file ->
+            file.absolutePath != protectedPath && file.lastModified() < cutoff
+        }.forEach { file ->
+            runCatching { file.delete() }
+        }
+
+        val remaining = trashDir.listFiles { file ->
+            file.isFile && file.extension == "json"
+        } ?: return
+        remaining
+            .sortedWith(
+                compareByDescending<File> { it.absolutePath == protectedPath }
+                    .thenByDescending { it.lastModified() }
+                    .thenByDescending { it.name }
+            )
+            .drop(MAX_TRASHED_TEMPLATE_FILES)
+            .forEach { file -> runCatching { file.delete() } }
     }
 
     fun loadTemplateState(template: UserTemplate): TemplateStateLoadResult? {
