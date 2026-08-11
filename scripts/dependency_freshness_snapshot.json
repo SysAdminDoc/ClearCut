@@ -315,18 +315,20 @@
     },
     "mediapipe": {
       "coordinate": "com.google.mediapipe:tasks-vision",
-      "pinnedVersion": "0.10.35",
+      "pinnedVersion": "1.0.0",
       "latestStable": "1.0.0",
       "source": "https://github.com/google-ai-edge/mediapipe/releases",
       "metadataSource": "https://dl.google.com/dl/android/maven2/com/google/mediapipe/tasks-vision/maven-metadata.xml",
       "reviewedOn": "2026-08-03",
-      "state": "held",
-      "reason": "MediaPipe 1.0.0 is a new stable artifact line; the existing 0.10.35 background-removal and face/pose sessions have not been revalidated against its graph and delegate behavior.",
-      "unblockCondition": "Run the MediaPipe session/output fixture review, then run `python scripts/probe_dependency_upgrade.py --dependency mediapipe --version 1.0.0` before changing this pin.",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
       "compatibilityProbe": {
-        "status": "not-run",
-        "version": null,
-        "command": "python scripts/probe_dependency_upgrade.py --dependency mediapipe --version 1.0.0"
+        "status": "passed",
+        "version": "1.0.0",
+        "verifiedOn": "2026-08-11",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency mediapipe --version 1.0.0",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
       }
     },
     "protobufJavalite": {

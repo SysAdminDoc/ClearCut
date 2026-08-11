@@ -20,7 +20,7 @@
     {
       "id": "mediapipe",
       "label": "MediaPipe",
-      "version": "0.10.35",
+      "version": "1.0.0",
       "coordinate": "com.google.mediapipe:tasks-vision",
       "catalogKeys": ["mediapipe"],
       "purpose": "Selfie segmentation and smart reframe",

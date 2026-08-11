@@ -20,7 +20,7 @@ coil = "3.5.0"
 datastore = "1.2.1"
 work = "2.11.2"
 onnxruntime = "1.26.0"
-mediapipe = "0.10.35"
+mediapipe = "1.0.0"
 # Transitive of MediaPipe tasks-core; MediaPipe still pulls 4.26.1, which carries
 # GHSA-735f-pc8j-v9w8 (malformed-input DoS). Constrained upward in app/build.gradle.kts.
 protobufJavalite = "4.27.5"

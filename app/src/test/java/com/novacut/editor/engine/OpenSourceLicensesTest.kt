@@ -37,6 +37,7 @@ class OpenSourceLicensesTest {
         }
         assertEquals("5.4.0", OpenSourceLicenses.noticeForArtifact("com.squareup.okhttp3:okhttp")?.version)
         assertEquals("3.5.0", OpenSourceLicenses.noticeForArtifact("io.coil-kt.coil3:coil-compose")?.version)
+        assertEquals("1.0.0", OpenSourceLicenses.noticeForArtifact("com.google.mediapipe:tasks-vision")?.version)
         assertEquals("2.60.1", OpenSourceLicenses.noticeForArtifact("com.google.dagger:hilt-android")?.version)
     }
 

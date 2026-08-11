@@ -465,7 +465,7 @@ Planning files are local-only in the development checkout:
 | Noise Reduction | DeepFilterNet 3 (android-deepfilternet 0.0.8) + spectral-gate fallback |
 | Beat Detection | Spectral flux onset detection (aubio NDK ready) |
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
-| Segmentation | MediaPipe Tasks Vision 0.10.35 |
+| Segmentation | MediaPipe Tasks Vision 1.0.0 |
 | Video Matting | Planned (RobustVideoMatting, ONNX Runtime) |
 | Object Removal | LaMa-Dilated (ONNX Runtime) -- selected rectangle, ellipse, or freehand masks are rendered into still/video outputs |
 | Upscaling | Planned (Real-ESRGAN) |
@@ -695,7 +695,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
 | ONNX Runtime | 1.26.0 | Whisper ASR and LaMa inpainting |
-| MediaPipe | 0.10.35 | Selfie segmentation and smart reframe |
+| MediaPipe | 1.0.0 | Selfie segmentation and smart reframe |
 | Lottie Compose | 6.7.1 | Animated title templates |
 | OkHttp | 5.4.0 | Model downloads and future opt-in provider calls |
 | Media3 | 1.11.0 | Transformer, ExoPlayer, effects, and muxing |

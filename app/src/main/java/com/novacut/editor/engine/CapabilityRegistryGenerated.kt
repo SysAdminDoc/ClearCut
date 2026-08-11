@@ -130,7 +130,7 @@ internal object CapabilityRegistryGenerated {
         PublicDependencyRecord(
             id = "mediapipe",
             label = "MediaPipe",
-            version = "0.10.35",
+            version = "1.0.0",
             coordinate = "com.google.mediapipe:tasks-vision",
             catalogKeys = listOf("mediapipe"),
             purpose = "Selfie segmentation and smart reframe",
@@ -242,7 +242,7 @@ internal object CapabilityRegistryGenerated {
         ),
         OpenSourceLicenseNotice(
             name = "MediaPipe Tasks Vision",
-            version = "0.10.35",
+            version = "1.0.0",
             artifact = "com.google.mediapipe:tasks-vision",
             licenseName = "The Apache Software License, Version 2.0",
             licenseText = "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",
