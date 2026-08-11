@@ -1,6 +1,8 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import android.net.Uri
 import android.util.Log
 import com.arthenica.ffmpegkit.FFmpegKit
@@ -11,6 +13,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.ByteBuffer
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -152,20 +155,41 @@ class FFmpegEngine @Inject constructor(
         if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         if (framePattern.isBlank()) return@withContext false
         outputFile.parentFile?.mkdirs()
-        val encoder = preferredIntermediateEncoder()
-        executeArguments(
-            buildList {
-                addAll(listOf("-y", "-framerate", fps.coerceIn(1, 120).toString()))
-                addAll(listOf("-i", framePattern))
-                addAll(listOf("-i", ffmpegInput(inputUri)))
-                addAll(listOf("-map", "0:v:0", "-map", "1:a:0?"))
-                addAll(listOf("-c:v", encoder.ffmpegName))
-                addAll(intermediateQualityArgs(encoder))
-                addAll(listOf("-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"))
-                addAll(listOf("-shortest", outputFile.absolutePath))
-            },
-            onProgress = onProgress
-        ) == 0
+        val sourceHasAudio = hasUsableTrack(inputUri, "audio/")
+        val preferred = preferredIntermediateEncoder()
+
+        // Some Android MediaCodec implementations report a successful FFmpeg
+        // session even when the hardware encoder emitted zero video samples.
+        // Treat the artifact, rather than the process return code, as the
+        // contract and retry with FFmpeg's licence-neutral software floor.
+        for (encoder in encoderAttempts(preferred)) {
+            outputFile.delete()
+            val exitCode = executeArguments(
+                buildList {
+                    addAll(listOf("-y", "-framerate", fps.coerceIn(1, 120).toString()))
+                    addAll(listOf("-i", framePattern))
+                    addAll(listOf("-i", ffmpegInput(inputUri)))
+                    addAll(listOf("-map", "0:v:0", "-map", "1:a:0?"))
+                    addAll(listOf("-c:v", encoder.ffmpegName))
+                    addAll(intermediateQualityArgs(encoder))
+                    addAll(listOf("-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"))
+                    addAll(listOf("-shortest", outputFile.absolutePath))
+                },
+                onProgress = onProgress
+            )
+            val hasVideo = exitCode == 0 && hasUsableTrack(outputFile, "video/")
+            val hasAudio = !sourceHasAudio || hasUsableTrack(outputFile, "audio/")
+            if (hasVideo && hasAudio) return@withContext true
+
+            Log.w(
+                TAG,
+                "Discarding unusable inpainting encode from ${encoder.ffmpegName}: " +
+                    "exit=$exitCode video=$hasVideo audio=$hasAudio",
+            )
+        }
+
+        outputFile.delete()
+        false
     }
 
     /**
@@ -543,6 +567,10 @@ class FFmpegEngine @Inject constructor(
         return chosen
     }
 
+    /** Return the selected encoder followed by the always-available software floor. */
+    internal fun encoderAttempts(preferred: H264Encoder): List<H264Encoder> =
+        listOf(preferred, H264Encoder.MPEG4).distinct()
+
     private suspend fun availableEncoderNames(): Set<String> {
         if (!isAvailable()) return emptySet()
         val output = runCatching { encoderListOutput() }.getOrNull() ?: return emptySet()
@@ -671,6 +699,54 @@ class FFmpegEngine @Inject constructor(
         // High constant bitrate stands in for near-visually-lossless CRF 18.
         H264Encoder.MEDIACODEC -> listOf("-b:v", "20M")
         H264Encoder.MPEG4 -> listOf("-b:v", "24M")
+    }
+
+    private fun hasUsableTrack(inputUri: Uri, mimePrefix: String): Boolean {
+        val extractor = MediaExtractor()
+        return try {
+            extractor.setDataSource(context, inputUri, null)
+            extractor.hasUsableTrack(mimePrefix)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not inspect source track ${mimePrefix.trimEnd('/')}", e)
+            false
+        } finally {
+            extractor.release()
+        }
+    }
+
+    private fun hasUsableTrack(file: File, mimePrefix: String): Boolean {
+        if (!file.isFile || file.length() <= 0L) return false
+        val extractor = MediaExtractor()
+        return try {
+            extractor.setDataSource(file.absolutePath)
+            extractor.hasUsableTrack(mimePrefix)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not inspect output track ${mimePrefix.trimEnd('/')}", e)
+            false
+        } finally {
+            extractor.release()
+        }
+    }
+
+    private fun MediaExtractor.hasUsableTrack(mimePrefix: String): Boolean {
+        for (index in 0 until trackCount) {
+            val format = getTrackFormat(index)
+            val mime = format.getString(MediaFormat.KEY_MIME) ?: continue
+            if (!mime.startsWith(mimePrefix)) continue
+            selectTrack(index)
+            return try {
+                val hasSample = sampleTime >= 0L && runCatching {
+                    readSampleData(ByteBuffer.allocate(64 * 1024), 0) > 0
+                }.getOrDefault(false)
+                val hasDuration = runCatching {
+                    format.getLong(MediaFormat.KEY_DURATION) > 0L
+                }.getOrDefault(false)
+                hasSample || hasDuration
+            } finally {
+                unselectTrack(index)
+            }
+        }
+        return false
     }
 
     /** Run `-encoders` and return its combined log output for capability probing. */

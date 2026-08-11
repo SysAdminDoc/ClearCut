@@ -74,6 +74,18 @@ class FFmpegEncoderSelectionTest {
     }
 
     @Test
+    fun unusableHardwareOutputFallsBackToMpeg4() {
+        assertEquals(
+            listOf(H264Encoder.MEDIACODEC, H264Encoder.MPEG4),
+            engine.encoderAttempts(H264Encoder.MEDIACODEC),
+        )
+        assertEquals(
+            listOf(H264Encoder.MPEG4),
+            engine.encoderAttempts(H264Encoder.MPEG4),
+        )
+    }
+
+    @Test
     fun ffmpegNamesMatchTheEncoderIdsFfmpegActuallyReports() {
         assertEquals("h264_mediacodec", H264Encoder.MEDIACODEC.ffmpegName)
         assertEquals("libx264", H264Encoder.X264.ffmpegName)
