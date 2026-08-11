@@ -24,8 +24,8 @@ hs_err_pid*.log
 replay_pid*.log
 
 # Local planning docs — keep local only.
-# README.md is the only tracked markdown file. ROADMAP.md remains the local
-# source of truth for open work; CHANGELOG.md and RESEARCH.md stay local.
+# README.md and CHANGELOG.md are the tracked public documentation. ROADMAP.md
+# remains the local source of truth for open work; RESEARCH.md stays local.
 # The broad *.md rule below enforces this policy.
 CLAUDE.md
 .claude/
@@ -48,6 +48,7 @@ research/
 # is the worksheet the Data safety form is filled in from.
 *.md
 !README.md
+!CHANGELOG.md
 !docs/models.md
 !docs/privacy-policy.md
 !docs/play-data-safety.md

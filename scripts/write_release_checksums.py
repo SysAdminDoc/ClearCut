@@ -38,6 +38,14 @@ def checksum_line(apk: Path) -> str:
     return f"{sha256_hex(apk)}  {apk.name}\n"
 
 
+def display_path(path: Path) -> str:
+    """Render repository paths compactly without failing for external roots."""
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def apk_paths(root: Path = APK_ROOT) -> list[Path]:
     variants = (
         root / "debug",
@@ -116,7 +124,7 @@ def main() -> int:
     action = "verified" if args.check else "wrote"
     print(f"{action} {len(sidecars)} release checksum file(s).")
     for sidecar in sidecars:
-        print(f"  - {sidecar.relative_to(ROOT)}")
+        print(f"  - {display_path(sidecar)}")
     return 0
 
 

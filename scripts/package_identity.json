@@ -49,7 +49,10 @@
     "docs/play-data-safety.md",
     "fastlane/metadata/android/en-US/title.txt",
     "fastlane/metadata/android/en-US/short_description.txt",
-    "fastlane/metadata/android/en-US/full_description.txt"
+    "fastlane/metadata/android/en-US/full_description.txt",
+    "fastlane/metadata/android/es-ES/title.txt",
+    "fastlane/metadata/android/es-ES/short_description.txt",
+    "fastlane/metadata/android/es-ES/full_description.txt"
   ],
   "readmePolicyPhrases": [
     "### Package identity and upgrade policy",

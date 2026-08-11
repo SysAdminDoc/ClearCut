@@ -10,7 +10,24 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FASTLANE = ROOT / "fastlane" / "metadata" / "android" / "en-US"
+FASTLANE_LOCALES = {
+    "en-US": (
+        "Distribution status",
+        "GitHub Releases",
+        "Google Play",
+        "F-Droid metadata",
+        "verified-developer registration",
+        "not complete",
+    ),
+    "es-ES": (
+        "Estado de distribución",
+        "GitHub Releases",
+        "Google Play",
+        "metadatos de F-Droid",
+        "registro de desarrollador verificado",
+        "no está completo",
+    ),
+}
 
 
 class DistributionError(RuntimeError):
@@ -54,6 +71,10 @@ def require_no_unearned_channel_claims(path: Path) -> None:
         r"\bf-droid release is live\b",
         r"\bdeveloper verification complete\b",
         r"\bverified developer account is complete\b",
+        r"\bdisponible en f-droid\b",
+        r"\bdescarga desde f-droid\b",
+        r"\bverificación del desarrollador está completa\b",
+        r"\bel registro de desarrollador verificado está completo\b",
     )
     for pattern in denied:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -81,20 +102,10 @@ def verify_readme(root: Path = ROOT) -> None:
     require_no_unearned_channel_claims(path)
 
 
-def verify_fastlane(root: Path = ROOT) -> None:
-    fastlane = root / FASTLANE.relative_to(ROOT)
+def verify_fastlane(root: Path = ROOT, locale: str = "en-US") -> None:
+    fastlane = root / "fastlane" / "metadata" / "android" / locale
     full_description = fastlane / "full_description.txt"
-    require_terms(
-        full_description,
-        (
-            "Distribution status",
-            "GitHub Releases",
-            "Google Play",
-            "F-Droid metadata",
-            "verified-developer registration",
-            "not complete",
-        ),
-    )
+    require_terms(full_description, FASTLANE_LOCALES[locale])
     require_no_unearned_channel_claims(full_description)
 
     title = read_text(fastlane / "title.txt").strip()
@@ -108,9 +119,9 @@ def verify_fastlane(root: Path = ROOT) -> None:
         raise DistributionError("fastlane full description must be 1-4000 characters")
 
 
-def verify_latest_changelog(root: Path = ROOT) -> None:
+def verify_latest_changelog(root: Path = ROOT, locale: str = "en-US") -> None:
     version_code, _version_name = parse_gradle_version(root)
-    changelog = root / "fastlane" / "metadata" / "android" / "en-US" / "changelogs" / f"{version_code}.txt"
+    changelog = root / "fastlane" / "metadata" / "android" / locale / "changelogs" / f"{version_code}.txt"
     text = read_text(changelog).strip()
     if not text:
         raise DistributionError(f"{rel(changelog)} must not be empty")
@@ -118,8 +129,8 @@ def verify_latest_changelog(root: Path = ROOT) -> None:
         raise DistributionError(f"{rel(changelog)} is {len(text)} characters, expected <= 500")
 
 
-def verify_changelog_history(root: Path = ROOT) -> None:
-    changelog_dir = root / "fastlane" / "metadata" / "android" / "en-US" / "changelogs"
+def verify_changelog_history(root: Path = ROOT, locale: str = "en-US") -> None:
+    changelog_dir = root / "fastlane" / "metadata" / "android" / locale / "changelogs"
     for changelog in sorted(changelog_dir.glob("*.txt")):
         text = read_text(changelog).strip()
         if not text:
@@ -130,9 +141,10 @@ def verify_changelog_history(root: Path = ROOT) -> None:
 
 def validate(root: Path = ROOT) -> None:
     verify_readme(root)
-    verify_fastlane(root)
-    verify_latest_changelog(root)
-    verify_changelog_history(root)
+    for locale in FASTLANE_LOCALES:
+        verify_fastlane(root, locale)
+        verify_latest_changelog(root, locale)
+        verify_changelog_history(root, locale)
 
 
 def write_fixture(root: Path, relative: str, text: str) -> None:
@@ -156,6 +168,19 @@ def write_minimal_repo(root: Path, readme: str, full_description: str) -> None:
     )
     write_fixture(root, "fastlane/metadata/android/en-US/full_description.txt", full_description)
     write_fixture(root, "fastlane/metadata/android/en-US/changelogs/200.txt", "- Distribution readiness gate\n")
+    write_fixture(root, "fastlane/metadata/android/es-ES/title.txt", "ClearCut\n")
+    write_fixture(
+        root,
+        "fastlane/metadata/android/es-ES/short_description.txt",
+        "Editor de vídeo profesional.\n",
+    )
+    write_fixture(
+        root,
+        "fastlane/metadata/android/es-ES/full_description.txt",
+        "Estado de distribución: GitHub Releases es el canal directo. Google Play está preparado. "
+        "Los metadatos de F-Droid están presentes, pero el registro de desarrollador verificado no está completo.\n",
+    )
+    write_fixture(root, "fastlane/metadata/android/es-ES/changelogs/200.txt", "- Preparación de distribución\n")
 
 
 def run_self_tests() -> None:

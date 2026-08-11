@@ -19,8 +19,9 @@ FASTLANE_DIR = ROOT / "fastlane" / "metadata" / "android" / "en-US" / "changelog
 MAX_CHARS = 499
 
 HEADING_RE = re.compile(r"^##\s+(v?\d+(?:\.\d+)+).*", re.MULTILINE)
-CODE_ARROW_RE = re.compile(r"versionCode\s+(\d+)\s*(?:->|→)\s*(\d+)")
-CODE_RE = re.compile(r"versionCode\s+(\d+)")
+SECTION_RE = re.compile(r"^##\s+.*", re.MULTILINE)
+CODE_ARROW_RE = re.compile(r"`?versionCode`?\s*(?:=|:)?\s*`?(\d+)`?\s*(?:->|→)\s*`?(\d+)")
+CODE_RE = re.compile(r"`?versionCode`?\s*(?:=|:)?\s*`?(\d+)")
 
 
 def split_releases(changelog: str) -> list[tuple[str, str]]:
@@ -28,7 +29,8 @@ def split_releases(changelog: str) -> list[tuple[str, str]]:
     releases: list[tuple[str, str]] = []
     for index, match in enumerate(matches):
         start = match.end()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(changelog)
+        next_section = SECTION_RE.search(changelog, start)
+        end = next_section.start() if next_section else len(changelog)
         releases.append((match.group(1).lstrip("v"), changelog[start:end].strip()))
     return releases
 
@@ -122,7 +124,30 @@ def changelog_text(body: str) -> str:
     return truncate_entry(lines)
 
 
+def run_self_tests() -> None:
+    cases = {
+        "`versionCode` 296": 296,
+        "versionCode = 181": 181,
+        "versionCode: 181 -> 182": 182,
+    }
+    for body, expected in cases.items():
+        actual = target_version_code(body)
+        if actual != expected:
+            raise AssertionError(f"version-code parser returned {actual!r} for {body!r}")
+
+    releases = split_releases(
+        "## v1.2.3\n\nCurrent version: `versionCode` 7.\n\n- A release change.\n\n"
+        "## Roadmap archive\n\n- This is not release copy.\n"
+    )
+    if len(releases) != 1 or target_version_code(releases[0][1]) != 7:
+        raise AssertionError("release parser crossed a non-release section")
+
+
 def generated_changelogs() -> dict[int, str]:
+    if not CHANGELOG.is_file():
+        raise FileNotFoundError(
+            f"missing {CHANGELOG.name}; the release changelog must be present in a clean checkout"
+        )
     changelog = CHANGELOG.read_text(encoding="utf-8")
     generated: dict[int, str] = {}
     for _version_name, body in split_releases(changelog):
@@ -136,9 +161,23 @@ def generated_changelogs() -> dict[int, str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true", help="fail if generated files are stale")
+    parser.add_argument("--self-test", action="store_true", help="run built-in parser checks")
     args = parser.parse_args()
 
-    generated = generated_changelogs()
+    if args.self_test:
+        try:
+            run_self_tests()
+        except AssertionError as error:
+            print(f"fastlane changelog self-test failed: {error}", file=sys.stderr)
+            return 1
+        print("fastlane changelog self-tests passed.")
+        return 0
+
+    try:
+        generated = generated_changelogs()
+    except (OSError, UnicodeError) as error:
+        print(f"could not read release changelog: {error}", file=sys.stderr)
+        return 1
     if not generated:
         print("No versionCode-backed changelog entries found.", file=sys.stderr)
         return 1

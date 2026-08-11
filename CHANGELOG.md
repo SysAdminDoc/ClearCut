@@ -2,6 +2,9 @@
 
 ## v3.78.1
 
+Current version: **v3.78.1** (`versionCode` 296).
+
+- Added a translated Spanish Play listing with a current changelog, replaced synthetic listing screenshots with API 37 device captures, and repaired the clean-checkout changelog/checksum release scripts.
 - Migrated project persistence to Room 3.0.1 and SQLite driver APIs; the v1–v10 migration chain remains device-validated on API 37.
 - Added validated-internet awareness across model downloads, AI model controls, caption translation, and opt-in update checks; offline controls explain the dependency, disable before a request, and recover from connectivity callbacks.
 - Made the appearance contract explicit: the menu now documents the implemented Dark and High Contrast Dark schemes only, and chroma-key colours live in content tokens while RGB scope traces remain documented instrument colours.

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -415,17 +416,24 @@ def icon_svg() -> str:
 """
 
 
-ASSETS = [
+GENERATED_ASSETS = [
     ("icon.png", (512, 512), icon_svg, "PNG32", "ClearCut app icon", "High-resolution Play Store icon."),
     ("featureGraphic.png", (1024, 500), feature_graphic, "PNG24", "ClearCut feature graphic", "Feature graphic for the main store listing."),
-    ("phoneScreenshots/01_project_gallery.png", (1080, 1920), gallery_phone, "PNG24", "Project gallery screen", "Project gallery with local autosaved projects."),
-    ("phoneScreenshots/02_editor_timeline.png", (1080, 1920), editor_phone, "PNG24", "Editor timeline screen", "Preview, editing tools, and multi-track timeline."),
-    ("phoneScreenshots/03_export_confidence.png", (1080, 1920), export_phone, "PNG24", "Export settings screen", "Export confidence and platform settings."),
-    ("phoneScreenshots/04_privacy_models.png", (1080, 1920), privacy_phone, "PNG24", "Privacy dashboard screen", "Local data controls and optional model downloads."),
-    ("tenInchScreenshots/01_tablet_editor.png", (1920, 1080), tablet_editor, "PNG24", "Tablet editor layout", "Three-pane tablet editor layout."),
-    ("tenInchScreenshots/02_media_manager.png", (1920, 1080), tablet_media, "PNG24", "Media manager table", "Media relink and verification workflow."),
-    ("tenInchScreenshots/03_captions_ai.png", (1920, 1080), tablet_captions, "PNG24", "Caption and AI tools", "Caption review and model-gated AI tools."),
-    ("tenInchScreenshots/04_export_review.png", (1920, 1080), tablet_export, "PNG24", "Tablet export review", "Export readiness and disclosure review."),
+]
+
+# These are checked-in captures from the API 37 device lane. The listing
+# generator only crops/rotates them to the Play dimensions; it never paints a
+# synthetic screen in their place. Keeping the capture source in the
+# inventory makes a future edit fail loudly when the source is replaced.
+CAPTURE_ASSETS = [
+    ("phoneScreenshots/01_project_gallery.png", "work/clearcut-final-home.png", "portrait", "Project gallery capture", "Project gallery captured from the running app."),
+    ("phoneScreenshots/02_editor_timeline.png", "work/clearcut-final-editor.png", "portrait", "Editor timeline capture", "Preview, editing tools, and multi-track timeline captured from the running app."),
+    ("phoneScreenshots/03_export_confidence.png", "work/clearcut-final-export.png", "portrait", "Export settings capture", "Export confidence and platform settings captured from the running app."),
+    ("phoneScreenshots/04_privacy_models.png", "work/clearcut-final-settings.png", "portrait", "Settings capture", "Settings and model controls captured from the running app."),
+    ("tenInchScreenshots/01_tablet_editor.png", "work/clearcut-final-editor.png", "landscape", "Editor capture", "Editor timeline captured from the running app and formatted for the landscape listing slot."),
+    ("tenInchScreenshots/02_media_manager.png", "work/cleancut-pass3-media-picker.png", "landscape", "Media import capture", "Media import workflow captured from the running app and formatted for the landscape listing slot."),
+    ("tenInchScreenshots/03_captions_ai.png", "work/clearcut-final-settings.png", "landscape", "Model controls capture", "Model controls captured from the running app and formatted for the landscape listing slot."),
+    ("tenInchScreenshots/04_export_review.png", "work/clearcut-final-export.png", "landscape", "Export review capture", "Export review captured from the running app and formatted for the landscape listing slot."),
 ]
 
 
@@ -442,15 +450,35 @@ def render(source: Path, target: Path, png_type: str) -> None:
     subprocess.run([magick, "-background", "none", str(source), output], check=True)
 
 
+def render_capture(source: Path, target: Path, orientation: str) -> None:
+    magick = shutil.which("magick")
+    if not magick:
+        raise SystemExit("ImageMagick 'magick' was not found; device captures cannot be formatted here.")
+    if not source.is_file():
+        raise SystemExit(f"device capture is missing: {source}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if orientation == "portrait":
+        operations = ["-gravity", "center", "-crop", "1080x1920+0+0", "+repage"]
+    elif orientation == "landscape":
+        operations = ["-rotate", "90", "-resize", "1920x1080^", "-gravity", "center", "-extent", "1920x1080"]
+    else:
+        raise SystemExit(f"unsupported capture orientation: {orientation}")
+    subprocess.run([magick, str(source), *operations, "PNG24:" + str(target)], check=True)
+
+
+def inventory_source(path: Path) -> str:
+    return Path(os.path.relpath(path, IMAGES)).as_posix()
+
+
 def main() -> int:
     SOURCE.mkdir(parents=True, exist_ok=True)
     inventory = {
         "schema": "com.clearcut.play-listing-assets.v1",
-        "updated": "2026-07-29",
+        "updated": "2026-08-11",
         "assets": [],
     }
 
-    for relative, dimensions, svg_factory, png_type, alt, caption in ASSETS:
+    for relative, dimensions, svg_factory, png_type, alt, caption in GENERATED_ASSETS:
         svg_path = SOURCE / (relative.replace("/", "_").removesuffix(".png") + ".svg")
         png_path = IMAGES / relative
         # An explicit LF newline keeps generation byte-identical on Windows,
@@ -464,11 +492,30 @@ def main() -> int:
                 "height": dimensions[1],
                 "altText": alt,
                 "caption": caption,
-                "source": str(svg_path.relative_to(IMAGES)).replace("\\", "/"),
+                "sourceType": "generated-svg",
+                "source": inventory_source(svg_path),
                 # Recorded so the release gate can tell a stale committed PNG
                 # from a regenerated one: editing a source SVG without re-running
                 # this generator leaves the hash pointing at the old source.
                 "sourceSha256": sha256_of(svg_path),
+            }
+        )
+
+    for relative, source_relative, orientation, alt, caption in CAPTURE_ASSETS:
+        source_path = ROOT / source_relative
+        png_path = IMAGES / relative
+        render_capture(source_path, png_path, orientation)
+        inventory["assets"].append(
+            {
+                "path": relative,
+                "width": 1080 if orientation == "portrait" else 1920,
+                "height": 1920 if orientation == "portrait" else 1080,
+                "altText": alt,
+                "caption": caption,
+                "sourceType": "device-capture",
+                "source": inventory_source(source_path),
+                "sourceSha256": sha256_of(source_path),
+                "transform": "center-crop" if orientation == "portrait" else "rotate-90-and-center-crop",
             }
         )
 
@@ -477,7 +524,7 @@ def main() -> int:
         encoding="utf-8",
         newline="\n",
     )
-    print(f"generated {len(ASSETS)} Play listing PNG assets")
+    print(f"generated {len(GENERATED_ASSETS) + len(CAPTURE_ASSETS)} Play listing PNG assets")
     return 0
 
 

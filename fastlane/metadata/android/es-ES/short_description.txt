@@ -1,0 +1,1 @@
+Editor de vídeo profesional con IA, efectos GLSL y línea de tiempo multipista.

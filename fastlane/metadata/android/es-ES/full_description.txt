@@ -1,0 +1,27 @@
+ClearCut es un editor de vídeo completo y de código abierto para Android. Está construido con Kotlin, Jetpack Compose y Media3 Transformer para ofrecer edición profesional con controles claros sobre el almacenamiento local, las descargas opcionales y las herramientas planificadas.
+
+Funciones:
+- Línea de tiempo multipista con ajuste magnético, edición slip/slide y agrupación de clips
+- Más de 40 efectos de vídeo basados en sombreadores GLSL de OpenGL ES 3.0
+- 37 transiciones aceleradas por GPU, como disolución, barrido, cubo, rizo y página
+- Control de velocidad de 0,1x a 100x con curvas de aceleración Bézier
+- Animación con fotogramas clave para opacidad, escala, rotación, posición y volumen
+- Corrección de color con ruedas lift/gamma/gain, curvas RGB, selector HSL e importación de LUT 3D
+- 18 modos de fusión y máscaras a mano alzada, rectangulares o elípticas con suavizado
+- Herramientas de IA con estados claros: subtítulos automáticos, eliminación de fondo y objetos, detección de escenas, recorte inteligente, seguimiento de movimiento, color automático y reducción de ruido de audio
+- Eliminación automática de palabras de relleno en subtítulos generados
+- Detección de ritmos y edición sincronizada con el ritmo
+- Mezcla de audio con volumen por pista, panoramización, ecualizador, compresor, reverberación y 15 efectos DSP
+- Normalización de sonoridad EBU R128 con ajustes para plataformas
+- Superposiciones de texto con 10 estilos de animación y selección de fuentes
+- Plantillas de títulos animados mediante Lottie
+- Exportación a H.264, H.265/HEVC, AV1 y VP9, con fondo transparente mediante WebM
+- Ajustes de plataforma para YouTube, TikTok, Instagram y Threads
+- Exportación por lotes, exportación solo de audio e intercambio de líneas de tiempo OTIO/FCPXML
+- Deshacer y rehacer con 50 niveles
+- Guardado automático del proyecto con recuperación tras fallos
+- Tema oscuro Catppuccin Mocha en toda la aplicación
+
+La edición principal funciona sin conexión. El uso de red es explícito para descargar modelos opcionales, obtener recursos de proveedores, usar herramientas con capacidad en la nube, firmar de forma remota, transmitir por LAN y entregar archivos mediante acciones de compartir o exportar iniciadas por el usuario.
+
+Estado de distribución: GitHub Releases es el canal directo de APK de esta edición. La ficha de Google Play está preparada y los metadatos de F-Droid están presentes, pero el registro de desarrollador verificado aún no está completo.

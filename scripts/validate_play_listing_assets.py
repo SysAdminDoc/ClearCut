@@ -106,7 +106,13 @@ def require_inventory(image_paths: list[Path]) -> None:
                 raise ListingError(f"{relative_path} inventory entry must include {field}")
         source = IMAGES / entry["source"]
         if not source.is_file():
-            raise ListingError(f"{relative_path} source SVG is missing: {entry['source']}")
+            raise ListingError(f"{relative_path} inventory source is missing: {entry['source']}")
+
+        if relative_path.startswith(("phoneScreenshots/", "tenInchScreenshots/")):
+            if entry.get("sourceType") != "device-capture":
+                raise ListingError(f"{relative_path} must be sourced from a device capture")
+            if source.suffix.lower() == ".svg":
+                raise ListingError(f"{relative_path} must not use a synthetic SVG source")
 
         # Freshness: the inventory records the hash of the source the committed
         # PNG was rendered from. Editing a source without re-running

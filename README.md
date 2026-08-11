@@ -10,6 +10,7 @@
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 
+- Distribution metadata now includes a translated Spanish listing and current changelog; Play screenshots are derived from checked-in API 37 device captures and the release helper scripts work from a clean checkout.
 - Project persistence now runs on Room 3.0.1 and SQLite driver APIs, with the full v1–v10 migration chain validated on the API 37 device lane.
 - CFR export normalization now turns irregular VFR source cadence into the selected delivery rate before the final Media3 render.
 - Batch Export can queue independent source-file trim ranges with persisted URIs and per-item settings while retaining uniform project exports.
@@ -661,7 +662,7 @@ python scripts\check_apk_size.py
 ```
 
 ### Distribution Readiness
-GitHub Releases are the direct APK distribution channel for this checkout. Google Play listing metadata, privacy disclosures, Data safety worksheet, and screenshot assets are committed under `fastlane/metadata/android/en-US/` and validated by the local release gate.
+GitHub Releases are the direct APK distribution channel for this checkout. Google Play listing metadata, privacy disclosures, Data safety worksheet, and screenshot assets are committed under `fastlane/metadata/android/en-US/` and `fastlane/metadata/android/es-ES/`, then validated by the local release gate. The listing PNGs are formatted from the checked-in API 37 device captures in `work/`; regenerate them with `python scripts\generate_play_listing_assets.py` after replacing a capture.
 
 F-Droid-compatible Fastlane metadata is present in the same source tree. F-Droid publication still needs a final reproducible-build metadata pass, including `AllowedAPKSigningKeys`, which can now be filled from the pinned certificate below.
 

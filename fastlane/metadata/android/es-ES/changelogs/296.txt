@@ -1,0 +1,3 @@
+Room 3.0.1 y entregas CFR más claras.
+La persistencia de proyectos usa ahora Room 3.0.1 y las API del controlador SQLite; la cadena de migración v1–v10 sigue validada en un dispositivo API 37.
+La normalización CFR corrige la cadencia VFR antes del render final y la exportación por lotes conserva los recortes independientes de cada archivo de origen.
