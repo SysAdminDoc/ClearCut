@@ -4,6 +4,7 @@ import android.media.MediaFormat
 import android.os.Build
 import com.novacut.editor.model.SourceHdrFormat
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -80,5 +81,19 @@ class MediaImportEngineTest {
         )
 
         assertEquals(SourceHdrFormat.ULTRA_HDR_GAIN_MAP, format)
+    }
+
+    @Test
+    fun nonPositiveStorageRequirementsDoNotReportFailure() {
+        assertNull(insufficientSpaceFor(0L, 0L))
+        assertNull(insufficientSpaceFor(-1L, 0L))
+    }
+
+    @Test
+    fun impossibleStorageRequirementIncludesRequiredAndAvailableBytes() {
+        val failure = insufficientSpaceFor(Long.MAX_VALUE, 0L)
+
+        assertEquals(Long.MAX_VALUE, failure?.requiredBytes)
+        assertEquals(0L, failure?.availableBytes)
     }
 }

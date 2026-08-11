@@ -1112,7 +1112,8 @@
     <string name="media_picker_importing_image_description">Keeping this still available in the project.</string>
     <string name="media_picker_importing_capture_title">Saving capture</string>
     <string name="media_picker_importing_capture_description">Moving the returned clip into your project media.</string>
-    <string name="media_picker_insufficient_space">Not enough storage space to import this media.</string>
+    <string name="media_picker_insufficient_space_format">Not enough storage to import this media. It needs %1$s, but only %2$s is available.</string>
+    <string name="media_picker_cancel_import">Cancel import</string>
     <string name="audio_conformance_mixed_rates">Clips have mixed sample rates. Audio will be resampled to match the export format.</string>
     <string name="audio_conformance_mixed_channels">Clips have mixed channel layouts. Audio will be normalized for export.</string>
     <string name="media_picker_audio_only">That file isn\'t audio. Pick a .mp3, .m4a, .wav, .ogg, or .flac.</string>

@@ -387,6 +387,35 @@ internal sealed class IngestResult {
     data class Failed(val reason: String) : IngestResult()
 }
 
+internal fun insufficientSpaceFor(
+    context: Context,
+    requiredBytes: Long,
+): IngestResult.InsufficientSpace? {
+    val availableBytes = StatFs(context.filesDir.path).availableBytes
+    return insufficientSpaceFor(requiredBytes, availableBytes)
+}
+
+internal fun insufficientSpaceFor(
+    requiredBytes: Long,
+    availableBytes: Long,
+): IngestResult.InsufficientSpace? {
+    if (requiredBytes <= 0L) return null
+    val marginBytes = maxOf(FREE_SPACE_MARGIN_BYTES, requiredBytes / 10)
+    val minimumAvailableBytes = if (Long.MAX_VALUE - requiredBytes < marginBytes) {
+        Long.MAX_VALUE
+    } else {
+        requiredBytes + marginBytes
+    }
+    return if (availableBytes >= minimumAvailableBytes) {
+        null
+    } else {
+        IngestResult.InsufficientSpace(
+            requiredBytes = requiredBytes,
+            availableBytes = availableBytes,
+        )
+    }
+}
+
 internal fun querySourceSize(context: Context, uri: Uri): Long {
     if (uri.scheme == "file") {
         return uri.path?.let(::File)?.length() ?: -1L
@@ -405,11 +434,7 @@ internal fun querySourceSize(context: Context, uri: Uri): Long {
 }
 
 internal fun checkFreeSpace(context: Context, requiredBytes: Long): Boolean {
-    if (requiredBytes <= 0L) return true
-    val statFs = StatFs(context.filesDir.path)
-    val available = statFs.availableBytes
-    val margin = maxOf(FREE_SPACE_MARGIN_BYTES, requiredBytes / 10)
-    return available >= requiredBytes + margin
+    return insufficientSpaceFor(context, requiredBytes) == null
 }
 
 internal fun importUriToManagedMediaWithProgress(
@@ -439,10 +464,7 @@ internal fun importUriToManagedMediaWithProgress(
     }
 
     val sourceSize = querySourceSize(context, uri)
-    if (sourceSize > 0L && !checkFreeSpace(context, sourceSize)) {
-        val statFs = StatFs(context.filesDir.path)
-        return IngestResult.InsufficientSpace(sourceSize, statFs.availableBytes)
-    }
+    insufficientSpaceFor(context, sourceSize)?.let { return it }
 
     if (isCancelled()) return IngestResult.Cancelled
 

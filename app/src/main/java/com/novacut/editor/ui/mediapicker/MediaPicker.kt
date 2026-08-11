@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -42,10 +43,9 @@ import androidx.core.content.FileProvider
 import com.novacut.editor.R
 import com.novacut.editor.engine.IngestResult
 import com.novacut.editor.engine.MediaSequenceOrder
-import com.novacut.editor.engine.checkFreeSpace
 import com.novacut.editor.engine.finalizePendingCameraCapture
-import com.novacut.editor.engine.importUriToManagedMedia
 import com.novacut.editor.engine.importUriToManagedMediaWithProgress
+import com.novacut.editor.engine.insufficientSpaceFor
 import com.novacut.editor.engine.pendingCameraCaptureDir
 import com.novacut.editor.engine.querySourceSize
 import com.novacut.editor.engine.resolveManagedMediaExtension
@@ -61,10 +61,15 @@ import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import com.novacut.editor.ui.theme.TouchTarget
 import java.io.File
+import java.util.Locale
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -99,6 +104,11 @@ private data class MediaPickerOperationState(
     val total: Int? = null,
 )
 
+private data class MediaPickerBatchImportResult(
+    val imported: List<MediaPickerSelection>,
+    val insufficientSpace: IngestResult.InsufficientSpace? = null,
+)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MediaPickerSheet(
@@ -109,11 +119,11 @@ fun MediaPickerSheet(
 ) {
     val semanticColors = LocalClearCutColors.current
     val context = LocalContext.current
+    val resources = LocalResources.current
     val importingBatchTitle = stringResource(R.string.media_picker_importing_batch_title)
     val importingBatchDescription = stringResource(R.string.media_picker_importing_batch_description)
     val localCopyFailed = stringResource(R.string.media_picker_local_copy_failed)
     val someImportsFailed = stringResource(R.string.media_picker_some_imports_failed)
-    val insufficientSpace = stringResource(R.string.media_picker_insufficient_space)
     val audioOnly = stringResource(R.string.media_picker_audio_only)
     val importingVideoTitle = stringResource(R.string.media_picker_importing_video_title)
     val importingVideoDescription = stringResource(R.string.media_picker_importing_video_description)
@@ -133,7 +143,32 @@ fun MediaPickerSheet(
     var sequenceOrder by remember { mutableStateOf(MediaSequenceOrder.CAPTURE_TIME) }
     var sequenceDragPermissions by remember { mutableStateOf<DragAndDropPermissions?>(null) }
     var sequencePersistedUris by remember { mutableStateOf<Set<Uri>>(emptySet()) }
+    var activeOperationJob by remember { mutableStateOf<Job?>(null) }
     val actionsEnabled = operationState == null && sequenceReview == null
+
+    fun launchImportOperation(block: suspend () -> Unit) {
+        val job = coroutineScope.launch(start = CoroutineStart.LAZY) {
+            try {
+                block()
+            } finally {
+                operationState = null
+                activeOperationJob = null
+            }
+        }
+        activeOperationJob = job
+        job.start()
+    }
+
+    fun cancelActiveOperation() {
+        activeOperationJob?.cancel()
+    }
+
+    fun insufficientSpaceMessage(failure: IngestResult.InsufficientSpace): String =
+        resources.getString(
+            R.string.media_picker_insufficient_space_format,
+            formatMediaPickerBytes(failure.requiredBytes),
+            formatMediaPickerBytes(failure.availableBytes),
+        )
 
     fun cancelSequenceReview() {
         val selections = sequenceReview
@@ -161,7 +196,7 @@ fun MediaPickerSheet(
             dragPermissions?.release()
             return
         }
-        coroutineScope.launch {
+        launchImportOperation {
             operationState = MediaPickerOperationState(
                 title = importingBatchTitle,
                 description = importingBatchDescription,
@@ -194,7 +229,6 @@ fun MediaPickerSheet(
                 AppLog.w("MediaPicker", "Could not prepare sequence review", error)
                 permissionMessage = localCopyFailed
             } finally {
-                operationState = null
                 if (!retainedPermissions) {
                     withContext(NonCancellable + Dispatchers.IO) {
                         releasePersistedReadPermissions(context, persistedUris)
@@ -213,35 +247,63 @@ fun MediaPickerSheet(
         sequenceDragPermissions = null
         val persistedUris = sequencePersistedUris
         sequencePersistedUris = emptySet()
-        coroutineScope.launch {
+        launchImportOperation {
             operationState = MediaPickerOperationState(
                 title = importingBatchTitle,
                 description = importingBatchDescription,
+                completed = 0,
+                total = selections.size,
             )
-            var hasSpace = true
-            val imported = try {
+            val operationContext = currentCoroutineContext()
+            val importResult = try {
                 withContext(Dispatchers.IO) {
                     val totalSize = selections.sumOf { selection ->
                         querySourceSize(context, selection.uri).coerceAtLeast(0L)
                     }
-                    hasSpace = totalSize <= 0L || checkFreeSpace(context, totalSize)
-                    if (!hasSpace) {
-                        emptyList()
-                    } else {
-                        selections.mapIndexedNotNull { index, selection ->
+                    insufficientSpaceFor(context, totalSize)?.let { failure ->
+                        return@withContext MediaPickerBatchImportResult(
+                            imported = emptyList(),
+                            insufficientSpace = failure,
+                        )
+                    }
+                    val imported = mutableListOf<MediaPickerSelection>()
+                    for ((index, selection) in selections.withIndex()) {
+                        if (!operationContext.isActive) {
+                            throw CancellationException("Media import cancelled")
+                        }
+                        withContext(Dispatchers.Main.immediate) {
                             operationState = operationState?.copy(
                                 completed = index,
                                 total = selections.size,
                             )
-                            importUriToManagedMedia(
-                                context,
-                                selection.uri,
-                                selection.mediaType,
-                            )?.let { managedUri ->
-                                selection.copy(uri = managedUri)
+                        }
+                        when (
+                            val result = importUriToManagedMediaWithProgress(
+                                context = context,
+                                uri = selection.uri,
+                                mediaType = selection.mediaType,
+                                isCancelled = { !operationContext.isActive },
+                            )
+                        ) {
+                            is IngestResult.Success -> imported += selection.copy(uri = result.managedUri)
+                            is IngestResult.InsufficientSpace -> {
+                                return@withContext MediaPickerBatchImportResult(
+                                    imported = imported.toList(),
+                                    insufficientSpace = result,
+                                )
                             }
+                            is IngestResult.Cancelled ->
+                                throw CancellationException("Media import cancelled")
+                            is IngestResult.Failed -> Unit
+                        }
+                        withContext(Dispatchers.Main.immediate) {
+                            operationState = operationState?.copy(
+                                completed = index + 1,
+                                total = selections.size,
+                            )
                         }
                     }
+                    MediaPickerBatchImportResult(imported = imported)
                 }
             } finally {
                 withContext(NonCancellable + Dispatchers.IO) {
@@ -249,18 +311,22 @@ fun MediaPickerSheet(
                 }
                 dragPermissions?.release()
             }
-            if (!hasSpace) {
-                permissionMessage = insufficientSpace
-            } else if (imported.isNotEmpty()) {
-                onMediaBatchSelected?.invoke(imported)
-                    ?: imported.forEach { selection -> onMediaSelected(selection.uri, selection.mediaType) }
-                if (imported.size < selections.size) {
-                    permissionMessage = if (imported.isEmpty()) localCopyFailed else someImportsFailed
+            importResult.insufficientSpace?.let { failure ->
+                permissionMessage = insufficientSpaceMessage(failure)
+            }
+            if (importResult.imported.isNotEmpty()) {
+                onMediaBatchSelected?.invoke(importResult.imported)
+                    ?: importResult.imported.forEach { selection ->
+                        onMediaSelected(selection.uri, selection.mediaType)
+                    }
+                if (importResult.imported.size < selections.size &&
+                    importResult.insufficientSpace == null
+                ) {
+                    permissionMessage = someImportsFailed
                 }
-            } else {
+            } else if (importResult.insufficientSpace == null) {
                 permissionMessage = localCopyFailed
             }
-            operationState = null
         }
     }
 
@@ -297,25 +363,28 @@ fun MediaPickerSheet(
     }
 
     fun importPickedMedia(uri: Uri, mediaType: String, title: String, description: String) {
-        coroutineScope.launch {
+        launchImportOperation {
             operationState = MediaPickerOperationState(title = title, description = description)
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    try {
-                        importUriToManagedMediaWithProgress(context, uri, mediaType)
-                    } finally {
+            val operationContext = currentCoroutineContext()
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    importUriToManagedMediaWithProgress(
+                        context = context,
+                        uri = uri,
+                        mediaType = mediaType,
+                        isCancelled = { !operationContext.isActive },
+                    )
+                } finally {
+                    withContext(NonCancellable) {
                         releasePersistedReadPermission(context, uri)
                     }
                 }
-                when (result) {
-                    is IngestResult.Success -> onMediaSelected(result.managedUri, mediaType)
-                    is IngestResult.InsufficientSpace ->
-                        permissionMessage = insufficientSpace
-                    else ->
-                        permissionMessage = localCopyFailed
-                }
-            } finally {
-                operationState = null
+            }
+            when (result) {
+                is IngestResult.Success -> onMediaSelected(result.managedUri, mediaType)
+                is IngestResult.InsufficientSpace -> permissionMessage = insufficientSpaceMessage(result)
+                is IngestResult.Cancelled -> throw CancellationException("Media import cancelled")
+                is IngestResult.Failed -> permissionMessage = localCopyFailed
             }
         }
     }
@@ -329,38 +398,35 @@ fun MediaPickerSheet(
             stageSequenceReview(uris, dragPermissions)
             return
         }
-        coroutineScope.launch {
+        launchImportOperation {
             operationState = MediaPickerOperationState(
                 title = importingBatchTitle,
                 description = importingBatchDescription
             )
-            var stoppedForInsufficientSpace = false
+            val operationContext = currentCoroutineContext()
             try {
-                val imported = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     val sorted = sortMediaChronologically(context, uris)
-                    val totalSize = sorted.sumOf { querySourceSize(context, it).coerceAtLeast(0L) }
-                    if (totalSize > 0L && !checkFreeSpace(context, totalSize)) {
-                        stoppedForInsufficientSpace = true
-                        return@withContext emptyList<Pair<Uri, String>>()
-                    }
-                    sorted.mapNotNull { uri ->
-                        val type = resolvePickedMediaType(context, uri, fallbackType = "video")
-                        importUriToManagedMedia(context, uri, type)?.let { localUri -> localUri to type }
-                    }
+                    val uri = sorted.single()
+                    val type = resolvePickedMediaType(context, uri, fallbackType = "video")
+                    val totalSize = querySourceSize(context, uri).coerceAtLeast(0L)
+                    val ingestResult = insufficientSpaceFor(context, totalSize)
+                        ?: importUriToManagedMediaWithProgress(
+                            context = context,
+                            uri = uri,
+                            mediaType = type,
+                            isCancelled = { !operationContext.isActive },
+                        )
+                    ingestResult to type
                 }
-                imported.forEach { (localUri, type) -> onMediaSelected(localUri, type) }
-                if (stoppedForInsufficientSpace) {
-                    permissionMessage = insufficientSpace
-                } else if (imported.size < uris.size) {
-                    permissionMessage = if (imported.isEmpty()) {
-                        localCopyFailed
-                    } else {
-                        someImportsFailed
-                    }
+                when (val ingestResult = result.first) {
+                    is IngestResult.Success -> onMediaSelected(ingestResult.managedUri, result.second)
+                    is IngestResult.InsufficientSpace -> permissionMessage = insufficientSpaceMessage(ingestResult)
+                    is IngestResult.Cancelled -> throw CancellationException("Media import cancelled")
+                    is IngestResult.Failed -> permissionMessage = localCopyFailed
                 }
             } finally {
                 dragPermissions.release()
-                operationState = null
             }
         }
     }
@@ -470,23 +536,19 @@ fun MediaPickerSheet(
         cameraVideoUri = null
         cameraVideoFile = null
         if (success) {
-            coroutineScope.launch {
+            launchImportOperation {
                 operationState = MediaPickerOperationState(
                     title = importingCaptureTitle,
                     description = importingCaptureDescription
                 )
-                try {
-                    val finalizedUri = withContext(Dispatchers.IO) {
-                        capturedFile?.let { finalizePendingCameraCapture(context, it, "video") }
-                    }
-                    if (finalizedUri != null) {
-                        onMediaSelected(finalizedUri, "video")
-                    } else {
-                        permissionMessage = cameraEmptyCapture
-                        withContext(Dispatchers.IO) { capturedFile?.delete() }
-                    }
-                } finally {
-                    operationState = null
+                val finalizedUri = withContext(Dispatchers.IO) {
+                    capturedFile?.let { finalizePendingCameraCapture(context, it, "video") }
+                }
+                if (finalizedUri != null) {
+                    onMediaSelected(finalizedUri, "video")
+                } else {
+                    permissionMessage = cameraEmptyCapture
+                    withContext(Dispatchers.IO) { capturedFile?.delete() }
                 }
             }
         } else {
@@ -569,6 +631,7 @@ fun MediaPickerSheet(
         accent = ClearCutAccents.Blue,
         onClose = {
             cancelSequenceReview()
+            cancelActiveOperation()
             onClose()
         },
         closeButtonTestTag = ClearCutTestTags.MEDIA_PICKER_CLOSE,
@@ -589,7 +652,10 @@ fun MediaPickerSheet(
             Spacer(modifier = Modifier.height(12.dp))
         }
         operationState?.let { operation ->
-            MediaImportStatusCard(operation = operation)
+            MediaImportStatusCard(
+                operation = operation,
+                onCancel = ::cancelActiveOperation,
+            )
             Spacer(modifier = Modifier.height(12.dp))
         }
 
@@ -736,8 +802,18 @@ private fun android.content.Context.findActivity(): Activity? {
 }
 
 @Composable
-private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
+private fun MediaImportStatusCard(
+    operation: MediaPickerOperationState,
+    onCancel: () -> Unit,
+) {
     val semanticColors = LocalClearCutColors.current
+    val total = operation.total
+    val completed = operation.completed
+    val batchProgress = if (total != null && completed != null && total > 1) {
+        (completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    } else {
+        null
+    }
     PremiumPanelCard(
         accent = ClearCutAccents.Mauve,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
@@ -747,19 +823,26 @@ private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                color = ClearCutAccents.Mauve,
-                strokeWidth = 2.dp
-            )
+            if (batchProgress != null) {
+                CircularProgressIndicator(
+                    progress = { batchProgress },
+                    modifier = Modifier.size(24.dp),
+                    color = ClearCutAccents.Mauve,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = ClearCutAccents.Mauve,
+                    strokeWidth = 2.dp,
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = operation.title,
                     style = MaterialTheme.typography.titleSmall,
                     color = semanticColors.text
                 )
-                val total = operation.total
-                val completed = operation.completed
                 if (total != null && completed != null && total > 1) {
                     Text(
                         text = stringResource(
@@ -778,14 +861,50 @@ private fun MediaImportStatusCard(operation: MediaPickerOperationState) {
                 )
             }
         }
-        LinearProgressIndicator(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(5.dp)
-                .clip(RoundedCornerShape(Radius.sm)),
-            color = ClearCutAccents.Mauve,
-            trackColor = semanticColors.surface
-        )
+        if (batchProgress != null) {
+            LinearProgressIndicator(
+                progress = { batchProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(Radius.sm)),
+                color = ClearCutAccents.Mauve,
+                trackColor = semanticColors.surface,
+            )
+        } else {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(Radius.sm)),
+                color = ClearCutAccents.Mauve,
+                trackColor = semanticColors.surface,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            TextButton(onClick = onCancel) {
+                Text(stringResource(R.string.media_picker_cancel_import))
+            }
+        }
+    }
+}
+
+private fun formatMediaPickerBytes(bytes: Long): String {
+    val safeBytes = bytes.coerceAtLeast(0L)
+    val bytesPerKilobyte = 1024.0
+    val bytesPerMegabyte = bytesPerKilobyte * 1024.0
+    val bytesPerGigabyte = bytesPerMegabyte * 1024.0
+    return when {
+        safeBytes >= bytesPerGigabyte ->
+            String.format(Locale.getDefault(), "%.1f GB", safeBytes / bytesPerGigabyte)
+        safeBytes >= bytesPerMegabyte ->
+            String.format(Locale.getDefault(), "%.1f MB", safeBytes / bytesPerMegabyte)
+        safeBytes >= bytesPerKilobyte ->
+            String.format(Locale.getDefault(), "%.0f KB", safeBytes / bytesPerKilobyte)
+        else -> "$safeBytes B"
     }
 }
 

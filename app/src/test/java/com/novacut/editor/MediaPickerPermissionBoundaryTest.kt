@@ -19,6 +19,10 @@ class MediaPickerPermissionBoundaryTest {
         assertTrue(source.contains("stageSequenceReview(uris, persistedUris = persistedUris)"))
         assertTrue(source.contains("releasePersistedReadPermissions(context, persistedUris)"))
         assertTrue(source.contains("uris.distinct().forEach { uri ->"))
+        assertTrue(source.contains("activeOperationJob?.cancel()"))
+        assertTrue(source.contains("isCancelled = { !operationContext.isActive }"))
+        assertTrue(source.contains("completed = index + 1"))
+        assertTrue(source.contains("progress = { batchProgress }"))
         assertFalse(
             "Batch cleanup must not release every URI merely because it was selected",
             source.contains("releasePersistedReadPermission(context, selection.uri)")
@@ -32,11 +36,10 @@ class MediaPickerPermissionBoundaryTest {
         ).readText()
         val strings = locate("app/src/main/res/values/strings.xml").readText()
 
-        assertTrue(source.contains("var stoppedForInsufficientSpace = false"))
-        assertTrue(source.contains("stoppedForInsufficientSpace = true"))
-        assertTrue(source.contains("if (stoppedForInsufficientSpace)"))
-        assertTrue(source.contains("permissionMessage = insufficientSpace"))
-        assertTrue(strings.contains("name=\"media_picker_insufficient_space\""))
+        assertTrue(source.contains("insufficientSpaceFor(context, totalSize)"))
+        assertTrue(source.contains("permissionMessage = insufficientSpaceMessage(ingestResult)"))
+        assertTrue(strings.contains("name=\"media_picker_insufficient_space_format\""))
+        assertTrue(strings.contains("name=\"media_picker_cancel_import\""))
     }
 
     @Test
