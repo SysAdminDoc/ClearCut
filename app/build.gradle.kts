@@ -5,6 +5,7 @@ import java.security.KeyStore
 import java.security.MessageDigest
 import java.util.Locale
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.testing.Test
 
 plugins {
     alias(libs.plugins.android.application)
@@ -850,6 +851,7 @@ dependencies {
     testImplementation(libs.robolectric)
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.compose.ui.test.junit4.accessibility)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.roborazzi.core)
     testImplementation(libs.roborazzi.compose)
@@ -868,4 +870,46 @@ dependencies {
 
 baselineProfile {
     automaticGenerationDuringBuild = false
+}
+
+// The screenshot lane intentionally uses the QA unit-test runtime: it contains the
+// same generated resources and Hilt graph as the normal JVM gate, while filtering to
+// the small visual verification class. Keeping record/compare/verify as explicit
+// tasks makes the golden update operation reviewable and prevents a plain unit-test
+// invocation from writing binary artifacts.
+afterEvaluate {
+    val qaUnitTestTask = tasks.named<Test>("testQaUnitTest")
+    val visualGoldenDirectory = layout.projectDirectory.dir("src/test/screenshots").asFile
+    val visualComparisonDirectory = layout.buildDirectory.dir("outputs/roborazzi-comparison")
+    val visualResultDirectory = layout.buildDirectory.dir("test-results/roborazzi")
+
+    fun registerJvmVisualVerificationTask(
+        name: String,
+        roborazziProperty: String,
+    ) = tasks.register<Test>(name) {
+        group = "verification"
+        description = "Run the JVM visual and accessibility verification lane in $roborazziProperty mode."
+        dependsOn(
+            "compileQaUnitTestKotlin",
+            "compileQaUnitTestJavaWithJavac",
+            "processQaUnitTestJavaRes",
+            "transformQaUnitTestClassesWithAsm",
+        )
+        testClassesDirs = qaUnitTestTask.get().testClassesDirs
+        classpath = qaUnitTestTask.get().classpath
+        useJUnit()
+        include("**/JvmVisualVerificationTest.class")
+        include("**/JvmAccessibilityFailureContractTest.class")
+        maxParallelForks = 1
+        outputs.upToDateWhen { false }
+        systemProperty("clearcut.visual.capture", "true")
+        systemProperty("roborazzi.test.$roborazziProperty", "true")
+        systemProperty("roborazzi.output.dir", visualGoldenDirectory.absolutePath)
+        systemProperty("roborazzi.compare.output.dir", visualComparisonDirectory.get().asFile.absolutePath)
+        systemProperty("roborazzi.result.dir", visualResultDirectory.get().asFile.absolutePath)
+    }
+
+    registerJvmVisualVerificationTask("recordJvmVisualVerification", "record")
+    registerJvmVisualVerificationTask("compareJvmVisualVerification", "compare")
+    registerJvmVisualVerificationTask("verifyJvmVisualVerification", "verify")
 }

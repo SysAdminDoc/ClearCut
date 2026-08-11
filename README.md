@@ -537,6 +537,10 @@ com.novacut.editor/
 ./gradlew :app:assembleQa :app:assembleQaAndroidTest
 # JVM/lint gate for the QA-targeted test graph
 ./gradlew :app:testQaUnitTest :app:lintDebug
+# Headless JVM visual and accessibility verification (record or compare committed goldens)
+./gradlew :app:recordJvmVisualVerification
+./gradlew :app:verifyJvmVisualVerification
+./gradlew :app:compareJvmVisualVerification
 # Run instrumentation only on a dedicated QA device or emulator
 ./gradlew :app:connectedQaAndroidTest
 
@@ -546,6 +550,13 @@ com.novacut.editor/
 # Managed-device startup/editor performance gate
 ./gradlew :baselineprofile:pixel6Api37BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
 ```
+
+The JVM visual lane drives the production dashboard, editor, export sheet, and
+settings flow under Robolectric in dark and high-contrast dark modes. It keeps
+the eight reference images in `app/src/test/screenshots/` and applies the
+strict Compose accessibility validator to each captured screen. Use the record
+task only when an intentional UI change should update those references; the
+verify task is the normal CI gate.
 
 For a reproducible headless API 37 lane, provision and launch the local
 16 KB-page-size AVD before running connected tests:

@@ -2,6 +2,7 @@
 
 ## v3.78.1
 
+- Added a headless JVM visual verification lane for the dashboard, editor, export sheet, and settings in dark and high-contrast dark modes, with committed Roborazzi goldens and strict accessibility checks.
 - Added a secret-free GitHub Actions PR/master gate covering JVM tests, lint, QA/debug packaging, package/release identity, dependency/native SBOM checks, 16 KB alignment, deterministic artifact hashes, and build provenance evidence.
 - Upgraded the pinned Media3 runtime to 1.11.0 after the QA compatibility probe, full release-gate matrix, generated dependency evidence, and APK alignment checks passed.
 - HDR export overlays now keep native text and API 34+ gain-mapped stills in the HDR compositor; unsupported bitmap paths disclose their SDR fallback, preserve gain maps through scaling, and fail early with a named sampler-budget error.
