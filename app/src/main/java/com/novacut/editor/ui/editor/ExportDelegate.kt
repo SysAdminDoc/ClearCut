@@ -34,6 +34,7 @@ import com.novacut.editor.engine.ExportResumePolicy
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
 import com.novacut.editor.engine.GifStreamEncoder
+import com.novacut.editor.engine.HdrOverlayAssetInspector
 import com.novacut.editor.engine.MAX_REVERSE_CLIP_DURATION_MS
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.Media3ExportRobustnessPolicy
@@ -927,14 +928,18 @@ class ExportDelegate(
         runtimeExportNote = null
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
+        val hdrOverlaySummary = withContext(Dispatchers.IO) {
+            HdrOverlayAssetInspector.inspect(
+                context = appContext,
+                textOverlays = currentState.textOverlays,
+                imageOverlays = currentState.imageOverlays,
+                watermark = currentState.exportConfig.watermark,
+            )
+        }
         val hdrOverlayDisclosure = HdrOverlayPolicy.evaluate(
             hdrRequested = currentState.exportConfig.hdr10PlusMetadata,
             codec = currentState.exportConfig.codec,
-            overlays = HdrOverlaySummary(
-                textOverlayCount = currentState.textOverlays.size,
-                imageOverlayCount = currentState.imageOverlays.size,
-                watermarkPresent = currentState.exportConfig.watermark != null,
-            ),
+            overlays = hdrOverlaySummary,
         ).disclosure
         val unsupportedTrackBlendCount = TrackBlendModeCapability
             .unsupportedTracks(currentState.tracks)

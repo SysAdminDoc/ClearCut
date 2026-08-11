@@ -1672,6 +1672,22 @@ class VideoEngine @Inject constructor(
         if (reversedCount > 0) {
             Log.w(TAG, "Export: $reversedCount reversed clip(s) not pre-rendered (FFmpeg unavailable or over limit)")
         }
+        val hdrOverlaySummary = HdrOverlayAssetInspector.inspect(
+            context = context,
+            textOverlays = textOverlays,
+            imageOverlays = imageOverlays,
+            watermark = config.watermark,
+        )
+        val hdrOverlayDecision = HdrOverlayPolicy.evaluate(
+            hdrRequested = config.hdr10PlusMetadata,
+            codec = config.codec,
+            overlays = hdrOverlaySummary,
+        )
+        HdrOverlayPolicy.throwIfSamplerBudgetExceeded(hdrOverlayDecision)
+        if (hdrOverlayDecision.requiresSdrFallback) {
+            Log.w(TAG, "Export: ${hdrOverlayDecision.disclosure}")
+        }
+        val preserveHdr = hdrOverlayDecision.preserveHdr
         val visualTrackSequences = buildVideoSequences(
             visibleVideoTracks = visibleVideoTracks,
             soloTrackIds = soloTrackIds,
@@ -1685,6 +1701,7 @@ class VideoEngine @Inject constructor(
             imageOverlays = imageOverlays,
             lottieOverlays = lottieOverlays,
             trackedObjects = trackedObjects,
+            hdrOverlaySummary = hdrOverlaySummary,
             degradationLedger = degradationLedger,
         )
         val unsupportedTrackBlendModes = visualTrackSequences
@@ -1704,19 +1721,6 @@ class VideoEngine @Inject constructor(
         }
         val hasEmbeddedVisualAudio = visualTrackSequences.any { it.hasEmbeddedAudio }
 
-        val hdrOverlayDecision = HdrOverlayPolicy.evaluate(
-            hdrRequested = config.hdr10PlusMetadata,
-            codec = config.codec,
-            overlays = HdrOverlaySummary(
-                textOverlayCount = textOverlays.size,
-                imageOverlayCount = imageOverlays.size,
-                watermarkPresent = config.watermark != null,
-            ),
-        )
-        if (hdrOverlayDecision.requiresSdrFallback) {
-            Log.w(TAG, "Export: ${hdrOverlayDecision.disclosure}")
-        }
-        val preserveHdr = hdrOverlayDecision.preserveHdr
         val composition = CompositionBuilder.build(
             CompositionBuildRequest(
                 sequences = allSequences,
@@ -1827,6 +1831,7 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
+        hdrOverlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
         previewMode: Boolean = false,
         degradationLedger: RenderDegradationLedger? = null,
     ): List<VisualTrackSequence> {
@@ -1855,6 +1860,7 @@ class VideoEngine @Inject constructor(
                     imageOverlays = imageOverlays,
                     lottieOverlays = lottieOverlays,
                     trackedObjects = trackedObjects,
+                    hdrOverlaySummary = hdrOverlaySummary,
                     globalTransitions = globalTransitions,
                     previewMode = previewMode,
                     degradationLedger = degradationLedger,
@@ -1886,6 +1892,7 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
+        hdrOverlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
         globalTransitions: List<GlobalTransition> = emptyList(),
         previewMode: Boolean = false,
         degradationLedger: RenderDegradationLedger? = null,
@@ -1925,6 +1932,7 @@ class VideoEngine @Inject constructor(
                             imageOverlays = imageOverlays,
                             lottieOverlays = lottieOverlays,
                             trackedObjects = trackedObjects,
+                            hdrOverlaySummary = hdrOverlaySummary,
                             nextClipTransition = nextTransition,
                             globalTransitions = globalTransitions,
                             previewMode = previewMode,
@@ -1953,6 +1961,7 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
+        hdrOverlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
         nextClipTransition: Transition? = null,
         globalTransitions: List<GlobalTransition> = emptyList(),
         previewMode: Boolean = false,
@@ -2038,11 +2047,7 @@ class VideoEngine @Inject constructor(
             val preserveLottieHdr = HdrOverlayPolicy.evaluate(
                 hdrRequested = config.hdr10PlusMetadata,
                 codec = config.codec,
-                overlays = HdrOverlaySummary(
-                    textOverlayCount = textOverlays.size,
-                    imageOverlayCount = imageOverlays.size,
-                    watermarkPresent = config.watermark != null,
-                ),
+                overlays = hdrOverlaySummary,
             ).preserveHdr
             val lottieBackendPlans = overlappingLottie.map { lo ->
                 val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L

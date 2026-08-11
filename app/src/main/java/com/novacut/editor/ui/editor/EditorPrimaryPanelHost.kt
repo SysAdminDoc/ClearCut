@@ -224,6 +224,8 @@ fun BoxScope.EditorPrimaryPanelHost(
             projectColorPolicy = ProjectColorPolicy.DEFAULT,
             hasTextOverlays = state.textOverlays.isNotEmpty(),
             hasImageOverlays = state.imageOverlays.isNotEmpty(),
+            textOverlays = state.textOverlays,
+            imageOverlays = state.imageOverlays,
             aiUsageLedger = state.aiUsageLedger,
             exportHistory = state.exportHistory,
             encoderName = state.export.encoderName,

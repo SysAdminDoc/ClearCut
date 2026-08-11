@@ -4,6 +4,7 @@
 
 - Added a secret-free GitHub Actions PR/master gate covering JVM tests, lint, QA/debug packaging, package/release identity, dependency/native SBOM checks, 16 KB alignment, deterministic artifact hashes, and build provenance evidence.
 - Upgraded the pinned Media3 runtime to 1.11.0 after the QA compatibility probe, full release-gate matrix, generated dependency evidence, and APK alignment checks passed.
+- HDR export overlays now keep native text and API 34+ gain-mapped stills in the HDR compositor; unsupported bitmap paths disclose their SDR fallback, preserve gain maps through scaling, and fail early with a named sampler-budget error.
 - Media Manager now provides local name/note/tag search, missing/relink/used/unused triage filters, deterministic sorting, and persisted per-asset notes/tags across autosave, Room migration 9→10, archives, and managed-media sidecars.
 - Batch export queues now persist priority order and planned outputs, support reorder controls plus active pause/cancel, retain eligible partial video paths for resume after interruption, and detect already-complete outputs to avoid duplicate work.
 - Export completion now verifies requested versus actual video/audio codecs, container, dimensions, frame rate, duration, and MP4 layout; Media3 fallback callbacks and rejected stream-copy artifacts remain in export diagnostics/history, while unavailable encoder probes fail closed.

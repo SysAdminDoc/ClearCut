@@ -3,7 +3,6 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.util.UnstableApi
@@ -53,9 +52,7 @@ internal object ExportWatermarkOverlay {
             .coerceAtLeast(1)
         val scale = targetWidth.toFloat() / bitmap.width.toFloat()
         val scaled = if (scale != 1f) {
-            val matrix = Matrix().apply { postScale(scale, scale) }
-            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                .also { if (it !== bitmap) bitmap.recycle() }
+            HdrBitmapOverlaySupport.scalePreservingGainMap(bitmap, scale)
         } else bitmap
 
         val settings = StaticOverlaySettings.Builder()

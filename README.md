@@ -406,7 +406,7 @@ Planning files are local-only in the development checkout:
 - **Platform handoff** — open completed exports in platform apps with suggested post text and manual AI-disclosure reminders
 - 480p to 4K Ultra HD
 - **4 codecs** — H.264, H.265 (HEVC), AV1, VP9 with hardware capability detection via `MediaCodecList`
-- **HDR export confidence** — HEVC, AV1, and VP9 preflight reports HDR10+, Dolby Vision Profile 10, Ultra HDR source gain maps, and device-tier hardware encode support before render; text/image/watermark overlays disclose and use the SDR overlay path when HDR preservation is requested
+- **HDR export confidence** — HEVC, AV1, and VP9 preflight reports HDR10+, Dolby Vision Profile 10, Ultra HDR source gain maps, and device-tier hardware encode support before render; native text and API 34+ gain-mapped bitmap overlays preserve HDR while unsupported overlays disclose their SDR fallback
 - **One-tap platform presets** — YouTube 1080p, YouTube 4K, TikTok, Instagram Reels, Instagram Square, Threads
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously

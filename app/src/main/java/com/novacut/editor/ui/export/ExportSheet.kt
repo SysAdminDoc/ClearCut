@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -82,6 +83,7 @@ import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportStoragePolicy
+import com.novacut.editor.engine.HdrOverlayAssetInspector
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
 import com.novacut.editor.engine.CodecInstanceBudget
@@ -100,12 +102,14 @@ import com.novacut.editor.model.AudioCodec
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ExportQuality
 import com.novacut.editor.model.FrameCaptureFormat
+import com.novacut.editor.model.ImageOverlay
 import com.novacut.editor.model.PlatformPreset
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SubtitleFormat
 import com.novacut.editor.model.TargetSizePreset
 import com.novacut.editor.model.TimelineExportRange
 import com.novacut.editor.model.TimelineTimebase
+import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
@@ -120,7 +124,9 @@ import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 enum class ExportSheetPresentation {
     BOTTOM_SHEET,
@@ -157,6 +163,8 @@ fun ExportSheet(
     projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
     hasTextOverlays: Boolean = false,
     hasImageOverlays: Boolean = false,
+    textOverlays: List<TextOverlay> = emptyList(),
+    imageOverlays: List<ImageOverlay> = emptyList(),
     aiUsageLedger: List<AiUsageLedger.Entry> = emptyList(),
     exportHistory: List<ExportHistoryEntry> = emptyList(),
     encoderName: String? = null,
@@ -238,7 +246,7 @@ fun ExportSheet(
     }
     var showClearAiLedgerConfirm by remember { mutableStateOf(false) }
     val codecCanCarryHdr = config.codec != VideoCodec.H264
-    val hdrOverlaySummary = remember(
+    val fallbackHdrOverlaySummary = remember(
         hasTextOverlays,
         hasImageOverlays,
         effectiveConfig.watermark,
@@ -248,6 +256,33 @@ fun ExportSheet(
             imageOverlayCount = if (hasImageOverlays) 1 else 0,
             watermarkPresent = effectiveConfig.watermark != null,
         )
+    }
+    val context = LocalContext.current
+    val hdrOverlaySummary by produceState(
+        initialValue = fallbackHdrOverlaySummary,
+        textOverlays,
+        imageOverlays,
+        effectiveConfig.watermark,
+        hasTextOverlays,
+        hasImageOverlays,
+    ) {
+        // Keep compatibility with callers that only provide the old boolean
+        // summary. The editor passes the model lists below, which lets the
+        // inspector distinguish gain-mapped stills from animated/SDR assets.
+        if ((hasTextOverlays && textOverlays.isEmpty()) ||
+            (hasImageOverlays && imageOverlays.isEmpty())
+        ) {
+            value = fallbackHdrOverlaySummary
+            return@produceState
+        }
+        value = withContext(Dispatchers.IO) {
+            HdrOverlayAssetInspector.inspect(
+                context = context,
+                textOverlays = textOverlays,
+                imageOverlays = imageOverlays,
+                watermark = effectiveConfig.watermark,
+            )
+        }
     }
     val hdrOverlayDecision = remember(
         effectiveConfig.hdr10PlusMetadata,
@@ -1216,13 +1251,17 @@ fun ExportSheet(
                     description = stringResource(
                         when {
                             !codecCanCarryHdr -> R.string.export_hdr_preserve_disabled
+                            hdrOverlayDecision.samplerBudgetExceeded -> R.string.export_hdr_preserve_sampler_budget
                             hdrOverlayDecision.requiresSdrFallback -> R.string.export_hdr_preserve_overlays_disabled
                             else -> R.string.export_hdr_preserve_description
                         }
                     ),
                     checked = config.hdr10PlusMetadata && codecCanCarryHdr &&
-                        !hdrOverlayDecision.requiresSdrFallback,
-                    enabled = codecCanCarryHdr && !hdrOverlayDecision.requiresSdrFallback,
+                        !hdrOverlayDecision.requiresSdrFallback &&
+                        !hdrOverlayDecision.samplerBudgetExceeded,
+                    enabled = codecCanCarryHdr &&
+                        !hdrOverlayDecision.requiresSdrFallback &&
+                        !hdrOverlayDecision.samplerBudgetExceeded,
                     onCheckedChange = { enabled ->
                         onConfigChanged(config.copy(hdr10PlusMetadata = enabled && codecCanCarryHdr))
                     },

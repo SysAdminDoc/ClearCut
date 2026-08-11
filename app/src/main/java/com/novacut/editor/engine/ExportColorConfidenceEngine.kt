@@ -102,13 +102,18 @@ object ExportColorConfidenceEngine {
             return Report(chips = chips, warnings = warnings)
         }
 
-        HdrOverlayPolicy.evaluate(
+        val hdrOverlayDecision = HdrOverlayPolicy.evaluate(
             hdrRequested = config.hdr10PlusMetadata,
             codec = config.codec,
             overlays = overlaySummary,
-        ).disclosure?.let { disclosure ->
+        )
+        hdrOverlayDecision.disclosure?.let { disclosure ->
             chips += Chip(
-                label = "HDR overlays → SDR",
+                label = if (hdrOverlayDecision.samplerBudgetExceeded) {
+                    "HDR overlay budget"
+                } else {
+                    "HDR overlays → SDR"
+                },
                 detail = disclosure,
                 tone = Tone.WARNING,
             )

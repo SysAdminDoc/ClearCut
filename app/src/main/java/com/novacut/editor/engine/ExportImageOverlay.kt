@@ -3,7 +3,6 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
 import android.util.Log
 import androidx.media3.common.OverlaySettings
@@ -115,9 +114,7 @@ internal class ExportImageOverlay private constructor(
             val targetWidth = outputWidthForFrame(overlayScale, outputFrameWidth)
             if (bitmap.width == targetWidth) return bitmap
             val scale = targetWidth.toFloat() / bitmap.width.coerceAtLeast(1).toFloat()
-            val matrix = Matrix().apply { postScale(scale, scale) }
-            return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-                .also { if (it !== bitmap) bitmap.recycleSafely() }
+            return HdrBitmapOverlaySupport.scalePreservingGainMap(bitmap, scale)
         }
 
         private fun Bitmap.recycleSafely() {
