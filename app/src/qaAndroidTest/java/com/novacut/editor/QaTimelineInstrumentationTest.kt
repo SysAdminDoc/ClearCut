@@ -12,7 +12,8 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.input.key.Key
 import androidx.core.content.FileProvider
-import androidx.room.Room
+import androidx.room3.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.novacut.editor.engine.AutoSaveState
@@ -68,6 +69,7 @@ class QaTimelineInstrumentationTest {
             ProjectDatabase::class.java,
             PROJECT_DATABASE_NAME
         )
+            .setDriver(AndroidSQLiteDriver())
             .addMigrations(*ProjectDatabase.ALL_MIGRATIONS)
             .build()
         autoSave = ProjectAutoSave(targetContext)

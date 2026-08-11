@@ -62,10 +62,14 @@ SOURCE_SPECS: dict[str, dict[str, str]] = {
         "source": "https://dagger.dev/releases/",
     },
     "room": {
-        "coordinate": "androidx.room:room-runtime",
-        "latestCoordinate": "androidx.room3:room3-runtime",
+        "coordinate": "androidx.room3:room3-runtime",
         "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/room3/room3-runtime/maven-metadata.xml",
         "source": "https://developer.android.com/jetpack/androidx/releases/room3",
+    },
+    "sqlite": {
+        "coordinate": "androidx.sqlite:sqlite-framework",
+        "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/sqlite/sqlite-framework/maven-metadata.xml",
+        "source": "https://developer.android.com/jetpack/androidx/releases/sqlite",
     },
     "coroutines": {
         "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
@@ -238,7 +242,7 @@ def default_hold(key: str, pinned: str, latest: str) -> tuple[str, str]:
 
 
 def state_for(key: str, pinned: str, latest: str) -> str:
-    if key == "room":
+    if key == "room" and "androidx-room3-runtime" not in CATALOG.read_text(encoding="utf-8"):
         return "migration-required"
     if pinned == latest:
         return "current"

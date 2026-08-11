@@ -33,6 +33,7 @@ class DependencyFreshnessTest {
         "navigation",
         "coil",
         "okhttp",
+        "sqlite",
         "lottieCompose",
         "onnxruntime",
         "mediapipe",

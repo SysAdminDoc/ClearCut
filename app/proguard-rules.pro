@@ -8,7 +8,7 @@
 # generated-implementation lookup. The equivalent consumer rule is also
 # shipped by room-runtime; keep this app-side declaration close to the usage
 # because it is a real reflection edge, not a package-wide Room keep.
--keep class * extends androidx.room.RoomDatabase { void <init>(); }
+-keep class * extends androidx.room3.RoomDatabase { void <init>(); }
 
 # The optional integrations below are discovered by Class.forName. Keep only
 # the named probe classes and allow R8 to optimize their members. Optional

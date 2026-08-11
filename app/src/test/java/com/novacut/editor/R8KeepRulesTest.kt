@@ -56,7 +56,7 @@ class R8KeepRulesTest {
     @Test
     fun releaseRulesDocumentConsumerRuleOwnership() {
         val rules = readRules()
-        assertTrue(rules.contains("-keep class * extends androidx.room.RoomDatabase { void <init>(); }"))
+        assertTrue(rules.contains("-keep class * extends androidx.room3.RoomDatabase { void <init>(); }"))
         assertTrue(rules.contains("-keepattributes AnnotationDefault,EnclosingMethod,InnerClasses"))
         assertTrue(rules.contains("-assumenosideeffects class android.util.Log"))
         assertTrue(

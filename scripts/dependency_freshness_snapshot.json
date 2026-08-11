@@ -142,21 +142,41 @@
       }
     },
     "room": {
-      "coordinate": "androidx.room:room-runtime",
-      "pinnedVersion": "2.8.4",
+      "coordinate": "androidx.room3:room3-runtime",
+      "pinnedVersion": "3.0.1",
       "latestStable": "3.0.1",
       "source": "https://developer.android.com/jetpack/androidx/releases/room3",
       "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/room3/room3-runtime/maven-metadata.xml",
       "reviewedOn": "2026-08-03",
-      "state": "migration-required",
-      "reason": "Room 3.0.1 is on the new androidx.room3 coordinate with breaking API changes; a version-only catalog edit would not be a valid migration.",
-      "unblockCondition": "Complete the Room 3 coordinate/API migration, then run `python scripts/probe_dependency_upgrade.py --dependency room --version 3.0.1` before updating the catalog.",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
       "compatibilityProbe": {
-        "status": "not-run",
-        "version": null,
-        "command": "python scripts/probe_dependency_upgrade.py --dependency room --version 3.0.1"
+        "status": "passed",
+        "version": "3.0.1",
+        "verifiedOn": "2026-08-11",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency room --version 3.0.1",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
       },
       "latestCoordinate": "androidx.room3:room3-runtime"
+    },
+    "sqlite": {
+      "coordinate": "androidx.sqlite:sqlite-framework",
+      "pinnedVersion": "2.7.0",
+      "latestStable": "2.7.0",
+      "source": "https://developer.android.com/jetpack/androidx/releases/sqlite",
+      "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/sqlite/sqlite-framework/maven-metadata.xml",
+      "reviewedOn": "2026-08-11",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
+      "compatibilityProbe": {
+        "status": "passed",
+        "version": "2.7.0",
+        "verifiedOn": "2026-08-11",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency sqlite --version 2.7.0",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
+      }
     },
     "coroutines": {
       "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-android",

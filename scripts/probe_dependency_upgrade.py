@@ -60,10 +60,12 @@ def wrapper_gradle_version() -> tuple[int, ...]:
 
 def preflight(dependency: str, candidate: str, catalog: dict[str, str]) -> None:
     if dependency == "room":
-        raise RuntimeError(
-            "Room 3 is a coordinate/API migration (androidx.room3), not a version-only "
-            "catalog edit; migrate the Room sources before running this probe."
-        )
+        catalog_text = CATALOG.read_text(encoding="utf-8")
+        if numeric_version(candidate) < (3, 0, 0) or "androidx-room3-runtime" not in catalog_text:
+            raise RuntimeError(
+                "Room 3 is a coordinate/API migration (androidx.room3); migrate the Room "
+                "sources and catalog aliases before running this probe."
+            )
     if dependency == "agp":
         required_gradle = {
             (9, 2): (9, 4, 1),

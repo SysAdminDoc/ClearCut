@@ -1,9 +1,10 @@
 package com.novacut.editor.engine.db
 
 import com.novacut.editor.engine.AppLog
-import androidx.room.*
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.room3.*
+import androidx.room3.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
 import com.novacut.editor.engine.ProjectMediaAsset
 import com.novacut.editor.engine.decodeMediaAssetTags
 import com.novacut.editor.engine.encodeMediaAssetTags
@@ -14,65 +15,65 @@ import com.novacut.editor.model.Resolution
 import kotlinx.coroutines.flow.Flow
 
 @Database(entities = [Project::class, ProjectMediaAssetEntity::class], version = 10, exportSchema = true)
-@TypeConverters(Converters::class)
+@ColumnTypeConverters(Converters::class)
 abstract class ProjectDatabase : RoomDatabase() {
     abstract fun projectDao(): ProjectDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE projects ADD COLUMN templateId TEXT DEFAULT NULL")
-                db.execSQL("ALTER TABLE projects ADD COLUMN proxyEnabled INTEGER NOT NULL DEFAULT 0")
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE projects ADD COLUMN templateId TEXT DEFAULT NULL")
+                connection.execSQL("ALTER TABLE projects ADD COLUMN proxyEnabled INTEGER NOT NULL DEFAULT 0")
             }
         }
 
         val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE projects ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE projects ADD COLUMN version INTEGER NOT NULL DEFAULT 1")
             }
         }
 
         val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
+            override suspend fun migrate(connection: SQLiteConnection) {
                 // Version 3's entity already declared thumbnailUri, but the original
                 // 1->3 upgrade path never added it. Fresh v3 databases therefore have
                 // the column while legacy databases upgraded from v1 do not.
                 var hasThumbnailUri = false
-                db.query("PRAGMA table_info(`projects`)").use { cursor ->
-                    while (cursor.moveToNext()) {
-                        if (cursor.getString(1) == "thumbnailUri") {
+                connection.prepare("PRAGMA table_info(`projects`)").use { statement ->
+                    while (statement.step()) {
+                        if (statement.getText(1) == "thumbnailUri") {
                             hasThumbnailUri = true
                             break
                         }
                     }
                 }
                 if (!hasThumbnailUri) {
-                    db.execSQL("ALTER TABLE projects ADD COLUMN thumbnailUri TEXT DEFAULT NULL")
+                    connection.execSQL("ALTER TABLE projects ADD COLUMN thumbnailUri TEXT DEFAULT NULL")
                 }
             }
         }
 
         val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE INDEX IF NOT EXISTS index_projects_updatedAt ON projects (updatedAt)")
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("CREATE INDEX IF NOT EXISTS index_projects_updatedAt ON projects (updatedAt)")
             }
         }
 
         val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE projects ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE projects ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
             }
         }
 
         val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE projects ADD COLUMN deletedAtEpochMs INTEGER DEFAULT NULL")
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE projects ADD COLUMN deletedAtEpochMs INTEGER DEFAULT NULL")
             }
         }
 
         val MIGRATION_7_8 = object : Migration(7, 8) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `project_media_assets` (
                         `projectId` TEXT NOT NULL,
@@ -94,30 +95,30 @@ abstract class ProjectDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_project_media_assets_projectId` ON `project_media_assets` (`projectId`)"
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_project_media_assets_projectId_managedUri` ON `project_media_assets` (`projectId`, `managedUri`)"
                 )
-                db.execSQL(
+                connection.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_project_media_assets_projectId_originalUri` ON `project_media_assets` (`projectId`, `originalUri`)"
                 )
             }
         }
 
         val MIGRATION_8_9 = object : Migration(8, 9) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE projects ADD COLUMN frameRateNumerator INTEGER NOT NULL DEFAULT 30")
-                db.execSQL("ALTER TABLE projects ADD COLUMN frameRateDenominator INTEGER NOT NULL DEFAULT 1")
-                db.execSQL("UPDATE projects SET frameRateNumerator = frameRate")
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE projects ADD COLUMN frameRateNumerator INTEGER NOT NULL DEFAULT 30")
+                connection.execSQL("ALTER TABLE projects ADD COLUMN frameRateDenominator INTEGER NOT NULL DEFAULT 1")
+                connection.execSQL("UPDATE projects SET frameRateNumerator = frameRate")
             }
         }
 
         val MIGRATION_9_10 = object : Migration(9, 10) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE project_media_assets ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
-                db.execSQL("ALTER TABLE project_media_assets ADD COLUMN tagsJson TEXT NOT NULL DEFAULT '[]'")
+            override suspend fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE project_media_assets ADD COLUMN notes TEXT NOT NULL DEFAULT ''")
+                connection.execSQL("ALTER TABLE project_media_assets ADD COLUMN tagsJson TEXT NOT NULL DEFAULT '[]'")
             }
         }
 
@@ -292,10 +293,10 @@ interface ProjectDao {
 }
 
 class Converters {
-    @TypeConverter
+    @ColumnTypeConverter
     fun fromAspectRatio(value: AspectRatio): String = value.name
 
-    @TypeConverter
+    @ColumnTypeConverter
     fun toAspectRatio(value: String): AspectRatio = try {
         AspectRatio.valueOf(value)
     } catch (_: IllegalArgumentException) {
@@ -303,10 +304,10 @@ class Converters {
         AspectRatio.RATIO_16_9
     }
 
-    @TypeConverter
+    @ColumnTypeConverter
     fun fromResolution(value: Resolution): String = value.name
 
-    @TypeConverter
+    @ColumnTypeConverter
     fun toResolution(value: String): Resolution = try {
         Resolution.valueOf(value)
     } catch (_: IllegalArgumentException) {

@@ -10,6 +10,7 @@
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 
+- Project persistence now runs on Room 3.0.1 and SQLite driver APIs, with the full v1–v10 migration chain validated on the API 37 device lane.
 - CFR export normalization now turns irregular VFR source cadence into the selected delivery rate before the final Media3 render.
 - Batch Export can queue independent source-file trim ranges with persisted URIs and per-item settings while retaining uniform project exports.
 
@@ -475,7 +476,7 @@ Planning files are local-only in the development checkout:
 | Startup performance | AndroidX Baseline Profile / Macrobenchmark 1.5.0-beta01 |
 | Timeline Exchange | OpenTimelineIO / FCPXML / EDL export and guarded import preview |
 | DI | Hilt / Dagger |
-| Database | Room 2.8.4 (schema v10, migration chain 1→10) |
+| Database | Room 3.0.1 (schema v10, migration chain 1→10) |
 | Settings | DataStore Preferences |
 | Architecture | MVVM, single-activity Compose navigation, StateFlow |
 

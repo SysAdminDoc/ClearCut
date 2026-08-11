@@ -1,7 +1,8 @@
 package com.novacut.editor.engine
 
 import android.content.Context
-import androidx.room.Room
+import androidx.room3.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.novacut.editor.engine.db.ProjectDatabase
 import com.novacut.editor.engine.db.ProjectDao
 import dagger.Module
@@ -23,6 +24,7 @@ object AppModule {
             ProjectDatabase::class.java,
             "clearcut.db"
         )
+            .setDriver(AndroidSQLiteDriver())
             .addMigrations(*ProjectDatabase.ALL_MIGRATIONS)
             .build()
     }

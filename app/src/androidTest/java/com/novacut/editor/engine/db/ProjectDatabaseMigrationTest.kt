@@ -1,11 +1,11 @@
 package com.novacut.editor.engine.db
 
-import android.database.Cursor
-import androidx.room.testing.MigrationTestHelper
-import androidx.sqlite.db.SupportSQLiteDatabase
-import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import androidx.room3.testing.MigrationTestHelper
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -23,19 +23,22 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ProjectDatabaseMigrationTest {
 
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val targetContext = instrumentation.targetContext
+
     @get:Rule
     val helper = MigrationTestHelper(
-        InstrumentationRegistry.getInstrumentation(),
-        ProjectDatabase::class.java,
-        emptyList(),
-        FrameworkSQLiteOpenHelperFactory()
+        instrumentation = instrumentation,
+        databaseClass = ProjectDatabase::class,
+        driver = AndroidSQLiteDriver(),
+        file = targetContext.getDatabasePath(TEST_DB)
     )
 
     @Test
-    fun committedSchemaVersionsMigrateToCurrentWithoutProjectLoss() {
+    fun committedSchemaVersionsMigrateToCurrentWithoutProjectLoss() = runBlocking {
         for (startVersion in FIRST_SCHEMA_VERSION until CURRENT_SCHEMA_VERSION) {
-            val dbName = "clearcut-migration-$startVersion"
-            helper.createDatabase(dbName, startVersion).use { db ->
+            targetContext.deleteDatabase(TEST_DB)
+            helper.createDatabase(startVersion).use { db ->
                 insertProject(db, startVersion)
                 assertProjectRowAtVersion(db, startVersion, startVersion)
             }
@@ -43,10 +46,8 @@ class ProjectDatabaseMigrationTest {
             for (targetVersion in (startVersion + 1)..CURRENT_SCHEMA_VERSION) {
                 val sourceVersion = targetVersion - 1
                 helper.runMigrationsAndValidate(
-                    dbName,
                     targetVersion,
-                    true,
-                    ProjectDatabase.ALL_MIGRATIONS[sourceVersion - FIRST_SCHEMA_VERSION]
+                    listOf(ProjectDatabase.ALL_MIGRATIONS[sourceVersion - FIRST_SCHEMA_VERSION])
                 ).use { db ->
                     assertProjectRowAtVersion(db, startVersion, targetVersion)
                 }
@@ -54,7 +55,7 @@ class ProjectDatabaseMigrationTest {
         }
     }
 
-    private fun insertProject(db: SupportSQLiteDatabase, version: Int) {
+    private fun insertProject(db: SQLiteConnection, version: Int) {
         val columns = mutableListOf(
             "id",
             "name",
@@ -104,88 +105,76 @@ class ProjectDatabaseMigrationTest {
             values += 1
         }
 
-        db.execSQL(
+        db.prepare(
             "INSERT INTO projects (${columns.joinToString(", ")}) " +
-                "VALUES (${values.joinToString(", ") { "?" }})",
-            values.toTypedArray()
-        )
+                "VALUES (${values.joinToString(", ") { "?" }})"
+        ).use { statement ->
+            values.forEachIndexed { index, value -> bindValue(statement, index + 1, value) }
+            statement.step()
+        }
     }
 
     private fun assertProjectRowAtVersion(
-        db: SupportSQLiteDatabase,
+        db: SQLiteConnection,
         sourceVersion: Int,
         schemaVersion: Int
     ) {
-        db.query(
-            "SELECT name, frameRate FROM projects WHERE id = ?",
-            arrayOf(projectId(sourceVersion))
-        ).use { cursor ->
-            assertTrue("Project row from v$sourceVersion should survive v$schemaVersion", cursor.moveToFirst())
-            assertEquals("Migrated v$sourceVersion", cursor.getString(0))
-            assertEquals(24, cursor.getInt(1))
-            assertFalse(cursor.moveToNext())
+        db.prepare("SELECT name, frameRate FROM projects WHERE id = ?").use { statement ->
+            statement.bindText(1, projectId(sourceVersion))
+            assertTrue("Project row from v$sourceVersion should survive v$schemaVersion", statement.step())
+            assertEquals("Migrated v$sourceVersion", statement.getText(0))
+            assertEquals(24, statement.getInt(1))
+            assertFalse(statement.step())
         }
 
         if (schemaVersion >= 2) {
-            db.query(
-                "SELECT templateId, proxyEnabled FROM projects WHERE id = ?",
-                arrayOf(projectId(sourceVersion))
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
-                assertTrue(cursor.isNull(0))
-                assertEquals(if (sourceVersion >= 2) 1 else 0, cursor.getInt(1))
+            db.prepare("SELECT templateId, proxyEnabled FROM projects WHERE id = ?").use { statement ->
+                statement.bindText(1, projectId(sourceVersion))
+                assertTrue(statement.step())
+                assertTrue(statement.isNull(0))
+                assertEquals(if (sourceVersion >= 2) 1 else 0, statement.getInt(1))
             }
         }
 
         if (schemaVersion >= 3) {
-            db.query(
-                "SELECT version FROM projects WHERE id = ?",
-                arrayOf(projectId(sourceVersion))
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
-                assertEquals(1, cursor.getInt(0))
+            db.prepare("SELECT version FROM projects WHERE id = ?").use { statement ->
+                statement.bindText(1, projectId(sourceVersion))
+                assertTrue(statement.step())
+                assertEquals(1, statement.getInt(0))
             }
         }
 
         if (schemaVersion >= 4) {
-            db.query(
-                "SELECT thumbnailUri FROM projects WHERE id = ?",
-                arrayOf(projectId(sourceVersion))
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
-                assertTrue(cursor.isNull(0))
+            db.prepare("SELECT thumbnailUri FROM projects WHERE id = ?").use { statement ->
+                statement.bindText(1, projectId(sourceVersion))
+                assertTrue(statement.step())
+                assertTrue(statement.isNull(0))
             }
         }
 
         if (schemaVersion >= 5) {
-            db.query(
-                "SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?",
-                arrayOf("index_projects_updatedAt")
-            ).use { cursor ->
-                assertTrue("updatedAt index should exist after v5", cursor.moveToFirst())
+            db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?").use { statement ->
+                statement.bindText(1, "index_projects_updatedAt")
+                assertTrue("updatedAt index should exist after v5", statement.step())
             }
         }
 
         if (schemaVersion >= 6) {
-            db.query(
-                "SELECT notes FROM projects WHERE id = ?",
-                arrayOf(projectId(sourceVersion))
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
-                assertEquals(expectedNotes(sourceVersion), cursor.getString(0))
+            db.prepare("SELECT notes FROM projects WHERE id = ?").use { statement ->
+                statement.bindText(1, projectId(sourceVersion))
+                assertTrue(statement.step())
+                assertEquals(expectedNotes(sourceVersion), statement.getText(0))
             }
         }
 
         if (schemaVersion >= 7) {
-            db.query(
-                "SELECT deletedAtEpochMs FROM projects WHERE id = ?",
-                arrayOf(projectId(sourceVersion))
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
+            db.prepare("SELECT deletedAtEpochMs FROM projects WHERE id = ?").use { statement ->
+                statement.bindText(1, projectId(sourceVersion))
+                assertTrue(statement.step())
                 if (sourceVersion >= 7) {
-                    assertEquals(DELETED_AT, cursor.getLong(0))
+                    assertEquals(DELETED_AT, statement.getLong(0))
                 } else {
-                    assertTrue(cursor.isNull(0))
+                    assertTrue(statement.isNull(0))
                 }
             }
         }
@@ -195,41 +184,49 @@ class ProjectDatabaseMigrationTest {
         }
 
         if (schemaVersion >= 9) {
-            db.query(
-                "SELECT frameRateNumerator, frameRateDenominator FROM projects WHERE id = ?",
-                arrayOf(projectId(sourceVersion))
-            ).use { cursor ->
-                assertTrue(cursor.moveToFirst())
-                assertEquals(24, cursor.getInt(0))
-                assertEquals(1, cursor.getInt(1))
+            db.prepare("SELECT frameRateNumerator, frameRateDenominator FROM projects WHERE id = ?").use { statement ->
+                statement.bindText(1, projectId(sourceVersion))
+                assertTrue(statement.step())
+                assertEquals(24, statement.getInt(0))
+                assertEquals(1, statement.getInt(1))
             }
         }
 
         if (schemaVersion >= 10) {
-            db.query("PRAGMA table_info(project_media_assets)").use { cursor ->
-                val columns = generateSequence { if (cursor.moveToNext()) cursor.getString(1) else null }
-                    .toSet()
-                assertTrue("project_media_assets.notes missing after v10", "notes" in columns)
-                assertTrue("project_media_assets.tagsJson missing after v10", "tagsJson" in columns)
+            val columns = db.prepare("PRAGMA table_info(project_media_assets)").use { statement ->
+                buildSet {
+                    while (statement.step()) add(statement.getText(1))
+                }
             }
+            assertTrue("project_media_assets.notes missing after v10", "notes" in columns)
+            assertTrue("project_media_assets.tagsJson missing after v10", "tagsJson" in columns)
         }
     }
 
-    private fun assertProjectMediaAssetsTableReady(db: SupportSQLiteDatabase) {
-        db.query("PRAGMA table_info(project_media_assets)").use { cursor ->
-            val columns = generateSequence { if (cursor.moveToNext()) cursor.getString(1) else null }
-                .toSet()
-            assertTrue("project_media_assets.projectId missing", "projectId" in columns)
-            assertTrue("project_media_assets.assetId missing", "assetId" in columns)
-            assertTrue("project_media_assets.managedUri missing", "managedUri" in columns)
-            assertTrue("project_media_assets.originalUri missing", "originalUri" in columns)
+    private fun assertProjectMediaAssetsTableReady(db: SQLiteConnection) {
+        val columns = db.prepare("PRAGMA table_info(project_media_assets)").use { statement ->
+            buildSet {
+                while (statement.step()) add(statement.getText(1))
+            }
         }
+        assertTrue("project_media_assets.projectId missing", "projectId" in columns)
+        assertTrue("project_media_assets.assetId missing", "assetId" in columns)
+        assertTrue("project_media_assets.managedUri missing", "managedUri" in columns)
+        assertTrue("project_media_assets.originalUri missing", "originalUri" in columns)
 
-        db.query(
-            "SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?",
-            arrayOf("index_project_media_assets_projectId_managedUri")
-        ).use { cursor ->
-            assertTrue("Managed URI lookup index should exist after migration", cursor.moveToFirst())
+        db.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?").use { statement ->
+            statement.bindText(1, "index_project_media_assets_projectId_managedUri")
+            assertTrue("Managed URI lookup index should exist after migration", statement.step())
+        }
+    }
+
+    private fun bindValue(statement: androidx.sqlite.SQLiteStatement, index: Int, value: Any?) {
+        when (value) {
+            null -> statement.bindNull(index)
+            is Int -> statement.bindInt(index, value)
+            is Long -> statement.bindLong(index, value)
+            is String -> statement.bindText(index, value)
+            else -> error("Unsupported migration fixture value: ${value::class}")
         }
     }
 
@@ -241,13 +238,6 @@ class ProjectDatabaseMigrationTest {
         private const val FIRST_SCHEMA_VERSION = 1
         private const val CURRENT_SCHEMA_VERSION = 10
         private const val DELETED_AT = 12_345L
-    }
-}
-
-private inline fun <T : Cursor, R> T.use(block: (T) -> R): R {
-    try {
-        return block(this)
-    } finally {
-        close()
+        private const val TEST_DB = "clearcut-migration-test"
     }
 }

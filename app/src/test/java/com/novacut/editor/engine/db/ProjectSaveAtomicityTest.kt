@@ -1,6 +1,7 @@
 package com.novacut.editor.engine.db
 
-import androidx.room.Room
+import androidx.room3.Room
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.novacut.editor.model.Project
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -33,7 +34,7 @@ class ProjectSaveAtomicityTest {
         db = Room.inMemoryDatabaseBuilder(
             RuntimeEnvironment.getApplication(),
             ProjectDatabase::class.java
-        ).build()
+        ).setDriver(AndroidSQLiteDriver()).build()
         dao = db.projectDao()
     }
 

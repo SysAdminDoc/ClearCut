@@ -2,7 +2,7 @@ package com.novacut.editor.model
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable
-import androidx.room.*
+import androidx.room3.*
 import java.util.UUID
 
 @Immutable
