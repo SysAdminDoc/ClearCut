@@ -284,13 +284,7 @@ fun BatchExportPanel(
                         FilterChip(
                             selected = false,
                             onClick = {
-                                val config = ExportConfig(
-                                    resolution = preset.resolution,
-                                    aspectRatio = preset.aspectRatio,
-                                    frameRate = preset.frameRate,
-                                    codec = preset.codec,
-                                    platformPreset = preset
-                                )
+                                val config = ExportConfig().withPlatformPreset(preset)
                                 onAddItem(config, preset.displayName)
                                 showPresetPicker = false
                             },

@@ -36,6 +36,7 @@
     <string name="export_failed">Exportación fallida</string>
     <string name="export_quick_presets">Preajustes rápidos</string>
     <string name="export_presets_description">Comience con un ajuste preestablecido listo para la plataforma, luego ajuste los detalles si este renderizado necesita algo personalizado.</string>
+    <string name="export_preset_reframe_disclosure">Este preajuste cambia el lienzo de salida de %1$s a %2$s. ClearCut ajustará la fuente a ese encuadre de entrega; revise el encuadre antes de exportar.</string>
     <string name="export_audio_only">Sólo audio</string>
     <string name="export_audio_only_description">Omita la reproducción de video y exporte un solo maestro de audio.</string>
     <string name="export_resolution">Resolución</string>

@@ -1021,7 +1021,7 @@ class ExportDelegate(
         if (requestedRange != null && resolvedRange == null) {
             val message = text(R.string.export_range_invalid)
             val invalidConfig = currentState.exportConfig.copy(
-                aspectRatio = currentState.project.aspectRatio,
+                aspectRatio = currentState.exportConfig.outputAspectRatio(currentState.project.aspectRatio),
             )
             updateExport {
                 it.copy(
@@ -1047,8 +1047,9 @@ class ExportDelegate(
         }
 
         val totalDurationMs = resolvedRange?.durationMs ?: projectDurationMs
+        val outputAspectRatio = currentState.exportConfig.outputAspectRatio(currentState.project.aspectRatio)
         val config = currentState.exportConfig
-            .copy(aspectRatio = currentState.project.aspectRatio)
+            .copy(aspectRatio = outputAspectRatio)
             .resolveTargetSize(totalDurationMs)
         val baseChapters = if (config.includeChapterMarkers && config.chapters.isEmpty()) {
             currentState.timelineMarkers
@@ -1162,7 +1163,9 @@ class ExportDelegate(
                     sheetFile = createOutputFile(
                         outputDir = outputDir,
                         extension = "png",
-                        preferredOutputName = (preferredOutputName ?: currentState.project.name) + "_contact"
+                        preferredOutputName = (preferredOutputName ?: currentState.project.name) + "_contact",
+                        configOverride = configWithChapters,
+                        stateOverride = currentState,
                     )
                     val targetSheetFile = sheetFile ?: return@launch
                     val allClips = tracks
@@ -1296,7 +1299,9 @@ class ExportDelegate(
                     gifFile = createOutputFile(
                         outputDir = outputDir,
                         extension = "gif",
-                        preferredOutputName = preferredOutputName ?: currentState.project.name
+                        preferredOutputName = preferredOutputName ?: currentState.project.name,
+                        configOverride = configWithChapters,
+                        stateOverride = currentState,
                     )
                     val targetGifFile = gifFile ?: return@launch
                     val videoTrackClips = tracks
@@ -1534,7 +1539,9 @@ class ExportDelegate(
                                 createOutputFile(
                                     outputDir = outputDir,
                                     extension = "m4a",
-                                    preferredOutputName = "${baseName}_stem${index + 1}_$trackName"
+                                    preferredOutputName = "${baseName}_stem${index + 1}_$trackName",
+                                    configOverride = configWithChapters,
+                                    stateOverride = currentState,
                                 )
                             },
                             onProgress = { p -> sampleProgress(p); updateExport { it.copy(progress = p) } },
@@ -1568,7 +1575,13 @@ class ExportDelegate(
                             onFallbackApplied = ::noteRuntimeExport,
                         )
                     } else {
-                        val outputFile = createOutputFile(outputDir, "m4a", baseName)
+                        val outputFile = createOutputFile(
+                            outputDir = outputDir,
+                            extension = "m4a",
+                            preferredOutputName = baseName,
+                            configOverride = configWithChapters,
+                            stateOverride = currentState,
+                        )
                         videoEngine.exportAudio(
                             tracks = tracks,
                             config = configWithChapters,
@@ -1622,7 +1635,9 @@ class ExportDelegate(
             val outputFile = outputFileOverride ?: createOutputFile(
                 outputDir = outputDir,
                 extension = ext,
-                preferredOutputName = preferredOutputName ?: currentState.project.name
+                preferredOutputName = preferredOutputName ?: currentState.project.name,
+                configOverride = configWithChapters,
+                stateOverride = currentState,
             )
 
             fun handleVideoExportComplete() {

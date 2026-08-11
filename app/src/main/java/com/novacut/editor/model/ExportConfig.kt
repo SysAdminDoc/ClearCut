@@ -63,6 +63,19 @@ data class ExportConfig(
         require(audioBitrate > 0) { "Audio bitrate must be positive" }
     }
 
+    /** Apply every delivery setting from a platform preset in one data-driven operation. */
+    fun withPlatformPreset(preset: PlatformPreset): ExportConfig = copy(
+        resolution = preset.resolution,
+        aspectRatio = preset.aspectRatio,
+        frameRate = preset.frameRate,
+        codec = preset.codec,
+        platformPreset = preset,
+    )
+
+    /** Use the selected delivery ratio, or the project canvas for a custom export. */
+    fun outputAspectRatio(projectAspectRatio: AspectRatio): AspectRatio =
+        platformPreset?.aspectRatio ?: projectAspectRatio
+
     /**
      * Resolve target-size constraint into a concrete bitrate override for the given
      * timeline duration. Returns a copy of this config with `bitrateOverride` set so

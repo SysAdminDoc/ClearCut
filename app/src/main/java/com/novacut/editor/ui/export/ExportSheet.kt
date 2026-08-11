@@ -264,7 +264,8 @@ fun ExportSheet(
 
     val semanticColors = LocalClearCutColors.current
     val availableCodecs = remember { ExportConfig.getAvailableCodecs() }
-    val (width, height) = config.resolution.forAspect(aspectRatio)
+    val outputAspectRatio = config.outputAspectRatio(aspectRatio)
+    val (width, height) = config.resolution.forAspect(outputAspectRatio)
     val resolvedRange = remember(config.timelineRange, timelineTimebase, totalDurationMs) {
         config.timelineRange?.resolve(timelineTimebase, totalDurationMs)
     }
@@ -713,12 +714,12 @@ fun ExportSheet(
                         when {
                             config.captureFrameOnly -> {
                                 ExportPill(localizedFrameCaptureFormat(config.captureFormat), ClearCutAccents.Mauve)
-                                ExportPill(aspectRatio.label, ClearCutAccents.Sapphire)
+                                ExportPill(outputAspectRatio.label, ClearCutAccents.Sapphire)
                             }
                             config.exportAsGif -> {
                                 ExportPill(stringResource(R.string.export_fps_value, config.gifFrameRate), ClearCutAccents.Mauve)
                                 ExportPill(stringResource(R.string.export_pixels_value, config.gifMaxWidth), ClearCutAccents.Sapphire)
-                                ExportPill(aspectRatio.label, ClearCutAccents.Teal)
+                                ExportPill(outputAspectRatio.label, ClearCutAccents.Teal)
                             }
                             config.exportStemsOnly -> {
                                 ExportPill(stringResource(R.string.export_stems), ClearCutAccents.Mauve)
@@ -763,12 +764,7 @@ fun ExportSheet(
                     FilterChip(
                         onClick = {
                             onConfigChanged(
-                                config.copy(
-                                    resolution = preset.resolution,
-                                    frameRate = preset.frameRate,
-                                    codec = preset.codec,
-                                    platformPreset = preset
-                                )
+                                config.withPlatformPreset(preset)
                             )
                         },
                         label = { Text(preset.displayName, style = MaterialTheme.typography.labelMedium) },
@@ -780,6 +776,37 @@ fun ExportSheet(
                             selectedLabelColor = ClearCutAccents.Green
                         )
                     )
+                }
+            }
+            if (config.platformPreset != null && outputAspectRatio != aspectRatio) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = ClearCutAccents.Yellow.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(Radius.md),
+                    border = BorderStroke(1.dp, ClearCutAccents.Yellow.copy(alpha = 0.28f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = ClearCutAccents.Yellow,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.export_preset_reframe_disclosure,
+                                aspectRatio.label,
+                                outputAspectRatio.label,
+                            ),
+                            color = semanticColors.text,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         }

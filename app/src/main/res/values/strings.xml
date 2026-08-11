@@ -39,6 +39,7 @@
     <string name="export_failed">Export Failed</string>
     <string name="export_quick_presets">Quick Presets</string>
     <string name="export_presets_description">Start with a platform-ready preset, then fine-tune the details if this render needs something custom.</string>
+    <string name="export_preset_reframe_disclosure">This preset changes the output canvas from %1$s to %2$s. ClearCut will fit the source to that delivery frame; review the framing before export.</string>
     <string name="export_audio_only">Audio Only</string>
     <string name="export_audio_only_description">Skip video rendering and export a single audio master.</string>
     <string name="export_resolution">Resolution</string>
