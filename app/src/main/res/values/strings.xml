@@ -429,6 +429,7 @@
     <plurals name="export_columns_count">
         <item quantity="one">%1$d column</item>
         <item quantity="other">%1$d columns</item>
+        <item quantity="many">%1$d columns</item>
     </plurals>
     <string name="export_suggested_resolution">Suggested: %1$s</string>
     <string name="export_suggested_resolution_fps">Suggested: %1$s, %2$d fps</string>
@@ -972,6 +973,7 @@
     <plurals name="sticker_ready_count">
         <item quantity="one">%1$d ready</item>
         <item quantity="other">%1$d ready</item>
+        <item quantity="many">%1$d ready</item>
     </plurals>
     <string name="sticker_shelf">Sticker shelf</string>
     <string name="sticker_shelf_description">Keep overlays fast and expressive with curated bundles for humor, emphasis, direction, and social prompts.</string>
@@ -1174,6 +1176,7 @@
     <plurals name="projects_media_health_projects_value">
         <item quantity="one">%1$d local project</item>
         <item quantity="other">%1$d local projects</item>
+        <item quantity="many">%1$d local projects</item>
     </plurals>
     <string name="projects_media_health_body">Imports stay local. Missing media is flagged before export.</string>
     <string name="projects_render_ready_title">Ready to render</string>
@@ -1559,6 +1562,7 @@
     <plurals name="undo_history_action_count">
         <item quantity="one">%1$d action</item>
         <item quantity="other">%1$d actions</item>
+        <item quantity="many">%1$d actions</item>
     </plurals>
 
     <!-- MarkerListPanel -->
@@ -1645,6 +1649,7 @@
     <plurals name="caption_total_count">
         <item quantity="one">%1$d total</item>
         <item quantity="other">%1$d total</item>
+        <item quantity="many">%1$d total</item>
     </plurals>
     <string name="caption_active_count">%1$d live</string>
     <string name="caption_ready">Ready</string>
@@ -1719,6 +1724,7 @@
     <plurals name="pip_layout_count">
         <item quantity="one">%1$d layout</item>
         <item quantity="other">%1$d layouts</item>
+        <item quantity="many">%1$d layouts</item>
     </plurals>
     <string name="pip_layout_categories">Corners, splits, hero</string>
     <string name="pip_layout_presets">Layout presets</string>
@@ -1784,10 +1790,12 @@
     <plurals name="cut_assistant_selected_count">
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>
+        <item quantity="many">%1$d selected</item>
     </plurals>
     <plurals name="cut_assistant_candidate_count">
         <item quantity="one">%1$d candidate</item>
         <item quantity="other">%1$d candidates</item>
+        <item quantity="many">%1$d candidates</item>
     </plurals>
     <string name="cut_assistant_reclaim_pill">Reclaim %1$s</string>
     <string name="cut_assistant_silence_count">%1$d pauses</string>
@@ -1918,18 +1926,22 @@
     <plurals name="media_health_blocking_count">
         <item quantity="one">%1$d blocker</item>
         <item quantity="other">%1$d blockers</item>
+        <item quantity="many">%1$d blockers</item>
     </plurals>
     <plurals name="media_health_warning_count">
         <item quantity="one">%1$d warning</item>
         <item quantity="other">%1$d warnings</item>
+        <item quantity="many">%1$d warnings</item>
     </plurals>
     <plurals name="media_manager_status_missing_count">
         <item quantity="one">%1$d issue</item>
         <item quantity="other">%1$d issues</item>
+        <item quantity="many">%1$d issues</item>
     </plurals>
     <plurals name="media_manager_status_empty_count">
         <item quantity="one">%1$d empty</item>
         <item quantity="other">%1$d empty</item>
+        <item quantity="many">%1$d empty</item>
     </plurals>
     <string name="media_manager_scanning_title">Reviewing linked media</string>
     <string name="media_manager_scanning_body">ClearCut is checking every source on the timeline so missing footage and cleanup opportunities are surfaced before export.</string>
@@ -1969,10 +1981,12 @@
     <plurals name="media_manager_missing_title">
         <item quantity="one">%1$d source needs attention</item>
         <item quantity="other">%1$d sources need attention</item>
+        <item quantity="many">%1$d sources need attention</item>
     </plurals>
     <plurals name="media_manager_bulk_relink">
         <item quantity="one">Relink %1$d missing source</item>
         <item quantity="other">Relink %1$d missing sources</item>
+        <item quantity="many">Relink %1$d missing sources</item>
     </plurals>
     <string name="media_manager_missing_body">Resolve missing or unverified source files before export so previews, renders, and relink decisions stay predictable.</string>
     <string name="media_manager_ready_title">All linked files are available</string>
@@ -2009,14 +2023,17 @@
     <plurals name="media_manager_empty_tracks_count">
         <item quantity="one">%1$d empty track</item>
         <item quantity="other">%1$d empty tracks</item>
+        <item quantity="many">%1$d empty tracks</item>
     </plurals>
     <plurals name="media_manager_asset_count">
         <item quantity="one">%1$d asset</item>
         <item quantity="other">%1$d assets</item>
+        <item quantity="many">%1$d assets</item>
     </plurals>
     <plurals name="media_used_in_clip_count">
         <item quantity="one">Used in %1$d clip</item>
         <item quantity="other">Used in %1$d clips</item>
+        <item quantity="many">Used in %1$d clips</item>
     </plurals>
     <string name="media_file_meta">%1$s • %2$s</string>
     <string name="media_missing_asset_title">Source unavailable</string>
@@ -2115,10 +2132,12 @@
     <plurals name="mixer_tracks_live">
         <item quantity="one">%1$d track live</item>
         <item quantity="other">%1$d tracks live</item>
+        <item quantity="many">%1$d tracks live</item>
     </plurals>
     <plurals name="mixer_fx_staged">
         <item quantity="one">%1$d FX staged</item>
         <item quantity="other">%1$d FX staged</item>
+        <item quantity="many">%1$d FX staged</item>
     </plurals>
     <string name="mixer_channel_strips">Channel strips</string>
     <string name="mixer_channel_strips_description">Each strip exposes rendered volume, mute, and solo controls.</string>
@@ -2298,6 +2317,7 @@
     <plurals name="panel_multi_cam_angle_count">
         <item quantity="one">%1$d angle</item>
         <item quantity="other">%1$d angles</item>
+        <item quantity="many">%1$d angles</item>
     </plurals>
     <string name="panel_multi_cam_angle_live">%1$s live</string>
     <string name="panel_multi_cam_selection_off_grid">Selection off-grid</string>
@@ -2336,6 +2356,7 @@
     <plurals name="panel_snapshot_saved_count">
         <item quantity="one">%1$d saved snapshot</item>
         <item quantity="other">%1$d saved snapshots</item>
+        <item quantity="many">%1$d saved snapshots</item>
     </plurals>
 
     <!-- TextEditorSheet -->
@@ -2359,6 +2380,7 @@
     <plurals name="blend_mode_modes_count">
         <item quantity="one">%1$d mode</item>
         <item quantity="other">%1$d modes</item>
+        <item quantity="many">%1$d modes</item>
     </plurals>
 
     <!-- TextTemplateGallery -->
@@ -2390,10 +2412,12 @@
     <plurals name="panel_text_template_looks">
         <item quantity="one">%1$d look</item>
         <item quantity="other">%1$d looks</item>
+        <item quantity="many">%1$d looks</item>
     </plurals>
     <plurals name="panel_text_template_results">
         <item quantity="one">%1$d option</item>
         <item quantity="other">%1$d options</item>
+        <item quantity="many">%1$d options</item>
     </plurals>
 
     <!-- BeatSyncPanel -->
@@ -2439,10 +2463,12 @@
     <plurals name="panel_keyframes_curves">
         <item quantity="one">%1$d curve</item>
         <item quantity="other">%1$d curves</item>
+        <item quantity="many">%1$d curves</item>
     </plurals>
     <plurals name="panel_keyframes_keys">
         <item quantity="one">%1$d key</item>
         <item quantity="other">%1$d keys</item>
+        <item quantity="many">%1$d keys</item>
     </plurals>
 
     <!-- MediaManagerPanel -->
@@ -2456,6 +2482,7 @@
     <plurals name="panel_speed_presets_count">
         <item quantity="one">%1$d preset</item>
         <item quantity="other">%1$d presets</item>
+        <item quantity="many">%1$d presets</item>
     </plurals>
     <string name="panel_speed_presets_reusable_curves">Reusable curves</string>
     <string name="panel_speed_presets_clip_mode">Clip mode</string>
@@ -2682,6 +2709,7 @@
     <plurals name="recovery_media_ready_body">
         <item quantity="one">%1$d restored media reference is available for editing and export.</item>
         <item quantity="other">%1$d restored media references are available for editing and export.</item>
+        <item quantity="many">%1$d restored media references are available for editing and export.</item>
     </plurals>
     <string name="recovery_media_no_media_title">No media in this recovery</string>
     <string name="recovery_media_no_media_body">Text, markers, and project settings were restored without linked media.</string>
@@ -2689,16 +2717,19 @@
     <plurals name="recovery_media_repair_body">
         <item quantity="one">%1$d restored media item needs repair before preview or export is reliable.</item>
         <item quantity="other">%1$d restored media items need repair before preview or export is reliable.</item>
+        <item quantity="many">%1$d restored media items need repair before preview or export is reliable.</item>
     </plurals>
     <string name="recovery_media_proxy_title">Preview proxy fallback</string>
     <plurals name="recovery_media_proxy_body">
         <item quantity="one">%1$d preview proxy is missing or empty. ClearCut will use source media while the proxy is rebuilt.</item>
         <item quantity="other">%1$d preview proxies are missing or empty. ClearCut will use source media while proxies are rebuilt.</item>
+        <item quantity="many">%1$d preview proxies are missing or empty. ClearCut will use source media while proxies are rebuilt.</item>
     </plurals>
     <string name="recovery_media_warning_title">Media warnings found</string>
     <plurals name="recovery_media_warning_body">
         <item quantity="one">%1$d restored media warning is available in Media Manager.</item>
         <item quantity="other">%1$d restored media warnings are available in Media Manager.</item>
+        <item quantity="many">%1$d restored media warnings are available in Media Manager.</item>
     </plurals>
 
     <!-- KeyframeCurveEditor -->
@@ -2788,11 +2819,13 @@
     <plurals name="timeline_marker_count">
         <item quantity="one">%1$d marker</item>
         <item quantity="other">%1$d markers</item>
+        <item quantity="many">%1$d markers</item>
     </plurals>
     <string name="timeline_tracks_label">Tracks</string>
     <plurals name="timeline_clip_count">
         <item quantity="one">%1$d clip</item>
         <item quantity="other">%1$d clips</item>
+        <item quantity="many">%1$d clips</item>
     </plurals>
     <string name="timeline_locked_short">Locked</string>
     <string name="timeline_muted_short">Muted</string>
@@ -3027,6 +3060,7 @@
     <plurals name="v369_chapter_candidates_ready">
         <item quantity="one">%1$d candidate chapter ready.</item>
         <item quantity="other">%1$d candidate chapters ready.</item>
+        <item quantity="many">%1$d candidate chapters ready.</item>
     </plurals>
     <string name="v369_detect">Detect</string>
     <string name="v369_talking_head_title">Talking-Head Framing</string>
@@ -3061,6 +3095,7 @@
     <plurals name="v369_flash_risky_segments">
         <item quantity="one">%1$d risky segment</item>
         <item quantity="other">%1$d risky segments</item>
+        <item quantity="many">%1$d risky segments</item>
     </plurals>
     <string name="v369_scan_selected_clip">Scan selected clip</string>
     <string name="v369_color_blind_title">Color-Blind Preview</string>
@@ -3126,15 +3161,18 @@
     <plurals name="trash_kept_summary">
         <item quantity="one">%1$d deleted project kept for 30 days.</item>
         <item quantity="other">%1$d deleted projects kept for 30 days.</item>
+        <item quantity="many">%1$d deleted projects kept for 30 days.</item>
     </plurals>
     <plurals name="trash_auto_delete_in">
         <item quantity="one">Auto-deletes in %1$d day</item>
         <item quantity="other">Auto-deletes in %1$d days</item>
+        <item quantity="many">Auto-deletes in %1$d days</item>
     </plurals>
     <string name="trash_empty_confirm_title">Empty trash?</string>
     <plurals name="trash_empty_confirm_message">
         <item quantity="one">%1$d project will be permanently deleted. This can\'t be undone.</item>
         <item quantity="other">%1$d projects will be permanently deleted. This can\'t be undone.</item>
+        <item quantity="many">%1$d projects will be permanently deleted. This can\'t be undone.</item>
     </plurals>
     <string name="trash_empty_confirm_action">Delete all</string>
     <string name="trash_delete_forever_title">Delete forever?</string>
@@ -3148,6 +3186,7 @@
     <plurals name="trash_empty_success">
         <item quantity="one">Emptied trash (%1$d project)</item>
         <item quantity="other">Emptied trash (%1$d projects)</item>
+        <item quantity="many">Emptied trash (%1$d projects)</item>
     </plurals>
     <string name="trash_empty_failed">Empty trash failed</string>
     <string name="storyboard_title">Storyboard</string>
@@ -3489,18 +3528,22 @@
     <plurals name="vm_media_missing_sources">
         <item quantity="one">%1$d missing source</item>
         <item quantity="other">%1$d missing sources</item>
+        <item quantity="many">%1$d missing sources</item>
     </plurals>
     <plurals name="vm_media_unverified_sources">
         <item quantity="one">%1$d unverified source</item>
         <item quantity="other">%1$d unverified sources</item>
+        <item quantity="many">%1$d unverified sources</item>
     </plurals>
     <plurals name="vm_media_repair_items">
         <item quantity="one">%1$d repair item</item>
         <item quantity="other">%1$d repair items</item>
+        <item quantity="many">%1$d repair items</item>
     </plurals>
     <plurals name="vm_media_warnings">
         <item quantity="one">%1$d warning</item>
         <item quantity="other">%1$d warnings</item>
+        <item quantity="many">%1$d warnings</item>
     </plurals>
     <string name="vm_media_list_and">%1$s and %2$s</string>
     <string name="vm_media_list_comma">%1$s, %2$s</string>

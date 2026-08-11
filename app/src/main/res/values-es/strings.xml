@@ -414,6 +414,7 @@
     <plurals name="export_columns_count">
         <item quantity="one">%1$d columna</item>
         <item quantity="other">%1$d columnas</item>
+        <item quantity="many">%1$d columnas</item>
     </plurals>
     <string name="export_suggested_resolution">Sugerido: %1$s</string>
     <string name="export_suggested_resolution_fps">Sugerido: %1$s, %2$d fps</string>
@@ -645,7 +646,7 @@
     <string name="settings_model_installed">Instalado</string>
     <string name="settings_model_not_installed">No instalado</string>
     <string name="settings_model_downloading">Descargando</string>
-    <string name="settings_model_error">necesita atencion</string>
+    <string name="settings_model_error">Necesita atención</string>
     <string name="settings_model_offline_description">Conéctese a Internet para descargar este modelo.</string>
     <string name="settings_tutorial">Tutoría</string>
     <string name="settings_tutorial_description">Repita el tutorial guiado del editor cuando necesite un repaso.</string>
@@ -935,6 +936,7 @@
     <plurals name="sticker_ready_count">
         <item quantity="one">%1$d disponible</item>
         <item quantity="other">%1$d disponibles</item>
+        <item quantity="many">%1$d disponibles</item>
     </plurals>
     <string name="sticker_shelf">Estante de pegatinas</string>
     <string name="sticker_shelf_description">Mantén las superposiciones rápidas y expresivas con colecciones para humor, énfasis, dirección y mensajes sociales.</string>
@@ -1131,6 +1133,7 @@
     <plurals name="projects_media_health_projects_value">
         <item quantity="one">%1$d proyecto local</item>
         <item quantity="other">%1$d proyectos locales</item>
+        <item quantity="many">%1$d proyectos locales</item>
     </plurals>
     <string name="projects_media_health_body">Las importaciones permanecen locales. Los medios faltantes se señalan antes de exportar.</string>
     <string name="projects_render_ready_title">Listo para renderizar</string>
@@ -1494,6 +1497,7 @@
     <plurals name="undo_history_action_count">
         <item quantity="one">%1$d acción</item>
         <item quantity="other">%1$d acciones</item>
+        <item quantity="many">%1$d acciones</item>
     </plurals>
     <string name="marker_list_title">Marcadores</string>
     <string name="marker_list_search">Marcadores de búsqueda…</string>
@@ -1568,6 +1572,7 @@
     <plurals name="caption_total_count">
         <item quantity="one">%1$d en total</item>
         <item quantity="other">%1$d en total</item>
+        <item quantity="many">%1$d en total</item>
     </plurals>
     <string name="caption_active_count">%1$d activos</string>
     <string name="caption_ready">Listo</string>
@@ -1636,6 +1641,7 @@
     <plurals name="pip_layout_count">
         <item quantity="one">%1$d diseño</item>
         <item quantity="other">%1$d diseños</item>
+        <item quantity="many">%1$d diseños</item>
     </plurals>
     <string name="pip_layout_categories">Esquinas, divisiones, protagonista</string>
     <string name="pip_layout_presets">Preajustes de diseño</string>
@@ -1695,10 +1701,12 @@
     <plurals name="cut_assistant_selected_count">
         <item quantity="one">%1$d seleccionado</item>
         <item quantity="other">%1$d seleccionado</item>
+        <item quantity="many">%1$d seleccionado</item>
     </plurals>
     <plurals name="cut_assistant_candidate_count">
         <item quantity="one">%1$d candidato</item>
         <item quantity="other">%1$d candidatos</item>
+        <item quantity="many">%1$d candidatos</item>
     </plurals>
     <string name="cut_assistant_reclaim_pill">Reclamar %1$s</string>
     <string name="cut_assistant_silence_count">%1$d hace una pausa</string>
@@ -1819,18 +1827,22 @@
     <plurals name="media_health_blocking_count">
         <item quantity="one">%1$d bloqueo</item>
         <item quantity="other">%1$d bloqueos</item>
+        <item quantity="many">%1$d bloqueos</item>
     </plurals>
     <plurals name="media_health_warning_count">
         <item quantity="one">%1$d advertencia</item>
         <item quantity="other">%1$d advertencias</item>
+        <item quantity="many">%1$d advertencias</item>
     </plurals>
     <plurals name="media_manager_status_missing_count">
         <item quantity="one">%1$d problema</item>
         <item quantity="other">%1$d problemas</item>
+        <item quantity="many">%1$d problemas</item>
     </plurals>
     <plurals name="media_manager_status_empty_count">
         <item quantity="one">%1$d vacío</item>
         <item quantity="other">%1$d vacío</item>
+        <item quantity="many">%1$d vacío</item>
     </plurals>
     <string name="media_manager_scanning_title">Revisar medios vinculados</string>
     <string name="media_manager_scanning_body">ClearCut está verificando cada fuente en la línea de tiempo para que las imágenes faltantes y las oportunidades de limpieza salgan a la luz antes de la exportación.</string>
@@ -1870,10 +1882,12 @@
     <plurals name="media_manager_missing_title">
         <item quantity="one">%1$d fuente necesita atención</item>
         <item quantity="other">%1$d fuentes necesitan atención</item>
+        <item quantity="many">%1$d fuentes necesitan atención</item>
     </plurals>
     <plurals name="media_manager_bulk_relink">
         <item quantity="one">Revincular %1$d fuente faltante</item>
         <item quantity="other">Revincular %1$d fuentes faltantes</item>
+        <item quantity="many">Revincular %1$d fuentes faltantes</item>
     </plurals>
     <string name="media_manager_missing_body">Resuelva los archivos fuente faltantes o no verificados antes de exportarlos para que las vistas previas, las renderizaciones y las decisiones de vinculación sean predecibles.</string>
     <string name="media_manager_ready_title">Todos los archivos vinculados están disponibles.</string>
@@ -1910,14 +1924,17 @@
     <plurals name="media_manager_empty_tracks_count">
         <item quantity="one">%1$d pista vacía</item>
         <item quantity="other">%1$d pistas vacías</item>
+        <item quantity="many">%1$d pistas vacías</item>
     </plurals>
     <plurals name="media_manager_asset_count">
         <item quantity="one">%1$d activo</item>
         <item quantity="other">%1$d activos</item>
+        <item quantity="many">%1$d activos</item>
     </plurals>
     <plurals name="media_used_in_clip_count">
         <item quantity="one">Utilizado en el clip %1$d</item>
         <item quantity="other">Utilizado en clips %1$d</item>
+        <item quantity="many">Utilizado en clips %1$d</item>
     </plurals>
     <string name="media_file_meta">%1$s • %2$s</string>
     <string name="media_missing_asset_title">Fuente no disponible</string>
@@ -2004,10 +2021,12 @@
     <plurals name="mixer_tracks_live">
         <item quantity="one">%1$d pista activa</item>
         <item quantity="other">%1$d pistas activas</item>
+        <item quantity="many">%1$d pistas activas</item>
     </plurals>
     <plurals name="mixer_fx_staged">
         <item quantity="one">%1$d FX preparados</item>
         <item quantity="other">%1$d FX preparados</item>
+        <item quantity="many">%1$d FX preparados</item>
     </plurals>
     <string name="mixer_channel_strips">Tiras de canal</string>
     <string name="mixer_channel_strips_description">Cada tira ofrece controles de volumen, silencio y solo renderizados.</string>
@@ -2107,7 +2126,7 @@
     <string name="panel_chroma_key_refinement">Refinamiento</string>
     <string name="panel_chroma_key_subtitle">Aísla el metraje con clave, reduce el derrame y ajusta el mate antes de componerlo sobre la línea de tiempo.</string>
     <string name="panel_auto_edit_generating">Generando carrete destacado\u2026</string>
-    <string name="panel_auto_edit_script_label">Guión/Descripción (opcional)</string>
+    <string name="panel_auto_edit_script_label">Guion/Descripción (opcional)</string>
     <string name="panel_auto_edit_script_placeholder">Describe tu historia en video\u2026</string>
     <string name="panel_auto_edit_add_music_hint">Agregue música a la pista de audio para cortes sincronizados con el ritmo</string>
     <string name="panel_caption_style">Estilo</string>
@@ -2171,6 +2190,7 @@
     <plurals name="panel_multi_cam_angle_count">
         <item quantity="one">%1$d ángulo</item>
         <item quantity="other">%1$d ángulos</item>
+        <item quantity="many">%1$d ángulos</item>
     </plurals>
     <string name="panel_multi_cam_angle_live">%1$s activa</string>
     <string name="panel_multi_cam_selection_off_grid">Selección fuera de la cuadrícula</string>
@@ -2205,6 +2225,7 @@
     <plurals name="panel_snapshot_saved_count">
         <item quantity="one">%1$d instantánea guardada</item>
         <item quantity="other">%1$d instantáneas guardadas</item>
+        <item quantity="many">%1$d instantáneas guardadas</item>
     </plurals>
     <string name="panel_text_editor_close">Cerrar</string>
     <string name="panel_text_editor_text_label">Texto</string>
@@ -2224,6 +2245,7 @@
     <plurals name="blend_mode_modes_count">
         <item quantity="one">Modo %1$d</item>
         <item quantity="other">%1$d modos</item>
+        <item quantity="many">%1$d modos</item>
     </plurals>
     <string name="panel_text_template_title">Plantillas de texto</string>
     <string name="panel_text_template_subtitle">Comience con tercios inferiores pulidos, tarjetas de título y CTA en lugar de diseñar cada capa de texto a mano.</string>
@@ -2253,10 +2275,12 @@
     <plurals name="panel_text_template_looks">
         <item quantity="one">%1$d mira</item>
         <item quantity="other">%1$d mira</item>
+        <item quantity="many">%1$d mira</item>
     </plurals>
     <plurals name="panel_text_template_results">
         <item quantity="one">Opción %1$d</item>
         <item quantity="other">%1$d opciones</item>
+        <item quantity="many">%1$d opciones</item>
     </plurals>
     <string name="panel_beat_sync_tap">Toque ritmos</string>
     <string name="panel_beat_sync_clear">Borrar</string>
@@ -2296,10 +2320,12 @@
     <plurals name="panel_keyframes_curves">
         <item quantity="one">%1$d curva</item>
         <item quantity="other">%1$d curvas</item>
+        <item quantity="many">%1$d curvas</item>
     </plurals>
     <plurals name="panel_keyframes_keys">
         <item quantity="one">Tecla %1$d</item>
         <item quantity="other">Teclas %1$d</item>
+        <item quantity="many">Teclas %1$d</item>
     </plurals>
     <string name="panel_media_manager_remove_unused">Eliminar pistas vacías</string>
     <string name="panel_speed_constant">constante</string>
@@ -2309,6 +2335,7 @@
     <plurals name="panel_speed_presets_count">
         <item quantity="one">%1$d preajuste</item>
         <item quantity="other">%1$d preajustes</item>
+        <item quantity="many">%1$d preajustes</item>
     </plurals>
     <string name="panel_speed_presets_reusable_curves">Curvas reutilizables</string>
     <string name="panel_speed_presets_clip_mode">Modo de clip</string>
@@ -2326,7 +2353,7 @@
     <string name="panel_tts_status_ready">Listo en el dispositivo</string>
     <string name="panel_tts_status_generating">generando</string>
     <string name="panel_tts_chars_format">%1$d caracteres</string>
-    <string name="panel_tts_script_title">Guión</string>
+    <string name="panel_tts_script_title">Guion</string>
     <string name="panel_tts_script_description">Borre una narración, lea una llamada a la acción en voz alta o una guía preliminar en VO antes de grabar la toma final.</string>
     <string name="panel_tts_voice_direction_title">dirección de voz</string>
     <string name="panel_tts_voice_direction_description">Cada estilo cambia la cadencia y el tono para que puedas escuchar rápidamente diferentes estados de ánimo.</string>
@@ -2400,7 +2427,7 @@
     <string name="cd_chapter_edit">Editar</string>
     <string name="cd_chapter_delete">Eliminar</string>
     <string name="auto_edit_info_clips">clips</string>
-    <string name="auto_edit_info_music">musica</string>
+    <string name="auto_edit_info_music">música</string>
     <string name="auto_edit_info_yes">si</string>
     <string name="auto_edit_info_no">No</string>
     <string name="auto_edit_info_target">Objetivo</string>
@@ -2491,6 +2518,7 @@
     <plurals name="recovery_media_ready_body">
         <item quantity="one">%1$d referencia de medios restaurada está disponible para editar y exportar.</item>
         <item quantity="other">%1$d referencias de medios restauradas están disponibles para editar y exportar.</item>
+        <item quantity="many">%1$d referencias de medios restauradas están disponibles para editar y exportar.</item>
     </plurals>
     <string name="recovery_media_no_media_title">No hay medios en esta recuperación</string>
     <string name="recovery_media_no_media_body">El texto, los marcadores y los ajustes del proyecto se restauraron sin medios vinculados.</string>
@@ -2498,16 +2526,19 @@
     <plurals name="recovery_media_repair_body">
         <item quantity="one">%1$d elemento de medios restaurado necesita reparación antes de que la vista previa o la exportación sean confiables.</item>
         <item quantity="other">%1$d elementos de medios restaurados necesitan reparación antes de que la vista previa o la exportación sean confiables.</item>
+        <item quantity="many">%1$d elementos de medios restaurados necesitan reparación antes de que la vista previa o la exportación sean confiables.</item>
     </plurals>
     <string name="recovery_media_proxy_title">Respaldo de proxy de vista previa</string>
     <plurals name="recovery_media_proxy_body">
         <item quantity="one">Falta %1$d proxy de vista previa o está vacío. ClearCut usará los medios de origen mientras se reconstruye el proxy.</item>
         <item quantity="other">Faltan %1$d proxies de vista previa o están vacíos. ClearCut usará los medios de origen mientras se reconstruyen los proxies.</item>
+        <item quantity="many">Faltan %1$d proxies de vista previa o están vacíos. ClearCut usará los medios de origen mientras se reconstruyen los proxies.</item>
     </plurals>
     <string name="recovery_media_warning_title">Se encontraron advertencias de medios</string>
     <plurals name="recovery_media_warning_body">
         <item quantity="one">%1$d advertencia de medios restaurados está disponible en el Administrador de Medios.</item>
         <item quantity="other">%1$d advertencias de medios restaurados están disponibles en el Administrador de Medios.</item>
+        <item quantity="many">%1$d advertencias de medios restaurados están disponibles en el Administrador de Medios.</item>
     </plurals>
     <string name="cd_keyframe_presets">Preajustes</string>
     <string name="cd_keyframe_delete">Eliminar fotograma clave</string>
@@ -2581,11 +2612,13 @@
     <plurals name="timeline_marker_count">
         <item quantity="one">%1$d marcador</item>
         <item quantity="other">%1$d marcadores</item>
+        <item quantity="many">%1$d marcadores</item>
     </plurals>
     <string name="timeline_tracks_label">Pistas</string>
     <plurals name="timeline_clip_count">
         <item quantity="one">%1$d clip</item>
         <item quantity="other">%1$d clips</item>
+        <item quantity="many">%1$d clips</item>
     </plurals>
     <string name="timeline_locked_short">bloqueado</string>
     <string name="timeline_muted_short">silenciado</string>
@@ -2758,6 +2791,7 @@
     <plurals name="v369_chapter_candidates_ready">
         <item quantity="one">%1$d capítulo candidato listo.</item>
         <item quantity="other">%1$d capítulos candidatos listos.</item>
+        <item quantity="many">%1$d capítulos candidatos listos.</item>
     </plurals>
     <string name="v369_detect">detectar</string>
     <string name="v369_talking_head_title">Encuadre de cabeza parlante</string>
@@ -2792,6 +2826,7 @@
     <plurals name="v369_flash_risky_segments">
         <item quantity="one">%1$d segmento riesgoso</item>
         <item quantity="other">%1$d segmentos riesgosos</item>
+        <item quantity="many">%1$d segmentos riesgosos</item>
     </plurals>
     <string name="v369_scan_selected_clip">Escanear clip seleccionado</string>
     <string name="v369_color_blind_title">Vista previa para daltónicos</string>
@@ -2855,15 +2890,18 @@
     <plurals name="trash_kept_summary">
         <item quantity="one">%1$d proyecto eliminado conservado durante 30 días.</item>
         <item quantity="other">%1$d proyectos eliminados conservados durante 30 días.</item>
+        <item quantity="many">%1$d proyectos eliminados conservados durante 30 días.</item>
     </plurals>
     <plurals name="trash_auto_delete_in">
         <item quantity="one">Eliminaciones automáticas en %1$d día</item>
         <item quantity="other">Eliminaciones automáticas en %1$d días</item>
+        <item quantity="many">Eliminaciones automáticas en %1$d días</item>
     </plurals>
     <string name="trash_empty_confirm_title">¿Basura vacía?</string>
     <plurals name="trash_empty_confirm_message">
         <item quantity="one">El proyecto %1$d se eliminará permanentemente. Esto no se puede deshacer.</item>
         <item quantity="other">%1$d proyectos se eliminarán permanentemente. Esto no se puede deshacer.</item>
+        <item quantity="many">%1$d proyectos se eliminarán permanentemente. Esto no se puede deshacer.</item>
     </plurals>
     <string name="trash_empty_confirm_action">eliminar todo</string>
     <string name="trash_delete_forever_title">¿Eliminar para siempre?</string>
@@ -2877,6 +2915,7 @@
     <plurals name="trash_empty_success">
         <item quantity="one">Papelera vaciada (%1$d proyecto)</item>
         <item quantity="other">Papelera vaciada (%1$d proyectos)</item>
+        <item quantity="many">Papelera vaciada (%1$d proyectos)</item>
     </plurals>
     <string name="trash_empty_failed">Error al vaciar la papelera</string>
     <string name="storyboard_title">Guion gráfico</string>
@@ -3216,18 +3255,22 @@
     <plurals name="vm_media_missing_sources">
         <item quantity="one">%1$d fuente ausente</item>
         <item quantity="other">%1$d fuentes ausentes</item>
+        <item quantity="many">%1$d fuentes ausentes</item>
     </plurals>
     <plurals name="vm_media_unverified_sources">
         <item quantity="one">%1$d fuente sin verificar</item>
         <item quantity="other">%1$d fuentes sin verificar</item>
+        <item quantity="many">%1$d fuentes sin verificar</item>
     </plurals>
     <plurals name="vm_media_repair_items">
         <item quantity="one">%1$d elemento que reparar</item>
         <item quantity="other">%1$d elementos que reparar</item>
+        <item quantity="many">%1$d elementos que reparar</item>
     </plurals>
     <plurals name="vm_media_warnings">
         <item quantity="one">%1$d advertencia</item>
         <item quantity="other">%1$d advertencias</item>
+        <item quantity="many">%1$d advertencias</item>
     </plurals>
     <string name="vm_media_list_and">%1$s y %2$s</string>
     <string name="vm_media_list_comma">%1$s, %2$s</string>
