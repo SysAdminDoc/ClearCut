@@ -2,6 +2,7 @@
 
 ## v3.78.1
 
+- Completed the AGP 9/API 37 acceptance lane: the managed Pixel 6 benchmark/profile tasks, detector ratchet, lint, advisory-floor, debug, and baseline-profile package gates are green; the connected QA baseline remains 17 tests with seven known emulator codec, accessibility-tree, preview, and migration-fixture failures.
 - Completed the API 37 headless Android system-backup matrix: a large project restored its autosave/database scope while generated media stayed excluded from the cloud scope, oversized autosave data hit the transport quota, and disabling backup blocked new backup requests and reinstall restore.
 - Added a headless JVM visual verification lane for the dashboard, editor, export sheet, and settings in dark and high-contrast dark modes, with committed Roborazzi goldens and strict accessibility checks.
 - Added a secret-free GitHub Actions PR/master gate covering JVM tests, lint, QA/debug packaging, package/release identity, dependency/native SBOM checks, 16 KB alignment, deterministic artifact hashes, and build provenance evidence.
