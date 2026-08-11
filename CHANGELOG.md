@@ -13,6 +13,7 @@ Current version: **v3.78.1** (`versionCode` 296).
 - Completed platform export presets: one data-driven selection now applies resolution, aspect ratio, frame rate, and codec through the UI, batch queue, and render pipeline, while portrait/square delivery changes disclose the output-frame adjustment before export.
 - Completed silence-aware Cut Assistant review: users can tune sensitivity and gap grouping, inspect silence/filler proposals (including multi-word fillers), accept or reject individual candidates, and apply the selected batch through one undo entry.
 - Bounded deleted-template recovery storage to five recent files or 30 days, while preserving the current deletion's one-tap restore offer.
+- Fixed custom-canvas export filenames so their aspect-ratio token follows the project output instead of the unrelated Settings default.
 - Pure single-source MP4 trims now use Media3's GOP trim optimization when eligible, disclose the full-render reason when they are not, and report all seven optimizer outcomes in English and Spanish; the unsafe MP4 edit-list path is no longer enabled.
 - Added validated-internet awareness across model downloads, AI model controls, caption translation, and opt-in update checks; offline controls explain the dependency, disable before a request, and recover from connectivity callbacks.
 - Made the appearance contract explicit: the menu now documents the implemented Dark and High Contrast Dark schemes only, and chroma-key colours live in content tokens while RGB scope traces remain documented instrument colours.

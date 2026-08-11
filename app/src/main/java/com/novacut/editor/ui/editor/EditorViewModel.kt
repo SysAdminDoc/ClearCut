@@ -1195,11 +1195,6 @@ class EditorViewModel @Inject constructor(
                                     resolution = settings.defaultResolution,
                                     frameRate = settings.defaultFrameRate,
                                     quality = quality,
-                                    // Default aspect ratio and codec were persisted and
-                                    // rendered back in Settings but never reached an
-                                    // export; they seed the export config alongside the
-                                    // resolution and frame rate that always did.
-                                    aspectRatio = settings.defaultAspectRatio,
                                     codec = videoCodecForSetting(settings.defaultCodec)
                                 )
                             )
