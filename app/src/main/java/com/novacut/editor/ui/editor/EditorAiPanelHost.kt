@@ -69,6 +69,7 @@ fun BoxScope.EditorAiPanelHost(
                 onAcceptAll = viewModel::acceptAllCutProposals,
                 onRejectAll = viewModel::rejectAllCutProposals,
                 onApply = viewModel::applyAcceptedCuts,
+                onReanalyze = viewModel::proposeCutsForReview,
                 onClose = viewModel::dismissCutAssistantReview
             )
         }

@@ -198,6 +198,58 @@ class CutAssistantEngineTest {
     }
 
     @Test
+    fun `review honors configurable merge gap`() {
+        val waveform = FloatArray(5000) { idx ->
+            when {
+                idx in 500 until 1500 -> 0f
+                idx in 1600 until 2600 -> 0f
+                else -> 0.5f
+            }
+        }
+        val clip = audioClip("c1", 0L, 5000L)
+        val tracks = listOf(Track(id = "t1", type = TrackType.AUDIO, index = 0, clips = listOf(clip)))
+        val audio = mapOf(
+            clip.id to CutAssistantEngine.ClipAudio(clip.id, waveform, 1000)
+        )
+
+        val review = engine.review(
+            tracks,
+            audio,
+            SilenceDetectionEngine.AutoCutConfig(
+                minSilenceMs = 400L,
+                paddingMs = 0L,
+                mergeGapMs = 0L,
+            ),
+        )
+
+        assertEquals(2, review.proposals.size)
+        assertEquals(0L, review.config.mergeGapMs)
+    }
+
+    @Test
+    fun `review includes multi-word filler proposals`() {
+        val clip = audioClip("c1", 0L, 2000L)
+        val tracks = listOf(Track(id = "t1", type = TrackType.AUDIO, index = 0, clips = listOf(clip)))
+        val words = listOf(
+            com.novacut.editor.engine.whisper.SherpaAsrEngine.WordTimestamp("you", 500L, 650L),
+            com.novacut.editor.engine.whisper.SherpaAsrEngine.WordTimestamp("know", 650L, 800L),
+        )
+        val audio = mapOf(
+            clip.id to CutAssistantEngine.ClipAudio(
+                clipId = clip.id,
+                waveform = FloatArray(2000) { 0.5f },
+                sampleRate = 1000,
+                words = words,
+            ),
+        )
+
+        val review = engine.review(tracks, audio)
+
+        assertEquals(1, review.proposals.size)
+        assertEquals("you know", review.proposals.single().matchedText)
+    }
+
+    @Test
     fun `ReviewProposal init rejects start equal to end`() {
         try {
             CutAssistantEngine.ReviewProposal(

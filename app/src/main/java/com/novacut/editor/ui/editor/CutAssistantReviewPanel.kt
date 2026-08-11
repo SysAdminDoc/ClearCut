@@ -31,10 +31,12 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,6 +70,7 @@ fun CutAssistantReviewPanel(
     onAcceptAll: () -> Unit,
     onRejectAll: () -> Unit,
     onApply: () -> Unit,
+    onReanalyze: (com.novacut.editor.engine.SilenceDetectionEngine.AutoCutConfig) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -155,6 +158,13 @@ fun CutAssistantReviewPanel(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        CutAssistantTuningCard(
+            config = review.config,
+            onReanalyze = onReanalyze,
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -262,6 +272,90 @@ fun CutAssistantReviewPanel(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CutAssistantTuningCard(
+    config: com.novacut.editor.engine.SilenceDetectionEngine.AutoCutConfig,
+    onReanalyze: (com.novacut.editor.engine.SilenceDetectionEngine.AutoCutConfig) -> Unit,
+) {
+    val semanticColors = LocalClearCutColors.current
+    var threshold by remember(config) { mutableFloatStateOf(config.silenceThreshold) }
+    var minSilenceMs by remember(config) { mutableFloatStateOf(config.minSilenceMs.toFloat()) }
+    var mergeGapMs by remember(config) { mutableFloatStateOf(config.mergeGapMs.toFloat()) }
+    val adjustedConfig = config.copy(
+        silenceThreshold = threshold,
+        minSilenceMs = minSilenceMs.toLong(),
+        mergeGapMs = mergeGapMs.toLong(),
+    )
+    val isDirty = adjustedConfig != config
+
+    PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
+        Text(
+            text = stringResource(R.string.cut_assistant_tuning_title),
+            style = MaterialTheme.typography.titleMedium,
+            color = semanticColors.text,
+        )
+        Text(
+            text = stringResource(R.string.cut_assistant_tuning_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = semanticColors.subtext,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(
+                R.string.cut_assistant_threshold_value,
+                threshold * 100f,
+            ),
+            style = MaterialTheme.typography.labelLarge,
+            color = semanticColors.text,
+        )
+        Slider(
+            value = threshold,
+            onValueChange = { threshold = it },
+            valueRange = 0.005f..0.1f,
+            steps = 18,
+        )
+
+        Text(
+            text = stringResource(
+                R.string.cut_assistant_min_silence_value,
+                formatCutAssistantDuration(minSilenceMs.toLong()),
+            ),
+            style = MaterialTheme.typography.labelLarge,
+            color = semanticColors.text,
+        )
+        Slider(
+            value = minSilenceMs,
+            onValueChange = { minSilenceMs = it },
+            valueRange = 250f..3_000f,
+            steps = 10,
+        )
+
+        Text(
+            text = stringResource(
+                R.string.cut_assistant_merge_gap_value,
+                formatCutAssistantDuration(mergeGapMs.toLong()),
+            ),
+            style = MaterialTheme.typography.labelLarge,
+            color = semanticColors.text,
+        )
+        Slider(
+            value = mergeGapMs,
+            onValueChange = { mergeGapMs = it },
+            valueRange = 0f..1_000f,
+            steps = 9,
+        )
+
+        ClearCutSecondaryButton(
+            text = stringResource(R.string.cut_assistant_reanalyze),
+            onClick = { onReanalyze(adjustedConfig) },
+            enabled = isDirty,
+            icon = Icons.Default.GraphicEq,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

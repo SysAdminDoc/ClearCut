@@ -39,6 +39,8 @@ class SilenceDetectionEngine @Inject constructor() {
         val minSilenceMs: Long = 500L,
         /** Safety margin kept at both ends of a silence range (don't clip actual speech). */
         val paddingMs: Long = 80L,
+        /** Maximum gap between proposals that may be merged into one cut. */
+        val mergeGapMs: Long = 250L,
         /** If true, propose cuts for filler words found in the transcript. */
         val cutFillerWords: Boolean = true,
         /** Filler tokens to match. Case-insensitive exact word match on Whisper output. */
@@ -48,6 +50,7 @@ class SilenceDetectionEngine @Inject constructor() {
             require(silenceThreshold in 0f..1f) { "silenceThreshold must be in [0, 1]" }
             require(minSilenceMs >= 50L) { "minSilenceMs must be >= 50" }
             require(paddingMs >= 0L) { "paddingMs must be >= 0" }
+            require(mergeGapMs >= 0L) { "mergeGapMs must be >= 0" }
         }
     }
 

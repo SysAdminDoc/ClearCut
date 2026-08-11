@@ -1686,6 +1686,12 @@
     <string name="cut_assistant_subtitle">Revise los cortes de silencios y palabras de relleno antes de que se conviertan en una edición de la línea de tiempo que no se pueda deshacer.</string>
     <string name="cut_assistant_overview_title">Revisar antes de aplicar</string>
     <string name="cut_assistant_overview_body">Las pausas y palabras de relleno detectadas se seleccionan de forma predeterminada. Deseleccione cualquier cosa que proteja el tiempo, el énfasis o la entrega natural.</string>
+    <string name="cut_assistant_tuning_title">Ajustes de detección</string>
+    <string name="cut_assistant_tuning_description">Ajuste la sensibilidad y la agrupación de pausas y vuelva a analizar la fuente. Estos ajustes solo cambian la lista propuesta; la línea de tiempo no cambia hasta que aplique los cortes seleccionados.</string>
+    <string name="cut_assistant_threshold_value">Sensibilidad al silencio: %1$.1f%%</string>
+    <string name="cut_assistant_min_silence_value">Pausa silenciosa mínima: %1$s</string>
+    <string name="cut_assistant_merge_gap_value">Combinar propuestas dentro de: %1$s</string>
+    <string name="cut_assistant_reanalyze">Volver a analizar con estos ajustes</string>
     <plurals name="cut_assistant_selected_count">
         <item quantity="one">%1$d seleccionado</item>
         <item quantity="other">%1$d seleccionado</item>

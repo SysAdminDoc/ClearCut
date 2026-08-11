@@ -77,6 +77,7 @@ import com.novacut.editor.engine.SmartReframeEngine
 import com.novacut.editor.engine.TimelineExportCoordinator
 import com.novacut.editor.engine.TrackBlendModeCapability
 import com.novacut.editor.engine.TimelineExchangeValidator
+import com.novacut.editor.engine.SilenceDetectionEngine
 import com.novacut.editor.engine.ProxyWorkflowEngine
 import com.novacut.editor.engine.MultiCamEngine
 import com.novacut.editor.engine.MediaImportEngine
@@ -731,6 +732,7 @@ class EditorViewModel @Inject constructor(
     private var captionTranslationJob: Job? = null
     private var autoEditJob: Job? = null
     private var autoEditGenerationId: Long = 0L
+    private var cutAssistantReviewJob: Job? = null
     private val projectMediaManifestCacheLock = Any()
     private var projectMediaManifestCache: CachedProjectMediaManifest? = null
 
@@ -4048,7 +4050,8 @@ class EditorViewModel @Inject constructor(
      * `state.cutAssistantReview` for the UI to render. The timeline is not
      * mutated until [applyAcceptedCuts] is called.
      */
-    fun proposeCutsForReview() {
+    fun proposeCutsForReview(config: SilenceDetectionEngine.AutoCutConfig = SilenceDetectionEngine.AutoCutConfig()) {
+        cutAssistantReviewJob?.cancel()
         val initialAudioClips = _state.value.tracks
             .filter { it.type == TrackType.VIDEO || it.type == TrackType.AUDIO }
             .flatMap { it.clips }
@@ -4062,7 +4065,7 @@ class EditorViewModel @Inject constructor(
         // post-scan filter below re-validates against the live state so we never
         // hand the engine a stale Track snapshot.
         val targetClipIds = initialAudioClips.map { it.id }.toSet()
-        viewModelScope.launch {
+        cutAssistantReviewJob = viewModelScope.launch {
             showToast(text(R.string.vm_cut_scanning_toast, initialAudioClips.size))
             try {
                 val perClipAudio = withContext(Dispatchers.IO) {
@@ -4096,7 +4099,7 @@ class EditorViewModel @Inject constructor(
                     track.copy(clips = track.clips.filter { it.id in validIds })
                 }
                 val filteredAudio = perClipAudio.filterKeys { it in validIds }
-                val review = cutAssistantEngine.review(filteredTracks, filteredAudio).acceptAll()
+                val review = cutAssistantEngine.review(filteredTracks, filteredAudio, config).acceptAll()
                 _state.update {
                     it.copy(ai = it.ai.copy(cutAssistantReview = review))
                         .copyPanel { panel -> panel.copy(panels = panel.panels.closeAll()) }

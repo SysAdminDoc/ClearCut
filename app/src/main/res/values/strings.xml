@@ -1775,6 +1775,12 @@
     <string name="cut_assistant_subtitle">Review silence and filler-word cuts before they become one undoable timeline edit.</string>
     <string name="cut_assistant_overview_title">Review before applying</string>
     <string name="cut_assistant_overview_body">Detected pauses and filler words are selected by default. Deselect anything that protects timing, emphasis, or natural delivery.</string>
+    <string name="cut_assistant_tuning_title">Detection settings</string>
+    <string name="cut_assistant_tuning_description">Tune sensitivity and gap grouping, then re-scan the source. These settings only change the proposed list; the timeline stays untouched until you apply selected cuts.</string>
+    <string name="cut_assistant_threshold_value">Silence sensitivity: %1$.1f%%</string>
+    <string name="cut_assistant_min_silence_value">Minimum quiet gap: %1$s</string>
+    <string name="cut_assistant_merge_gap_value">Merge nearby proposals within: %1$s</string>
+    <string name="cut_assistant_reanalyze">Re-scan with these settings</string>
     <plurals name="cut_assistant_selected_count">
         <item quantity="one">%1$d selected</item>
         <item quantity="other">%1$d selected</item>

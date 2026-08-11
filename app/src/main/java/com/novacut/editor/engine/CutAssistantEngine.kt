@@ -53,7 +53,8 @@ class CutAssistantEngine @Inject constructor(
      */
     data class ReviewSet(
         val proposals: List<ReviewProposal>,
-        val accepted: Set<String> = emptySet()
+        val accepted: Set<String> = emptySet(),
+        val config: AutoCutConfig = AutoCutConfig(),
     ) {
         fun toggle(id: String): ReviewSet =
             copy(accepted = if (id in accepted) accepted - id else accepted + id)
@@ -106,7 +107,8 @@ class CutAssistantEngine @Inject constructor(
                 val audio = perClipAudio[clip.id] ?: return@forEach
                 val silences = silenceDetectionEngine.detectSilences(audio.waveform, audio.sampleRate, config)
                 val fillers = silenceDetectionEngine.detectFillerWords(audio.words, config)
-                (silences + fillers).forEach { p ->
+                val multiWordFillers = silenceDetectionEngine.detectMultiWordFillers(audio.words, config)
+                (silences + fillers + multiWordFillers).forEach { p ->
                     val tl = projectClipRangeToTimeline(clip, p.startMs, p.endMs) ?: return@forEach
                     raw += ReviewProposal(
                         id = "p${serial++}_${clip.id.take(8)}",
@@ -119,8 +121,8 @@ class CutAssistantEngine @Inject constructor(
                 }
             }
         }
-        val merged = mergeOverlapping(raw, gapToleranceMs = MERGE_GAP_TOLERANCE_MS)
-        return ReviewSet(proposals = merged)
+        val merged = mergeOverlapping(raw, gapToleranceMs = config.mergeGapMs)
+        return ReviewSet(proposals = merged, config = config)
     }
 
     /**
@@ -233,14 +235,6 @@ class CutAssistantEngine @Inject constructor(
     }
 
     companion object {
-        /**
-         * Two abutting proposals separated by less than this gap collapse into
-         * one entry. Picked so a "um... uh..." run with ~150 ms between tokens
-         * shows up as a single review row instead of three, but a 1 s pause
-         * between sentences still gets its own card.
-         */
-        private const val MERGE_GAP_TOLERANCE_MS = 250L
-
         /**
          * Skip proposals shorter than this after trim clipping. Below ~80 ms
          * the visual jolt of a cut outweighs the time saved.
