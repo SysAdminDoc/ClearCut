@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.roundToInt
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -137,11 +136,6 @@ internal fun playbackSessionNeedsReset(
 ): Boolean = forceRestart || hasPlayerError ||
     playbackState == Player.STATE_IDLE || playbackState == Player.STATE_ENDED ||
     (playbackState == Player.STATE_BUFFERING && !playbackRequested)
-
-internal fun normalizedVideoFrameRate(rawRate: Float?): Int? {
-    if (rawRate == null || !rawRate.isFinite() || rawRate <= 0f) return null
-    return rawRate.roundToInt().coerceIn(1, 120)
-}
 
 internal fun canCoalesceAdjacentPreviewCuts(left: Clip, right: Clip): Boolean =
     left.timelineEndMs == right.timelineStartMs &&
@@ -560,45 +554,6 @@ class VideoEngine @Inject constructor(
             0 to 0
         } finally {
             retrieverLease.close()
-        }
-    }
-
-    fun getVideoFrameRate(uri: Uri): Int {
-        val retrieverLease = CodecInstanceBudget.acquireRetrieverBlocking(resolveMimeType(uri))
-        val retriever = retrieverLease.resource
-        return try {
-            val captureRate = runCatching {
-                retriever.setDataSource(context, uri)
-                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CAPTURE_FRAMERATE)
-                    ?.toFloatOrNull()
-            }.getOrNull()
-            normalizedVideoFrameRate(captureRate)
-                ?: normalizedVideoFrameRate(readVideoTrackFrameRate(uri))
-                ?: 30
-        } finally {
-            retrieverLease.close()
-        }
-    }
-
-    private fun readVideoTrackFrameRate(uri: Uri): Float? {
-        val extractor = MediaExtractor()
-        return try {
-            extractor.setDataSource(context, uri, emptyMap())
-            (0 until extractor.trackCount)
-                .asSequence()
-                .mapNotNull { trackIndex ->
-                    val format = extractor.getTrackFormat(trackIndex)
-                    val mime = runCatching { format.getString(MediaFormat.KEY_MIME) }.getOrNull()
-                    if (mime?.startsWith("video/", ignoreCase = true) != true) return@mapNotNull null
-                    val rawRate = runCatching { format.getFloat(MediaFormat.KEY_FRAME_RATE) }.getOrNull()
-                        ?: runCatching { format.getInteger(MediaFormat.KEY_FRAME_RATE).toFloat() }.getOrNull()
-                    rawRate?.takeIf { normalizedVideoFrameRate(it) != null }
-                }
-                .firstOrNull()
-        } catch (_: Exception) {
-            null
-        } finally {
-            runCatching { extractor.release() }
         }
     }
 
