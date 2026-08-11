@@ -1,0 +1,85 @@
+{
+  "benchmarks": [
+    {
+        "iterations": 5,
+        "metrics": {
+          "timeToInitialDisplayMs": {
+          "coefficientOfVariation": 0.07521424211218723,
+          "maximum": 1630.4185,
+          "median": 1576.9466,
+          "minimum": 1383.521
+        }
+      },
+      "name": "aColdStartupDefaultCompilation",
+      "sampledMetrics": {}
+    },
+    {
+      "iterations": 5,
+      "metrics": {
+        "timeToInitialDisplayMs": {
+          "coefficientOfVariation": 0.08100157428017395,
+          "maximum": 1494.8446,
+          "median": 1370.8199,
+          "minimum": 1203.8728
+        }
+      },
+      "name": "bColdStartupWithBaselineProfile",
+      "sampledMetrics": {}
+    },
+    {
+      "iterations": 5,
+      "metrics": {
+        "timeToInitialDisplayMs": {
+          "coefficientOfVariation": 0.44649992762719676,
+          "maximum": 795.1144,
+          "median": 422.4906,
+          "minimum": 255.7511
+        }
+      },
+      "name": "cWarmStartupWithBaselineProfile",
+      "sampledMetrics": {}
+    },
+    {
+      "iterations": 3,
+      "metrics": {
+        "frameCount": {
+          "coefficientOfVariation": 0.06896551724137931,
+          "maximum": 31.0,
+          "median": 29.0,
+          "minimum": 27.0
+        }
+      },
+      "name": "dBlankEditorEntryAndTimelineScrubFrames",
+      "sampledMetrics": {
+        "frameDurationCpuMs": {
+          "P50": 70.6692,
+          "P90": 274.9310800000001,
+          "P95": 395.14972,
+          "P99": 590.8421940000001
+        },
+        "frameOverrunMs": {
+          "P50": 78.34609,
+          "P90": 416.4770152000001,
+          "P95": 496.9832596000001,
+          "P99": 614.94460656
+        }
+      }
+    }
+  ],
+  "device": {
+    "cpuCoreCount": 2,
+    "cpuMaxFreqHz": 2000000000,
+    "deviceName": "clearcut-api37-ps16k",
+    "fingerprint": "google/sdk_gphone16k_x86_64/emu64xa16k:17/CE2A.260420.019/15611780:userdebug/dev-keys",
+    "memTotalBytes": 4105588736,
+    "model": "sdk_gphone16k_x86_64",
+    "sdk": 37
+  },
+  "generatedAt": "2026-08-11T07:58:17Z",
+  "profile": {
+    "lineCount": 30384,
+    "path": "app/src/main/baseline-prof.txt",
+    "sha256": "fe6c2d46d158b17ea65f39abbcde3dfebc9a42dbd6f62f79513284b3d84fc627"
+  },
+  "schemaVersion": 1
+}

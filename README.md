@@ -548,7 +548,18 @@ com.novacut.editor/
 
 # Managed-device startup/editor performance gate
 ./gradlew :baselineprofile:pixel6Api37BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
+# Regenerate the shipped profile and refresh the measured metrics baseline
+python scripts/generate_baseline_profile.py
 ```
+
+The regeneration script runs the non-minified profile collector and the
+benchmark variant on the managed API 37 Pixel 6, then atomically updates
+`app/src/main/baseline-prof.txt` and `scripts/baseline_profile_metrics.json`.
+The metrics file records the device fingerprint and the startup/frame
+percentiles that the benchmark produced; rerun the script after a deliberate
+startup or editor-flow change and review both artifacts together.
+When an API 37 AVD is already booted, pass its serial to avoid provisioning a
+managed device: `python scripts/generate_baseline_profile.py --connected-serial emulator-5554`.
 
 The JVM visual lane drives the production dashboard, editor, export sheet, and
 settings flow under Robolectric in dark and high-contrast dark modes. It keeps
