@@ -588,7 +588,7 @@ Before release, verify audio focus on a physical device:
 On an Android 17 Beta 3+ device or emulator, enable loud audio-hardening failures before checking editor audio paths:
 
 ```bash
-adb shell cmd audio set-enable-hardening throw
+adb shell cmd audio set-hardening throw
 adb logcat | grep AudioHardening
 ```
 

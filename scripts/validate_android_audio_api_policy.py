@@ -131,7 +131,7 @@ def verify_documented_smoke(root: Path = ROOT) -> None:
     required = (
         "Target SDK",
         "Android 17 audio hardening",
-        "adb shell cmd audio set-enable-hardening throw",
+        "adb shell cmd audio set-hardening throw",
         "AudioHardening",
         "TTS preview",
         "voiceover",
@@ -196,7 +196,7 @@ def write_valid_fixture(root: Path, export_service: str = "class ExportService {
     write_fixture(
         root,
         "README.md",
-        "Target SDK 37. Android 17 audio hardening: run `adb shell cmd audio set-enable-hardening throw`, "
+        "Target SDK 37. Android 17 audio hardening: run `adb shell cmd audio set-hardening throw`, "
         "then exercise TTS preview, voiceover, and export while watching AudioHardening logs.\n",
     )
 
