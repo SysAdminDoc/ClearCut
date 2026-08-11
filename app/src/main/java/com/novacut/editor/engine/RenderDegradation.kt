@@ -59,3 +59,12 @@ data class RenderDegradationOutcome(
 class RenderDegradationException(
     val outcome: RenderDegradationOutcome,
 ) : IllegalStateException("Export could not honor GPU effects: ${outcome.summary}")
+
+/**
+ * Convert the per-export ledger snapshot into the typed callback failure used
+ * by every Transformer export path. Keeping this decision pure makes it
+ * possible to test propagation without creating a GLES context.
+ */
+internal fun renderDegradationExceptionOrNull(
+    outcome: RenderDegradationOutcome?,
+): RenderDegradationException? = outcome?.let(::RenderDegradationException)

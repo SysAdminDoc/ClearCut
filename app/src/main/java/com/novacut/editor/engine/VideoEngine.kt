@@ -2649,7 +2649,8 @@ class VideoEngine @Inject constructor(
                         onError(IllegalStateException("Empty output file"))
                         return
                     }
-                    degradationLedger?.outcome()?.let { outcome ->
+                    renderDegradationExceptionOrNull(degradationLedger?.outcome())?.let { failure ->
+                        val outcome = failure.outcome
                         Log.e(TAG, "GPU effect degradation detected: ${outcome.summary}")
                         publishRenderDegradation(outcome)
                         failExport(ExportFailureCause.GPU_EFFECT_DEGRADED, outcome.summary)
@@ -2659,7 +2660,7 @@ class VideoEngine @Inject constructor(
                         runCatching { outputFile.delete() }
                         runCatching { resumeFromFile?.delete() }
                         terminalReached = true
-                        onError(RenderDegradationException(outcome))
+                        onError(failure)
                         return
                     }
                     val verification = ExportOutputVerifier.verify(

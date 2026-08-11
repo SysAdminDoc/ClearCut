@@ -48,4 +48,23 @@ class ShaderEffectTest {
         val exception = RenderDegradationException(outcome)
         assertTrue(exception.message.orEmpty().contains("BG_REMOVAL"))
     }
+
+    @Test
+    fun exportPropagationCarriesTheRecordedOutcomeAsATypedFailure() {
+        val ledger = RenderDegradationLedger().apply {
+            record(RenderDegradationType.SHADER_COMPILE, "VHS_RETRO")
+            repeat(4) {
+                record(RenderDegradationType.SEGMENTATION_FRAME, "BG_REMOVAL")
+            }
+        }
+
+        val failure = renderDegradationExceptionOrNull(ledger.outcome())
+
+        assertEquals(
+            "VHS_RETRO: shader compile fallback (1 occurrence(s)); " +
+                "BG_REMOVAL: neutral mask fallback (4 frame(s))",
+            requireNotNull(failure).outcome.summary,
+        )
+        assertNull(renderDegradationExceptionOrNull(null))
+    }
 }
