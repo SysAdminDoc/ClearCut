@@ -157,8 +157,21 @@
       "CVE-2026-58049",
       "CVE-2026-12706",
       "CVE-2026-66037",
-      "CVE-2026-66038"
-    ]
+      "CVE-2026-66038",
+      "CVE-2026-64832"
+    ],
+    "reachability": {
+      "CVE-2026-64832": {
+        "status": "not_reachable",
+        "requiredAbsentBuildFlags": [
+          "--enable-nvdec",
+          "--enable-cuda",
+          "--enable-cuda-nvcc"
+        ],
+        "reviewedOn": "2026-08-12",
+        "evidence": "The shipped Android recipe enables MediaCodec decoding but contains no CUDA or NVDEC configure flag; the advisory's libavcodec/nvdec.c path is not built into this artifact."
+      }
+    }
   },
   "advisories": [
     {
@@ -283,6 +296,16 @@
       "reviewUntil": "2026-10-31",
       "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-66038",
       "disabledComponents": ["zlib_decoder"]
+    },
+    {
+      "id": "CVE-2026-64832",
+      "component": "FFmpeg",
+      "severity": "HIGH",
+      "status": "not_affected",
+      "rationale": "The shipped Android artifact does not build the NVIDIA NVDEC hardware-decoder path; the exact absent configure flags and review evidence are recorded under security.reachability.",
+      "reviewUntil": "2026-10-31",
+      "url": "https://nvd.nist.gov/vuln/detail/CVE-2026-64832",
+      "disabledComponents": []
     }
   ]
 }

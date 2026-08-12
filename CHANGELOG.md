@@ -19,6 +19,7 @@ Current version: **v3.78.1** (`versionCode` 296).
 - Made batch media imports report required and available storage, show determinate file progress, and cancel safely while releasing URI grants.
 - Corrected AI tool descriptions for face tracking, frame interpolation, and custom background replacement, with a uniqueness test guarding the tool grid.
 - Hardened the Settings consumer ratchet with a negative used/unused fixture and documented its read-and-discard limitation.
+- Expanded the native FFmpeg advisory gate with the 2026-07-22 NVDEC double-free review: the lock now records the explicit not-reachable build-flag evidence, rejects contradictory CUDA/NVDEC recipes, and self-tests missing reachability decisions.
 - Removed the unused VideoEngine frame-rate probe rather than leaving an uncallable source-rate API with a misleading fallback.
 - Pure single-source MP4 trims now use Media3's GOP trim optimization when eligible, disclose the full-render reason when they are not, and report all seven optimizer outcomes in English and Spanish; the unsafe MP4 edit-list path is no longer enabled.
 - Added validated-internet awareness across model downloads, AI model controls, caption translation, and opt-in update checks; offline controls explain the dependency, disable before a request, and recover from connectivity callbacks.

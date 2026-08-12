@@ -27,6 +27,7 @@ REQUIRED_REACHABLE_CVES = {
     "CVE-2026-12706",
     "CVE-2026-66037",
     "CVE-2026-66038",
+    "CVE-2026-64832",
 }
 REQUIRED_CVE_COMPONENTS = {
     "CVE-2026-64830": {"vobsub_demuxer"},
@@ -38,6 +39,7 @@ REQUIRED_CVE_COMPONENTS = {
     "CVE-2026-12706": {"rasc_decoder"},
     "CVE-2026-66037": {"iamf_demuxer"},
     "CVE-2026-66038": {"zlib_decoder"},
+    "CVE-2026-64832": set(),
 }
 REQUIRED_PATCH_FLAGS = {
     "--disable-demuxer=vobsub",
@@ -134,6 +136,15 @@ def validate(lock: dict, root: Path = ROOT, today: dt.date | None = None) -> Non
     advisories_by_id = {advisory.get("id"): advisory for advisory in advisories}
     if len(advisories_by_id) != len(advisories):
         raise ValueError("native advisory inventory contains duplicate IDs")
+    reachability = security.get("reachability")
+    if not isinstance(reachability, dict):
+        raise ValueError("native reachability inventory is missing")
+    orphan_decisions = sorted(set(reachability) - set(advisories_by_id))
+    if orphan_decisions:
+        raise ValueError(
+            "native reachability inventory contains unknown advisories: "
+            + ", ".join(orphan_decisions)
+        )
     for required_id in sorted(REQUIRED_REACHABLE_CVES):
         advisory = advisories_by_id.get(required_id)
         if advisory is None:
@@ -154,6 +165,35 @@ def validate(lock: dict, root: Path = ROOT, today: dt.date | None = None) -> Non
             raise ValueError(f"native advisory review expired: {advisory['id']}")
         severity = advisory["severity"].upper()
         status = advisory["status"].lower()
+        advisory_components = set(advisory.get("disabledComponents", []))
+        if severity in BLOCKING_SEVERITIES and status == "not_affected" and not advisory_components:
+            decision = reachability.get(advisory["id"])
+            if not isinstance(decision, dict):
+                raise ValueError(
+                    f"native reachability decision missing: {advisory['id']}"
+                )
+            if decision.get("status") != "not_reachable":
+                raise ValueError(
+                    f"native reachability decision is not not_reachable: {advisory['id']}"
+                )
+            absent_flags = decision.get("requiredAbsentBuildFlags", [])
+            if not isinstance(absent_flags, list) or not absent_flags or any(
+                not isinstance(flag, str) or not flag for flag in absent_flags
+            ):
+                raise ValueError(
+                    f"native reachability decision has no build-flag evidence: {advisory['id']}"
+                )
+            build_command = str(lock.get("build", {}).get("command", ""))
+            present_flags = [flag for flag in absent_flags if flag in build_command]
+            if present_flags:
+                raise ValueError(
+                    f"native advisory reachability contradicts build flags for "
+                    f"{advisory['id']}: {', '.join(present_flags)}"
+                )
+            if not str(decision.get("evidence", "")).strip():
+                raise ValueError(
+                    f"native reachability decision has no rationale: {advisory['id']}"
+                )
         if severity in BLOCKING_SEVERITIES and status not in RESOLVED_STATUSES:
             raise ValueError(
                 f"unresolved {severity} native advisory: {advisory['id']} status={status}"
@@ -249,6 +289,22 @@ def self_test(lock: dict) -> None:
         raise AssertionError("expired advisory review was accepted")
     except ValueError as error:
         if "review expired" not in str(error):
+            raise
+    missing_reachability = copy.deepcopy(lock)
+    missing_reachability["security"]["reachability"].pop("CVE-2026-64832")
+    try:
+        validate(missing_reachability)
+        raise AssertionError("missing native reachability decision was accepted")
+    except ValueError as error:
+        if "reachability decision missing" not in str(error):
+            raise
+    contradictory_reachability = copy.deepcopy(lock)
+    contradictory_reachability["build"]["command"] += " --enable-nvdec"
+    try:
+        validate(contradictory_reachability)
+        raise AssertionError("contradictory native reachability was accepted")
+    except ValueError as error:
+        if "contradicts build flags" not in str(error):
             raise
     missing = copy.deepcopy(lock)
     missing["advisories"] = [
