@@ -4,7 +4,7 @@
 
 ClearCut is a local-first Android video editor. Your projects, media, and edits
 stay on your device. ClearCut has no account system, no advertising, and no
-analytics SDK. Nothing in this policy is aspirational — every statement below
+analytics SDK. Nothing in this policy is aspirational: every statement below
 describes what the shipped app does.
 
 ## What ClearCut stores, and where
@@ -34,24 +34,24 @@ URIs in them are redacted.
 
 Only these, and each one requires you to act first:
 
-- **Cloud generative video calls** — off unless you invoke a cloud generative
+- **Cloud generative video calls**: off unless you invoke a cloud generative
   tool, and a consent sheet discloses the provider before each call.
-- **MediaPipe on-device task metrics** — off by default. If you grant consent in
+- **MediaPipe on-device task metrics**: off by default. If you grant consent in
   Settings → Privacy, Google's MediaPipe Tasks SDK uploads anonymous performance
   metrics (app id/version, task and mode, invocation and drop counts, latency,
   initialization errors). Your frames and pixels never leave the device.
   Revoking consent closes any running task and blocks it from starting again.
-- **App update check** — off by default. When enabled in Settings → Updates,
+- **App update check**: off by default. When enabled in Settings → Updates,
   ClearCut makes a single TLS request to the public GitHub releases API to
   compare the latest tag with your installed version. No data is stored and no
   APK is downloaded or installed.
-- **Model downloads** — fetching a Whisper or segmentation model contacts the
+- **Model downloads**: fetching a Whisper or segmentation model contacts the
   model host recorded in `docs/models.md`. You start the download; nothing about
   your projects is sent with it.
 
 ClearCut integrates no advertising SDK, no attribution SDK, and no usage
 analytics. The "opt-in usage telemetry" row in the in-app privacy dashboard is a
-placeholder for a future provider — no telemetry provider is integrated today,
+placeholder for a future provider: no telemetry provider is integrated today,
 and the row exists so it cannot be added silently.
 
 ## Backup and device transfer
@@ -59,8 +59,8 @@ and the row exists so it cannot be added silently.
 ClearCut participates in Android's built-in backup. The **cloud** backup scope is
 deliberately limited to your project documents (the project database and autosave
 files). Android Auto Backup is capped at 25 MB per app and fails the whole backup
-when that is exceeded, so generated timeline media — freeze frames, voiceovers,
-text-to-speech audio, noise-reduced audio, stabilized clips — is excluded. A
+when that is exceeded, so generated timeline media: freeze frames, voiceovers,
+text-to-speech audio, noise-reduced audio, stabilized clips: is excluded. A
 cloud restore therefore returns your projects with that generated media missing.
 
 **Device-to-device transfer** has no such quota and carries everything, including
@@ -91,13 +91,13 @@ they appear.
 
 ## Deletion
 
-- **A project** — delete it from the Projects screen; it moves to trash, and
+- **A project**: delete it from the Projects screen; it moves to trash, and
   emptying the trash removes the project, its autosave, and its managed media
   copies.
-- **AI models** — Settings → AI Models → Remove model.
-- **Diagnostic, crash, and process-death records** — clearing app storage removes
+- **AI models**: Settings → AI Models → Remove model.
+- **Diagnostic, crash, and process-death records**: clearing app storage removes
   them; they are also capped and rotate automatically.
-- **Everything** — Android Settings → Apps → ClearCut → Storage → Clear storage
+- **Everything**: Android Settings → Apps → ClearCut → Storage → Clear storage
   removes all ClearCut data from the device. Uninstalling does the same.
 
 Because ClearCut has no account and stores nothing about you on a server, there

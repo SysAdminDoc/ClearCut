@@ -1,0 +1,4 @@
+- Reworked the dashboard, editor, settings, and export sheet around a flat AMOLED workspace with stronger hierarchy and a shared 12 dp radius ceiling.
+- Added a direct built-in template grid to the empty dashboard and a denser recent-project row for returning work.
+- Kept the export action visible after editable resolution, frame-rate, codec, and quality rows.
+- Tightened settings density while preserving the full set of delivery, notification, timeline, storage, privacy, and model controls.

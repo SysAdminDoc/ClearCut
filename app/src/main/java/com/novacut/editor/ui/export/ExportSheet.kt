@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ClosedCaption
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
@@ -206,6 +207,7 @@ private fun trimOptimizationDisclosureText(
 @Composable
 fun ExportSheet(
     config: ExportConfig,
+    projectName: String = "",
     exportState: ExportState,
     exportProgress: Float,
     modifier: Modifier = Modifier,
@@ -500,7 +502,7 @@ fun ExportSheet(
         modifier = modifier
             .fillMaxWidth()
             .testTag(ClearCutTestTags.EXPORT_SHEET)
-            .background(semanticColors.panel, containerShape)
+            .background(semanticColors.background, containerShape)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = Spacing.lg, vertical = 14.dp)
     ) {
@@ -520,45 +522,22 @@ fun ExportSheet(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
-                shape = RoundedCornerShape(Radius.lg),
-                border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f))
-            ) {
-                Box(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.FileUpload,
-                        contentDescription = stringResource(R.string.export_title),
-                        tint = ClearCutAccents.Rosewater,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.export_title),
-                    color = semanticColors.text,
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    stringResource(R.string.export_subtitle),
-                    color = semanticColors.subtext,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+            Text(
+                stringResource(R.string.export_title),
+                color = semanticColors.text,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
 
             if (exportState != ExportState.EXPORTING) {
                 ClearCutChromeIconButton(
                     icon = Icons.Default.Close,
                     contentDescription = stringResource(R.string.close),
                     onClick = onClose,
+                    tint = semanticColors.text,
+                    containerColor = Color.Transparent,
+                    borderColor = Color.Transparent,
                     modifier = Modifier.testTag(ClearCutTestTags.EXPORT_CLOSE),
                     size = 40.dp
                 )
@@ -678,75 +657,57 @@ fun ExportSheet(
             return
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = semanticColors.panel),
-            border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
-            shape = RoundedCornerShape(Radius.xl)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.xs, vertical = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
-            Box(
-                modifier = Modifier.background(
-                    Brush.verticalGradient(
-                        listOf(
-                            semanticColors.panelHighest.copy(alpha = 0.95f),
-                            semanticColors.panel
-                        )
-                    )
+            Text(
+                text = config.platformPreset?.displayName ?: stringResource(R.string.export_delivery_summary),
+                color = semanticColors.subtext,
+                style = MaterialTheme.typography.labelLarge
+            )
+            if (projectName.isNotBlank()) {
+                Text(
+                    text = projectName,
+                    color = semanticColors.text,
+                    style = MaterialTheme.typography.headlineMedium
                 )
-            ) {
-                Column(
-                    modifier = Modifier.padding(Spacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
-                ) {
-                    Text(
-                        text = config.platformPreset?.displayName ?: stringResource(R.string.export_delivery_summary),
-                        color = ClearCutAccents.Rosewater,
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                    Text(
-                        text = summaryHeadline,
-                        color = semanticColors.text,
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        when {
-                            config.captureFrameOnly -> {
-                                ExportPill(localizedFrameCaptureFormat(config.captureFormat), ClearCutAccents.Mauve)
-                                ExportPill(outputAspectRatio.label, ClearCutAccents.Sapphire)
-                            }
-                            config.exportAsGif -> {
-                                ExportPill(stringResource(R.string.export_fps_value, config.gifFrameRate), ClearCutAccents.Mauve)
-                                ExportPill(stringResource(R.string.export_pixels_value, config.gifMaxWidth), ClearCutAccents.Sapphire)
-                                ExportPill(outputAspectRatio.label, ClearCutAccents.Teal)
-                            }
-                            config.exportStemsOnly -> {
-                                ExportPill(stringResource(R.string.export_stems), ClearCutAccents.Mauve)
-                                ExportPill(config.audioCodec.label, ClearCutAccents.Sapphire)
-                            }
-                            config.exportAudioOnly -> {
-                                ExportPill(stringResource(R.string.export_audio_only), ClearCutAccents.Mauve)
-                                ExportPill(config.audioCodec.label, ClearCutAccents.Sapphire)
-                            }
-                            else -> {
-                                ExportPill(stringResource(R.string.export_fps_value, config.frameRate), ClearCutAccents.Mauve)
-                                if (config.forceConstantFrameRate) {
-                                    ExportPill(stringResource(R.string.export_constant_frame_rate_pill), ClearCutAccents.Mauve)
-                                }
-                                ExportPill(config.codec.label, ClearCutAccents.Sapphire)
-                                ExportPill(localizedExportQuality(config.quality), ClearCutAccents.Teal)
-                            }
-                        }
-                    }
-                    Text(
-                        text = summaryDetail,
-                        color = semanticColors.subtext,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
             }
+            Text(
+                text = summaryHeadline,
+                color = semanticColors.text,
+                style = MaterialTheme.typography.titleLarge
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = outputDetailsPrimary,
+                    color = ClearCutAccents.Sky,
+                    style = MaterialTheme.typography.labelLarge
+                )
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(18.dp)
+                        .background(semanticColors.cardStrokeStrong)
+                )
+                Text(
+                    text = outputAspectRatio.label,
+                    color = semanticColors.subtextStrong,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+            Text(
+                text = summaryDetail,
+                color = semanticColors.subtext,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            HorizontalDivider(color = semanticColors.cardStroke)
         }
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -811,6 +772,89 @@ fun ExportSheet(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        ExportSectionCard(
+            title = stringResource(R.string.export_output_details),
+            description = null,
+            accent = ClearCutAccents.Sky
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                ExportSummarySettingRow(
+                icon = Icons.Default.ViewModule,
+                label = stringResource(R.string.export_resolution),
+                value = config.resolution.label,
+                accent = ClearCutAccents.Sky,
+                onClick = {
+                    val options = Resolution.entries
+                    val next = options[(options.indexOf(config.resolution) + 1) % options.size]
+                    onConfigChanged(config.copy(resolution = next, platformPreset = null))
+                }
+            )
+                ExportSummarySettingRow(
+                icon = Icons.Default.Speed,
+                label = stringResource(R.string.export_frame_rate),
+                value = stringResource(R.string.export_fps_value, config.frameRate),
+                accent = ClearCutAccents.Mauve,
+                onClick = {
+                    val options = listOf(24, 30, 60)
+                    val next = options[(options.indexOf(config.frameRate).coerceAtLeast(0) + 1) % options.size]
+                    onConfigChanged(config.copy(frameRate = next, platformPreset = null))
+                }
+            )
+                ExportSummarySettingRow(
+                icon = Icons.Default.FileUpload,
+                label = stringResource(R.string.export_codec),
+                value = "MP4 · ${config.codec.label}",
+                accent = ClearCutAccents.Teal,
+                onClick = {
+                    val options = VideoCodec.entries.filter { it in availableCodecs }
+                    if (options.isNotEmpty()) {
+                        val next = options[(options.indexOf(config.codec).coerceAtLeast(0) + 1) % options.size]
+                        onConfigChanged(config.copy(codec = next, platformPreset = null))
+                    }
+                }
+            )
+                ExportSummarySettingRow(
+                icon = Icons.Default.GraphicEq,
+                label = stringResource(R.string.export_quality),
+                value = localizedExportQuality(config.quality),
+                accent = ClearCutAccents.Green,
+                onClick = {
+                    val options = ExportQuality.entries
+                    val next = options[(options.indexOf(config.quality) + 1) % options.size]
+                    onConfigChanged(config.copy(quality = next, platformPreset = null))
+                }
+            )
+                if (estimatedSize != null && videoModeEnabled) {
+                    Text(
+                        text = stringResource(R.string.export_estimated_size_format, estimatedSize),
+                        color = ClearCutAccents.Peach,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = Spacing.sm)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Spacing.md))
+
+        ClearCutPrimaryButton(
+            text = primaryButtonLabel,
+            onClick = {
+                if (config.captureFrameOnly) {
+                    onCaptureFrame()
+                } else {
+                    onStartExport()
+                }
+            },
+            icon = primaryButtonIcon,
+            enabled = rangeReady,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1721,51 +1765,79 @@ fun ExportSheet(
 @Composable
 private fun ExportSectionCard(
     title: String,
-    description: String,
+    description: String? = null,
     accent: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = LocalClearCutColors.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = colors.panelHighest),
-        border = BorderStroke(
-            1.dp,
-            if (colors.highContrast) colors.cardStrokeStrong else colors.cardStrokeStrong.copy(alpha = 0.92f)
-        ),
-        shape = RoundedCornerShape(Radius.xl)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.xs, vertical = Spacing.md),
+        verticalArrangement = Arrangement.spacedBy(Spacing.md)
     ) {
-        Box(
-            modifier = Modifier.background(
-                Brush.verticalGradient(
-                    listOf(
-                        accent.copy(alpha = 0.12f),
-                        colors.panelHighest,
-                        colors.panelRaised.copy(alpha = 0.96f)
-                    )
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = title,
+                color = colors.text,
+                style = MaterialTheme.typography.titleMedium
             )
-        ) {
-            Column(
-                modifier = Modifier.padding(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = title,
-                        color = colors.text,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = description,
-                        color = colors.subtext,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                content()
+            if (!description.isNullOrBlank()) {
+                Text(
+                    text = description,
+                    color = colors.subtext,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
+        content()
+        HorizontalDivider(color = accent.copy(alpha = if (colors.highContrast) 0.72f else 0.18f))
     }
+}
+
+@Composable
+private fun ExportSummarySettingRow(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val colors = LocalClearCutColors.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(22.dp)
+        )
+        Text(
+            text = label,
+            color = colors.text,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            color = accent,
+            style = MaterialTheme.typography.labelLarge,
+            textAlign = TextAlign.End
+        )
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = colors.subtext,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+    HorizontalDivider(color = colors.cardStroke)
 }
 
 @Composable
@@ -2359,7 +2431,7 @@ private fun ExportToggleRow(
         ) {
             Surface(
                 color = accent.copy(alpha = if (enabled) 0.14f else 0.07f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(Radius.xl),
                 border = BorderStroke(1.dp, accent.copy(alpha = if (enabled) 0.22f else 0.10f))
             ) {
                 Box(
@@ -2604,25 +2676,6 @@ private fun ExportStateCard(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ExportPill(
-    text: String,
-    accent: Color
-) {
-    Surface(
-        color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
-    ) {
-        Text(
-            text = text,
-            color = accent,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-        )
     }
 }
 

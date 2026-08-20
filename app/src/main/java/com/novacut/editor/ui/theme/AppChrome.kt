@@ -36,7 +36,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -53,52 +52,7 @@ fun ClearCutScreenBackground(
     content: @Composable BoxScope.() -> Unit
 ) {
     val colors = LocalClearCutColors.current
-    Box(
-        modifier = modifier
-            .background(colors.background)
-    ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            colors.background,
-                            colors.backgroundMid.copy(alpha = 0.98f),
-                            colors.background
-                        )
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0f to colors.accent.copy(alpha = if (colors.highContrast) 0.12f else 0.055f),
-                            0.18f to Color.Transparent,
-                            0.76f to Color.Transparent,
-                            1f to colors.accentSecondary.copy(alpha = if (colors.highContrast) 0.10f else 0.045f)
-                        )
-                    )
-                )
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(
-                    Brush.horizontalGradient(
-                        colorStops = arrayOf(
-                            0f to colors.panelRaised.copy(alpha = 0.32f),
-                            0.5f to Color.Transparent,
-                            1f to colors.panelRaised.copy(alpha = 0.26f)
-                        )
-                    )
-                )
-        )
-        content()
-    }
+    Box(modifier = modifier.background(colors.background), content = content)
 }
 
 @Composable
@@ -115,26 +69,16 @@ fun ClearCutHeroCard(
         modifier = modifier.fillMaxWidth(),
         color = colors.panel,
         shape = shape,
-        border = BorderStroke(1.dp, if (colors.highContrast) colors.cardStrokeStrong else colors.cardStrokeStrong.copy(alpha = 0.72f))
+        border = BorderStroke(
+            1.dp,
+            if (colors.highContrast) colors.cardStrokeStrong else resolvedAccent.copy(alpha = 0.12f)
+        )
     ) {
-        Box(
-            modifier = Modifier.background(
-                Brush.verticalGradient(
-                    colorStops = arrayOf(
-                        0f to resolvedAccent.copy(alpha = 0.075f),
-                        0.2f to colors.panelHighest.copy(alpha = 0.92f),
-                        0.68f to colors.panel.copy(alpha = 0.98f),
-                        1f to colors.panelRaised.copy(alpha = 0.98f)
-                    )
-                )
-            )
-        ) {
-            Column(
-                modifier = Modifier.padding(contentPadding),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
-                content = content
-            )
-        }
+        Column(
+            modifier = Modifier.padding(contentPadding),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
+            content = content
+        )
     }
 }
 

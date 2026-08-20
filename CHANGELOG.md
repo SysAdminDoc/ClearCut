@@ -1,11 +1,22 @@
 # Changelog
 
+## v3.79.0
+
+Current version: **v3.79.0** (`versionCode` 297).
+
+- Reworked the dashboard, editor, settings, and export sheet around a flat AMOLED workspace with stronger hierarchy and a shared 12 dp radius ceiling.
+- Added a direct built-in template grid to the empty dashboard and a denser recent-project row for returning work.
+- Kept the export action visible after editable resolution, frame-rate, codec, and quality rows.
+- Tightened settings density while preserving the full set of delivery, notification, timeline, storage, privacy, and model controls.
+- Expanded JVM visual verification to 1080 x 2400 pixel captures for dark and high-contrast modes, including separate empty and populated dashboard evidence.
+- Saved source targets, same-viewport comparison evidence, and a passing visual parity report for the four primary screens.
+
 ## v3.78.1
 
 Current version: **v3.78.1** (`versionCode` 296).
 
 - Added a translated Spanish Play listing with a current changelog, replaced synthetic listing screenshots with API 37 device captures, and repaired the clean-checkout changelog/checksum release scripts.
-- Migrated project persistence to Room 3.0.1 and SQLite driver APIs; the v1–v10 migration chain remains device-validated on API 37.
+- Migrated project persistence to Room 3.0.1 and SQLite driver APIs; the v1 to v10 migration chain remains device-validated on API 37.
 - Updated Coil Compose and its video-frame decoder from 3.3.0 to 3.5.0 after the unit-test, lint, and QA packaging compatibility probe passed; the timeline and media-picker review continue to use their independent VideoEngine and metadata paths, so the dependency change does not alter those measured paths.
 - Updated the Compose BOM from 2026.06.00 to 2026.06.01; the resulting Compose 1.11.4 graph passed the refreshed dependency-verification hashes, unit tests, lint, and QA packaging probe.
 - Updated AndroidX Core KTX from 1.16.0 to 1.19.0, added it to the freshness registry, and passed the refreshed Core/lifecycle metadata verification, unit-test, lint, and QA packaging probe.
@@ -31,7 +42,7 @@ Current version: **v3.78.1** (`versionCode` 296).
 - Added offline hardware-aware stabilization: bounded platform motion analysis with low-RAM and thermal gates, live progress and cancellation, source-preserving review/apply UI, persistent motion/lens/sync/crop data, shared preview/export transforms, and API 37 device acceptance.
 - Completed the AGP 9/API 37 acceptance lane: the managed Pixel 6 benchmark/profile tasks, detector ratchet, lint, advisory-floor, debug, and baseline-profile package gates are green; the connected QA baseline remains 17 tests with seven known emulator codec, accessibility-tree, preview, and migration-fixture failures.
 - Completed LaMa object-removal acceptance on the API 37 AVD with the pinned 174 MiB model: still inference and an audio-bearing video both produced usable outputs, and FFmpeg now rejects zero-sample hardware artifacts before retrying with its MPEG-4 software floor.
-- Completed the Room v1–v10 migration matrix on the API 37 AVD; each hop now preserves the project row, frame-rate values, media-asset table/indexes, and v10 manifest columns, including a corrected v9 fixture for the non-null frame-rate pair.
+- Completed the Room v1 to v10 migration matrix on the API 37 AVD; each hop now preserves the project row, frame-rate values, media-asset table/indexes, and v10 manifest columns, including a corrected v9 fixture for the non-null frame-rate pair.
 - Completed Android 17/API 37 acceptance: the corrected `cmd audio set-hardening throw` policy smoke, media-processing foreground-service start, audio export, 2400×1080 resizability launch, debug/streaming packages, Room matrix, managed Pixel 6 benchmark, and baseline-profile collection all passed; emulator-suppressed profile cases remain explicitly skipped.
 - Added API 37 device acceptance for dense-cut thumbnail memory, a software 1080p-to-720p render, two trims from one source window, 3000ms/3030ms A/V alignment, and rejection of short or empty outputs before `COMPLETE`.
 - Completed the API 37 headless Android system-backup matrix: a large project restored its autosave/database scope while generated media stayed excluded from the cloud scope, oversized autosave data hit the transport quota, and disabling backup blocked new backup requests and reinstall restore.
@@ -115,7 +126,7 @@ Current version: **v3.78.1** (`versionCode` 296).
 - Moved mutable editor-state construction behind a tested `EditorStateStore`; the existing ViewModel/delegate APIs remain behavior-compatible while screens observe a read-only flow.
 - Conformed the unsigned C2PA draft to 2.4 generator-info and actions-v2 metadata, removed the retired training-mining assertion, and made the no-signing/no-embed status invariant explicit in sidecars and UI copy.
 
-## Roadmap archive — 2026-08-10 — ROADMAP.md
+## Roadmap archive: 2026-08-10: ROADMAP.md
 
 <details>
 <summary>Original roadmap snapshot</summary>
@@ -134,7 +145,7 @@ context belongs in `RESEARCH.md`; blocked or operator-gated work belongs in
 ## Active Queue
 
 Deferred findings from the 2026-07-17 deep audit (v3.74.157). Verified real,
-not fixed this pass — mostly larger mechanical work or UI polish.
+not fixed this pass, mostly larger mechanical work or UI polish.
 
 ## Blocked Queue
 
@@ -149,7 +160,7 @@ verified locally.
 ## Audit Backlog (2026-07-12)
 
 Deferred findings from the deep engineering/QA audit. Verified but not fixed in
-that pass — either ambiguous product behavior, a larger refactor, or negligible
+that pass, either ambiguous product behavior, a larger refactor, or negligible
 practical impact.
 
 ## Research-Driven Additions
@@ -163,45 +174,45 @@ pass (larger refactors, ambiguous product behavior, or device-gated verification
 
 ## Research-Driven Additions
 
-### P1 — Next
+### P1: Next
 
-### P2 — Later
+### P2: Later
 
 
 ## Research-Driven Additions (2026-07-22)
 
-Reinforces existing items: this pass re-confirms the open P1 "Make public feature claims an executable capability contract" (extend it to cover the blend-mode and bitrate-mode gaps below), and the P2 Media3 export items (edit-list trim fast-path, CodecDB-Lite/rounding/fps) and Compose-1.9 scroll-perf item — all still valid against the 2026 Media3 1.8–1.10 / Compose 1.10 release notes. `SmartRenderEngine`, `StabilizationEngine`, chroma key, motion tracking, `autoDuck`, loudness normalization, and on-device `WhisperEngine` captions already exist — do NOT re-add them as new features. ONNX Runtime is already 1.26.0 (no CVE bump needed). No numeric ID scheme in this file; items stay unnumbered.
+Reinforces existing items: this pass re-confirms the open P1 "Make public feature claims an executable capability contract" (extend it to cover the blend-mode and bitrate-mode gaps below), and the P2 Media3 export items (edit-list trim fast-path, CodecDB-Lite/rounding/fps) and Compose-1.9 scroll-perf item. All remain valid against the 2026 Media3 1.8 to 1.10 / Compose 1.10 release notes. `SmartRenderEngine`, `StabilizationEngine`, chroma key, motion tracking, `autoDuck`, loudness normalization, and on-device `WhisperEngine` captions already exist. Do NOT re-add them as new features. ONNX Runtime is already 1.26.0 (no CVE bump needed). No numeric ID scheme in this file; items stay unnumbered.
 
-### P1 — Now
+### P1: Now
 
-### P2 — Next
+### P2: Next
 
-### P3 — Later
+### P3: Later
 
 ## Research-Driven Additions
 
-- [ ] P2 — Give media scanning an explicit failure and retry state
+- [ ] P2: Give media scanning an explicit failure and retry state
   Why: The outer media scan exposes only an analyzing boolean and per-URI resolver exceptions are absorbed, so a provider-wide failure can leave users without a clear retry path or an explanation of partial results.
   Evidence: `app/src/main/java/com/novacut/editor/ui/media/MediaManagerPanel.kt:95-108,1073-1165`; the current scan catches resolver failures per URI but has no typed terminal error state or retry action.
   Touches: `MediaManagerPanel.kt`, media scan state/diagnostics, strings, cancellation handling, and unit/Compose tests.
   Acceptance: The UI distinguishes idle, scanning, ready-with-partial-results, failed, and cancelled states; failed providers and skipped assets are counted with actionable detail; retry is explicit and idempotent; cancellation never leaves a permanent spinner; tests cover resolver failure, empty results, cancellation, and retry.
   Complexity: S
 
-- [ ] P2 — Establish a Compose accessibility and font-scale matrix
+- [ ] P2: Establish a Compose accessibility and font-scale matrix
   Why: Existing smoke tests cover pseudo-locale and RTL behavior, but there is no broad font-scale or large-screen matrix for dense export, batch, and media-manager surfaces. Compose semantics and state descriptions should be verified as part of the product’s accessibility contract.
   Evidence: `app/src/androidTest/java/com/novacut/editor/ClearCutSmokeTest.kt`; existing locale/resource and semantic-theme tests; official guidance at https://developer.android.com/develop/ui/compose/accessibility, https://developer.android.com/develop/ui/compose/accessibility/semantics, and https://developer.android.com/develop/ui/compose/testing/semantics.
   Touches: smoke/instrumentation tests, `ExportSheet.kt`, `BatchExportPanel.kt`, `MediaManagerPanel.kt`, semantics, and strings.
   Acceptance: Instrumentation covers wide layouts, 200% and 300% font scale, RTL, and pseudo-locales; no primary action, status, progress, or error is clipped or hidden; controls expose stable labels, roles, values, and state descriptions; the matrix runs in the invisible device test lane.
   Complexity: M
 
-- [ ] P2 — Add a container and fast-start compatibility gate
+- [ ] P2: Add a container and fast-start compatibility gate
   Why: The exporter accounts for MP4 `moov` size but does not assert atom order or clearly distinguish a stream-safe output contract from a merely playable file. Android’s format guidance makes codec/container combinations and streamed MP4 ordering explicit.
   Evidence: `app/src/main/java/com/novacut/editor/model/ExportConfig.kt:81`; `app/src/main/java/com/novacut/editor/engine/ExportOutputVerifier.kt`; https://developer.android.com/media/platform/supported-formats; Media3’s current muxer notes at https://developer.android.com/blog/posts/media3-whats-new?hl=en.
   Touches: `ExportOutputVerifier.kt`, container parser/policy, export diagnostics/share metadata, fixtures, and instrumentation tests.
   Acceptance: The output gate checks MP4 atom order and declared codec/container compatibility, reports when an output is playable but not stream-safe, and does not make an unverified live-streaming claim; fixtures cover valid and invalid `moov` placement and supported/unsupported audio combinations.
   Complexity: M
 
-- [ ] P3 — Decompose the largest editor coordinators around stable seams
+- [ ] P3: Decompose the largest editor coordinators around stable seams
   Why: `EditorViewModel.kt`, `VideoEngine.kt`, `ExportDelegate.kt`, `Timeline.kt`, `ExportSheet.kt`, and `ProjectAutoSave.kt` remain high-churn, multi-thousand-line coordination points. Smaller pure state transitions and explicit interfaces would reduce regression risk while preserving the current architecture.
   Evidence: Repository line-count and recent-churn audit on 2026-08-08; existing seams in `ExportDelegate.kt`, `ProjectAutoSave.kt`, and `EditorViewModel.kt` provide bounded extraction points.
   Touches: `EditorViewModel.kt`, `VideoEngine.kt`, `ExportDelegate.kt`, `ProjectAutoSave.kt`, editor state/coordinator interfaces, and regression tests.

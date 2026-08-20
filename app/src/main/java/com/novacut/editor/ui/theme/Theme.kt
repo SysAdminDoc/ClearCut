@@ -19,38 +19,38 @@ import com.novacut.editor.engine.AppearanceMode
 object Mocha {
     // Neutral creator-workspace layers. Catppuccin accents remain available for media
     // semantics, while persistent chrome stays graphite so footage remains the focal point.
-    val Midnight = Color(0xFF03070A)
-    val Crust = Color(0xFF071016)
-    val Mantle = Color(0xFF0B141C)
-    val Base = Color(0xFF0E1822)
-    val Panel = Color(0xFF0A1219)
-    val PanelRaised = Color(0xFF101B25)
-    val PanelHighest = Color(0xFF16232F)
-    val CardStroke = Color(0xFF263746)
-    val CardStrokeStrong = Color(0xFF3A5366)
+    val Midnight = Color(0xFF020405)
+    val Crust = Color(0xFF05090C)
+    val Mantle = Color(0xFF070C11)
+    val Base = Color(0xFF0A1117)
+    val Panel = Color(0xFF070C10)
+    val PanelRaised = Color(0xFF0C131A)
+    val PanelHighest = Color(0xFF111A22)
+    val CardStroke = Color(0xFF1D2933)
+    val CardStrokeStrong = Color(0xFF31404B)
     val Glow = Color(0x66CBA6F7)
     val GlowSoft = Color(0x3389B4FA)
     val GlowWarm = Color(0x33F5E0DC)
-    val Surface0 = Color(0xFF243240)
-    val Surface1 = Color(0xFF3B4A58)
-    val Surface2 = Color(0xFF566574)
-    val Overlay0 = Color(0xFF626B78)
-    val Overlay1 = Color(0xFF7F849C)
-    val Overlay2 = Color(0xFF9399B2)
-    val Subtext0 = Color(0xFFA6ADC8)
-    val Subtext1 = Color(0xFFBAC2DE)
-    val Text = Color(0xFFCDD6F4)
+    val Surface0 = Color(0xFF17212A)
+    val Surface1 = Color(0xFF25323D)
+    val Surface2 = Color(0xFF3C4A56)
+    val Overlay0 = Color(0xFF596470)
+    val Overlay1 = Color(0xFF788390)
+    val Overlay2 = Color(0xFF929CA8)
+    val Subtext0 = Color(0xFF87919F)
+    val Subtext1 = Color(0xFFAFB7C3)
+    val Text = Color(0xFFF4F7FA)
     val Lavender = Color(0xFFB4BEFE)
     val Blue = Color(0xFF89B4FA)
-    val Sapphire = Color(0xFF74C7EC)
-    val Sky = Color(0xFF89DCEB)
-    val Teal = Color(0xFF94E2D5)
-    val Green = Color(0xFFA6E3A1)
+    val Sapphire = Color(0xFF52C8F0)
+    val Sky = Color(0xFF35D5E8)
+    val Teal = Color(0xFF54D6C6)
+    val Green = Color(0xFF91E68F)
     val Yellow = Color(0xFFF9E2AF)
-    val Peach = Color(0xFFFAB387)
+    val Peach = Color(0xFFFF7F6E)
     val Maroon = Color(0xFFEBA0AC)
     val Red = Color(0xFFF38BA8)
-    val Mauve = Color(0xFFCBA6F7)
+    val Mauve = Color(0xFFC27CFF)
     val Pink = Color(0xFFF5C2E7)
     val Flamingo = Color(0xFFF2CDCD)
     val Rosewater = Color(0xFFF5E0DC)
@@ -293,84 +293,86 @@ object ClearCutThemeDefaults {
     }
 }
 
+private val ClearCutFontFamily = FontFamily.SansSerif
+
 private val ClearCutTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 36.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp
     ),
     displayMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 30.sp,
         lineHeight = 34.sp,
         letterSpacing = 0.sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         lineHeight = 24.sp
     ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 18.sp,
         lineHeight = 22.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
         lineHeight = 20.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 18.sp
     ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 15.sp,
         lineHeight = 21.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 17.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 13.sp,
         lineHeight = 16.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 14.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = ClearCutFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 13.sp,

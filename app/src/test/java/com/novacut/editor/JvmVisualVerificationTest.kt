@@ -25,7 +25,11 @@ import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(application = ClearCutApp::class, sdk = [35])
+@Config(
+    application = ClearCutApp::class,
+    sdk = [35],
+    qualifiers = "w360dp-h800dp-xxhdpi",
+)
 class JvmVisualVerificationTest {
     private val goldenDirectory = File(System.getProperty("user.dir"), "src/test/screenshots")
 
@@ -40,7 +44,7 @@ class JvmVisualVerificationTest {
 
     @Test
     fun dashboard_editor_export_and_settings_render_in_both_dark_modes() {
-        capture("project-dashboard-dark.png")
+        capture("project-dashboard-empty-dark.png")
 
         compose.onNodeWithTag(ClearCutTestTags.PROJECTS_CREATE_PROJECT).performClick()
         compose.onNodeWithTag(ClearCutTestTags.TEMPLATE_BLANK)
@@ -57,6 +61,7 @@ class JvmVisualVerificationTest {
 
         compose.onNodeWithTag(ClearCutTestTags.EDITOR_BACK).performClick()
         waitUntilAtLeastOneExists(ClearCutTestTags.PROJECTS_SCREEN)
+        capture("project-dashboard-dark.png")
         compose.onNodeWithTag(ClearCutTestTags.PROJECTS_SETTINGS).performClick()
         waitUntilAtLeastOneExists(ClearCutTestTags.SETTINGS_SCREEN)
         capture("settings-dark.png")

@@ -170,8 +170,6 @@ fun PreviewPanel(
     isLooping: Boolean = false,
     aspectRatio: AspectRatio = AspectRatio.RATIO_16_9,
     frameRate: Int = 30,
-    frameRateLabel: String = "$frameRate fps",
-    resolvedFrameTimecode: String? = null,
     onTogglePlayback: () -> Unit,
     onToggleLoop: () -> Unit = {},
     onSeek: (Long) -> Unit,
@@ -232,8 +230,7 @@ fun PreviewPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(semanticColors.background)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .background(semanticColors.background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
@@ -242,7 +239,7 @@ fun PreviewPanel(
                 .weight(1f),
             colors = CardDefaults.cardColors(containerColor = semanticColors.onAccent),
             border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.72f)),
-            shape = RoundedCornerShape(Radius.sm)
+            shape = RoundedCornerShape(0.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -541,12 +538,11 @@ fun PreviewPanel(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
+        HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.72f))
 
         Surface(
             color = semanticColors.background,
-            shape = RoundedCornerShape(Radius.sm),
-            border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.64f)),
+            shape = RoundedCornerShape(0.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -608,15 +604,7 @@ fun PreviewPanel(
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = buildString {
-                        append(aspectRatio.label)
-                        append("  •  ")
-                        append(frameRateLabel)
-                        resolvedFrameTimecode?.let {
-                            append("  •  ")
-                            append(it)
-                        }
-                    },
+                    text = "${formatTimecode(playheadMs)} / ${formatTimecode(totalDurationMs)}",
                     color = semanticColors.subtext,
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,

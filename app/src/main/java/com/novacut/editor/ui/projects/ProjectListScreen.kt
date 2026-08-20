@@ -10,6 +10,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -25,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +40,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -63,7 +67,6 @@ import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutFilterChip
-import com.novacut.editor.ui.theme.ClearCutHeroCard
 import com.novacut.editor.ui.theme.ClearCutMetricPill
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutScreenBackground
@@ -146,7 +149,6 @@ fun ProjectListScreen(
                 .then(if (showTemplateSheet) Modifier.clearAndSetSemantics { } else Modifier)
         ) {
             ProjectHomeHero(
-                projectCount = projectTotalCount,
                 searchQuery = searchQuery,
                 sortMode = sortMode,
                 onSearchQueryChanged = viewModel::setSearchQuery,
@@ -155,7 +157,6 @@ fun ProjectListScreen(
                 onCreateProject = { showTemplateSheet = true },
                 onImportTemplate = importTemplate,
                 onSettings = onSettings,
-                showProjectActions = projects.isNotEmpty(),
                 showSearch = showCollectionControls,
                 showSortControls = showCollectionControls && projects.isNotEmpty(),
                 actionsEnabled = actionsEnabled
@@ -229,7 +230,6 @@ fun ProjectListScreen(
                         searchQuery = searchQuery,
                         filterMode = filterMode,
                         onCreateProject = { showTemplateSheet = true },
-                        onImportTemplate = importTemplate,
                         onShowAllProjects = {
                             viewModel.setSearchQuery("")
                             viewModel.setFilterMode(ProjectFilterMode.ALL)
@@ -297,7 +297,6 @@ fun ProjectListScreen(
                                 searchQuery = searchQuery,
                                 filterMode = filterMode,
                                 onCreateProject = { showTemplateSheet = true },
-                                onImportTemplate = importTemplate,
                                 onShowAllProjects = {
                                     viewModel.setSearchQuery("")
                                     viewModel.setFilterMode(ProjectFilterMode.ALL)
@@ -580,7 +579,6 @@ private fun DocumentReportLine(
 
 @Composable
 private fun ProjectHomeHero(
-    projectCount: Int,
     searchQuery: String,
     sortMode: SortMode,
     onSearchQueryChanged: (String) -> Unit,
@@ -589,24 +587,33 @@ private fun ProjectHomeHero(
     onCreateProject: () -> Unit,
     onImportTemplate: () -> Unit,
     onSettings: () -> Unit,
-    showProjectActions: Boolean,
     showSearch: Boolean,
     showSortControls: Boolean,
     actionsEnabled: Boolean
 ) {
-    ClearCutHeroCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(bottomStart = Radius.xl, bottomEnd = Radius.xl),
-        accent = ClearCutAccents.Sky
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(LocalClearCutColors.current.background)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(Spacing.lg)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ClearCutMetricPill(
-                text = "${stringResource(R.string.projects_app_title)} · $projectCount",
-                accent = ClearCutAccents.Mauve,
-                icon = Icons.Default.Movie
+            Icon(
+                imageVector = Icons.Default.Movie,
+                contentDescription = null,
+                tint = ClearCutAccents.Mauve,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(Modifier.width(Spacing.sm))
+            Text(
+                text = stringResource(R.string.projects_app_title),
+                color = LocalClearCutColors.current.text,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.weight(1f))
             ClearCutChromeIconButton(
@@ -617,18 +624,33 @@ private fun ProjectHomeHero(
             )
         }
 
-        if (showProjectActions) {
-            ProjectActionRow(
-                primaryLabel = stringResource(R.string.projects_new_project),
-                primaryIcon = Icons.Default.Add,
-                onPrimary = onCreateProject,
-                secondaryLabel = stringResource(R.string.template_import),
-                secondaryIcon = Icons.Default.FileOpen,
-                onSecondary = onImportTemplate,
-                enabled = actionsEnabled,
-                primaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
+        HorizontalDivider(color = LocalClearCutColors.current.cardStroke)
+
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            Text(
+                text = stringResource(R.string.projects_ready_title),
+                color = LocalClearCutColors.current.text,
+                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(R.string.projects_ready_body),
+                color = LocalClearCutColors.current.subtext,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.widthIn(max = 520.dp)
             )
         }
+
+        ProjectActionRow(
+            primaryLabel = stringResource(R.string.projects_new_project),
+            primaryIcon = Icons.Default.Add,
+            onPrimary = onCreateProject,
+            secondaryLabel = stringResource(R.string.project_document_import_confirm),
+            secondaryIcon = Icons.Default.FileOpen,
+            onSecondary = onImportTemplate,
+            enabled = actionsEnabled,
+            primaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
+        )
 
         if (showSearch) {
             OutlinedTextField(
@@ -690,6 +712,8 @@ private fun ProjectHomeHero(
                 }
             }
         }
+
+        HorizontalDivider(color = LocalClearCutColors.current.cardStroke.copy(alpha = 0.82f))
     }
 }
 
@@ -922,7 +946,6 @@ private fun ProjectEmptyState(
     searchQuery: String,
     filterMode: ProjectFilterMode,
     onCreateProject: () -> Unit,
-    onImportTemplate: () -> Unit,
     onShowAllProjects: () -> Unit,
     actionsEnabled: Boolean
 ) {
@@ -931,7 +954,6 @@ private fun ProjectEmptyState(
     val hasActiveFilter = filterMode != ProjectFilterMode.ALL
     val isConstrainedEmpty = hasAnyProjects && (hasActiveSearch || hasActiveFilter)
     val colors = LocalClearCutColors.current
-    val accent = if (isConstrainedEmpty) ClearCutAccents.Sapphire else ClearCutAccents.Mauve
     val iconTint = if (isConstrainedEmpty) ClearCutAccents.Sapphire else ClearCutAccents.Rosewater
     val title = projectEmptyStateTitle(
         isConstrainedEmpty = isConstrainedEmpty,
@@ -944,83 +966,97 @@ private fun ProjectEmptyState(
         hasActiveSearch = hasActiveSearch,
         hasActiveFilter = hasActiveFilter
     )
+    val templatesDescription = stringResource(
+        R.string.projects_templates_count,
+        projectTemplates.size
+    )
 
-    Surface(
-        color = colors.panel,
-        shape = RoundedCornerShape(Radius.xl),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke.copy(alpha = 0.9f)
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = "$title. $body" }
-    ) {
-        Box(
+    if (!isConstrainedEmpty) {
+        Column(
             modifier = Modifier
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            colors.panelHighest.copy(alpha = 0.92f),
-                            colors.panel
-                        )
-                    )
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = Spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = actionsEnabled, role = Role.Button, onClick = onCreateProject)
+                    .semantics { contentDescription = templatesDescription }
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.template_built_in_section),
+                    color = colors.text,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
                 )
-                .padding(horizontal = Spacing.xxl, vertical = Spacing.xxxl)
+                Text(
+                    text = projectTemplates.size.toString(),
+                    color = ClearCutAccents.Sapphire,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+            projectTemplates.chunked(3).forEach { rowTemplates ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                ) {
+                    rowTemplates.forEach { template ->
+                        ProjectTemplateShortcut(
+                            template = template,
+                            enabled = actionsEnabled,
+                            onClick = onCreateProject,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    repeat(3 - rowTemplates.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    } else {
+        Surface(
+            color = Color.Transparent,
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "$title. $body" }
         ) {
             Column(
+                modifier = Modifier.padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(Spacing.md)
             ) {
-                Surface(
-                    color = accent.copy(alpha = if (colors.highContrast) 0.22f else 0.14f),
-                    shape = RoundedCornerShape(Radius.lg),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        accent.copy(alpha = if (colors.highContrast) 0.72f else 0.24f)
-                    )
-                ) {
-                    Icon(
-                        imageVector = if (isConstrainedEmpty) Icons.Default.Search else Icons.Default.VideoLibrary,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier
-                            .padding(Spacing.lg)
-                            .size(30.dp)
-                    )
-                }
-
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(30.dp)
+                )
                 Text(
                     text = title,
                     color = colors.text,
                     style = MaterialTheme.typography.headlineMedium
                 )
-
                 Text(
                     text = body,
                     color = colors.subtext,
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
-
-                if (isConstrainedEmpty) {
-                    ProjectActionRow(
-                        primaryLabel = stringResource(R.string.projects_show_all),
-                        primaryIcon = Icons.Default.Clear,
-                        onPrimary = onShowAllProjects,
-                        secondaryLabel = stringResource(R.string.projects_new_project),
-                        secondaryIcon = Icons.Default.Add,
-                        onSecondary = onCreateProject,
-                        enabled = actionsEnabled,
-                        secondaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
-                    )
-                } else {
-                    ProjectEmptyStateActions(
-                        onCreateProject = onCreateProject,
-                        onImportTemplate = onImportTemplate,
-                        enabled = actionsEnabled
-                    )
-                }
+                ProjectActionRow(
+                    primaryLabel = stringResource(R.string.projects_show_all),
+                    primaryIcon = Icons.Default.Clear,
+                    onPrimary = onShowAllProjects,
+                    secondaryLabel = stringResource(R.string.projects_new_project),
+                    secondaryIcon = Icons.Default.Add,
+                    onSecondary = onCreateProject,
+                    enabled = actionsEnabled,
+                    secondaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
+                )
             }
         }
     }
@@ -1052,21 +1088,39 @@ private fun projectEmptyStateBody(
 }
 
 @Composable
-private fun ProjectEmptyStateActions(
-    onCreateProject: () -> Unit,
-    onImportTemplate: () -> Unit,
-    enabled: Boolean
+private fun ProjectTemplateShortcut(
+    template: ProjectTemplateUI,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    ProjectActionRow(
-        primaryLabel = stringResource(R.string.projects_create_first),
-        primaryIcon = Icons.Default.Add,
-        onPrimary = onCreateProject,
-        secondaryLabel = stringResource(R.string.template_import),
-        secondaryIcon = Icons.Default.FileOpen,
-        onSecondary = onImportTemplate,
-        enabled = enabled,
-        primaryTestTag = ClearCutTestTags.PROJECTS_CREATE_PROJECT
-    )
+    val name = stringResource(template.nameResId)
+    Column(
+        modifier = modifier
+            .height(88.dp)
+            .background(
+                color = template.accentColor.copy(alpha = 0.09f),
+                shape = RoundedCornerShape(Radius.md)
+            )
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = name }
+            .padding(Spacing.md),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Icon(
+            imageVector = template.icon,
+            contentDescription = null,
+            tint = template.accentColor,
+            modifier = Modifier.size(22.dp)
+        )
+        Text(
+            text = name,
+            color = LocalClearCutColors.current.text,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 @Composable
@@ -1082,7 +1136,7 @@ private fun ProjectActionRow(
     secondaryTestTag: String? = null
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val stackActions = maxWidth < 300.dp
+        val stackActions = maxWidth < 400.dp
         if (stackActions) {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 ClearCutPrimaryButton(
@@ -1200,36 +1254,32 @@ private fun ProjectCard(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 124.dp)
+                .defaultMinSize(minHeight = 112.dp)
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics {
                     contentDescription = projectCardDescription
                 },
-            colors = CardDefaults.cardColors(containerColor = LocalClearCutColors.current.panel),
-            border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStroke.copy(alpha = 0.9f)),
-            shape = RoundedCornerShape(Radius.lg)
+            colors = CardDefaults.cardColors(containerColor = LocalClearCutColors.current.background),
+            shape = RoundedCornerShape(0.dp)
         ) {
             BoxWithConstraints(
                 modifier = Modifier
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                LocalClearCutColors.current.panelHighest.copy(alpha = 0.72f),
-                                LocalClearCutColors.current.panel.copy(alpha = 0.98f)
-                            )
-                        )
-                    )
-                    .padding(14.dp)
+                    .padding(vertical = 10.dp)
             ) {
                 val compactCard = maxWidth < 390.dp
-                val thumbnailSize = if (compactCard) 76.dp else 92.dp
+                val thumbnailWidth = if (compactCard) 112.dp else 156.dp
+                val thumbnailHeight = if (compactCard) 76.dp else 92.dp
                 val thumbnailGap = if (compactCard) Spacing.sm else 14.dp
                 Row(
                     modifier = Modifier
                         .fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ProjectThumbnail(project = project, size = thumbnailSize)
+                    ProjectThumbnail(
+                        project = project,
+                        width = thumbnailWidth,
+                        height = thumbnailHeight
+                    )
 
                     Spacer(modifier = Modifier.width(thumbnailGap))
 
@@ -1245,25 +1295,21 @@ private fun ProjectCard(
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            ProjectMetadataChip(text = project.resolution.label, accent = ClearCutAccents.Rosewater)
-                            ProjectMetadataChip(text = project.timelineTimebase.frameRateLabel, accent = ClearCutAccents.Mauve)
-                            ProjectMetadataChip(text = projectDuration, accent = ClearCutAccents.Sapphire)
-                            if (project.templateId != null) {
-                                ProjectMetadataChip(
-                                    text = stringResource(R.string.projects_template_badge),
-                                    accent = ClearCutAccents.Green
-                                )
-                            }
-                            if (project.proxyEnabled) {
-                                ProjectMetadataChip(
-                                    text = stringResource(R.string.projects_proxy_badge),
-                                    accent = ClearCutAccents.Teal
-                                )
-                            }
+                            Text(projectDuration, color = ClearCutAccents.Peach, style = MaterialTheme.typography.labelMedium)
+                            VerticalDivider(
+                                modifier = Modifier.height(14.dp),
+                                color = LocalClearCutColors.current.cardStrokeStrong
+                            )
+                            Text(project.resolution.label, color = LocalClearCutColors.current.subtext, style = MaterialTheme.typography.labelMedium)
+                            VerticalDivider(
+                                modifier = Modifier.height(14.dp),
+                                color = LocalClearCutColors.current.cardStrokeStrong
+                            )
+                            Text(project.timelineTimebase.frameRateLabel, color = LocalClearCutColors.current.subtext, style = MaterialTheme.typography.labelMedium)
                         }
 
                         Text(
@@ -1500,22 +1546,16 @@ private fun ProjectCard(
 @Composable
 private fun ProjectThumbnail(
     project: Project,
-    size: androidx.compose.ui.unit.Dp = 92.dp
+    width: androidx.compose.ui.unit.Dp = 156.dp,
+    height: androidx.compose.ui.unit.Dp = 92.dp
 ) {
     val context = LocalContext.current
 
     Box(
         modifier = Modifier
-            .size(size)
+            .size(width, height)
             .clip(RoundedCornerShape(Radius.lg))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        ClearCutAccents.Mauve.copy(alpha = 0.26f),
-                        LocalClearCutColors.current.panelHighest
-                    )
-                )
-            )
+            .background(LocalClearCutColors.current.panelHighest)
     ) {
         if (project.thumbnailUri != null) {
             AsyncImage(
@@ -1531,10 +1571,10 @@ private fun ProjectThumbnail(
             Icon(
                 imageVector = Icons.Default.Movie,
                 contentDescription = stringResource(R.string.cd_movie_placeholder),
-                tint = ClearCutAccents.Rosewater,
+                tint = ClearCutAccents.Mauve,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(if (size < 90.dp) 24.dp else 28.dp)
+                    .size(28.dp)
             )
         }
 
@@ -1550,32 +1590,11 @@ private fun ProjectThumbnail(
                 color = LocalClearCutColors.current.text,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(
-                    horizontal = if (size < 90.dp) 6.dp else 8.dp,
+                    horizontal = 8.dp,
                     vertical = 4.dp
                 )
             )
         }
-    }
-}
-
-@Composable
-private fun ProjectMetadataChip(
-    text: String,
-    accent: androidx.compose.ui.graphics.Color
-) {
-    Surface(
-        color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(Radius.sm),
-        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.2f))
-    ) {
-        Text(
-            text = text,
-            color = accent,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
-        )
     }
 }
 

@@ -1,0 +1,1 @@
+ClearCut estrena un espacio AMOLED más plano en el panel, el editor, los ajustes y la exportación. Es más fácil iniciar o reabrir proyectos, la línea de tiempo sigue siendo compacta, los ajustes se leen más rápido y las opciones de salida quedan junto al botón de exportación. Las comprobaciones visuales y de accesibilidad cubren ambos modos oscuros.

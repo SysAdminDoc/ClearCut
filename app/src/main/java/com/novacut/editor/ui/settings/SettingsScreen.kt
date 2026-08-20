@@ -27,10 +27,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
@@ -42,6 +41,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -68,19 +68,15 @@ import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.ClearCutChromeIconButton
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
 import com.novacut.editor.ui.theme.ClearCutFilterChip
-import com.novacut.editor.ui.theme.ClearCutHeroCard
 import com.novacut.editor.ui.theme.LocalClearCutColors
 import com.novacut.editor.ui.theme.ClearCutMetricPill
 import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutScreenBackground
-import com.novacut.editor.ui.theme.ClearCutSectionHeader
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Motion
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
-import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.math.roundToInt
 
 private enum class SettingsAiModelRemovalTarget {
     WHISPER,
@@ -106,13 +102,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
-    var aiModelsScrollY by remember { mutableIntStateOf(0) }
-    val bringAiModelsIntoView: () -> Unit = {
-        coroutineScope.launch {
-            scrollState.animateScrollTo((aiModelsScrollY - 24).coerceAtLeast(0))
-        }
-    }
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val aiModelStorage by viewModel.aiModelStorage.collectAsStateWithLifecycle()
     val diagnosticExport by viewModel.diagnosticExport.collectAsStateWithLifecycle()
@@ -170,21 +159,13 @@ fun SettingsScreen(
         SettingsHero(
             settings = settings,
             editorModeLabel = selectedEditorMode.label,
-            onBack = onBack,
-            onManageAiModels = bringAiModelsIntoView
+            onBack = onBack
         )
 
         aiModelStorage.feedbackMessage?.let { message ->
             SettingsFeedbackBanner(
                 message = message,
                 onDismiss = viewModel::dismissAiModelStorageFeedback
-            )
-        }
-        if (!networkAvailable) {
-            SettingsFeedbackBanner(
-                message = stringResource(R.string.settings_network_offline_description),
-                accentOverride = ClearCutAccents.Yellow,
-                iconOverride = Icons.Default.CloudOff,
             )
         }
         (diagnosticExport.message ?: diagnosticExport.errorMessage)?.let { message ->
@@ -381,15 +362,10 @@ fun SettingsScreen(
         }
 
         // AI Models
-        Box(
-            modifier = Modifier.onGloballyPositioned { coordinates ->
-                aiModelsScrollY = (coordinates.positionInRoot().y + scrollState.value).roundToInt()
-            }
+        SettingsSection(
+            title = stringResource(R.string.settings_ai_models),
+            description = stringResource(R.string.settings_ai_models_description)
         ) {
-            SettingsSection(
-                title = stringResource(R.string.settings_ai_models),
-                description = stringResource(R.string.settings_ai_models_description)
-            ) {
                 SettingsSwitch(
                     icon = Icons.Default.Wifi,
                     accent = ClearCutAccents.Sapphire,
@@ -478,7 +454,6 @@ fun SettingsScreen(
                     )
                 }
             }
-        }
 
         // Project Storage
         SettingsSection(
@@ -959,100 +934,104 @@ private fun SettingsAiModelRemovalConfirmDialog(
 private fun SettingsHero(
     settings: AppSettings,
     editorModeLabel: String,
-    onBack: () -> Unit,
-    onManageAiModels: () -> Unit
+    onBack: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
-        ClearCutHeroCard(
-            accent = ClearCutAccents.Sapphire,
-            shape = RoundedCornerShape(Radius.xxl)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ClearCutChromeIconButton(
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back),
-                    onClick = onBack,
-                    modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_BACK)
+            ClearCutChromeIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.back),
+                onClick = onBack,
+                tint = LocalClearCutColors.current.text,
+                containerColor = Color.Transparent,
+                borderColor = Color.Transparent,
+                modifier = Modifier.testTag(ClearCutTestTags.SETTINGS_BACK)
+            )
+            Spacer(Modifier.width(Spacing.sm))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.settings_title),
+                    color = LocalClearCutColors.current.text,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        stringResource(R.string.settings_title),
-                        color = LocalClearCutColors.current.text,
-                        style = MaterialTheme.typography.headlineLarge,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.settings_subtitle),
-                        color = LocalClearCutColors.current.subtext,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.settings_subtitle),
+                    color = LocalClearCutColors.current.subtext,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
+        }
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                contentPadding = PaddingValues(end = Spacing.sm),
-            ) {
-                item {
-                    SettingsOverviewStat(
-                        label = stringResource(R.string.settings_editor),
-                        value = editorModeLabel,
-                        accent = ClearCutAccents.Sky,
-                        modifier = Modifier.width(132.dp)
-                    )
-                }
-                item {
-                    SettingsOverviewStat(
-                        label = stringResource(R.string.settings_auto_save),
-                        value = if (settings.autoSaveEnabled) "${settings.autoSaveIntervalSec}s" else stringResource(R.string.settings_off),
-                        accent = ClearCutAccents.Green,
-                        modifier = Modifier.width(132.dp)
-                    )
-                }
-                item {
-                    SettingsOverviewStat(
-                        label = stringResource(R.string.settings_ai_models),
-                        value = stringResource(R.string.manage),
-                        accent = ClearCutAccents.Peach,
-                        modifier = Modifier
-                            .width(132.dp)
-                            .clickable(role = Role.Button, onClick = onManageAiModels)
-                    )
-                }
-            }
+        HorizontalDivider(
+            modifier = Modifier.padding(top = Spacing.lg),
+            color = LocalClearCutColors.current.cardStroke
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SettingsOverviewStat(
+                icon = Icons.Default.Tune,
+                label = stringResource(R.string.settings_editor),
+                value = editorModeLabel,
+                accent = ClearCutAccents.Mauve,
+                modifier = Modifier.weight(1f)
+            )
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(56.dp)
+                    .background(LocalClearCutColors.current.cardStroke)
+            )
+            SettingsOverviewStat(
+                icon = Icons.Default.Schedule,
+                label = stringResource(R.string.settings_auto_save),
+                value = if (settings.autoSaveEnabled) "${settings.autoSaveIntervalSec}s" else stringResource(R.string.settings_off),
+                accent = ClearCutAccents.Green,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }
 
 @Composable
 private fun SettingsOverviewStat(
+    icon: ImageVector,
     label: String,
     value: String,
     accent: androidx.compose.ui.graphics.Color,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.semantics {
+    Row(
+        modifier = modifier
+            .semantics {
             contentDescription = "$label. $value"
-        },
-        color = accent.copy(alpha = 0.1f),
-        shape = RoundedCornerShape(Radius.md),
-        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.18f))
+        }
+            .padding(horizontal = Spacing.md, vertical = Spacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(24.dp)
+        )
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
@@ -1065,7 +1044,7 @@ private fun SettingsOverviewStat(
             Text(
                 text = value,
                 color = LocalClearCutColors.current.text,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -1470,41 +1449,17 @@ private fun SettingsSection(
     description: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = LocalClearCutColors.current
-    Column(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
-        ClearCutSectionHeader(
-            title = title,
-            description = description,
-            modifier = Modifier.padding(bottom = Spacing.sm)
+    Column(modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md)) {
+        Text(
+            text = title.uppercase(),
+            color = LocalClearCutColors.current.subtext,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(bottom = Spacing.xs)
         )
-        Card(
-            colors = CardDefaults.cardColors(containerColor = colors.panel),
-            shape = RoundedCornerShape(Radius.lg),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                if (colors.highContrast) colors.cardStrokeStrong else colors.cardStroke.copy(alpha = 0.85f)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(
-                modifier = Modifier.background(
-                    Brush.verticalGradient(
-                        listOf(
-                            colors.panelHighest.copy(alpha = 0.78f),
-                            colors.panel
-                        )
-                    )
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .animateContentSize()
-                        .padding(Spacing.md),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-                    content = content
-                )
-            }
-        }
+        Column(
+            modifier = Modifier.animateContentSize(),
+            content = content
+        )
     }
 }
 
@@ -1604,12 +1559,8 @@ private fun SettingsSlider(
     // Only commit the final value on drag end. `value` (the canonical settings value)
     // is the key on remember so external changes still propagate.
     var localValue by remember(value) { mutableStateOf(value) }
-    Surface(
-        color = LocalClearCutColors.current.panelHighest,
-        shape = RoundedCornerShape(Radius.md),
-        border = androidx.compose.foundation.BorderStroke(1.dp, LocalClearCutColors.current.cardStroke.copy(alpha = 0.9f))
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
+    Column {
+        Column(modifier = Modifier.padding(horizontal = Spacing.xs, vertical = Spacing.md)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1807,19 +1758,10 @@ private fun SettingsTile(
         targetValue = if (onClick != null && pressed) {
             colors.panelHighest.copy(alpha = if (colors.highContrast) 1f else 0.88f)
         } else {
-            colors.panelHighest
+            Color.Transparent
         },
         animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
         label = "settingsTileContainer"
-    )
-    val tileBorder by animateColorAsState(
-        targetValue = when {
-            onClick != null && pressed -> accent.copy(alpha = if (colors.highContrast) 0.82f else 0.42f)
-            colors.highContrast -> colors.cardStrokeStrong
-            else -> colors.cardStroke.copy(alpha = 0.9f)
-        },
-        animationSpec = tween(durationMillis = Motion.DurationFast, easing = Motion.StandardEasing),
-        label = "settingsTileBorder"
     )
     val tileScale by animateFloatAsState(
         targetValue = if (onClick != null && pressed) 0.992f else 1f,
@@ -1832,81 +1774,53 @@ private fun SettingsTile(
             scaleY = tileScale
         },
         color = tileContainer,
-        shape = RoundedCornerShape(Radius.md),
-        border = androidx.compose.foundation.BorderStroke(1.dp, tileBorder)
+        shape = RoundedCornerShape(0.dp)
     ) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(modifier)
-                .defaultMinSize(minHeight = 72.dp)
-                .then(
-                    if (onClick != null) {
-                        Modifier.clickable(
-                            interactionSource = interactionSource,
-                            indication = LocalIndication.current,
-                            role = role,
-                            onClick = onClick
-                        )
-                    } else {
-                        Modifier
-                    }
-                )
-                .then(
-                    if (semanticState != null) {
-                        Modifier.semantics { stateDescription = semanticState }
-                    } else {
-                        Modifier
-                    }
-                )
-                .padding(horizontal = 14.dp, vertical = 14.dp)
-        ) {
-            val compact = maxWidth < 420.dp
-            if (compact) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(Spacing.sm)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SettingsTileIcon(icon = icon, accent = accent)
-                        SettingsTileText(
-                            label = label,
-                            description = description,
-                            modifier = Modifier.weight(1f),
-                            colors = colors
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = trailing
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(modifier)
+                    .defaultMinSize(minHeight = 60.dp)
+                    .then(
+                        if (onClick != null) {
+                            Modifier.clickable(
+                                interactionSource = interactionSource,
+                                indication = LocalIndication.current,
+                                role = role,
+                                onClick = onClick
+                            )
+                        } else {
+                            Modifier
+                        }
                     )
-                }
-            } else {
+                    .then(
+                        if (semanticState != null) {
+                            Modifier.semantics { stateDescription = semanticState }
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .padding(horizontal = Spacing.xs, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SettingsTileIcon(icon = icon, accent = accent)
+                SettingsTileText(
+                    label = label,
+                    description = description,
+                    modifier = Modifier.weight(1f),
+                    colors = colors
+                )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SettingsTileIcon(icon = icon, accent = accent)
-                    SettingsTileText(
-                        label = label,
-                        description = description,
-                        modifier = Modifier.weight(1f),
-                        colors = colors
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        content = trailing
-                    )
-                }
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = trailing
+                )
             }
+            HorizontalDivider(
+                color = colors.cardStroke.copy(alpha = if (colors.highContrast) 1f else 0.78f)
+            )
         }
     }
 }
@@ -1934,7 +1848,7 @@ private fun SettingsTileText(
                 it,
                 color = colors.subtext,
                 style = MaterialTheme.typography.bodySmall,
-                maxLines = 3,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
@@ -1946,18 +1860,15 @@ private fun SettingsTileIcon(
     icon: ImageVector,
     accent: androidx.compose.ui.graphics.Color
 ) {
-    Surface(
-        color = accent.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(Radius.sm),
-        border = androidx.compose.foundation.BorderStroke(1.dp, accent.copy(alpha = 0.2f))
+    Box(
+        modifier = Modifier.size(36.dp),
+        contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = accent,
-            modifier = Modifier
-                .padding(10.dp)
-                .size(18.dp)
+            modifier = Modifier.size(22.dp)
         )
     }
 }

@@ -824,89 +824,64 @@ fun EditorScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                            .padding(horizontal = Spacing.xl, vertical = Spacing.lg),
                         contentAlignment = Alignment.Center
                     ) {
-                        Card(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 210.dp),
-                            colors = CardDefaults.cardColors(containerColor = semanticColors.panel),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.9f)),
-                            shape = RoundedCornerShape(Radius.xxl)
+                                .heightIn(max = 210.dp)
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Box(
-                                modifier = Modifier.background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            semanticColors.panelHighest.copy(alpha = 0.86f),
-                                            semanticColors.panel
-                                        )
-                                    )
-                                )
+                            Icon(
+                                Icons.Default.VideoLibrary,
+                                contentDescription = null,
+                                tint = ClearCutAccents.Sky,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(Modifier.height(Spacing.sm))
+                            Text(
+                                stringResource(R.string.editor_empty_title),
+                                color = semanticColors.text,
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                            Spacer(Modifier.height(Spacing.xs))
+                            Text(
+                                stringResource(R.string.editor_empty_body),
+                                color = semanticColors.subtext,
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(Spacing.lg))
+                            val emptyAddMediaLabel = stringResource(R.string.editor_add_media)
+                            Row(
+                                modifier = Modifier
+                                    .widthIn(min = 180.dp)
+                                    .height(TouchTarget.minimum)
+                                    .clip(RoundedCornerShape(Radius.md))
+                                    .background(ClearCutAccents.Sky)
+                                    .clickable(onClick = viewModel::showMediaPicker)
+                                    .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Surface(
-                                        color = ClearCutAccents.Sky.copy(alpha = 0.12f),
-                                        shape = RoundedCornerShape(Radius.md),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Sky.copy(alpha = 0.24f))
-                                    ) {
-                                        Icon(
-                                            Icons.Default.VideoLibrary,
-                                            contentDescription = null,
-                                            tint = ClearCutAccents.Sky,
-                                            modifier = Modifier
-                                                .padding(10.dp)
-                                                .size(22.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.height(Spacing.sm))
-                                    Text(
-                                        stringResource(R.string.editor_empty_title),
-                                        color = semanticColors.text,
-                                        style = MaterialTheme.typography.titleLarge
-                                    )
-                                    Spacer(Modifier.height(Spacing.xs))
-                                    Text(
-                                        stringResource(R.string.editor_empty_body),
-                                        color = semanticColors.subtext,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(Modifier.height(Spacing.lg))
-                                    val emptyAddMediaLabel = stringResource(R.string.editor_add_media)
-                                    Row(
-                                        modifier = Modifier
-                                            .widthIn(min = 180.dp)
-                                            .height(TouchTarget.minimum)
-                                            .clip(RoundedCornerShape(Radius.md))
-                                            .background(ClearCutAccents.Sky)
-                                            .clickable(onClick = viewModel::showMediaPicker)
-                                            .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
-                                        horizontalArrangement = Arrangement.Center,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = null,
-                                            tint = semanticColors.background,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(Modifier.width(Spacing.sm))
-                                        Text(
-                                            text = emptyAddMediaLabel,
-                                            color = semanticColors.background,
-                                            style = MaterialTheme.typography.labelLarge,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = semanticColors.background,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(Spacing.sm))
+                                Text(
+                                    text = emptyAddMediaLabel,
+                                    color = semanticColors.background,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
                         }
                     }
@@ -942,8 +917,6 @@ fun EditorScreen(
                     isLooping = state.isLooping,
                     aspectRatio = state.project.aspectRatio,
                     frameRate = state.project.frameRate,
-                    frameRateLabel = state.project.timelineTimebase.frameRateLabel,
-                    resolvedFrameTimecode = state.project.timelineTimebase.formatTimecode(playheadMs),
                     onTogglePlayback = viewModel::togglePlayback,
                     onToggleLoop = viewModel::toggleLoop,
                     onSeek = viewModel::seekTo,
@@ -1020,7 +993,7 @@ fun EditorScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     color = Color.Transparent,
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(Radius.xl),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ClearCutAccents.Peach.copy(alpha = 0.2f))
                 ) {
                     Row(
@@ -1649,15 +1622,7 @@ private fun EditorTopBar(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            semanticColors.background,
-                            semanticColors.panel.copy(alpha = 0.9f),
-                            semanticColors.background
-                        )
-                    )
-                )
+                .background(semanticColors.background)
         ) {
             Row(
                 modifier = Modifier
@@ -1666,9 +1631,8 @@ private fun EditorTopBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = semanticColors.panelHighest,
-                    shape = RoundedCornerShape(Radius.md),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke)
+                    color = Color.Transparent,
+                    shape = RoundedCornerShape(Radius.md)
                 ) {
                     IconButton(
                         onClick = onBack,
@@ -1748,9 +1712,8 @@ private fun EditorTopBar(
                 }
 
                 Surface(
-                    color = semanticColors.panelHighest,
-                    shape = RoundedCornerShape(Radius.md),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke)
+                    color = Color.Transparent,
+                    shape = RoundedCornerShape(Radius.md)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
@@ -1788,9 +1751,8 @@ private fun EditorTopBar(
 
                 Box {
                     Surface(
-                        color = semanticColors.panelHighest,
-                        shape = RoundedCornerShape(Radius.md),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, semanticColors.cardStroke)
+                        color = Color.Transparent,
+                        shape = RoundedCornerShape(Radius.md)
                     ) {
                         IconButton(
                             onClick = { showOverflow = true },

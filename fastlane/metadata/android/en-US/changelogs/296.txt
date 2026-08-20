@@ -1,3 +1,3 @@
-- Migrated project persistence to Room 3.0.1 and SQLite driver APIs; the v1–v10 migration chain remains device-validated on API 37.
-- Added validated-internet awareness across model downloads, AI model controls, caption translation, and opt-in update checks; offline controls explain the dependency, disable before a request, and recover from connectivity callbacks.
-- Made the appearance contract explicit: the menu now documents the implemented Dark and High Contrast Dark schemes only, and chr...
+- Added a translated Spanish Play listing with a current changelog, replaced synthetic listing screenshots with API 37 device captures, and repaired the clean-checkout changelog/checksum release scripts.
+- Migrated project persistence to Room 3.0.1 and SQLite driver APIs; the v1 to v10 migration chain remains device-validated on API 37.
+- Updated Coil Compose and its video-frame decoder from 3.3.0 to 3.5.0 after the unit-test, lint, and QA packaging compatibility probe passed; the timeline a...

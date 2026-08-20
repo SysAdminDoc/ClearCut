@@ -210,6 +210,7 @@ fun BoxScope.EditorPrimaryPanelHost(
         }
         ExportSheet(
             config = state.exportConfig,
+            projectName = state.project.name,
             exportState = state.exportState,
             exportProgress = state.exportProgress,
             aspectRatio = state.project.aspectRatio,

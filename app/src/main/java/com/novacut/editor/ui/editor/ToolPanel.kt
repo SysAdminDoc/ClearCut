@@ -796,7 +796,7 @@ fun EffectsPanel(
                     modifier = Modifier.width(112.dp),
                     onClick = { onAddEffect(effectType) },
                     color = semanticColors.panelHighest,
-                    shape = RoundedCornerShape(22.dp),
+                    shape = RoundedCornerShape(Radius.xl),
                     border = BorderStroke(
                         width = 1.dp,
                         color = if (isApplied) accent.copy(alpha = 0.34f) else semanticColors.cardStroke
@@ -813,7 +813,7 @@ fun EffectsPanel(
                         Box(
                             modifier = Modifier
                                 .size(42.dp)
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(Radius.xl))
                                 .background(
                                     if (isApplied) accent.copy(alpha = 0.18f)
                                     else semanticColors.panel
@@ -1682,7 +1682,7 @@ private fun TransitionOptionCard(
         modifier = modifier,
         onClick = onClick,
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(Radius.xl),
         border = BorderStroke(
             width = 1.dp,
             color = if (isActive) ClearCutAccents.Mauve.copy(alpha = 0.32f) else semanticColors.cardStroke
@@ -1701,7 +1701,7 @@ private fun TransitionOptionCard(
             Box(
                 modifier = Modifier
                     .size(42.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(Radius.xl))
                     .background(if (isActive) ClearCutAccents.Mauve.copy(alpha = 0.16f) else semanticColors.panel),
                 contentAlignment = Alignment.Center
             ) {
@@ -1881,7 +1881,7 @@ private fun TextOverlayList(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = semanticColors.panelHighest,
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(Radius.xl),
                         border = BorderStroke(1.dp, semanticColors.cardStroke)
                     ) {
                         Row(
@@ -1894,11 +1894,11 @@ private fun TextOverlayList(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .clip(RoundedCornerShape(Radius.xl))
                                     .background(overlayAccent.copy(alpha = 0.14f))
                                     .border(
                                         BorderStroke(1.dp, overlayAccent.copy(alpha = 0.22f)),
-                                        RoundedCornerShape(14.dp)
+                                        RoundedCornerShape(Radius.xl)
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {

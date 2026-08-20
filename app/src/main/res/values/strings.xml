@@ -37,7 +37,7 @@
     <string name="export_save_to_gallery">Save to Gallery</string>
     <string name="export_cancelled">Export Cancelled</string>
     <string name="export_failed">Export Failed</string>
-    <string name="export_quick_presets">Quick Presets</string>
+    <string name="export_quick_presets">Quick presets</string>
     <string name="export_presets_description">Start with a platform-ready preset, then fine-tune the details if this render needs something custom.</string>
     <string name="export_preset_reframe_disclosure">This preset changes the output canvas from %1$s to %2$s. ClearCut will fit the source to that delivery frame; review the framing before export.</string>
     <string name="export_audio_only">Audio Only</string>
@@ -60,7 +60,7 @@
     <string name="export_resume_unavailable">This partial export cannot be resumed. Restart the export to create a fresh file.</string>
     <string name="export_smart_render_title">Smart render outlook</string>
     <string name="export_smart_render_detail">%1$d%% of the timeline can stream through. %2$d ranges copy directly; %3$d need re-encode.</string>
-    <string name="export_delivery_summary">Delivery Summary</string>
+    <string name="export_delivery_summary">Delivery summary</string>
     <string name="export_delivery_options">Delivery Options</string>
     <string name="export_delivery_options_description">Adjust the specs ClearCut will use for this export.</string>
     <string name="export_target_size">Target File Size</string>
@@ -225,7 +225,7 @@
     <string name="export_contact_sheet_button">Export Contact Sheet</string>
     <string name="export_special_outputs">Special Outputs</string>
     <string name="export_special_outputs_description">Turn on alternate deliverables like subtitles, stems, GIFs, or still captures.</string>
-    <string name="export_video_button">Export Video</string>
+    <string name="export_video_button">Export video</string>
     <string name="export_audio_button">Export Audio</string>
     <string name="export_stems_button">Export Stems</string>
     <string name="export_video_cd">Export video</string>
@@ -616,7 +616,7 @@
 
     <!-- SettingsScreen -->
     <string name="settings_title">Settings</string>
-    <string name="settings_subtitle">Tune export defaults, timeline behavior, AI models, and editing comfort in one place.</string>
+    <string name="settings_subtitle">Make ClearCut work your way.</string>
     <string name="settings_export_defaults">Export Defaults</string>
     <string name="settings_export_defaults_description">Choose the defaults ClearCut reaches for when you start a new export.</string>
     <string name="settings_default_resolution">Default Resolution</string>
@@ -1144,7 +1144,7 @@
     <string name="projects_search_placeholder">Search projects\u2026</string>
     <string name="projects_search">Search</string>
     <string name="projects_clear">Clear</string>
-    <string name="projects_recent">Recent Projects</string>
+    <string name="projects_recent">Continue editing</string>
     <string name="projects_recent_subtitle">Pick up where you left off, duplicate a cut, or jump into a template.</string>
     <string name="projects_results_count_one">1 result</string>
     <string name="projects_results_count_many">%1$d results</string>
@@ -1163,8 +1163,8 @@
     <string name="project_filter_empty">No clips</string>
     <string name="projects_no_matching">No matching projects</string>
     <string name="projects_no_projects_yet">No projects yet</string>
-    <string name="projects_ready_title">Your studio starts here.</string>
-    <string name="projects_ready_body">Start with a guided template or open a clean timeline and build from scratch.</string>
+    <string name="projects_ready_title">Your next cut starts here</string>
+    <string name="projects_ready_body">Private, local editing that stays out of your way.</string>
     <string name="projects_create_first">Create First Project</string>
     <string name="projects_try_different_search">Try another keyword or clear the filter to bring every project back.</string>
     <string name="projects_no_filter_results">No projects for %1$s</string>
@@ -1186,7 +1186,7 @@
     <string name="projects_render_ready_title">Ready to render</string>
     <string name="projects_render_ready_value">%1$s · %2$s · %3$dfps</string>
     <string name="projects_render_ready_body">%1$d starter paths with share-ready defaults.</string>
-    <string name="projects_new_project">New Project</string>
+    <string name="projects_new_project">New project</string>
     <string name="projects_duplicate">Duplicate</string>
     <string name="projects_rename">Rename</string>
     <string name="projects_rename_title">Rename Project</string>
