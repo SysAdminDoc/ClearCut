@@ -1637,7 +1637,7 @@ private fun EditorTopBar(
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier
-                            .size(TouchTarget.minimum)
+                            .size(if (isCompactBar) 60.dp else TouchTarget.minimum)
                             .testTag(ClearCutTestTags.EDITOR_BACK)
                     ) {
                         Icon(
@@ -1674,8 +1674,12 @@ private fun EditorTopBar(
                     else -> ClearCutAccents.Green
                 }
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(onClick = onToggleEditorMode)
+                        .semantics { contentDescription = modeChipDescription },
+                    verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
                         text = projectName,
@@ -1685,9 +1689,6 @@ private fun EditorTopBar(
                         overflow = TextOverflow.Ellipsis
                     )
                     Row(
-                        modifier = Modifier
-                            .clickable(onClick = onToggleEditorMode)
-                            .semantics { contentDescription = modeChipDescription },
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -1711,38 +1712,40 @@ private fun EditorTopBar(
                     }
                 }
 
-                Surface(
-                    color = Color.Transparent,
-                    shape = RoundedCornerShape(Radius.md)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(
-                            onClick = onUndo,
-                            enabled = canUndo,
-                            modifier = Modifier
-                                .size(TouchTarget.minimum)
-                                .testTag(ClearCutTestTags.EDITOR_UNDO)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Undo,
-                                contentDescription = stringResource(R.string.editor_undo),
-                                tint = if (canUndo) semanticColors.text else semanticColors.surfaceHigh,
-                                modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = onRedo,
-                            enabled = canRedo,
-                            modifier = Modifier
-                                .size(TouchTarget.minimum)
-                                .testTag(ClearCutTestTags.EDITOR_REDO)
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Redo,
-                                contentDescription = stringResource(R.string.editor_redo),
-                                tint = if (canRedo) semanticColors.text else semanticColors.surfaceHigh,
-                                modifier = Modifier.size(if (isCompactBar) 16.dp else 18.dp)
-                            )
+                if (!isCompactBar) {
+                    Surface(
+                        color = Color.Transparent,
+                        shape = RoundedCornerShape(Radius.md)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = onUndo,
+                                enabled = canUndo,
+                                modifier = Modifier
+                                    .size(TouchTarget.minimum)
+                                    .testTag(ClearCutTestTags.EDITOR_UNDO)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Undo,
+                                    contentDescription = stringResource(R.string.editor_undo),
+                                    tint = if (canUndo) semanticColors.text else semanticColors.surfaceHigh,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = onRedo,
+                                enabled = canRedo,
+                                modifier = Modifier
+                                    .size(TouchTarget.minimum)
+                                    .testTag(ClearCutTestTags.EDITOR_REDO)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Redo,
+                                    contentDescription = stringResource(R.string.editor_redo),
+                                    tint = if (canRedo) semanticColors.text else semanticColors.surfaceHigh,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -1771,6 +1774,36 @@ private fun EditorTopBar(
                         onDismissRequest = { showOverflow = false },
                         containerColor = semanticColors.panelHighest
                     ) {
+                        if (isCompactBar) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.editor_undo)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onUndo()
+                                },
+                                enabled = canUndo,
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Undo,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.editor_redo)) },
+                                onClick = {
+                                    showOverflow = false
+                                    onRedo()
+                                },
+                                enabled = canRedo,
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Redo,
+                                        contentDescription = null,
+                                    )
+                                },
+                            )
+                        }
                         if (selectedClipId != null) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.editor_delete), color = ClearCutAccents.Red) },
@@ -1974,7 +2007,7 @@ private fun EditorTopBar(
                     shape = RoundedCornerShape(Radius.md),
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .height(TouchTarget.minimum)
+                        .height(if (isCompactBar) 60.dp else TouchTarget.minimum)
                         .testTag(ClearCutTestTags.EDITOR_EXPORT)
                 ) {
                     Icon(

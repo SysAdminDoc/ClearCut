@@ -11,11 +11,13 @@ import tempfile
 import time
 from pathlib import Path
 
-
 AVD_NAME = "clearcut-api37-ps16k"
 SYSTEM_IMAGE = "system-images;android-37.0;google_apis_ps16k;x86_64"
 DEVICE_NAME = "pixel_6"
 BOOT_TIMEOUT_SECONDS = 300
+DATA_PARTITION_SIZE_MB = 2047
+RAM_SIZE_MB = 4096
+DEVICE_READY_STABILITY_SECONDS = 10
 
 
 class AvdError(RuntimeError):
@@ -49,7 +51,10 @@ def find_java_home() -> Path | None:
             return candidate
 
     candidates = (
-        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Android" / "Android Studio" / "jbr",
+        Path(os.environ.get("ProgramFiles", "C:/Program Files"))
+        / "Android"
+        / "Android Studio"
+        / "jbr",
         Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Java" / "jdk-21",
     )
     for candidate in candidates:
@@ -88,7 +93,9 @@ def find_executable(sdk_root: Path, relative: str) -> Path:
     raise AvdError(f"Android SDK executable not found: {executable}")
 
 
-def run(command: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
+def run(
+    command: list[str], *, input_text: str | None = None
+) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(
             command,
@@ -102,7 +109,9 @@ def run(command: list[str], *, input_text: str | None = None) -> subprocess.Comp
         raise AvdError(f"could not execute {command[0]}") from error
     except subprocess.CalledProcessError as error:
         details = (error.stderr or error.stdout or "").strip()
-        raise AvdError(f"command failed ({error.returncode}): {' '.join(command)}\n{details}") from error
+        raise AvdError(
+            f"command failed ({error.returncode}): {' '.join(command)}\n{details}"
+        ) from error
 
 
 def avd_manager_command(tool: Path, *arguments: str) -> list[str]:
@@ -114,33 +123,70 @@ def avd_manager_command(tool: Path, *arguments: str) -> list[str]:
 
 def avd_exists(avd_manager: Path, name: str) -> bool:
     result = run(avd_manager_command(avd_manager, "list", "avd"))
-    return any(line.strip().startswith(f"Name: {name}") for line in result.stdout.splitlines())
+    return any(
+        line.strip().startswith(f"Name: {name}") for line in result.stdout.splitlines()
+    )
+
+
+def avd_home() -> Path:
+    configured = os.environ.get("ANDROID_AVD_HOME")
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".android" / "avd"
+
+
+def configure_data_partition(name: str) -> None:
+    config_path = avd_home() / f"{name}.avd" / "config.ini"
+    if not config_path.is_file():
+        raise AvdError(f"AVD configuration not found: {config_path}")
+
+    settings = {
+        "disk.dataPartition.size": f"{DATA_PARTITION_SIZE_MB}M",
+        "hw.ramSize": f"{RAM_SIZE_MB}M",
+    }
+    lines = config_path.read_text(encoding="utf-8").splitlines()
+    updated: list[str] = []
+    replaced: set[str] = set()
+    for line in lines:
+        key = line.partition("=")[0]
+        if key in settings:
+            if key not in replaced:
+                updated.append(f"{key}={settings[key]}")
+                replaced.add(key)
+            continue
+        updated.append(line)
+    for key, value in settings.items():
+        if key not in replaced:
+            updated.append(f"{key}={value}")
+    config_path.write_text("\n".join(updated) + "\n", encoding="utf-8")
 
 
 def provision_avd(sdk_root: Path, name: str) -> bool:
     avd_manager = find_tool(sdk_root, "avdmanager")
-    image_dir = sdk_root / "system-images" / "android-37.0" / "google_apis_ps16k" / "x86_64"
+    image_dir = (
+        sdk_root / "system-images" / "android-37.0" / "google_apis_ps16k" / "x86_64"
+    )
     if not image_dir.is_dir():
         raise AvdError(f"required system image is not installed: {SYSTEM_IMAGE}")
-    if avd_exists(avd_manager, name):
-        return False
-
-    run(
-        avd_manager_command(
-            avd_manager,
-            "create",
-            "avd",
-            "--name",
-            name,
-            "--package",
-            SYSTEM_IMAGE,
-            "--device",
-            DEVICE_NAME,
-            "--force",
-        ),
-        input_text="no\n",
-    )
-    return True
+    created = not avd_exists(avd_manager, name)
+    if created:
+        run(
+            avd_manager_command(
+                avd_manager,
+                "create",
+                "avd",
+                "--name",
+                name,
+                "--package",
+                SYSTEM_IMAGE,
+                "--device",
+                DEVICE_NAME,
+                "--force",
+            ),
+            input_text="no\n",
+        )
+    configure_data_partition(name)
+    return created
 
 
 def adb_path(sdk_root: Path) -> Path:
@@ -153,12 +199,28 @@ def emulator_path(sdk_root: Path) -> Path:
     return find_executable(sdk_root, f"emulator/{suffix}")
 
 
-def connected_serial(adb: Path) -> str | None:
+def connected_serial(adb: Path, name: str) -> str | None:
     result = run([str(adb), "devices"])
     for line in result.stdout.splitlines()[1:]:
         fields = line.split()
-        if len(fields) >= 2 and fields[0].startswith("emulator-") and fields[1] == "device":
-            return fields[0]
+        if (
+            len(fields) < 2
+            or not fields[0].startswith("emulator-")
+            or fields[1] != "device"
+        ):
+            continue
+        serial = fields[0]
+        identity = run([str(adb), "-s", serial, "emu", "avd", "name"])
+        reported_name = next(
+            (
+                candidate.strip()
+                for candidate in identity.stdout.splitlines()
+                if candidate.strip() != "OK"
+            ),
+            "",
+        )
+        if reported_name == name:
+            return serial
     return None
 
 
@@ -173,12 +235,37 @@ def boot_completed(adb: Path, serial: str) -> bool:
     return result.returncode == 0 and result.stdout.strip() == "1"
 
 
+def device_ready(adb: Path, serial: str) -> bool:
+    if not boot_completed(adb, serial):
+        return False
+    checks = (
+        (["shell", "service", "check", "activity"], "found"),
+        (["shell", "service", "check", "package"], "found"),
+        (["shell", "settings", "get", "global", "device_provisioned"], None),
+    )
+    for arguments, expected in checks:
+        result = subprocess.run(
+            [str(adb), "-s", serial, *arguments],
+            text=True,
+            capture_output=True,
+            check=False,
+            env=command_environment(),
+        )
+        if result.returncode != 0:
+            return False
+        if expected is not None and expected not in result.stdout.lower():
+            return False
+        if arguments[1] == "settings" and result.stdout.strip() not in {"0", "1"}:
+            return False
+    return True
+
+
 def launch_and_wait(sdk_root: Path, name: str, timeout_seconds: int) -> str:
     adb = adb_path(sdk_root)
     emulator = emulator_path(sdk_root)
     run([str(adb), "start-server"])
 
-    serial = connected_serial(adb)
+    serial = connected_serial(adb, name)
     if serial is None:
         log_path = Path(tempfile.gettempdir()) / f"{name}-emulator.log"
         log_handle = log_path.open("w", encoding="utf-8")
@@ -194,6 +281,12 @@ def launch_and_wait(sdk_root: Path, name: str, timeout_seconds: int) -> str:
                 "-gpu",
                 "swiftshader_indirect",
                 "-no-snapshot-load",
+                "-wipe-data",
+                "-partition-size",
+                str(DATA_PARTITION_SIZE_MB),
+                "-memory",
+                str(RAM_SIZE_MB),
+                "-no-snapshot-save",
             ],
             stdout=log_handle,
             stderr=subprocess.STDOUT,
@@ -205,17 +298,26 @@ def launch_and_wait(sdk_root: Path, name: str, timeout_seconds: int) -> str:
         log_handle.close()
 
     deadline = time.monotonic() + timeout_seconds
+    ready_since: float | None = None
     while time.monotonic() < deadline:
-        serial = connected_serial(adb)
-        if serial and boot_completed(adb, serial):
-            return serial
+        serial = connected_serial(adb, name)
+        if serial and device_ready(adb, serial):
+            now = time.monotonic()
+            if ready_since is None:
+                ready_since = now
+            elif now - ready_since >= DEVICE_READY_STABILITY_SECONDS:
+                return serial
+        else:
+            ready_since = None
         time.sleep(2)
     raise AvdError(f"{name} did not boot within {timeout_seconds} seconds")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--name", default=AVD_NAME, help=f"AVD name (default: {AVD_NAME})")
+    parser.add_argument(
+        "--name", default=AVD_NAME, help=f"AVD name (default: {AVD_NAME})"
+    )
     parser.add_argument(
         "--launch",
         action="store_true",

@@ -124,6 +124,7 @@ import com.novacut.editor.ui.theme.ClearCutPrimaryButton
 import com.novacut.editor.ui.theme.ClearCutSecondaryButton
 import com.novacut.editor.ui.theme.Radius
 import com.novacut.editor.ui.theme.Spacing
+import com.novacut.editor.ui.theme.TouchTarget
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.Dispatchers
@@ -1807,6 +1808,7 @@ private fun ExportSummarySettingRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = TouchTarget.minimum)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(Spacing.md),

@@ -582,17 +582,23 @@ strict Compose accessibility validator to each captured screen. Use the record
 task only when an intentional UI change should update those references; the
 verify task is the normal CI gate.
 
-For a reproducible headless API 37 lane, provision and launch the local
-16 KB-page-size AVD before running connected tests:
+Run the canonical API 37 QA baseline with:
 
 ```powershell
-python scripts\ensure_api37_avd.py --launch
-.\gradlew.bat :app:connectedQaAndroidTest
+python scripts\run_api37_qa.py
 ```
 
-The launcher uses `-no-window` and `-no-audio`, so it does not open a window on
-the operator's display. Set `ANDROID_HOME` or `ANDROID_SDK_ROOT` when the SDK
-is not in the standard location.
+This command provisions a headless managed Pixel 6, runs every expected
+instrumentation case, and writes named JSON and text reports under
+`app/build/reports/connected-qa/`. It exits successfully only when all 21
+expected cases are present and every non-passing result matches an explicit
+emulator assumption or optional-model skip. The accepted status is
+`PASS-WITH-ASSUMPTIONS`, not a generic green connected-test claim.
+
+`python scripts\ensure_api37_avd.py --launch` remains available when a reusable
+16 KB-page-size AVD is useful for manual diagnosis. It starts headlessly, so it
+does not open a window. Set `ANDROID_HOME` or `ANDROID_SDK_ROOT` when the SDK is
+not in the standard location.
 
 ### Manual QA: audio focus
 
