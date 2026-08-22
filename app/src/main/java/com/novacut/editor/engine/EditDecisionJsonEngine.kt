@@ -18,6 +18,7 @@ import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.model.TimelineTimebase
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
+import com.novacut.editor.model.clampClipAudioSyncOffsetMs
 import com.novacut.editor.model.clampTrackTimelineOffsetMs
 import org.json.JSONArray
 import org.json.JSONObject
@@ -178,6 +179,7 @@ internal object EditDecisionJsonEngine {
         put("source", clip.sourceUri.toString())
         put("sourceDurationMs", clip.sourceDurationMs)
         put("timelineStartMs", clip.timelineStartMs)
+        put("audioSyncOffsetMs", clip.audioSyncOffsetMs)
         put("trimStartMs", clip.trimStartMs)
         put("trimEndMs", clip.trimEndMs)
         putFiniteFloat("volume", clip.volume, 1f)
@@ -407,6 +409,7 @@ internal object EditDecisionJsonEngine {
             sourceUri = sourceUri,
             sourceDurationMs = sourceDurationMs,
             timelineStartMs = json.optLong("timelineStartMs", 0L),
+            audioSyncOffsetMs = clampClipAudioSyncOffsetMs(json.optLong("audioSyncOffsetMs", 0L)),
             trimStartMs = trimStartMs,
             trimEndMs = trimEndMs,
             effects = parseEffects(json.optJSONArray("effects"), warnings, trackIndex, clipIndex),

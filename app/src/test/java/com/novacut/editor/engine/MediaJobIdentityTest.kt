@@ -29,6 +29,12 @@ class MediaJobIdentityTest {
         assertFalse(
             shouldApplyMediaJobResult(
                 identity,
+                original.copy(audioSyncOffsetMs = 500L).timelineMediaJobIdentity(),
+            )
+        )
+        assertFalse(
+            shouldApplyMediaJobResult(
+                identity,
                 identity.copy(sourceUri = "content://media/relinked.mp4"),
             )
         )

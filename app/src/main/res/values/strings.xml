@@ -2864,6 +2864,15 @@
     <string name="timeline_track_offset_earlier">Nudge one frame earlier</string>
     <string name="timeline_track_offset_later">Nudge one frame later</string>
     <string name="timeline_track_offset_reset">Reset sync offset</string>
+    <string name="timeline_clip_audio_sync_offset_set">Set selected clip audio sync offset</string>
+    <string name="timeline_clip_audio_sync_offset_dialog_title">Clip audio sync offset</string>
+    <string name="timeline_clip_audio_sync_offset_dialog_message">Adjust this audio clip without moving its source edit. Positive values move the audio later. Values are snapped to the project frame grid.</string>
+    <string name="timeline_clip_audio_sync_offset_ms_label">Offset in milliseconds</string>
+    <string name="timeline_clip_audio_sync_offset_apply">Apply</string>
+    <string name="timeline_clip_audio_sync_offset_cancel">Cancel</string>
+    <string name="timeline_clip_audio_sync_offset_earlier">Move audio one frame earlier</string>
+    <string name="timeline_clip_audio_sync_offset_later">Move audio one frame later</string>
+    <string name="timeline_clip_audio_sync_offset_reset">Reset clip audio sync offset</string>
     <string name="timeline_trim_mode_hint">Trim mode: drag edges to resize; drag the clip body to slip media.</string>
     <string name="timeline_clip_content_description">%1$s, %2$s on %3$s, %4$s, starts at %5$s</string>
     <string name="timeline_select_clip_action">Select clip</string>

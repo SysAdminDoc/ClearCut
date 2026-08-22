@@ -82,9 +82,26 @@ enum class TrackType { VIDEO, AUDIO, OVERLAY, TEXT, ADJUSTMENT }
 
 const val MAX_TRACK_TIMELINE_OFFSET_MS = 60_000L
 const val MIN_TRACK_TIMELINE_OFFSET_MS = -MAX_TRACK_TIMELINE_OFFSET_MS
+const val MAX_CLIP_AUDIO_SYNC_OFFSET_MS = 60_000L
+const val MIN_CLIP_AUDIO_SYNC_OFFSET_MS = -MAX_CLIP_AUDIO_SYNC_OFFSET_MS
 
 fun clampTrackTimelineOffsetMs(value: Long): Long =
     value.coerceIn(MIN_TRACK_TIMELINE_OFFSET_MS, MAX_TRACK_TIMELINE_OFFSET_MS)
+
+fun clampClipAudioSyncOffsetMs(value: Long): Long =
+    value.coerceIn(MIN_CLIP_AUDIO_SYNC_OFFSET_MS, MAX_CLIP_AUDIO_SYNC_OFFSET_MS)
+
+/**
+ * Snap a signed audio sync adjustment to the nearest project frame boundary.
+ * Negative offsets are quantized by magnitude so they do not collapse to zero.
+ */
+fun quantizeClipAudioSyncOffsetMs(value: Long, timebase: TimelineTimebase): Long {
+    val clamped = clampClipAudioSyncOffsetMs(value)
+    if (clamped == 0L) return 0L
+    val sign = if (clamped < 0L) -1L else 1L
+    val snappedMagnitude = timebase.snapMs(kotlin.math.abs(clamped))
+    return clampClipAudioSyncOffsetMs(sign * snappedMagnitude)
+}
 
 @Immutable
 data class Track(
@@ -116,9 +133,12 @@ data class Track(
     }
 }
 
-fun Track.effectiveTimelineStartMs(clip: Clip): Long = clip.timelineStartMs + timelineOffsetMs
+fun Track.effectiveTimelineOffsetMs(clip: Clip): Long =
+    timelineOffsetMs + if (type == TrackType.AUDIO) clip.audioSyncOffsetMs else 0L
 
-fun Track.effectiveTimelineEndMs(clip: Clip): Long = clip.timelineEndMs + timelineOffsetMs
+fun Track.effectiveTimelineStartMs(clip: Clip): Long = clip.timelineStartMs + effectiveTimelineOffsetMs(clip)
+
+fun Track.effectiveTimelineEndMs(clip: Clip): Long = clip.timelineEndMs + effectiveTimelineOffsetMs(clip)
 
 enum class ClipLabel(val argb: Long, val displayName: String) {
     NONE(0x00000000, "None"),
@@ -177,6 +197,8 @@ data class Clip(
     val sourceUri: Uri,
     val sourceDurationMs: Long,
     val timelineStartMs: Long,
+    /** Signed, frame-quantized adjustment used only when this clip is on an audio track. */
+    val audioSyncOffsetMs: Long = 0L,
     val trimStartMs: Long = 0L,
     val trimEndMs: Long = sourceDurationMs,
     val effects: List<Effect> = emptyList(),
@@ -222,6 +244,9 @@ data class Clip(
         require(volume in 0f..2f) { "Volume must be between 0 and 2" }
         require(opacity in 0f..1f) { "Opacity must be between 0 and 1" }
         require(trimEndMs <= sourceDurationMs) { "trimEndMs cannot exceed sourceDurationMs" }
+        require(audioSyncOffsetMs in MIN_CLIP_AUDIO_SYNC_OFFSET_MS..MAX_CLIP_AUDIO_SYNC_OFFSET_MS) {
+            "Clip audio sync offset must be between $MIN_CLIP_AUDIO_SYNC_OFFSET_MS and $MAX_CLIP_AUDIO_SYNC_OFFSET_MS ms"
+        }
     }
 
     val durationMs: Long get() {

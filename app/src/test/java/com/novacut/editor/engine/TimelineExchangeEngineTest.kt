@@ -281,6 +281,31 @@ class TimelineExchangeEngineTest {
     }
 
     @Test
+    fun editDecisionJsonRoundTripPreservesPerClipAudioSyncOffset() {
+        val audio = clip(
+            id = "sync-audio",
+            uri = "file:///media/sync.wav",
+            durationMs = 4_000L,
+        ).copy(audioSyncOffsetMs = -3_000L)
+        val json = engine.exportToEditDecisionJson(
+            tracks = listOf(Track(type = TrackType.AUDIO, index = 0, clips = listOf(audio))),
+            projectName = "Per clip sync",
+            timebase = TimelineTimebase(30),
+        )
+
+        val exportedClip = JSONObject(json)
+            .getJSONArray("tracks")
+            .getJSONObject(0)
+            .getJSONArray("clips")
+            .getJSONObject(0)
+        assertEquals(-3_000L, exportedClip.getLong("audioSyncOffsetMs"))
+
+        val imported = engine.importFromEditDecisionJson(json, ::testUri)
+        assertTrue(imported.warnings.isEmpty())
+        assertEquals(-3_000L, imported.tracks.single().clips.single().audioSyncOffsetMs)
+    }
+
+    @Test
     fun editDecisionJsonRejectsSchemaThatIsNewerThanTheSupportedVersion() {
         val future = JSONObject()
             .put("schema", "com.clearcut.edit-decision")

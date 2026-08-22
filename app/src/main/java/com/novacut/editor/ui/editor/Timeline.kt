@@ -461,6 +461,7 @@ fun Timeline(
     onSetTrackHeight: (String, Int) -> Unit = { _, _ -> },
     frameDurationMs: Long = 33L,
     onSetTrackTimelineOffset: (String, Long) -> Unit = { _, _ -> },
+    onSetClipAudioSyncOffset: (String, String, Long) -> Unit = { _, _, _ -> },
     snapToBeat: Boolean = false,
     snapToMarker: Boolean = true,
     markers: List<TimelineMarker> = emptyList(),
@@ -509,6 +510,11 @@ fun Timeline(
     var trackOffsetDialogTrackId by remember { mutableStateOf<String?>(null) }
     var trackOffsetDialogText by remember { mutableStateOf("") }
     val trackOffsetDialogTrack = tracks.firstOrNull { it.id == trackOffsetDialogTrackId }
+    var clipOffsetDialogTrackId by remember { mutableStateOf<String?>(null) }
+    var clipOffsetDialogClipId by remember { mutableStateOf<String?>(null) }
+    var clipOffsetDialogText by remember { mutableStateOf("") }
+    val clipOffsetDialogTrack = tracks.firstOrNull { it.id == clipOffsetDialogTrackId }
+    val clipOffsetDialogClip = clipOffsetDialogTrack?.clips?.firstOrNull { it.id == clipOffsetDialogClipId }
     val fitZoomLevel = remember(timelineWidthPx, totalDurationMs) {
         if (timelineWidthPx <= 0f || totalDurationMs <= 0L) {
             1f
@@ -614,6 +620,7 @@ fun Timeline(
     val currentOnSlipEditStarted by rememberUpdatedState(onSlipEditStarted)
     val currentOnSlipEditEnded by rememberUpdatedState(onSlipEditEnded)
     val currentSelectedClipId by rememberUpdatedState(selectedClipId)
+    val currentOnSetClipAudioSyncOffset by rememberUpdatedState(onSetClipAudioSyncOffset)
 
     if (trackOffsetDialogTrack != null) {
         AlertDialog(
@@ -650,6 +657,56 @@ fun Timeline(
             dismissButton = {
                 TextButton(onClick = { trackOffsetDialogTrackId = null }) {
                     Text(stringResource(R.string.timeline_track_offset_cancel))
+                }
+            },
+        )
+    }
+    if (clipOffsetDialogTrack != null && clipOffsetDialogClip != null) {
+        AlertDialog(
+            onDismissRequest = {
+                clipOffsetDialogTrackId = null
+                clipOffsetDialogClipId = null
+            },
+            title = { Text(stringResource(R.string.timeline_clip_audio_sync_offset_dialog_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.timeline_clip_audio_sync_offset_dialog_message))
+                    OutlinedTextField(
+                        value = clipOffsetDialogText,
+                        onValueChange = { clipOffsetDialogText = it },
+                        singleLine = true,
+                        label = { Text(stringResource(R.string.timeline_clip_audio_sync_offset_ms_label)) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(ClearCutTestTags.CLIP_AUDIO_SYNC_OFFSET_INPUT),
+                    )
+                }
+            },
+            confirmButton = {
+                val parsedOffsetMs = clipOffsetDialogText.toLongOrNull()
+                TextButton(
+                    enabled = parsedOffsetMs != null,
+                    onClick = {
+                        parsedOffsetMs?.let { offsetMs ->
+                            currentOnSetClipAudioSyncOffset(
+                                clipOffsetDialogTrack.id,
+                                clipOffsetDialogClip.id,
+                                offsetMs,
+                            )
+                            clipOffsetDialogTrackId = null
+                            clipOffsetDialogClipId = null
+                        }
+                    },
+                ) {
+                    Text(stringResource(R.string.timeline_clip_audio_sync_offset_apply))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    clipOffsetDialogTrackId = null
+                    clipOffsetDialogClipId = null
+                }) {
+                    Text(stringResource(R.string.timeline_clip_audio_sync_offset_cancel))
                 }
             },
         )
@@ -1015,6 +1072,11 @@ fun Timeline(
                             val currentTrackHeight = timelineTrackHeight(track, isCompactTimeline)
                             val trackColor = trackAccentColor(track.type)
                             var trackMenuExpanded by remember(track.id) { mutableStateOf(false) }
+                            val selectedAudioClip = if (track.type == TrackType.AUDIO) {
+                                track.clips.firstOrNull { it.id == selectedClipId }
+                            } else {
+                                null
+                            }
                             val trackOffsetStatusLabel = if (track.timelineOffsetMs != 0L) {
                                 stringResource(
                                     R.string.timeline_track_offset,
@@ -1220,6 +1282,68 @@ fun Timeline(
                                                                     onToggleTrackMute(track.id)
                                                                 },
                                                             )
+                                                        }
+                                                        if (selectedAudioClip != null) {
+                                                            DropdownMenuItem(
+                                                                text = {
+                                                                    Text(stringResource(R.string.timeline_clip_audio_sync_offset_set))
+                                                                },
+                                                                leadingIcon = {
+                                                                    Icon(Icons.Default.Edit, contentDescription = null)
+                                                                },
+                                                                onClick = {
+                                                                    trackMenuExpanded = false
+                                                                    clipOffsetDialogText = selectedAudioClip.audioSyncOffsetMs.toString()
+                                                                    clipOffsetDialogTrackId = track.id
+                                                                    clipOffsetDialogClipId = selectedAudioClip.id
+                                                                },
+                                                            )
+                                                            DropdownMenuItem(
+                                                                text = {
+                                                                    Text(stringResource(R.string.timeline_clip_audio_sync_offset_earlier))
+                                                                },
+                                                                leadingIcon = {
+                                                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null)
+                                                                },
+                                                                onClick = {
+                                                                    trackMenuExpanded = false
+                                                                    onSetClipAudioSyncOffset(
+                                                                        track.id,
+                                                                        selectedAudioClip.id,
+                                                                        selectedAudioClip.audioSyncOffsetMs - frameDurationMs.coerceAtLeast(1L),
+                                                                    )
+                                                                },
+                                                            )
+                                                            DropdownMenuItem(
+                                                                text = {
+                                                                    Text(stringResource(R.string.timeline_clip_audio_sync_offset_later))
+                                                                },
+                                                                leadingIcon = {
+                                                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                                                                },
+                                                                onClick = {
+                                                                    trackMenuExpanded = false
+                                                                    onSetClipAudioSyncOffset(
+                                                                        track.id,
+                                                                        selectedAudioClip.id,
+                                                                        selectedAudioClip.audioSyncOffsetMs + frameDurationMs.coerceAtLeast(1L),
+                                                                    )
+                                                                },
+                                                            )
+                                                            if (selectedAudioClip.audioSyncOffsetMs != 0L) {
+                                                                DropdownMenuItem(
+                                                                    text = {
+                                                                        Text(stringResource(R.string.timeline_clip_audio_sync_offset_reset))
+                                                                    },
+                                                                    leadingIcon = {
+                                                                        Icon(Icons.Default.Clear, contentDescription = null)
+                                                                    },
+                                                                    onClick = {
+                                                                        trackMenuExpanded = false
+                                                                        onSetClipAudioSyncOffset(track.id, selectedAudioClip.id, 0L)
+                                                                    },
+                                                                )
+                                                            }
                                                         }
                                                         DropdownMenuItem(
                                                             text = { Text(stringResource(R.string.timeline_track_offset_earlier)) },
@@ -1601,7 +1725,7 @@ fun Timeline(
                                             }
                                             val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
                                             val clip = trackClips.firstOrNull {
-                                                it.containsTimelinePosition(tappedMs, track.timelineOffsetMs)
+                                                it.containsTimelinePosition(tappedMs, track.effectiveTimelineOffsetMs(it))
                                             }
                                             if (clip != null) {
                                                 onClipSelected(clip.id, track.id)
@@ -1616,7 +1740,7 @@ fun Timeline(
                                             val tappedMs = currentScrollOffsetMs + (offset.x / ppm).toLong()
                                             val trackClips = currentTracks.firstOrNull { it.id == track.id }?.clips ?: return@detectTapGestures
                                             val clip = trackClips.firstOrNull {
-                                                it.containsTimelinePosition(tappedMs, track.timelineOffsetMs)
+                                                it.containsTimelinePosition(tappedMs, track.effectiveTimelineOffsetMs(it))
                                             }
                                             if (clip != null) {
                                                 dispatchTimelineClipLongPress(
@@ -1652,7 +1776,7 @@ fun Timeline(
                                             clip = clip,
                                             scrollOffsetMs = scrollOffsetMs,
                                             pixelsPerMs = pixelsPerMs,
-                                            timelineOffsetMs = track.timelineOffsetMs,
+                                            timelineOffsetMs = track.effectiveTimelineOffsetMs(clip),
                                         )
                                         if (clipLayout.isVisibleIn(timelineWidthPx)) {
                                             Box(
@@ -1725,7 +1849,7 @@ fun Timeline(
                                     clip = clip,
                                     scrollOffsetMs = scrollOffsetMs,
                                     pixelsPerMs = pixelsPerMs,
-                                    timelineOffsetMs = track.timelineOffsetMs,
+                                    timelineOffsetMs = track.effectiveTimelineOffsetMs(clip),
                                 )
                                 val clipStartPx = clipLayout.startPx
                                 val clipWidthPx = clipLayout.widthPx
@@ -1776,11 +1900,22 @@ fun Timeline(
                                         R.string.timeline_clip_action_nudge_later,
                                         nudgeDurationLabel
                                     )
+                                    val audioSyncEarlierActionLabel = stringResource(
+                                        R.string.timeline_clip_audio_sync_offset_earlier
+                                    )
+                                    val audioSyncLaterActionLabel = stringResource(
+                                        R.string.timeline_clip_audio_sync_offset_later
+                                    )
+                                    val audioSyncSetActionLabel = stringResource(
+                                        R.string.timeline_clip_audio_sync_offset_set
+                                    )
                                     val clipCustomActions = remember(
                                         clip.id,
                                         track.id,
                                         track.isLocked,
                                         track.timelineOffsetMs,
+                                        clip.audioSyncOffsetMs,
+                                        track.type,
                                         track.effectiveTimelineStartMs(clip),
                                         track.effectiveTimelineEndMs(clip),
                                         clip.durationMs,
@@ -1789,7 +1924,10 @@ fun Timeline(
                                         deleteClipActionLabel,
                                         openCompoundActionLabel,
                                         nudgeEarlierActionLabel,
-                                        nudgeLaterActionLabel
+                                        nudgeLaterActionLabel,
+                                        audioSyncEarlierActionLabel,
+                                        audioSyncLaterActionLabel,
+                                        audioSyncSetActionLabel,
                                     ) {
                                         if (track.isLocked) {
                                             emptyList()
@@ -1802,7 +1940,7 @@ fun Timeline(
                                                         ) {
                                                             val splitPointMs = clip.accessibleSplitPointMs(
                                                                 currentPlayheadMs,
-                                                                track.timelineOffsetMs,
+                                                                track.effectiveTimelineOffsetMs(clip),
                                                             )
                                                             if (splitPointMs == null) {
                                                                 false
@@ -1830,6 +1968,42 @@ fun Timeline(
                                                             label = openCompoundActionLabel
                                                         ) {
                                                             currentOnOpenCompoundClip(clip.id)
+                                                        }
+                                                    )
+                                                }
+                                                if (track.type == TrackType.AUDIO) {
+                                                    add(
+                                                        CustomAccessibilityAction(
+                                                            label = audioSyncEarlierActionLabel
+                                                        ) {
+                                                            currentOnSetClipAudioSyncOffset(
+                                                                track.id,
+                                                                clip.id,
+                                                                clip.audioSyncOffsetMs - frameDurationMs.coerceAtLeast(1L),
+                                                            )
+                                                            true
+                                                        }
+                                                    )
+                                                    add(
+                                                        CustomAccessibilityAction(
+                                                            label = audioSyncLaterActionLabel
+                                                        ) {
+                                                            currentOnSetClipAudioSyncOffset(
+                                                                track.id,
+                                                                clip.id,
+                                                                clip.audioSyncOffsetMs + frameDurationMs.coerceAtLeast(1L),
+                                                            )
+                                                            true
+                                                        }
+                                                    )
+                                                    add(
+                                                        CustomAccessibilityAction(
+                                                            label = audioSyncSetActionLabel
+                                                        ) {
+                                                            clipOffsetDialogText = clip.audioSyncOffsetMs.toString()
+                                                            clipOffsetDialogTrackId = track.id
+                                                            clipOffsetDialogClipId = clip.id
+                                                            true
                                                         }
                                                     )
                                                 }
@@ -1882,7 +2056,7 @@ fun Timeline(
                                         } else {
                                             val splitPointMs = clip.accessibleSplitPointMs(
                                                 currentPlayheadMs,
-                                                track.timelineOffsetMs,
+                                                track.effectiveTimelineOffsetMs(clip),
                                             )
                                             if (splitPointMs == null) {
                                                 false

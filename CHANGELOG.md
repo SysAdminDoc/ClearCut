@@ -16,6 +16,7 @@ Current version: **v3.79.0** (`versionCode` 297).
 - Dependency freshness now covers Activity, adopts the independently gated KSP, Compose BOM, Activity, and OkHttp updates, and records explicit hold or retained-beta decisions for the remaining candidates.
 - HDR export now gates the UI and export preflight on `FEATURE_HdrEditing` or `FEATURE_HlgEditing`, and diagnostic bundles record both feature flags for each encoder.
 - Subtitle burn-in now escapes brackets, commas, and semicolons in addition to the existing filtergraph path characters.
+- Audio tracks now expose signed, frame-grid clip sync offsets that persist through autosave and edit-decision JSON and feed the shared preview, export, mixdown, and stem timing path.
 
 ## v3.78.1
 

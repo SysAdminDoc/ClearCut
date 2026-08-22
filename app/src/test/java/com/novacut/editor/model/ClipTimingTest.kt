@@ -85,6 +85,18 @@ class ClipTimingTest {
         assertEquals(twelveHoursMs, clip.durationMs)
     }
 
+    @Test
+    fun `audio sync offsets are signed frame quantized and audio track only`() {
+        val clip = clip().copy(audioSyncOffsetMs = 500L)
+        val audioTrack = Track(type = TrackType.AUDIO, index = 0, clips = listOf(clip))
+        val videoTrack = Track(type = TrackType.VIDEO, index = 1, clips = listOf(clip))
+
+        assertEquals(500L, audioTrack.effectiveTimelineStartMs(clip))
+        assertEquals(0L, videoTrack.effectiveTimelineStartMs(clip))
+        assertEquals(33L, quantizeClipAudioSyncOffsetMs(17L, TimelineTimebase(30)))
+        assertEquals(-33L, quantizeClipAudioSyncOffsetMs(-17L, TimelineTimebase(30)))
+    }
+
     private fun assertWithin(expected: Long, actual: Long, toleranceMs: Long) {
         assertTrue(
             "expected $actual to be within ${toleranceMs}ms of $expected",

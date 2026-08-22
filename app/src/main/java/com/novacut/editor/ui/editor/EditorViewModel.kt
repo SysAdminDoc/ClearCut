@@ -3152,6 +3152,42 @@ class EditorViewModel @Inject constructor(
         rebuildPlayerTimeline()
         saveProject()
     }
+    fun setClipAudioSyncOffset(trackId: String, clipId: String, offsetMs: Long) {
+        val state = _state.value
+        val track = state.tracks.firstOrNull { it.id == trackId } ?: return
+        if (track.type != TrackType.AUDIO) return
+        val clip = track.clips.firstOrNull { it.id == clipId } ?: return
+        val quantizedOffsetMs = quantizeClipAudioSyncOffsetMs(
+            value = offsetMs,
+            timebase = state.project.timelineTimebase,
+        )
+        if (clip.audioSyncOffsetMs == quantizedOffsetMs) return
+        pauseIfPlaying()
+        saveUndoState("Change clip audio sync offset")
+        _state.update { current ->
+            recalculateDuration(
+                current.copy(
+                    tracks = current.tracks.map { currentTrack ->
+                        if (currentTrack.id != trackId) {
+                            currentTrack
+                        } else {
+                            currentTrack.copy(
+                                clips = currentTrack.clips.map { currentClip ->
+                                    if (currentClip.id == clipId) {
+                                        currentClip.copy(audioSyncOffsetMs = quantizedOffsetMs)
+                                    } else {
+                                        currentClip
+                                    }
+                                }
+                            )
+                        }
+                    }
+                )
+            )
+        }
+        rebuildPlayerTimeline()
+        saveProject()
+    }
     fun toggleTrackCollapsed(trackId: String) {
         _state.update { state ->
             state.copy(tracks = state.tracks.map {

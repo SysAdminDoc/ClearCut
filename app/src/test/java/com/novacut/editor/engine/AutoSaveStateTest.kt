@@ -127,6 +127,43 @@ class AutoSaveStateTest {
     }
 
     @Test
+    fun clipAudioSyncOffset_roundTripsAndDefaultsForOlderDocuments() {
+        val state = AutoSaveState(
+            projectId = "clip-offset-project",
+            tracks = listOf(
+                Track(
+                    type = TrackType.AUDIO,
+                    index = 0,
+                    clips = listOf(
+                        Clip(
+                            sourceUri = FakeUri,
+                            sourceDurationMs = 4_000L,
+                            timelineStartMs = 0L,
+                            audioSyncOffsetMs = -3_000L,
+                            trimEndMs = 4_000L,
+                        )
+                    ),
+                )
+            ),
+        )
+
+        val serialized = JSONObject(state.serialize())
+        val serializedClip = serialized.getJSONArray("tracks")
+            .getJSONObject(0)
+            .getJSONArray("clips")
+            .getJSONObject(0)
+        assertEquals(-3_000L, serializedClip.getLong("audioSyncOffsetMs"))
+
+        val restored = AutoSaveState.deserialize(serialized.toString()) { FakeUri }
+        assertEquals(-3_000L, restored.tracks.single().clips.single().audioSyncOffsetMs)
+
+        serializedClip.remove("audioSyncOffsetMs")
+        val restoredOld = AutoSaveState.deserialize(serialized.toString()) { FakeUri }
+            .tracks.single().clips.single()
+        assertEquals(0L, restoredOld.audioSyncOffsetMs)
+    }
+
+    @Test
     fun clipFlipAxes_roundTripAndDefaultOffForOlderDocuments() {
         val state = AutoSaveState(
             projectId = "flip-project",

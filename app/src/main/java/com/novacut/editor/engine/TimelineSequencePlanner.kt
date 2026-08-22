@@ -35,13 +35,25 @@ internal fun shiftClipForTimelineOffset(clip: Clip, offsetMs: Long): Clip? {
     )
 }
 
-internal fun shiftedTimelineClips(clips: List<Clip>, offsetMs: Long): List<Clip> {
-    if (offsetMs == 0L) {
+internal fun shiftedTimelineClips(
+    clips: List<Clip>,
+    offsetMs: Long,
+    includeClipAudioSyncOffset: Boolean = false,
+): List<Clip> {
+    if (offsetMs == 0L && !includeClipAudioSyncOffset) {
         return clips.filter { it.durationMs > 0L }.sortedBy { it.timelineStartMs }
     }
     return clips
         .mapNotNull { clip ->
-            if (clip.durationMs <= 0L) null else shiftClipForTimelineOffset(clip, offsetMs)
+            if (clip.durationMs <= 0L) {
+                null
+            } else {
+                val clipOffsetMs = if (includeClipAudioSyncOffset) clip.audioSyncOffsetMs else 0L
+                shiftClipForTimelineOffset(clip, offsetMs + clipOffsetMs)
+                    ?.let { shifted ->
+                        if (includeClipAudioSyncOffset) shifted.copy(audioSyncOffsetMs = 0L) else shifted
+                    }
+            }
         }
         .filter { it.durationMs > 0L }
         .sortedBy { it.timelineStartMs }
@@ -51,8 +63,9 @@ internal fun buildTimelineSequenceSteps(
     clips: List<Clip>,
     totalDurationMs: Long? = null,
     timelineOffsetMs: Long = 0L,
+    includeClipAudioSyncOffset: Boolean = false,
 ): List<TimelineSequenceStep> {
-    val sortedClips = shiftedTimelineClips(clips, timelineOffsetMs)
+    val sortedClips = shiftedTimelineClips(clips, timelineOffsetMs, includeClipAudioSyncOffset)
 
     val steps = mutableListOf<TimelineSequenceStep>()
     var cursorMs = 0L

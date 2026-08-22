@@ -2657,6 +2657,15 @@
     <string name="timeline_track_offset_earlier">Mover un fotograma antes</string>
     <string name="timeline_track_offset_later">Mover un fotograma después</string>
     <string name="timeline_track_offset_reset">Restablecer desfase</string>
+    <string name="timeline_clip_audio_sync_offset_set">Establecer desfase de audio del clip seleccionado</string>
+    <string name="timeline_clip_audio_sync_offset_dialog_title">Desfase de audio del clip</string>
+    <string name="timeline_clip_audio_sync_offset_dialog_message">Ajusta este clip de audio sin mover su edición de origen. Los valores positivos mueven el audio más tarde. Los valores se ajustan a la cuadrícula de fotogramas del proyecto.</string>
+    <string name="timeline_clip_audio_sync_offset_ms_label">Desfase en milisegundos</string>
+    <string name="timeline_clip_audio_sync_offset_apply">Aplicar</string>
+    <string name="timeline_clip_audio_sync_offset_cancel">Cancelar</string>
+    <string name="timeline_clip_audio_sync_offset_earlier">Mover el audio un fotograma antes</string>
+    <string name="timeline_clip_audio_sync_offset_later">Mover el audio un fotograma después</string>
+    <string name="timeline_clip_audio_sync_offset_reset">Restablecer desfase de audio del clip</string>
     <string name="timeline_trim_mode_hint">Modo de recorte: arrastre los bordes para cambiar el tamaño; arrastre el cuerpo del clip para deslizar el medio.</string>
     <string name="timeline_clip_content_description">%1$s, %2$s en %3$s, %4$s, comienza en %5$s</string>
     <string name="timeline_select_clip_action">Seleccionar clip</string>

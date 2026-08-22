@@ -2338,12 +2338,21 @@ class VideoEngine @Inject constructor(
             .sortedBy { it.index }
             .filter {
                 it.type == TrackType.AUDIO &&
-                    shiftedTimelineClips(it.clips, it.timelineOffsetMs).isNotEmpty() &&
+                    shiftedTimelineClips(
+                        it.clips,
+                        it.timelineOffsetMs,
+                        includeClipAudioSyncOffset = true,
+                    ).isNotEmpty() &&
                     isTrackAudibleForMix(it, soloTrackIds)
             }
         return audioTracks.map { at ->
             val builder = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
-            for (step in buildTimelineSequenceSteps(at.clips, totalTimelineDurationMs, at.timelineOffsetMs)) {
+            for (step in buildTimelineSequenceSteps(
+                clips = at.clips,
+                totalDurationMs = totalTimelineDurationMs,
+                timelineOffsetMs = at.timelineOffsetMs,
+                includeClipAudioSyncOffset = true,
+            )) {
                 when (step) {
                     is TimelineSequenceStep.GapStep -> {
                         builder.addGap(durationMsToUs(step.durationMs))
