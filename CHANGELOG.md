@@ -15,6 +15,7 @@ Current version: **v3.79.0** (`versionCode` 297).
 - New Project and Open Recent launcher shortcuts now route to their intended project flows, and static shortcut targets resolve the active application ID in the streaming build.
 - Dependency freshness now covers Activity, adopts the independently gated KSP, Compose BOM, Activity, and OkHttp updates, and records explicit hold or retained-beta decisions for the remaining candidates.
 - HDR export now gates the UI and export preflight on `FEATURE_HdrEditing` or `FEATURE_HlgEditing`, and diagnostic bundles record both feature flags for each encoder.
+- Subtitle burn-in now escapes brackets, commas, and semicolons in addition to the existing filtergraph path characters.
 
 ## v3.78.1
 

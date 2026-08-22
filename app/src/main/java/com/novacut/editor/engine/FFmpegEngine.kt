@@ -861,6 +861,10 @@ class FFmpegEngine @Inject constructor(
                 .replace("\\", "\\\\")
                 .replace(":", "\\:")
                 .replace("'", "\\'")
+                .replace("[", "\\[")
+                .replace("]", "\\]")
+                .replace(",", "\\,")
+                .replace(";", "\\;")
         }
 
         fun subtitleFilter(subtitlePath: String): String =

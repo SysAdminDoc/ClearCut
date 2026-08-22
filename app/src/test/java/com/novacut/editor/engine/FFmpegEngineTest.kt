@@ -16,6 +16,14 @@ class FFmpegEngineTest {
     }
 
     @Test
+    fun subtitleFilterEscapesRemainingFiltergraphMetacharacters() {
+        assertEquals(
+            """subtitles=C\:\\Exports\\\[cut\]\,final\;v1.ass:fontsdir=/system/fonts""",
+            FFmpegEngine.subtitleFilter("C:\\Exports\\[cut],final;v1.ass"),
+        )
+    }
+
+    @Test
     fun msToSeconds_zero() {
         assertEquals("0.000", FFmpegEngine.msToSeconds(0L))
     }
