@@ -10,6 +10,10 @@
 
 ### v3.80.0 A quieter workspace for every cut
 
+- Stabilization now supports local, versioned `.ncstabilization` profiles that carry lens, motion-search, crop, and sync assumptions without executable content. Import previews disclose fallback metadata and stable rejection codes, activation is atomic, and the next offline analysis plus its saved project data use the selected profile.
+
+### v3.79.0 A quieter workspace for every cut
+
 - The dashboard now opens with a focused project launcher, a compact recent-project row, and direct access to built-in templates.
 - The editor gives footage more room, keeps transport and timeline controls dense, and uses a flatter tool bar that stays readable at a glance.
 - Settings uses compact rows and clearer value hierarchy without hiding ClearCut's existing controls.
@@ -25,7 +29,6 @@
 - Timeline toolbar rendering now has its own callback-driven owner and zoom policy, with focused behavior coverage and reviewed byte budgets for the largest editor coordination files.
 - Shareable effect and style packs now publish a schema-v3 compatibility manifest with minimum app version, required capabilities, payload hashes, provenance, and stable import reason codes. Unknown capabilities and incompatible app versions are rejected before any install, while legacy packs still migrate through the rollback-safe path.
 - Translation coverage now walks every `values-*` resource directory, checks strings, plurals, and arrays against English, parses locale registration, and requires the matching Play metadata files. Dependency freshness applies the fixed 30-day horizon to snapshot, dependency, and upstream fact evidence, while the timeline toolbar keeps one overflow owner and one shared zoom clamp across fit, pinch, and ViewModel updates.
-- Stabilization now supports local, versioned `.ncstabilization` profiles that carry lens, motion-search, crop, and sync assumptions without executable content. Import previews disclose fallback metadata and stable rejection codes, activation is atomic, and the next offline analysis plus its saved project data use the selected profile.
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 
