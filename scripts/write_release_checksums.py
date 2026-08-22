@@ -14,7 +14,7 @@ APK_ROOT = ROOT / "app" / "build" / "outputs" / "apk"
 APK_VARIANTS = (
     APK_ROOT / "debug",
     APK_ROOT / "release",
-    APK_ROOT / "androidTest" / "debug",
+    APK_ROOT / "androidTest" / "qa",
 )
 
 
@@ -50,7 +50,7 @@ def apk_paths(root: Path = APK_ROOT) -> list[Path]:
     variants = (
         root / "debug",
         root / "release",
-        root / "androidTest" / "debug",
+        root / "androidTest" / "qa",
     )
     paths: list[Path] = []
     for variant in variants:

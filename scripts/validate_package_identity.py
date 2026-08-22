@@ -7,6 +7,7 @@ import copy
 import json
 import re
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
@@ -198,16 +199,18 @@ def validate_manifest(root: Path, registry: dict[str, Any]) -> None:
 def validate_shortcuts(root: Path, registry: dict[str, Any]) -> None:
     shortcut_root = parse_xml(root / "app/src/main/res/xml/shortcuts.xml", root)
     target = registry["shortcutTarget"]
+    expected_package = "${applicationId}"
+    expected_class = "${applicationId}.MainActivity"
     intents = shortcut_root.findall(".//intent")
     if len(intents) != len(target["actions"]):
         raise PackageIdentityError("shortcuts.xml must keep one intent for each registered static shortcut")
     for intent in intents:
         if intent.get(ANDROID_ATTR("package")) is not None:
             raise PackageIdentityError("shortcuts.xml must use targetPackage, not an invalid package attribute")
-        if intent.get(ANDROID_ATTR("targetPackage")) != target["package"]:
-            raise PackageIdentityError("shortcut targetPackage changed from the frozen application ID")
-        if intent.get(ANDROID_ATTR("targetClass")) != target["class"]:
-            raise PackageIdentityError("shortcut targetClass changed from the frozen namespace")
+        if intent.get(ANDROID_ATTR("targetPackage")) != expected_package:
+            raise PackageIdentityError("shortcut targetPackage must remain application-scoped")
+        if intent.get(ANDROID_ATTR("targetClass")) != expected_class:
+            raise PackageIdentityError("shortcut targetClass must remain application-scoped")
     actual_actions = [intent.get(ANDROID_ATTR("action")) for intent in intents]
     if actual_actions != target["actions"]:
         raise PackageIdentityError("shortcut action order or values changed")
@@ -291,6 +294,30 @@ def run_self_test(root: Path = ROOT) -> None:
         pass
     else:
         raise AssertionError("self-test expected migration-policy drift to fail")
+
+    with tempfile.TemporaryDirectory() as temp:
+        fixture_root = Path(temp)
+        shortcuts_path = fixture_root / "app/src/main/res/xml/shortcuts.xml"
+        shortcuts_path.parent.mkdir(parents=True)
+        actions = registry["shortcutTarget"]["actions"]
+        placeholder_xml = f'''<shortcuts xmlns:android="{ANDROID_NS}">
+    <shortcut><intent android:action="{actions[0]}" android:targetPackage="${{applicationId}}" android:targetClass="${{applicationId}}.MainActivity" /></shortcut>
+    <shortcut><intent android:action="{actions[1]}" android:targetPackage="${{applicationId}}" android:targetClass="${{applicationId}}.MainActivity" /></shortcut>
+</shortcuts>
+'''
+        shortcuts_path.write_text(placeholder_xml, encoding="utf-8")
+        validate_shortcuts(fixture_root, registry)
+
+        shortcuts_path.write_text(
+            placeholder_xml.replace('targetPackage="${applicationId}"', f'targetPackage="{registry["applicationId"]}"'),
+            encoding="utf-8",
+        )
+        try:
+            validate_shortcuts(fixture_root, registry)
+        except PackageIdentityError:
+            pass
+        else:
+            raise AssertionError("self-test expected a fixed shortcut package to fail")
 
 
 def main() -> int:

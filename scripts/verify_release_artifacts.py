@@ -111,17 +111,17 @@ def verify_variant_apk(variant: str, version_code: int, version_name: str) -> li
 
 
 def verify_android_test_apk() -> Path:
-    variant_path = APK_ROOT / "androidTest" / "debug"
+    variant_path = APK_ROOT / "androidTest" / "qa"
     metadata = read_output_metadata(variant_path)
     elements = metadata.get("elements")
     if not isinstance(elements, list) or len(elements) != 1:
-        raise VerificationError("debugAndroidTest metadata must contain exactly one APK element")
+        raise VerificationError("qaAndroidTest metadata must contain exactly one APK element")
     apk_name = elements[0].get("outputFile")
     if not isinstance(apk_name, str) or not apk_name.endswith(".apk"):
-        raise VerificationError("debugAndroidTest metadata does not point at an APK output")
+        raise VerificationError("qaAndroidTest metadata does not point at an APK output")
     apk_path = variant_path / apk_name
     if not apk_path.is_file() or apk_path.stat().st_size <= 0:
-        raise VerificationError(f"debugAndroidTest APK missing or empty: {apk_path.relative_to(ROOT)}")
+        raise VerificationError(f"qaAndroidTest APK missing or empty: {apk_path.relative_to(ROOT)}")
     return apk_path
 
 
@@ -250,8 +250,8 @@ def run_self_tests() -> None:
             release_apks = write_split_output_metadata(root, "release", version_code, version_name)
             test_apk = write_output_metadata(
                 root,
-                "androidTest/debug",
-                "app-debug-androidTest.apk",
+                "androidTest/qa",
+                "app-qa-androidTest.apk",
                 version_code,
                 version_name,
             )

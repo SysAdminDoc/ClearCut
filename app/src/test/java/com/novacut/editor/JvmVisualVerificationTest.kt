@@ -106,11 +106,6 @@ class JvmVisualVerificationTest {
         dismissFixtureMediaWarningIfPresent()
         capture("editor-dark.png")
 
-        compose.onNodeWithTag(ClearCutTestTags.EDITOR_EXPORT).performClick()
-        waitUntilAtLeastOneExists(ClearCutTestTags.EXPORT_SHEET)
-        capture("export-sheet-dark.png")
-        compose.onNodeWithTag(ClearCutTestTags.EXPORT_CLOSE).performClick()
-
         updateAppearance(AppearanceMode.HIGH_CONTRAST_DARK)
         capture("editor-high-contrast-dark.png")
 
@@ -119,6 +114,13 @@ class JvmVisualVerificationTest {
         capture("export-sheet-high-contrast-dark.png")
         compose.onNodeWithTag(ClearCutTestTags.EXPORT_CLOSE).performClick()
 
+        updateAppearance(AppearanceMode.DARK)
+        compose.onNodeWithTag(ClearCutTestTags.EDITOR_EXPORT).performClick()
+        waitUntilAtLeastOneExists(ClearCutTestTags.EXPORT_SHEET)
+        capture("export-sheet-dark.png")
+        compose.onNodeWithTag(ClearCutTestTags.EXPORT_CLOSE).performClick()
+
+        updateAppearance(AppearanceMode.HIGH_CONTRAST_DARK)
         compose.onNodeWithTag(ClearCutTestTags.EDITOR_BACK).performClick()
         waitUntilAtLeastOneExists(ClearCutTestTags.PROJECTS_SCREEN)
         capture("project-dashboard-high-contrast-dark.png")
@@ -168,6 +170,7 @@ class JvmVisualVerificationTest {
 
     private fun capture(name: String) {
         if (System.getProperty("clearcut.visual.capture") != "true") return
+        compose.mainClock.advanceTimeBy(VISUAL_SETTLE_TIME_MS)
         compose.waitForIdle()
         compose.onRoot().tryPerformAccessibilityChecks()
         compose.onRoot().captureRoboImage(File(goldenDirectory, name))
@@ -320,5 +323,6 @@ class JvmVisualVerificationTest {
     private companion object {
         const val VISUAL_PROJECT_NAME = "Mountain Story"
         const val VISUAL_PROJECT_DURATION_MS = 42_000L
+        const val VISUAL_SETTLE_TIME_MS = 1_000L
     }
 }

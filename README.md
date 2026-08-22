@@ -4,9 +4,16 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.80.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.81.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
+
+### v3.81.0 Sharper screens, fewer dead ends
+
+- The dashboard now keeps recent projects beside the built-in template library, with actions in the same flatter 12 dp layout.
+- Export keeps three preset choices, editable output details, estimated size, and the main action visible on a phone screen.
+- Settings keeps its navigation fixed and gives narrow rows room to wrap. Close stays visible in long privacy and license panels.
+- Reversible project and clip deletion is immediate, while expanded visual checks cover 20 screens across both dark themes.
 
 ### v3.80.0 A quieter workspace for every cut
 
@@ -576,8 +583,10 @@ python scripts/verify_otio_exports.py app/build/exports
 # Run instrumentation only on a dedicated QA device or emulator
 ./gradlew :app:connectedQaAndroidTest
 
-# Release build (requires keystore.properties or env vars)
+# Release APKs (requires keystore.properties or env vars)
 ./gradlew assembleRelease
+# Play bundle. Run this separately so bundle packaging does not inherit APK splits.
+./gradlew bundleRelease
 
 # Managed-device startup/editor performance gate
 ./gradlew :baselineprofile:pixel6Api37BenchmarkReleaseAndroidTest :baselineprofile:collectNonMinifiedReleaseBaselineProfile
@@ -686,7 +695,7 @@ Or via environment variables: `CLEARCUT_STORE_FILE`, `CLEARCUT_STORE_PASSWORD`, 
 Release credentials are required; see Release Signing Identity below for the pinned-key contract.
 
 ### Release Verification
-Local release builds publish a `.sha256` checksum and `.signing-cert-sha256` certificate-fingerprint sidecar next to every APK. After building `debug`, `release`, and `androidTest` APKs, write or refresh the sidecars, then run the single local release gate:
+Local release builds publish a `.sha256` checksum and `.signing-cert-sha256` certificate-fingerprint sidecar next to every APK. After building `debug`, `release`, and the QA `androidTest` APK, write or refresh the sidecars, then run the single local release gate:
 
 ```powershell
 python scripts\write_release_checksums.py --root app\build\outputs\apk

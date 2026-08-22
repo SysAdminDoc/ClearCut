@@ -22,6 +22,9 @@ fun resolveSigningSecret(vararg keys: String): String? {
 }
 
 val runtimeNoticeGeneratedDir = layout.buildDirectory.dir("generated/source/runtimeNotices")
+val bundleTaskRequested = gradle.startParameter.taskNames.any { taskName ->
+    taskName.substringAfterLast(':').startsWith("bundle", ignoreCase = true)
+}
 
 android {
     namespace = "com.novacut.editor"
@@ -31,8 +34,8 @@ android {
         applicationId = "com.novacut.editor"
         minSdk = 26
         targetSdk = 37
-        versionCode = 298
-        versionName = "3.80.0"
+        versionCode = 299
+        versionName = "3.81.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testBuildType = "qa"
 
@@ -119,10 +122,12 @@ android {
     // cannot determine their ABI or who sideloads across devices.
     splits {
         abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = true
+            isEnable = !bundleTaskRequested
+            if (!bundleTaskRequested) {
+                reset()
+                include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+                isUniversalApk = true
+            }
         }
     }
 

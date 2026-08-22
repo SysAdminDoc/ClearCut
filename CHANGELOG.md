@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.81.0
+
+Current version: **v3.81.0** (`versionCode` 299).
+
+- Unified the primary interface around flat AMOLED surfaces with stronger type hierarchy. A source check caps corner radii at 12 dp.
+- Added a persistent built-in template entry to populated dashboards and made recoverable project and clip deletion immediate.
+- Replaced the clipped export preset scroller with two featured presets plus a complete overflow selector, then tightened output rows so the main export action stays visible at 360 x 800 dp.
+- Kept the Settings header fixed, made narrow rows wrap without losing controls, and added sticky Close actions to long privacy and open-source panels.
+- Stacked privacy metadata for phone-width reading and stopped preview titles, guides, or split overlays from colliding with playback error recovery.
+- Expanded the visual workflow to 20 settled-frame golden screens across dark and high-contrast dark, including template, empty editor, media picker, populated editor, export, privacy, licenses, and tutorial states.
+- Tightened user-facing English and Spanish status copy and removed the obsolete delete-confirmation preference.
+- Bundle invocations now disable APK splits, so signed AAB packaging works while APK builds retain per-ABI and universal outputs. Release verification now follows the active QA instrumentation package and application-scoped shortcut targets.
+
 ## v3.80.0
 
 Current version: **v3.80.0** (`versionCode` 298).

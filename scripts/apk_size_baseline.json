@@ -1,38 +1,38 @@
 {
   "maxGrowthBytes": 2097152,
   "outputs": {
-    "androidTest/debug/app-debug-androidTest.apk": {
-      "baselineBytes": 3042851
+    "androidTest/qa/app-qa-androidTest.apk": {
+      "baselineBytes": 3155935
     },
     "debug/app-arm64-v8a-debug.apk": {
-      "baselineBytes": 119685795
+      "baselineBytes": 121338670
     },
     "debug/app-armeabi-v7a-debug.apk": {
-      "baselineBytes": 121780917
+      "baselineBytes": 123269952
     },
     "debug/app-universal-debug.apk": {
-      "baselineBytes": 385812154
+      "baselineBytes": 389087045
     },
     "debug/app-x86-debug.apk": {
-      "baselineBytes": 135780207
+      "baselineBytes": 137596922
     },
     "debug/app-x86_64-debug.apk": {
-      "baselineBytes": 136508891
+      "baselineBytes": 138309222
     },
     "release/app-arm64-v8a-release.apk": {
-      "baselineBytes": 96243347
+      "baselineBytes": 92115923
     },
     "release/app-armeabi-v7a-release.apk": {
-      "baselineBytes": 98338469
+      "baselineBytes": 94047205
     },
     "release/app-universal-release.apk": {
-      "baselineBytes": 362369706
+      "baselineBytes": 359864298
     },
     "release/app-x86-release.apk": {
-      "baselineBytes": 112337759
+      "baselineBytes": 108374175
     },
     "release/app-x86_64-release.apk": {
-      "baselineBytes": 113066443
+      "baselineBytes": 109086475
     }
   },
   "schema": "com.clearcut.apk-size-budget.v1"
