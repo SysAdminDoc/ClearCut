@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
+import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -65,6 +66,16 @@ class EffectShareEngine @Inject constructor(
                 put("type", "clearcut_effects")
                 put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
                 put("packType", DeclarativePackKind.EFFECT.wireName)
+                put("minAppVersion", BuildConfig.VERSION_NAME)
+                put("requiredCapabilities", JSONArray().apply {
+                    put(DeclarativePackContract.EFFECT_PACK_CAPABILITY)
+                    if (audioEffects.isNotEmpty()) {
+                        put(DeclarativePackContract.AUDIO_EFFECTS_CAPABILITY)
+                    }
+                    if (embeddedLut != null) {
+                        put(DeclarativePackContract.EMBEDDED_LUT_CAPABILITY)
+                    }
+                })
                 put("provenance", JSONObject().put("source", "ClearCut effect export"))
 
                 // Effects
@@ -142,6 +153,9 @@ class EffectShareEngine @Inject constructor(
         INVALID_SCHEMA,
         WRONG_KIND,
         INCOMPATIBLE_VERSION,
+        MISSING_MANIFEST_FIELDS,
+        UNKNOWN_REQUIRED_CAPABILITY,
+        INCOMPATIBLE_APP_VERSION,
         UNSAFE_CONTENT,
         MISSING_CONTENT_HASH,
         HASH_MISMATCH,
@@ -155,7 +169,10 @@ class EffectShareEngine @Inject constructor(
         val schemaVersion: Int = DeclarativePackContract.LEGACY_SCHEMA_VERSION,
         val contentHash: String? = null,
         val provenanceSource: String? = null,
+        val minAppVersion: String? = null,
+        val requiredCapabilities: Set<String> = emptySet(),
         val warnings: List<String> = emptyList(),
+        val reasonCode: String = failure.name,
     )
 
     /** Read-only validation for the Projects import preview. */
@@ -213,6 +230,9 @@ class EffectShareEngine @Inject constructor(
                 DeclarativePackIssue.INVALID_SCHEMA -> EffectPackFailure.INVALID_SCHEMA
                 DeclarativePackIssue.FUTURE_SCHEMA -> EffectPackFailure.INCOMPATIBLE_VERSION
                 DeclarativePackIssue.WRONG_KIND -> EffectPackFailure.WRONG_KIND
+                DeclarativePackIssue.MISSING_MANIFEST_FIELDS -> EffectPackFailure.MISSING_MANIFEST_FIELDS
+                DeclarativePackIssue.UNKNOWN_REQUIRED_CAPABILITY -> EffectPackFailure.UNKNOWN_REQUIRED_CAPABILITY
+                DeclarativePackIssue.INCOMPATIBLE_APP_VERSION -> EffectPackFailure.INCOMPATIBLE_APP_VERSION
                 DeclarativePackIssue.MISSING_CONTENT_HASH -> EffectPackFailure.MISSING_CONTENT_HASH
                 DeclarativePackIssue.HASH_MISMATCH -> EffectPackFailure.HASH_MISMATCH
                 DeclarativePackIssue.EXECUTABLE_CONTENT -> EffectPackFailure.UNSAFE_CONTENT
@@ -223,7 +243,10 @@ class EffectShareEngine @Inject constructor(
                     schemaVersion = envelope.schemaVersion,
                     contentHash = envelope.contentHash,
                     provenanceSource = envelope.source,
+                    minAppVersion = envelope.minAppVersion,
+                    requiredCapabilities = envelope.requiredCapabilities,
                     warnings = envelope.warnings,
+                    reasonCode = envelope.reasonCode,
                 )
             }
             if (json.optString("type") != "clearcut_effects") {
@@ -232,7 +255,10 @@ class EffectShareEngine @Inject constructor(
                     schemaVersion = envelope.schemaVersion,
                     contentHash = envelope.contentHash,
                     provenanceSource = envelope.source,
+                    minAppVersion = envelope.minAppVersion,
+                    requiredCapabilities = envelope.requiredCapabilities,
                     warnings = listOf("This JSON document is not a ClearCut effect pack."),
+                    reasonCode = EffectPackFailure.WRONG_KIND.name,
                 )
             }
 
@@ -279,6 +305,8 @@ class EffectShareEngine @Inject constructor(
                     schemaVersion = envelope.schemaVersion,
                     contentHash = envelope.contentHash,
                     provenanceSource = envelope.source,
+                    minAppVersion = envelope.minAppVersion,
+                    requiredCapabilities = envelope.requiredCapabilities,
                     warnings = listOf("Embedded LUT is malformed, oversized, or uses an unsupported format."),
                 )
             }
@@ -349,6 +377,8 @@ class EffectShareEngine @Inject constructor(
                     schemaVersion = envelope.schemaVersion,
                     contentHash = envelope.contentHash,
                     provenanceSource = envelope.source,
+                    minAppVersion = envelope.minAppVersion,
+                    requiredCapabilities = envelope.requiredCapabilities,
                     warnings = listOf(
                         "Effect pack contains $invalidEntries unsupported or invalid effect entr${if (invalidEntries == 1) "y" else "ies"}."
                     ),
@@ -366,13 +396,18 @@ class EffectShareEngine @Inject constructor(
                 schemaVersion = envelope.schemaVersion,
                 contentHash = envelope.contentHash.orEmpty(),
                 provenanceSource = envelope.source,
+                minAppVersion = envelope.minAppVersion,
+                requiredCapabilities = envelope.requiredCapabilities,
             )
             EffectPackValidation(
                 imported = imported,
                 schemaVersion = envelope.schemaVersion,
                 contentHash = envelope.contentHash,
                 provenanceSource = envelope.source,
+                minAppVersion = envelope.minAppVersion,
+                requiredCapabilities = envelope.requiredCapabilities,
                 warnings = warnings,
+                reasonCode = envelope.reasonCode,
             )
         } catch (e: Exception) {
             AppLog.e(TAG, "Parse failed", e)
@@ -528,4 +563,6 @@ data class ImportedEffects(
     val schemaVersion: Int = DeclarativePackContract.LEGACY_SCHEMA_VERSION,
     val contentHash: String = "",
     val provenanceSource: String? = null,
+    val minAppVersion: String? = null,
+    val requiredCapabilities: Set<String> = emptySet(),
 )

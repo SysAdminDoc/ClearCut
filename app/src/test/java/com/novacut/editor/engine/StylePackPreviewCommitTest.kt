@@ -100,6 +100,11 @@ class StylePackPreviewCommitTest {
             .put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
             .put("packType", DeclarativePackKind.STYLE.wireName)
             .put("provenance", org.json.JSONObject().put("source", "test"))
+            .put("minAppVersion", "3.79.0")
+            .put(
+                "requiredCapabilities",
+                org.json.JSONArray().put(DeclarativePackContract.STYLE_PACK_CAPABILITY),
+            )
         current.put("contentHash", DeclarativePackContract.contentHash(current))
 
         assertEquals(StylePackFailure.NONE, manager.validateFromJson(current.toString()).failure)

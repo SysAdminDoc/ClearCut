@@ -1,5 +1,6 @@
 package com.novacut.editor.engine
 
+import com.novacut.editor.BuildConfig
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -17,14 +18,18 @@ enum class DeclarativePackKind(val wireName: String) {
     FONT("font"),
 }
 
-enum class DeclarativePackIssue {
-    NONE,
-    INVALID_SCHEMA,
-    FUTURE_SCHEMA,
-    WRONG_KIND,
-    MISSING_CONTENT_HASH,
-    HASH_MISMATCH,
-    EXECUTABLE_CONTENT,
+enum class DeclarativePackIssue(val reasonCode: String) {
+    NONE("PACK_OK"),
+    INVALID_SCHEMA("PACK_INVALID_SCHEMA"),
+    FUTURE_SCHEMA("PACK_FUTURE_SCHEMA"),
+    WRONG_KIND("PACK_WRONG_KIND"),
+    MISSING_MANIFEST_FIELDS("PACK_MISSING_MANIFEST_FIELDS"),
+    UNKNOWN_REQUIRED_CAPABILITY("PACK_UNKNOWN_REQUIRED_CAPABILITY"),
+    INCOMPATIBLE_APP_VERSION("PACK_INCOMPATIBLE_APP_VERSION"),
+    MISSING_CONTENT_HASH("PACK_MISSING_CONTENT_HASH"),
+    HASH_MISMATCH("PACK_HASH_MISMATCH"),
+    EXECUTABLE_CONTENT("PACK_EXECUTABLE_CONTENT");
+
 }
 
 data class DeclarativePackEnvelope(
@@ -34,11 +39,31 @@ data class DeclarativePackEnvelope(
     val warnings: List<String> = emptyList(),
     val contentHash: String? = null,
     val source: String? = null,
-)
+    val minAppVersion: String? = null,
+    val requiredCapabilities: Set<String> = emptySet(),
+) {
+    val reasonCode: String
+        get() = issue.reasonCode
+}
 
 object DeclarativePackContract {
-    const val CURRENT_SCHEMA_VERSION = 2
+    const val CURRENT_SCHEMA_VERSION = 3
     const val LEGACY_SCHEMA_VERSION = 1
+    const val EFFECT_PACK_CAPABILITY = "effect-pack-v1"
+    const val STYLE_PACK_CAPABILITY = "style-pack-v1"
+    const val LUT_PACK_CAPABILITY = "lut-pack-v1"
+    const val FONT_PACK_CAPABILITY = "font-pack-v1"
+    const val EMBEDDED_LUT_CAPABILITY = "embedded-lut-v1"
+    const val AUDIO_EFFECTS_CAPABILITY = "audio-effects-v1"
+
+    val supportedCapabilities: Set<String> = setOf(
+        EFFECT_PACK_CAPABILITY,
+        STYLE_PACK_CAPABILITY,
+        LUT_PACK_CAPABILITY,
+        FONT_PACK_CAPABILITY,
+        EMBEDDED_LUT_CAPABILITY,
+        AUDIO_EFFECTS_CAPABILITY,
+    )
 
     private val executableKeyMarkers = setOf(
         "code",
@@ -54,7 +79,12 @@ object DeclarativePackContract {
     )
 
     /** Inspect the shared envelope before a type-specific parser runs. */
-    fun inspect(root: JSONObject, expectedKind: DeclarativePackKind): DeclarativePackEnvelope {
+    fun inspect(
+        root: JSONObject,
+        expectedKind: DeclarativePackKind,
+        supportedAppVersion: String = BuildConfig.VERSION_NAME,
+        capabilities: Set<String> = DeclarativePackContract.supportedCapabilities,
+    ): DeclarativePackEnvelope {
         val rawSchema = root.opt("schemaVersion")
         val schemaVersion = when {
             rawSchema == null || rawSchema == JSONObject.NULL -> LEGACY_SCHEMA_VERSION
@@ -70,6 +100,16 @@ object DeclarativePackContract {
             ?.optString("source", "")
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
+        val minAppVersion = root.optString("minAppVersion", "").trim().takeIf { it.isNotEmpty() }
+        val requiredCapabilities = root.optJSONArray("requiredCapabilities")
+            ?.let { array ->
+                buildSet {
+                    for (index in 0 until array.length()) {
+                        array.optString(index, "").trim().takeIf { it.isNotEmpty() }?.let(::add)
+                    }
+                }
+            }
+            .orEmpty()
         val unsafeKey = findExecutableKey(root)
         if (unsafeKey != null) {
             return DeclarativePackEnvelope(
@@ -79,6 +119,8 @@ object DeclarativePackContract {
                 warnings = listOf("Executable pack field rejected: $unsafeKey"),
                 contentHash = root.optString("contentHash", "").takeIf { it.isNotBlank() },
                 source = source,
+                minAppVersion = minAppVersion,
+                requiredCapabilities = requiredCapabilities,
             )
         }
         if (schemaVersion <= 0) {
@@ -89,6 +131,8 @@ object DeclarativePackContract {
                 warnings = listOf("Pack schemaVersion must be a positive integer."),
                 contentHash = root.optString("contentHash", "").takeIf { it.isNotBlank() },
                 source = source,
+                minAppVersion = minAppVersion,
+                requiredCapabilities = requiredCapabilities,
             )
         }
         if (schemaVersion > CURRENT_SCHEMA_VERSION) {
@@ -101,6 +145,8 @@ object DeclarativePackContract {
                 ),
                 contentHash = root.optString("contentHash", "").takeIf { it.isNotBlank() },
                 source = source,
+                minAppVersion = minAppVersion,
+                requiredCapabilities = requiredCapabilities,
             )
         }
         if (schemaVersion >= CURRENT_SCHEMA_VERSION && rawKind != expectedKind.wireName) {
@@ -111,9 +157,53 @@ object DeclarativePackContract {
                 warnings = listOf("Expected a ${expectedKind.wireName} pack, received $kind."),
                 contentHash = root.optString("contentHash", "").takeIf { it.isNotBlank() },
                 source = source,
+                minAppVersion = minAppVersion,
+                requiredCapabilities = requiredCapabilities,
             )
         }
         if (schemaVersion >= CURRENT_SCHEMA_VERSION) {
+            val manifestMissing = minAppVersion == null ||
+                root.optJSONArray("requiredCapabilities") == null ||
+                requiredCapabilities.isEmpty() ||
+                source == null
+            if (manifestMissing) {
+                return DeclarativePackEnvelope(
+                    schemaVersion = schemaVersion,
+                    kind = expectedKind,
+                    issue = DeclarativePackIssue.MISSING_MANIFEST_FIELDS,
+                    warnings = listOf(
+                        "Current-schema packs must declare minAppVersion, requiredCapabilities, and provenance.source."
+                    ),
+                    source = source,
+                    minAppVersion = minAppVersion,
+                    requiredCapabilities = requiredCapabilities,
+                )
+            }
+            val unknownCapability = requiredCapabilities.firstOrNull { it !in capabilities }
+            if (unknownCapability != null) {
+                return DeclarativePackEnvelope(
+                    schemaVersion = schemaVersion,
+                    kind = expectedKind,
+                    issue = DeclarativePackIssue.UNKNOWN_REQUIRED_CAPABILITY,
+                    warnings = listOf("Pack requires unsupported capability '$unknownCapability'."),
+                    source = source,
+                    minAppVersion = minAppVersion,
+                    requiredCapabilities = requiredCapabilities,
+                )
+            }
+            if (!isVersionAtLeast(supportedAppVersion, minAppVersion)) {
+                return DeclarativePackEnvelope(
+                    schemaVersion = schemaVersion,
+                    kind = expectedKind,
+                    issue = DeclarativePackIssue.INCOMPATIBLE_APP_VERSION,
+                    warnings = listOf(
+                        "Pack requires ClearCut $minAppVersion or newer; this build is $supportedAppVersion."
+                    ),
+                    source = source,
+                    minAppVersion = minAppVersion,
+                    requiredCapabilities = requiredCapabilities,
+                )
+            }
             val expectedHash = root.optString("contentHash", "").trim().lowercase()
             if (!isSha256(expectedHash)) {
                 return DeclarativePackEnvelope(
@@ -122,6 +212,8 @@ object DeclarativePackContract {
                     issue = DeclarativePackIssue.MISSING_CONTENT_HASH,
                     warnings = listOf("Current-schema packs must carry a SHA-256 contentHash."),
                     source = source,
+                    minAppVersion = minAppVersion,
+                    requiredCapabilities = requiredCapabilities,
                 )
             }
             val actualHash = contentHash(root)
@@ -133,6 +225,8 @@ object DeclarativePackContract {
                     warnings = listOf("Pack contentHash does not match its declarative payload."),
                     contentHash = expectedHash,
                     source = source,
+                    minAppVersion = minAppVersion,
+                    requiredCapabilities = requiredCapabilities,
                 )
             }
             return DeclarativePackEnvelope(
@@ -140,6 +234,8 @@ object DeclarativePackContract {
                 kind = expectedKind,
                 contentHash = actualHash,
                 source = source,
+                minAppVersion = minAppVersion,
+                requiredCapabilities = requiredCapabilities,
             )
         }
         return DeclarativePackEnvelope(
@@ -150,8 +246,34 @@ object DeclarativePackContract {
             ),
             contentHash = contentHash(root),
             source = source,
+            minAppVersion = minAppVersion,
+            requiredCapabilities = requiredCapabilities,
         )
     }
+
+    private fun isVersionAtLeast(current: String, minimum: String?): Boolean {
+        if (minimum.isNullOrBlank()) return false
+        val currentParts = parseVersion(current) ?: return false
+        val minimumParts = parseVersion(minimum) ?: return false
+        val size = maxOf(currentParts.size, minimumParts.size)
+        for (index in 0 until size) {
+            val actual = currentParts.getOrNull(index) ?: 0
+            val required = minimumParts.getOrNull(index) ?: 0
+            if (actual != required) return actual > required
+        }
+        return true
+    }
+
+    private fun parseVersion(value: String): List<Int>? =
+        Regex("^\\d+(?:\\.\\d+){0,3}(?:[-+][0-9A-Za-z.-]+)?$")
+            .takeIf { it.matches(value.trim()) }
+            ?.let {
+                value.trim()
+                    .substringBefore('-')
+                    .substringBefore('+')
+                    .split('.')
+                    .map(String::toInt)
+            }
 
     /** Hash the canonical JSON payload, excluding mutable envelope metadata. */
     fun contentHash(root: JSONObject): String {

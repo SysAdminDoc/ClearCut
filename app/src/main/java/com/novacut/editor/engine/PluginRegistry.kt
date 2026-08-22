@@ -37,13 +37,29 @@ object PluginRegistry {
         val displayName: String,
         val fileExtension: String,
         val mimeType: String,
+        val declarativeCapability: String? = null,
     ) {
         TEMPLATE("Project template", ".clearcut-template", "application/octet-stream"),
-        EFFECT_PACK("Effect pack", ".ncfx", "application/octet-stream"),
-        STYLE_PACK("Caption / text style pack", ".ncstyle", "application/octet-stream"),
-        LUT_CUBE("LUT (.cube)", ".cube", "text/plain"),
-        LUT_3DL("LUT (.3dl)", ".3dl", "text/plain"),
-        OPENFX_DESCRIPTOR("OpenFX effect descriptor", ".ncfxd", "application/json"),
+        EFFECT_PACK(
+            "Effect pack",
+            ".ncfx",
+            "application/octet-stream",
+            DeclarativePackContract.EFFECT_PACK_CAPABILITY,
+        ),
+        STYLE_PACK(
+            "Caption / text style pack",
+            ".ncstyle",
+            "application/octet-stream",
+            DeclarativePackContract.STYLE_PACK_CAPABILITY,
+        ),
+        LUT_CUBE("LUT (.cube)", ".cube", "text/plain", DeclarativePackContract.LUT_PACK_CAPABILITY),
+        LUT_3DL("LUT (.3dl)", ".3dl", "text/plain", DeclarativePackContract.LUT_PACK_CAPABILITY),
+        OPENFX_DESCRIPTOR(
+            "OpenFX effect descriptor",
+            ".ncfxd",
+            "application/json",
+            DeclarativePackContract.EFFECT_PACK_CAPABILITY,
+        ),
     }
 
     /**
@@ -72,6 +88,9 @@ object PluginRegistry {
      * preview) has one place to land.
      */
     fun shareMimeTypeFor(kind: Kind): String = kind.mimeType
+
+    /** Return the declarative capability required by a safe shareable asset. */
+    fun requiredDeclarativeCapability(kind: Kind): String? = kind.declarativeCapability
 
     /**
      * Render a human-readable list of supported file extensions, useful for

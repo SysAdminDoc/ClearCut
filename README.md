@@ -23,6 +23,7 @@
 - Clip sync offsets at the signed limit now stay on the nearest in-bounds frame boundary for fractional frame rates.
 - Translation contributors now have a documented locale, resource-parity, locale-config, and Play metadata path, with a recursive UI literal ratchet and locale registration test.
 - Timeline toolbar rendering now has its own callback-driven owner and zoom policy, with focused behavior coverage and reviewed byte budgets for the largest editor coordination files.
+- Shareable effect and style packs now publish a schema-v3 compatibility manifest with minimum app version, required capabilities, payload hashes, provenance, and stable import reason codes. Unknown capabilities and incompatible app versions are rejected before any install, while legacy packs still migrate through the rollback-safe path.
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 

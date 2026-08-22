@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import android.content.Context
 import android.net.Uri
+import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.CaptionAccessibilityPreset
 import com.novacut.editor.model.CaptionStyleTemplate
@@ -27,12 +28,14 @@ data class StylePack(
     val schemaVersion: Int = DeclarativePackContract.LEGACY_SCHEMA_VERSION,
     val contentHash: String = "",
     val provenanceSource: String? = null,
+    val requiredCapabilities: Set<String> = emptySet(),
 )
 
 data class StylePackImportResult(
     val pack: StylePack? = null,
     val failure: StylePackFailure = StylePackFailure.NONE,
     val warnings: List<String> = emptyList(),
+    val reasonCode: String = failure.name,
 )
 
 enum class StylePackFailure {
@@ -43,6 +46,9 @@ enum class StylePackFailure {
     INVALID_SCHEMA,
     WRONG_KIND,
     INCOMPATIBLE_VERSION,
+    MISSING_MANIFEST_FIELDS,
+    UNKNOWN_REQUIRED_CAPABILITY,
+    INCOMPATIBLE_APP_VERSION,
     UNSAFE_CONTENT,
     INVALID_STYLE_ENTRY,
     MISSING_CONTENT_HASH,
@@ -226,6 +232,9 @@ class StylePackManager @Inject constructor(
             DeclarativePackIssue.INVALID_SCHEMA -> StylePackFailure.INVALID_SCHEMA
             DeclarativePackIssue.FUTURE_SCHEMA -> StylePackFailure.INCOMPATIBLE_VERSION
             DeclarativePackIssue.WRONG_KIND -> StylePackFailure.WRONG_KIND
+            DeclarativePackIssue.MISSING_MANIFEST_FIELDS -> StylePackFailure.MISSING_MANIFEST_FIELDS
+            DeclarativePackIssue.UNKNOWN_REQUIRED_CAPABILITY -> StylePackFailure.UNKNOWN_REQUIRED_CAPABILITY
+            DeclarativePackIssue.INCOMPATIBLE_APP_VERSION -> StylePackFailure.INCOMPATIBLE_APP_VERSION
             DeclarativePackIssue.MISSING_CONTENT_HASH -> StylePackFailure.MISSING_CONTENT_HASH
             DeclarativePackIssue.HASH_MISMATCH -> StylePackFailure.HASH_MISMATCH
             DeclarativePackIssue.EXECUTABLE_CONTENT -> StylePackFailure.UNSAFE_CONTENT
@@ -234,6 +243,7 @@ class StylePackManager @Inject constructor(
             return Validation(
                 StylePackImportResult(
                     failure = contractFailure,
+                    reasonCode = envelope.reasonCode,
                     warnings = envelope.warnings,
                 )
             )
@@ -300,7 +310,11 @@ class StylePackManager @Inject constructor(
         }
 
         return Validation(
-            result = StylePackImportResult(pack = pack, warnings = warnings),
+            result = StylePackImportResult(
+                pack = pack,
+                warnings = warnings,
+                reasonCode = envelope.reasonCode,
+            ),
             validated = ValidatedPack(pack = pack, root = root, targetFile = file, warnings = warnings)
         )
     }
@@ -327,7 +341,11 @@ class StylePackManager @Inject constructor(
                     "(${installedPack.name}, ${installedPack.styles.size} styles, " +
                     "hash=${installedPack.contentHash.take(12)})"
             )
-            StylePackImportResult(pack = installedPack, warnings = validated.warnings)
+            StylePackImportResult(
+                pack = installedPack,
+                warnings = validated.warnings,
+                reasonCode = "PACK_OK",
+            )
         } catch (e: Exception) {
             AppLog.e(TAG, "Failed to write style pack", e)
             StylePackImportResult(failure = StylePackFailure.WRITE_FAILED)
@@ -357,6 +375,15 @@ class StylePackManager @Inject constructor(
                 ?.optString("source", "")
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() },
+            requiredCapabilities = root.optJSONArray("requiredCapabilities")
+                ?.let { array ->
+                    buildSet {
+                        for (index in 0 until array.length()) {
+                            (array.opt(index) as? String)?.trim()?.takeIf { it.isNotEmpty() }?.let(::add)
+                        }
+                    }
+                }
+                .orEmpty(),
         )
     }
 
@@ -393,6 +420,14 @@ class StylePackManager @Inject constructor(
         }
         if (provenance.optString("source", "").isBlank()) {
             provenance.put("source", "local import")
+        }
+        if (normalized.optString("minAppVersion", "").isBlank()) {
+            normalized.put("minAppVersion", BuildConfig.VERSION_NAME)
+        }
+        val requiredCapabilities = normalized.optJSONArray("requiredCapabilities")
+            ?: JSONArray().also { normalized.put("requiredCapabilities", it) }
+        if (requiredCapabilities.length() == 0) {
+            requiredCapabilities.put(DeclarativePackContract.STYLE_PACK_CAPABILITY)
         }
         normalized.put("installedAtEpochMs", System.currentTimeMillis())
         normalized.put("contentHash", DeclarativePackContract.contentHash(normalized))

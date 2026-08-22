@@ -41,6 +41,8 @@ class EffectShareEnginePackTest {
 
         assertEquals(EffectShareEngine.EffectPackFailure.NONE, accepted.failure)
         assertEquals("test export", accepted.provenanceSource)
+        assertEquals("PACK_OK", accepted.reasonCode)
+        assertEquals(setOf(DeclarativePackContract.EFFECT_PACK_CAPABILITY), accepted.requiredCapabilities)
         assertEquals(DeclarativePackContract.contentHash(root), accepted.contentHash)
 
         root.getJSONArray("effects").getJSONObject(0).put("enabled", false)
@@ -72,6 +74,24 @@ class EffectShareEnginePackTest {
             EffectShareEngine.EffectPackFailure.INCOMPATIBLE_VERSION,
             engine.validateEffectsJson(future.toString()).failure,
         )
+    }
+
+    @Test
+    fun currentEffectPackRejectsUnknownCapabilityAndNewerApp() {
+        val unknown = currentRoot().put(
+            "requiredCapabilities",
+            JSONArray().put("future-feature-v9"),
+        )
+        unknown.put("contentHash", DeclarativePackContract.contentHash(unknown))
+        val unknownResult = engine.validateEffectsJson(unknown.toString())
+        assertEquals(EffectShareEngine.EffectPackFailure.UNKNOWN_REQUIRED_CAPABILITY, unknownResult.failure)
+        assertEquals("PACK_UNKNOWN_REQUIRED_CAPABILITY", unknownResult.reasonCode)
+
+        val newer = currentRoot().put("minAppVersion", "999.0.0")
+        newer.put("contentHash", DeclarativePackContract.contentHash(newer))
+        val newerResult = engine.validateEffectsJson(newer.toString())
+        assertEquals(EffectShareEngine.EffectPackFailure.INCOMPATIBLE_APP_VERSION, newerResult.failure)
+        assertEquals("PACK_INCOMPATIBLE_APP_VERSION", newerResult.reasonCode)
     }
 
     @Test
@@ -142,6 +162,8 @@ class EffectShareEnginePackTest {
         put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
         put("packType", DeclarativePackKind.EFFECT.wireName)
         put("provenance", JSONObject().put("source", "test export"))
+        put("minAppVersion", "3.79.0")
+        put("requiredCapabilities", JSONArray().put(DeclarativePackContract.EFFECT_PACK_CAPABILITY))
         put("effects", JSONArray().put(JSONObject().put("type", "BRIGHTNESS")))
         put("contentHash", DeclarativePackContract.contentHash(this))
     }

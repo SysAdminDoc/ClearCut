@@ -145,6 +145,7 @@ class IncomingDocumentImportRouter @Inject constructor(
                     "Schema: v${pack.schemaVersion}",
                     "Content hash: ${pack.contentHash.ifBlank { "not recorded" }}",
                     "Source: ${pack.provenanceSource ?: "not specified"}",
+                    "Reason code: ${result.reasonCode}",
                     "Rollback available: ${stylePackManager.canRollback(pack.id)}",
                 ),
                 warnings = result.warnings,
@@ -155,6 +156,7 @@ class IncomingDocumentImportRouter @Inject constructor(
                 item = item,
                 body = stylePackFailureMessage(result.failure),
                 warnings = result.warnings,
+                reasonCode = result.reasonCode,
             )
         }
     }
@@ -165,7 +167,7 @@ class IncomingDocumentImportRouter @Inject constructor(
         val result = stylePackManager.validateFromJson(json)
         val pack = result.pack
         if (pack == null) {
-            return invalid(item, stylePackFailureMessage(result.failure), result.warnings)
+            return invalid(item, stylePackFailureMessage(result.failure), result.warnings, result.reasonCode)
         }
         return IncomingDocumentImportPreview(
             item = item,
@@ -180,6 +182,7 @@ class IncomingDocumentImportRouter @Inject constructor(
                 "Schema: v${pack.schemaVersion}",
                 "Content hash: ${pack.contentHash.ifBlank { "computed on install" }}",
                 "Source: ${pack.provenanceSource ?: "not specified; recorded as local import on install"}",
+                "Reason code: ${result.reasonCode}",
                 "Rollback available: ${stylePackManager.canRollback(pack.id)}",
             ),
             warnings = result.warnings + "Nothing was installed during preview; choose Import to install.",
@@ -206,6 +209,7 @@ class IncomingDocumentImportRouter @Inject constructor(
                 item = item,
                 body = effectPackFailureMessage(validation.failure),
                 warnings = validation.warnings,
+                reasonCode = validation.reasonCode,
             )
         return IncomingDocumentImportPreview(
             item = item,
@@ -225,6 +229,7 @@ class IncomingDocumentImportRouter @Inject constructor(
                 "Schema: v${validation.schemaVersion}",
                 "Content hash: ${validation.contentHash ?: "computed for legacy pack on export"}",
                 "Source: ${validation.provenanceSource ?: "not specified"}",
+                "Reason code: ${validation.reasonCode}",
             ),
             warnings = validation.warnings + "No clip was changed from the Projects screen.",
             canImportNow = false,
@@ -500,13 +505,14 @@ class IncomingDocumentImportRouter @Inject constructor(
         item: IncomingDocumentItem,
         body: String,
         warnings: List<String> = emptyList(),
+        reasonCode: String? = null,
     ): IncomingDocumentImportPreview {
         return IncomingDocumentImportPreview(
             item = item,
             status = IncomingDocumentImportStatus.INVALID,
             title = "Document import blocked",
             body = body,
-            details = baseDetails(item),
+            details = baseDetails(item) + reasonCode?.let { listOf("Reason code: $it") }.orEmpty(),
             warnings = warnings.ifEmpty { listOf("No project data was changed.") },
             canImportNow = false,
         )
@@ -537,6 +543,9 @@ class IncomingDocumentImportRouter @Inject constructor(
             StylePackFailure.INVALID_SCHEMA -> "Pack schemaVersion must be a positive integer."
             StylePackFailure.WRONG_KIND -> "This file declares a different declarative pack type."
             StylePackFailure.INCOMPATIBLE_VERSION -> "Pack requires a newer version of ClearCut."
+            StylePackFailure.MISSING_MANIFEST_FIELDS -> "Current-schema packs must declare compatibility and provenance metadata."
+            StylePackFailure.UNKNOWN_REQUIRED_CAPABILITY -> "Pack requires a capability this ClearCut build does not support."
+            StylePackFailure.INCOMPATIBLE_APP_VERSION -> "Pack requires a newer version of ClearCut."
             StylePackFailure.UNSAFE_CONTENT -> "Pack contains executable or plugin content, which ClearCut rejects."
             StylePackFailure.INVALID_STYLE_ENTRY -> "Pack contains an invalid style entry."
             StylePackFailure.MISSING_CONTENT_HASH -> "Current-schema packs must include a content hash."
@@ -556,6 +565,9 @@ class IncomingDocumentImportRouter @Inject constructor(
             EffectShareEngine.EffectPackFailure.INVALID_SCHEMA -> "Effect pack schemaVersion must be a positive integer."
             EffectShareEngine.EffectPackFailure.WRONG_KIND -> "This file declares a different declarative pack type."
             EffectShareEngine.EffectPackFailure.INCOMPATIBLE_VERSION -> "Effect pack requires a newer version of ClearCut."
+            EffectShareEngine.EffectPackFailure.MISSING_MANIFEST_FIELDS -> "Current-schema effect packs must declare compatibility and provenance metadata."
+            EffectShareEngine.EffectPackFailure.UNKNOWN_REQUIRED_CAPABILITY -> "Effect pack requires a capability this ClearCut build does not support."
+            EffectShareEngine.EffectPackFailure.INCOMPATIBLE_APP_VERSION -> "Effect pack requires a newer version of ClearCut."
             EffectShareEngine.EffectPackFailure.UNSAFE_CONTENT -> "Effect pack contains executable or plugin content, which ClearCut rejects."
             EffectShareEngine.EffectPackFailure.MISSING_CONTENT_HASH -> "Current-schema effect packs must include a content hash."
             EffectShareEngine.EffectPackFailure.HASH_MISMATCH -> "Effect pack content failed its integrity check."

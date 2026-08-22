@@ -34,6 +34,40 @@ class DeclarativePackContractTest {
     }
 
     @Test
+    fun currentSchemaRequiresCompatibilityManifest() {
+        val root = currentRoot()
+        root.remove("minAppVersion")
+
+        val rejected = DeclarativePackContract.inspect(root, DeclarativePackKind.STYLE)
+
+        assertEquals(DeclarativePackIssue.MISSING_MANIFEST_FIELDS, rejected.issue)
+        assertEquals("PACK_MISSING_MANIFEST_FIELDS", rejected.reasonCode)
+    }
+
+    @Test
+    fun unknownCapabilitiesAndNewerAppVersionsAreRejected() {
+        val unknown = currentRoot().put(
+            "requiredCapabilities",
+            org.json.JSONArray().put("future-feature-v9"),
+        )
+        unknown.put("contentHash", DeclarativePackContract.contentHash(unknown))
+        assertEquals(
+            DeclarativePackIssue.UNKNOWN_REQUIRED_CAPABILITY,
+            DeclarativePackContract.inspect(unknown, DeclarativePackKind.STYLE).issue,
+        )
+
+        val newer = currentRoot().put("minAppVersion", "999.0.0")
+        newer.put("contentHash", DeclarativePackContract.contentHash(newer))
+        val incompatible = DeclarativePackContract.inspect(
+            newer,
+            DeclarativePackKind.STYLE,
+            supportedAppVersion = "3.79.0",
+        )
+        assertEquals(DeclarativePackIssue.INCOMPATIBLE_APP_VERSION, incompatible.issue)
+        assertEquals("PACK_INCOMPATIBLE_APP_VERSION", incompatible.reasonCode)
+    }
+
+    @Test
     fun canonicalHashIgnoresObjectKeyOrderButNotPayload() {
         val first = currentRoot()
         val second = JSONObject().apply {
@@ -42,6 +76,8 @@ class DeclarativePackContractTest {
             put("packType", "style")
             put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
             put("id", "pack")
+            put("minAppVersion", "3.79.0")
+            put("requiredCapabilities", org.json.JSONArray().put(DeclarativePackContract.STYLE_PACK_CAPABILITY))
         }
 
         assertEquals(DeclarativePackContract.contentHash(first), DeclarativePackContract.contentHash(second))
@@ -99,6 +135,8 @@ class DeclarativePackContractTest {
         put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
         put("packType", "style")
         put("provenance", JSONObject().put("source", "test"))
+        put("minAppVersion", "3.79.0")
+        put("requiredCapabilities", org.json.JSONArray().put(DeclarativePackContract.STYLE_PACK_CAPABILITY))
         put("id", "pack")
         put("styles", org.json.JSONArray().put(JSONObject().put("id", "style-a")))
         put("contentHash", DeclarativePackContract.contentHash(this))

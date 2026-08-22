@@ -114,4 +114,21 @@ class PluginRegistryTest {
             PluginRegistry.shareMimeTypeFor(PluginRegistry.Kind.LUT_CUBE)
         )
     }
+
+    @Test
+    fun safeShareKindsDeclareStableDeclarativeCapabilities() {
+        assertEquals(
+            DeclarativePackContract.EFFECT_PACK_CAPABILITY,
+            PluginRegistry.requiredDeclarativeCapability(PluginRegistry.Kind.EFFECT_PACK),
+        )
+        assertEquals(
+            DeclarativePackContract.STYLE_PACK_CAPABILITY,
+            PluginRegistry.requiredDeclarativeCapability(PluginRegistry.Kind.STYLE_PACK),
+        )
+        assertEquals(
+            DeclarativePackContract.LUT_PACK_CAPABILITY,
+            PluginRegistry.requiredDeclarativeCapability(PluginRegistry.Kind.LUT_CUBE),
+        )
+        assertNull(PluginRegistry.requiredDeclarativeCapability(PluginRegistry.Kind.TEMPLATE))
+    }
 }
