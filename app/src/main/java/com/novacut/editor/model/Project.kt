@@ -100,7 +100,9 @@ fun quantizeClipAudioSyncOffsetMs(value: Long, timebase: TimelineTimebase): Long
     if (clamped == 0L) return 0L
     val sign = if (clamped < 0L) -1L else 1L
     val snappedMagnitude = timebase.snapMs(kotlin.math.abs(clamped))
-    return clampClipAudioSyncOffsetMs(sign * snappedMagnitude)
+    val maximumFrame = timebase.frameIndexAtOrBefore(MAX_CLIP_AUDIO_SYNC_OFFSET_MS)
+    val maximumGridAlignedMagnitude = timebase.timeMsAt(maximumFrame)
+    return sign * snappedMagnitude.coerceAtMost(maximumGridAlignedMagnitude)
 }
 
 @Immutable

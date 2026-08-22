@@ -97,6 +97,28 @@ class ClipTimingTest {
         assertEquals(-33L, quantizeClipAudioSyncOffsetMs(-17L, TimelineTimebase(30)))
     }
 
+    @Test
+    fun `fractional frame-rate sync limits remain frame aligned at both bounds`() {
+        val timebase = TimelineTimebase.NTSC_23_976
+        val maximumGridAlignedOffset = timebase.timeMsAt(
+            timebase.frameIndexAtOrBefore(MAX_CLIP_AUDIO_SYNC_OFFSET_MS)
+        )
+
+        assertTrue(maximumGridAlignedOffset < MAX_CLIP_AUDIO_SYNC_OFFSET_MS)
+        assertEquals(
+            maximumGridAlignedOffset,
+            quantizeClipAudioSyncOffsetMs(MAX_CLIP_AUDIO_SYNC_OFFSET_MS, timebase),
+        )
+        assertEquals(
+            -maximumGridAlignedOffset,
+            quantizeClipAudioSyncOffsetMs(MIN_CLIP_AUDIO_SYNC_OFFSET_MS, timebase),
+        )
+        assertEquals(
+            maximumGridAlignedOffset,
+            timebase.snapMs(maximumGridAlignedOffset),
+        )
+    }
+
     private fun assertWithin(expected: Long, actual: Long, toleranceMs: Long) {
         assertTrue(
             "expected $actual to be within ${toleranceMs}ms of $expected",

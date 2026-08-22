@@ -7,6 +7,7 @@ Current version: **v3.79.0** (`versionCode` 297).
 - Added a translation contribution path with a locale guide, recursive UI literal budget, translated-resource locale-config parity test, and reproducible validation command.
 - Dependency freshness now declares a 30-day evidence horizon, fails stale snapshot or upstream facts, and prints an offline report that separates stale evidence from intentionally held candidates with executable probe provenance.
 - Extracted the timeline toolbar from `Timeline.kt` behind a callback-driven owner and pure zoom policy, with focused tests and ownership-size ratchets for the largest editor coordinators.
+- Corrected clip sync quantization at the ±60,000 ms limit so fractional frame-rate projects remain frame-aligned instead of clamping to an off-grid millisecond value.
 - Reworked the dashboard, editor, settings, and export sheet around a flat AMOLED workspace with stronger hierarchy and a shared 12 dp radius ceiling.
 - Added a direct built-in template grid to the empty dashboard and a denser recent-project row for returning work.
 - Kept the export action visible after editable resolution, frame-rate, codec, and quality rows.
