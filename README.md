@@ -419,6 +419,7 @@ Planning files are local-only in the development checkout:
 - **4 codecs**: H.264, H.265 (HEVC), AV1, VP9 with hardware capability detection via `MediaCodecList`
 - **HDR export confidence**: HEVC, AV1, and VP9 preflight reports HDR10+, Dolby Vision Profile 10, Ultra HDR source gain maps, and device-tier hardware encode support before render; native text and API 34+ gain-mapped bitmap overlays preserve HDR while unsupported overlays disclose their SDR fallback
 - **One-tap platform presets**: YouTube 1080p, YouTube 4K, TikTok, Instagram Reels, Instagram Square, Threads
+- **Progressive delivery contract**: named platform presets require fast-start MP4 output. The verifier reports invalid, playable-only, or stream-safe status and rejects a preset export when MP4 metadata follows the media data. Custom exports make no stream-safe claim.
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously
 - Background export with progress notification, ETA display, and cancel

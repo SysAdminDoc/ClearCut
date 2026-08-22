@@ -1377,6 +1377,7 @@ class VideoEngine @Inject constructor(
                     outputFile = runOutput,
                     label = "Mixed run ${execution.index}",
                     expectedDurationMs = execution.run.durationMs,
+                    config = config,
                 )
                 outputsByName[execution.outputFileName] = runOutput
                 completedWeight += stepWeight
@@ -1418,6 +1419,7 @@ class VideoEngine @Inject constructor(
                 expectedDurationMs = tracks.maxOfOrNull { track ->
                     track.clips.maxOfOrNull { clip -> track.effectiveTimelineEndMs(clip) } ?: 0L
                 }?.coerceAtLeast(0L) ?: 0L,
+                config = config,
             )
 
             _exportState.value = ExportState.COMPLETE
@@ -1491,12 +1493,14 @@ class VideoEngine @Inject constructor(
         outputFile: File,
         label: String,
         expectedDurationMs: Long,
+        config: ExportConfig,
     ) {
         ensureNonEmptyExportOutput(outputFile, label)
         val verification = ExportOutputVerifier.verify(
             outputFile = outputFile,
             expectVideo = true,
             expectedDurationMs = expectedDurationMs,
+            requireFastStart = config.requiresStreamSafeOutput(outputFile.extension),
         )
         if (!verification.valid) {
             throw IllegalStateException(
@@ -2606,9 +2610,13 @@ class VideoEngine @Inject constructor(
                             null
                         },
                         expectedContainer = expectedContainerForExtension(outputFile.extension),
+                        requireFastStart = config.requiresStreamSafeOutput(outputFile.extension),
                     )
                     if (!verification.valid) {
-                        AppLog.e(TAG, "Post-export verification failed: ${verification.reason}")
+                        AppLog.e(
+                            TAG,
+                            "Post-export verification failed (${verification.deliveryStatus}): ${verification.reason}",
+                        )
                         failExport(ExportFailureCause.VERIFICATION_FAILED, verification.reason ?: "Export verification failed")
                         _exportState.value = ExportState.ERROR
                         _exportProgress.value = 0f

@@ -241,7 +241,9 @@ enum class PlatformPreset(
     val resolution: Resolution,
     val aspectRatio: AspectRatio,
     val frameRate: Int,
-    val codec: VideoCodec
+    val codec: VideoCodec,
+    /** Platform delivery targets require progressive MP4 metadata placement. */
+    val requiresStreamSafeMp4: Boolean = true,
 ) {
     YOUTUBE_1080(
         "YouTube 1080p", Resolution.FHD_1080P, AspectRatio.RATIO_16_9, 30, VideoCodec.H264
@@ -271,6 +273,11 @@ enum class PlatformPreset(
         "Threads", Resolution.FHD_1080P, AspectRatio.RATIO_9_16, 30, VideoCodec.H264
     )
 }
+
+/** A platform preset is stream-safe only for MP4 output, never for a custom target. */
+fun ExportConfig.requiresStreamSafeOutput(outputExtension: String): Boolean =
+    outputExtension.equals("mp4", ignoreCase = true) &&
+        platformPreset?.requiresStreamSafeMp4 == true
 
 @Immutable
 data class ChapterMarker(

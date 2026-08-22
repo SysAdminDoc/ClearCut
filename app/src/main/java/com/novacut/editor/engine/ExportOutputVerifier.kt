@@ -26,7 +26,24 @@ data class ExportVerificationResult(
     val frameRate: Float = 0f,
     val container: ExportContainer = ExportContainer.UNKNOWN,
     val fastStart: Boolean = false,
+    /** True when the artifact has readable media tracks and a positive duration. */
+    val playable: Boolean = false,
+    /** True when the container can begin progressive delivery without a remux. */
+    val streamSafe: Boolean = false,
 )
+
+enum class ExportDeliveryStatus {
+    INVALID,
+    PLAYABLE,
+    STREAM_SAFE,
+}
+
+val ExportVerificationResult.deliveryStatus: ExportDeliveryStatus
+    get() = when {
+        !playable -> ExportDeliveryStatus.INVALID
+        streamSafe -> ExportDeliveryStatus.STREAM_SAFE
+        else -> ExportDeliveryStatus.PLAYABLE
+    }
 
 class ExportVerificationException(
     val verification: ExportVerificationResult,
@@ -124,6 +141,11 @@ object ExportOutputVerifier {
             val durationMs = maxDurationUs / 1000L
             val container = detectExportContainer(outputFile)
             val fastStart = container == ExportContainer.MP4 && hasFastStartMp4Layout(outputFile)
+            val streamSafe = when (container) {
+                ExportContainer.MP4 -> fastStart
+                ExportContainer.WEBM -> true
+                ExportContainer.UNKNOWN -> false
+            }
 
             if (expectVideo && !hasVideo) {
                 return ExportVerificationResult(
@@ -194,6 +216,8 @@ object ExportOutputVerifier {
                     frameRate = frameRate,
                     container = container,
                     fastStart = fastStart,
+                    playable = true,
+                    streamSafe = streamSafe,
                 )
             }
 
@@ -212,9 +236,7 @@ object ExportOutputVerifier {
                     "Video frame rate is missing from the output"
                 expectedContainer != null && container != expectedContainer ->
                     "Container mismatch (requested $expectedContainer, actual $container)"
-                requireFastStart && container == ExportContainer.MP4 && !fastStart ->
-                    "Output is not fast-start compatible"
-                else -> null
+                else -> streamSafeContractFailure(container, fastStart, requireFastStart)
             }
             if (contractMismatch != null) {
                 return ExportVerificationResult(
@@ -231,6 +253,8 @@ object ExportOutputVerifier {
                     frameRate = frameRate,
                     container = container,
                     fastStart = fastStart,
+                    playable = true,
+                    streamSafe = streamSafe,
                 )
             }
 
@@ -254,6 +278,8 @@ object ExportOutputVerifier {
                 frameRate = frameRate,
                 container = container,
                 fastStart = fastStart,
+                playable = true,
+                streamSafe = streamSafe,
             )
         } catch (e: Exception) {
             AppLog.e(TAG, "Verification failed for ${outputFile.redacted()}", e)
@@ -279,6 +305,18 @@ object ExportOutputVerifier {
     private fun MediaFormat.getLongSafe(key: String): Long {
         return try { getLong(key) } catch (_: Exception) { 0L }
     }
+}
+
+internal fun streamSafeContractFailure(
+    container: ExportContainer,
+    fastStart: Boolean,
+    requireFastStart: Boolean,
+): String? = if (
+    requireFastStart && container == ExportContainer.MP4 && !fastStart
+) {
+    "Output is playable but not stream-safe: MP4 metadata is after media data"
+} else {
+    null
 }
 
 internal fun expectedContainerForExtension(extension: String): ExportContainer = when {

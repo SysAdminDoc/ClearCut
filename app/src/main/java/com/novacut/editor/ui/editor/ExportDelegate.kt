@@ -23,6 +23,7 @@ import com.novacut.editor.engine.ExportIncidentBuilder
 import com.novacut.editor.engine.ExportIncidentStore
 import com.novacut.editor.engine.ExportOutputVerifier
 import com.novacut.editor.engine.ExportVerificationException
+import com.novacut.editor.engine.deliveryStatus
 import com.novacut.editor.engine.expectedContainerForExtension
 import com.novacut.editor.engine.ExportService
 import com.novacut.editor.engine.ExportStoragePolicy
@@ -64,6 +65,7 @@ import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.requiresStreamSafeOutput
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
@@ -601,10 +603,11 @@ class ExportDelegate(
             expectedVideoHeight = safeDimensions.height,
             expectedFrameRate = config.frameRate.toFloat(),
             expectedContainer = expectedContainerForExtension(outputFile.extension),
+            requireFastStart = config.requiresStreamSafeOutput(outputFile.extension),
         )
         if (!verification.valid) {
             noteRuntimeExport(
-                "Stream-copy output rejected; falling back to Transformer: " +
+                "Stream-copy output rejected (${verification.deliveryStatus}); falling back to Transformer: " +
                     (verification.reason ?: "output contract mismatch")
             )
             com.novacut.editor.engine.AppLog.w(
@@ -627,12 +630,13 @@ class ExportDelegate(
             sourceState = state,
             status = ExportHistoryStatus.COMPLETE,
             startedAtMs = startedAtMs,
-            outputFile = finalizedFile,
-            config = config,
-            timelineDurationMs = totalDurationMs,
-            diagnosticSummary = "Stream-copy export completed without transcoding.",
-            healthReport = healthReport
-        )
+                outputFile = finalizedFile,
+                config = config,
+                timelineDurationMs = totalDurationMs,
+                diagnosticSummary = "Stream-copy export completed without transcoding. Delivery status: " +
+                    verification.deliveryStatus.name.lowercase() + ".",
+                healthReport = healthReport
+            )
         showToast(appContext.getString(R.string.export_stream_copy_complete_toast, finalizedFile.name))
         return true
     }
@@ -2366,6 +2370,7 @@ class ExportDelegate(
                     expectedDurationMs = itemState.tracks.flatMap { it.clips }
                         .maxOfOrNull { it.timelineStartMs + it.durationMs } ?: 0L,
                     expectedContainer = expectedContainerForExtension(persistedFile.extension),
+                    requireFastStart = item.config.requiresStreamSafeOutput(persistedFile.extension),
                 )
                 if (complete.valid) {
                     return BatchOutputPlan(outputFile = persistedFile, alreadyComplete = true)

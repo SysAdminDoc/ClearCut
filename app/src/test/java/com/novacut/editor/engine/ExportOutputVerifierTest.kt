@@ -43,6 +43,9 @@ class ExportOutputVerifierTest {
         assertEquals(0, result.width)
         assertEquals(0, result.height)
         assertEquals(0, result.trackCount)
+        assertFalse(result.playable)
+        assertFalse(result.streamSafe)
+        assertEquals(ExportDeliveryStatus.INVALID, result.deliveryStatus)
     }
 
     @Test
@@ -106,6 +109,24 @@ class ExportOutputVerifierTest {
         } finally {
             dir.deleteRecursively()
         }
+    }
+
+    @Test
+    fun streamSafeContractDistinguishesPlayableOnlyFromProgressiveMp4() {
+        assertNull(streamSafeContractFailure(ExportContainer.MP4, fastStart = true, requireFastStart = true))
+        assertTrue(
+            streamSafeContractFailure(ExportContainer.MP4, fastStart = false, requireFastStart = true)
+                ?.contains("playable but not stream-safe") == true
+        )
+        assertNull(streamSafeContractFailure(ExportContainer.MP4, fastStart = false, requireFastStart = false))
+        assertEquals(
+            ExportDeliveryStatus.PLAYABLE,
+            ExportVerificationResult(valid = true, playable = true, streamSafe = false).deliveryStatus,
+        )
+        assertEquals(
+            ExportDeliveryStatus.STREAM_SAFE,
+            ExportVerificationResult(valid = true, playable = true, streamSafe = true).deliveryStatus,
+        )
     }
 
     @Test

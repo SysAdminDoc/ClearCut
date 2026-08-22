@@ -1,6 +1,8 @@
 package com.novacut.editor.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExportConfigPresetTest {
@@ -14,6 +16,8 @@ class ExportConfigPresetTest {
         assertEquals(30, config.frameRate)
         assertEquals(VideoCodec.H264, config.codec)
         assertEquals(PlatformPreset.TIKTOK, config.platformPreset)
+        assertTrue(config.requiresStreamSafeOutput("mp4"))
+        assertFalse(config.requiresStreamSafeOutput("webm"))
     }
 
     @Test
@@ -29,5 +33,11 @@ class ExportConfigPresetTest {
             AspectRatio.RATIO_9_16,
             customConfig.outputAspectRatio(AspectRatio.RATIO_9_16),
         )
+        assertFalse(customConfig.requiresStreamSafeOutput("mp4"))
+    }
+
+    @Test
+    fun everyNamedPlatformPresetRequiresProgressiveMp4Metadata() {
+        assertTrue(PlatformPreset.entries.all { it.requiresStreamSafeMp4 })
     }
 }
