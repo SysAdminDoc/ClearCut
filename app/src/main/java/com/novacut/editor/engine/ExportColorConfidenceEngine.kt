@@ -20,9 +20,13 @@ object ExportColorConfidenceEngine {
         val supportedFormats: Set<String> = emptySet(),
         val maxWidth: Int = 0,
         val maxHeight: Int = 0,
-        val maxBitrate: Int = 0
+        val maxBitrate: Int = 0,
+        /** Null preserves the legacy pure-analysis fixture contract. Production passes a probe result. */
+        val featureSupport: EncoderCapabilityProbe.HdrFeatureSupport? = null,
     ) {
         val hasAnyHdr: Boolean get() = supportedFormats.isNotEmpty()
+        val canPreserveHdr: Boolean
+            get() = featureSupport?.canPreserveHdr ?: hasAnyHdr
     }
 
     data class SourceHdrSummary(
@@ -120,13 +124,36 @@ object ExportColorConfidenceEngine {
             warnings += disclosure
         }
 
-        if (!hdrSupport.hasAnyHdr) {
+        if (!hdrSupport.canPreserveHdr) {
             chips += Chip(
-                label = "HDR not advertised",
-                detail = "No HDR encode profile was found for ${config.codec.label}.",
+                label = if (hdrSupport.featureSupport == null) "HDR not advertised" else "HDR unavailable",
+                detail = if (hdrSupport.featureSupport == null) {
+                    "No HDR encode profile was found for ${config.codec.label}."
+                } else {
+                    "The selected encoder does not report FEATURE_HdrEditing or FEATURE_HlgEditing."
+                },
                 tone = Tone.WARNING
             )
-            warnings += "This device does not advertise HDR encode support for ${config.codec.label}; Media3 may tone-map or fall back to SDR."
+            warnings += if (hdrSupport.featureSupport == null) {
+                "This device does not advertise HDR encode support for ${config.codec.label}; Media3 may tone-map or fall back to SDR."
+            } else {
+                "This device does not report FEATURE_HdrEditing or FEATURE_HlgEditing for ${config.codec.label}; choose SDR or another codec."
+            }
+        } else if (!hdrSupport.hasAnyHdr) {
+            val featureNames = hdrSupport.featureSupport
+                ?.advertisedFeatureNames
+                ?.sorted()
+                ?.joinToString(", ")
+                .orEmpty()
+            chips += Chip(
+                label = "HDR feature gate",
+                detail = if (featureNames.isBlank()) {
+                    "${config.codec.label} reports HDR editing support."
+                } else {
+                    "${config.codec.label} reports $featureNames; no named HDR profile was returned."
+                },
+                tone = Tone.INFO,
+            )
         } else {
             val formats = hdrSupport.supportedFormats.sorted().joinToString(", ")
             chips += Chip(

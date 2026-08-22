@@ -238,6 +238,38 @@ class ExportColorConfidenceEngineTest {
     }
 
     @Test
+    fun profileNamesDoNotHideMissingHdrEditingFeature() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(
+                supportedFormats = setOf("HDR10"),
+                featureSupport = EncoderCapabilityProbe.HdrFeatureSupport(),
+            ),
+        )
+
+        assertTrue(report.hasWarnings)
+        assertTrue(report.chips.any { it.label == "HDR unavailable" })
+        assertTrue(report.warnings.any { it.contains("FEATURE_HlgEditing") })
+    }
+
+    @Test
+    fun advertisedHdrEditingFeatureCanOpenGateWithoutProfileName() {
+        val report = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            width = 1920,
+            height = 1080,
+            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(
+                featureSupport = EncoderCapabilityProbe.HdrFeatureSupport(hdrEditing = true),
+            ),
+        )
+
+        assertFalse(report.hasWarnings)
+        assertTrue(report.chips.any { it.label == "HDR feature gate" })
+    }
+
+    @Test
     fun hdrRequestWarnsWhenExportExceedsAdvertisedHdrLimits() {
         val report = ExportColorConfidenceEngine.analyze(
             config = ExportConfig(

@@ -17,6 +17,7 @@
 - Dark and high-contrast screenshot coverage now renders at a 360 x 800 dp phone viewport with accessibility checks enabled.
 - Launcher shortcuts now open the new-project flow or the most recent project in every build variant, including streaming.
 - Dependency freshness now tracks Activity and records an explicit adopt, hold, or retained-beta decision for every catalog pin. Accepted upgrades carry a passing QA, lint, assemble, and strict verification probe.
+- HDR export now requires the selected encoder to report `FEATURE_HdrEditing` or `FEATURE_HlgEditing`; unsupported devices are stopped before render and the feature result is included in diagnostics.
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 
@@ -395,6 +396,7 @@ Planning files are local-only in the development checkout:
 | **Tap-to-Segment** | Planned -- SAM 2.1 Hiera Tiny target with MobileSAM fallback | Planned |
 | **Scene Detection** | Content-aware frame difference analysis with auto-split | Yes |
 | **Auto Color** | Histogram-based brightness/contrast/saturation/temperature | Yes |
+| **HDR Encoder Feature Gate** | MediaCodecInfo.CodecCapabilities FEATURE_HdrEditing / FEATURE_HlgEditing | Yes |
 | **Motion Tracking** | Template matching with position keyframe generation | Yes |
 | **Audio Denoise** | DeepFilterNet 3 with spectral-gate fallback | Yes |
 <!-- capability-registry:ai-tools:end -->
@@ -419,7 +421,7 @@ Planning files are local-only in the development checkout:
 - **Platform handoff**: open completed exports in platform apps with suggested post text and manual AI-disclosure reminders
 - 480p to 4K Ultra HD
 - **4 codecs**: H.264, H.265 (HEVC), AV1, VP9 with hardware capability detection via `MediaCodecList`
-- **HDR export confidence**: HEVC, AV1, and VP9 preflight reports HDR10+, Dolby Vision Profile 10, Ultra HDR source gain maps, and device-tier hardware encode support before render; native text and API 34+ gain-mapped bitmap overlays preserve HDR while unsupported overlays disclose their SDR fallback
+- **HDR export confidence**: HEVC, AV1, and VP9 preflight reports HDR10+, Dolby Vision Profile 10, Ultra HDR source gain maps, and the selected encoder's `FEATURE_HdrEditing` / `FEATURE_HlgEditing` result before render; native text and API 34+ gain-mapped bitmap overlays preserve HDR while unsupported overlays disclose their SDR fallback
 - **One-tap platform presets**: YouTube 1080p, YouTube 4K, TikTok, Instagram Reels, Instagram Square, Threads
 - **Progressive delivery contract**: named platform presets require fast-start MP4 output. The verifier reports invalid, playable-only, or stream-safe status and rejects a preset export when MP4 metadata follows the media data. Custom exports make no stream-safe claim.
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown

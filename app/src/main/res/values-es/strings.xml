@@ -73,6 +73,7 @@
     <string name="export_hdr_preserve">Preservar metadatos HDR</string>
     <string name="export_hdr_preserve_description">Mantenga los metadatos de color HDR cuando tanto la fuente como el codificador seleccionado los admitan.</string>
     <string name="export_hdr_preserve_disabled">Requiere HEVC, AV1 o VP9. Las exportaciones H.264 son DEG.</string>
+    <string name="export_hdr_preserve_feature_disabled">El codificador seleccionado no anuncia FEATURE_HdrEditing ni FEATURE_HlgEditing.</string>
     <string name="export_hdr_preserve_overlays_disabled">No disponible con texto delineado, imágenes animadas o superposiciones de mapa de bits sin un mapa de ganancia Ultra HDR. La exportación usará la ruta SDR para evitar errores de color HDR.</string>
     <string name="export_hdr_preserve_sampler_budget">Demasiados muestreadores de superposición HDR simultáneos. Quite algunas superposiciones o desactive HDR antes de exportar.</string>
     <string name="export_constant_frame_rate">Velocidad de fotogramas constante</string>

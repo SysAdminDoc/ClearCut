@@ -34,6 +34,7 @@ import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportResumePolicy
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
+import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.GifStreamEncoder
 import com.novacut.editor.engine.HdrOverlayAssetInspector
 import com.novacut.editor.engine.MAX_REVERSE_CLIP_DURATION_MS
@@ -934,6 +935,22 @@ class ExportDelegate(
         runtimeExportNote = null
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
+        val hdrProfileSupport = withContext(Dispatchers.IO) {
+            EncoderCapabilityProbe.queryHdrProfiles(currentState.exportConfig.codec)
+        }
+        val hdrFeatureBlockers = if (
+            currentState.exportConfig.hdr10PlusMetadata &&
+            !currentState.exportConfig.exportAudioOnly &&
+            !currentState.exportConfig.exportStemsOnly &&
+            !currentState.exportConfig.exportAsGif &&
+            !currentState.exportConfig.captureFrameOnly &&
+            !currentState.exportConfig.exportAsContactSheet &&
+            !hdrProfileSupport.canPreserveHdr
+        ) {
+            listOf(hdrProfileSupport.featureFailureReason())
+        } else {
+            emptyList()
+        }
         val hdrOverlaySummary = withContext(Dispatchers.IO) {
             HdrOverlayAssetInspector.inspect(
                 context = appContext,
@@ -962,6 +979,7 @@ class ExportDelegate(
             audioConformance = audioConformance,
             dependencies = projectDependencyManifest(currentState),
             additionalWarnings = renderWarnings,
+            additionalBlockers = hdrFeatureBlockers,
             intentFallbacks = reverseIntentFallbacks(currentState),
         )
         stateFlow.update { state ->

@@ -227,6 +227,20 @@ class ExportMediaPreflightTest {
     }
 
     @Test
+    fun additionalBlockersRefuseExportAndKeepCapabilityExplanation() {
+        val blocker = "HDR export is unavailable for HEVC: the selected encoder does not report FEATURE_HdrEditing or FEATURE_HlgEditing. Choose SDR or another codec."
+        val result = ExportMediaPreflight.evaluate(
+            healthReport = report(),
+            relinkReports = emptyMap(),
+            additionalBlockers = listOf(blocker),
+        )
+
+        assertFalse(result.canExport)
+        assertEquals(listOf(blocker), result.blockers)
+        assertTrue(result.message.contains("FEATURE_HdrEditing"))
+    }
+
+    @Test
     fun diagnosticTimestampAndColorRisksRequireConsent() {
         val result = ExportMediaPreflight.evaluate(
             healthReport = report(

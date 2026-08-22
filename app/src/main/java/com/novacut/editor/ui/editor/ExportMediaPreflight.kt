@@ -46,6 +46,8 @@ object ExportMediaPreflight {
         dependencies: ProjectDependencyManifest = ProjectDependencyManifest(emptyList()),
         /** Warnings about deliberate render-policy fallbacks, such as HDR overlay safety. */
         additionalWarnings: List<String> = emptyList(),
+        /** Capability or policy blockers discovered by the export pipeline. */
+        additionalBlockers: List<String> = emptyList(),
         // Render intents the export pipeline already knows it cannot honour —
         // currently reversed clips whose backend is unavailable or that exceed
         // the reverse pre-render limit. They would export forward, which is a
@@ -104,6 +106,7 @@ object ExportMediaPreflight {
 
         intentFallbacks.forEach { fallback -> warnings += fallback.message }
         additionalWarnings.forEach { warning -> warnings += warning }
+        additionalBlockers.forEach { blocker -> blockers += blocker }
 
         val distinctBlockers = blockers.distinct()
         val distinctWarnings = warnings.distinct()
@@ -115,7 +118,7 @@ object ExportMediaPreflight {
                 canExport = false,
                 blockingCount = blockingCount,
                 warningCount = warningCount,
-                message = blockedMessage(blockingCount, dependencyBlockers),
+                message = blockedMessage(blockingCount, dependencyBlockers, distinctBlockers),
                 audioConformance = audioConformance,
                 dependencies = dependencies,
                 blockers = distinctBlockers,
@@ -171,6 +174,7 @@ object ExportMediaPreflight {
     private fun blockedMessage(
         blockers: Int,
         dependencyBlockers: List<ProjectDependency>,
+        blockerMessages: List<String>,
     ): String {
         if (dependencyBlockers.isNotEmpty()) {
             val names = dependencyBlockers.take(3).joinToString { dependency ->
@@ -181,10 +185,19 @@ object ExportMediaPreflight {
             return "Export blocked by $blockers issue${if (blockers == 1) "" else "s"}. " +
                 "Required dependencies: $names$suffix. Restore or replace them before export."
         }
+        val detail = blockerMessages.take(2).joinToString(" ")
         return if (blockers == 1) {
-            "Export blocked by 1 media issue. Open Media Manager to relink or repair it."
+            if (detail.isBlank()) {
+                "Export blocked by 1 media issue. Open Media Manager to relink or repair it."
+            } else {
+                "Export blocked by 1 media issue. $detail"
+            }
         } else {
-            "Export blocked by $blockers media issues. Open Media Manager to relink or repair them."
+            if (detail.isBlank()) {
+                "Export blocked by $blockers media issues. Open Media Manager to relink or repair them."
+            } else {
+                "Export blocked by $blockers media issues. $detail"
+            }
         }
     }
 }

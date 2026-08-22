@@ -100,6 +100,14 @@ internal object CapabilityRegistryGenerated {
             reachability = "reachable",
         ),
         CapabilityRecord(
+            id = "hdr_encode_feature_gate",
+            name = "HDR Encoder Feature Gate",
+            engine = "MediaCodecInfo.CodecCapabilities FEATURE_HdrEditing / FEATURE_HlgEditing",
+            onDevice = "Yes",
+            status = "available",
+            reachability = "reachable",
+        ),
+        CapabilityRecord(
             id = "motion_tracking",
             name = "Motion Tracking",
             engine = "Template matching with position keyframe generation",

@@ -30,6 +30,8 @@ object EncoderCapabilityProbe {
 
     private const val TAG = "EncoderCapabilityProbe"
     private const val MIME_DOLBY_VISION = "video/dolby-vision"
+    private const val FEATURE_HDR_EDITING = "FEATURE_HdrEditing"
+    private const val FEATURE_HLG_EDITING = "FEATURE_HlgEditing"
 
     /**
      * APV (Advanced Professional Video) codec MIME type. Android 16 native;
@@ -51,18 +53,43 @@ object EncoderCapabilityProbe {
         PREMIUM("Premium")
     }
 
+    /**
+     * HDR editing features explicitly advertised by an encoder. Profile
+     * levels describe formats, but these feature flags are the platform's
+     * contract that the encoder accepts HDR editing input.
+     */
+    data class HdrFeatureSupport(
+        val hdrEditing: Boolean = false,
+        val hlgEditing: Boolean = false,
+    ) {
+        val canPreserveHdr: Boolean get() = hdrEditing || hlgEditing
+
+        val advertisedFeatureNames: Set<String>
+            get() = buildSet {
+                if (hdrEditing) add(FEATURE_HDR_EDITING)
+                if (hlgEditing) add(FEATURE_HLG_EDITING)
+            }
+    }
+
     data class HdrProfileSupport(
         val codec: VideoCodec,
         val supportedFormats: Set<HdrExportFormat>,
         val maxWidth: Int = 0,
         val maxHeight: Int = 0,
         val maxBitrate: Int = 0,
-        val encoderNames: Set<String> = emptySet()
+        val encoderNames: Set<String> = emptySet(),
+        val featureSupport: HdrFeatureSupport = HdrFeatureSupport(),
     ) {
         val hasAnyHdr: Boolean get() = supportedFormats.isNotEmpty()
+        val canPreserveHdr: Boolean get() = featureSupport.canPreserveHdr
         val hasHdr10Plus: Boolean get() = HdrExportFormat.HDR10_PLUS in supportedFormats
         val hasDolbyVisionProfile10: Boolean
             get() = HdrExportFormat.DOLBY_VISION_PROFILE_10 in supportedFormats
+
+        fun featureFailureReason(): String {
+            return "HDR export is unavailable for ${codec.label}: the selected encoder does not report " +
+                "$FEATURE_HDR_EDITING or $FEATURE_HLG_EDITING. Choose SDR or another codec."
+        }
     }
 
     data class DeviceEncodingTierHint(
@@ -180,6 +207,7 @@ object EncoderCapabilityProbe {
         var maxWidth = 0
         var maxHeight = 0
         var maxBitrate = 0
+        var featureSupport = HdrFeatureSupport()
 
         for ((info, mimeType) in matchingEncoderEntries(mimeTypes)) {
             val caps = try {
@@ -191,18 +219,21 @@ object EncoderCapabilityProbe {
                 continue
             }
 
+            val entryFeatureSupport = readHdrFeatureSupport(caps)
+            featureSupport = featureSupport.merge(entryFeatureSupport)
             val discovered = caps.profileLevels
                 ?.mapNotNull { classifyHdrProfile(mimeType, it) }
                 ?.toSet()
                 .orEmpty()
-            if (discovered.isEmpty()) continue
 
-            formats += discovered
-            encoders += info.name
-            caps.videoCapabilities?.let { videoCaps ->
-                maxWidth = maxOf(maxWidth, videoCaps.supportedWidths.upper)
-                maxHeight = maxOf(maxHeight, videoCaps.supportedHeights.upper)
-                maxBitrate = maxOf(maxBitrate, videoCaps.bitrateRange.upper)
+            if (discovered.isNotEmpty() || entryFeatureSupport.canPreserveHdr) {
+                formats += discovered
+                encoders += info.name
+                caps.videoCapabilities?.let { videoCaps ->
+                    maxWidth = maxOf(maxWidth, videoCaps.supportedWidths.upper)
+                    maxHeight = maxOf(maxHeight, videoCaps.supportedHeights.upper)
+                    maxBitrate = maxOf(maxBitrate, videoCaps.bitrateRange.upper)
+                }
             }
         }
 
@@ -212,8 +243,24 @@ object EncoderCapabilityProbe {
             maxWidth = maxWidth,
             maxHeight = maxHeight,
             maxBitrate = maxBitrate,
-            encoderNames = encoders
+            encoderNames = encoders,
+            featureSupport = featureSupport,
         )
+    }
+
+    /** A PII-free line for the local diagnostic bundle. */
+    internal fun diagnosticHdrFeatureLine(info: MediaCodecInfo, mimeType: String): String {
+        val support = try {
+            info.getCapabilitiesForType(mimeType)?.let(::readHdrFeatureSupport)
+        } catch (t: Throwable) {
+            AppLog.w(TAG, "HDR feature lookup failed for ${info.name} / $mimeType", t)
+            null
+        }
+        return buildString {
+            append("encoder_features\t${info.name}\t$mimeType")
+            append("\t$FEATURE_HDR_EDITING=${support?.hdrEditing ?: false}")
+            append("\t$FEATURE_HLG_EDITING=${support?.hlgEditing ?: false}")
+        }
     }
 
     /**
@@ -342,6 +389,39 @@ object EncoderCapabilityProbe {
 
     private fun hasHardwareEncoder(mimeType: String): Boolean {
         return matchingEncoderEntries(setOf(mimeType)).any { (info, _) -> info.isHardwareAcceleratedCompat() }
+    }
+
+    private fun readHdrFeatureSupport(caps: MediaCodecInfo.CodecCapabilities): HdrFeatureSupport {
+        val hdrEditing = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            isFeatureSupportedSafely(caps, MediaCodecInfo.CodecCapabilities.FEATURE_HdrEditing)
+        } else {
+            false
+        }
+        val hlgEditing = if (Build.VERSION.SDK_INT >= 35) {
+            isFeatureSupportedSafely(caps, MediaCodecInfo.CodecCapabilities.FEATURE_HlgEditing)
+        } else {
+            false
+        }
+        return HdrFeatureSupport(hdrEditing = hdrEditing, hlgEditing = hlgEditing)
+    }
+
+    private fun isFeatureSupportedSafely(
+        caps: MediaCodecInfo.CodecCapabilities,
+        feature: String,
+    ): Boolean {
+        return try {
+            caps.isFeatureSupported(feature)
+        } catch (t: Throwable) {
+            AppLog.w(TAG, "Codec feature lookup failed for $feature", t)
+            false
+        }
+    }
+
+    private fun HdrFeatureSupport.merge(other: HdrFeatureSupport): HdrFeatureSupport {
+        return HdrFeatureSupport(
+            hdrEditing = hdrEditing || other.hdrEditing,
+            hlgEditing = hlgEditing || other.hlgEditing,
+        )
     }
 
     private fun MediaCodecInfo.isHardwareAcceleratedCompat(): Boolean {

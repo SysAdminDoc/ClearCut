@@ -308,7 +308,10 @@ fun ExportSheet(
         AiUsageLedger.summaryLine(aiUsageEntries)
     }
     var showClearAiLedgerConfirm by remember { mutableStateOf(false) }
-    val codecCanCarryHdr = config.codec != VideoCodec.H264
+    val hdrProfileSupport = remember(effectiveConfig.codec) {
+        EncoderCapabilityProbe.queryHdrProfiles(effectiveConfig.codec)
+    }
+    val codecCanCarryHdr = effectiveConfig.codec != VideoCodec.H264 && hdrProfileSupport.canPreserveHdr
     val fallbackHdrOverlaySummary = remember(
         hasTextOverlays,
         hasImageOverlays,
@@ -358,9 +361,6 @@ fun ExportSheet(
             overlays = hdrOverlaySummary,
         )
     }
-    val hdrProfileSupport = remember(effectiveConfig.codec) {
-        EncoderCapabilityProbe.queryHdrProfiles(effectiveConfig.codec)
-    }
     val deviceTierHint = remember {
         EncoderCapabilityProbe.deviceTierHint()
     }
@@ -369,7 +369,8 @@ fun ExportSheet(
             supportedFormats = hdrProfileSupport.supportedFormats.map { it.displayName }.toSet(),
             maxWidth = hdrProfileSupport.maxWidth,
             maxHeight = hdrProfileSupport.maxHeight,
-            maxBitrate = hdrProfileSupport.maxBitrate
+            maxBitrate = hdrProfileSupport.maxBitrate,
+            featureSupport = hdrProfileSupport.featureSupport,
         )
     }
     val colorConfidenceReport = remember(
@@ -1390,7 +1391,8 @@ fun ExportSheet(
                     title = stringResource(R.string.export_hdr_preserve),
                     description = stringResource(
                         when {
-                            !codecCanCarryHdr -> R.string.export_hdr_preserve_disabled
+                            effectiveConfig.codec == VideoCodec.H264 -> R.string.export_hdr_preserve_disabled
+                            !hdrProfileSupport.canPreserveHdr -> R.string.export_hdr_preserve_feature_disabled
                             hdrOverlayDecision.samplerBudgetExceeded -> R.string.export_hdr_preserve_sampler_budget
                             hdrOverlayDecision.requiresSdrFallback -> R.string.export_hdr_preserve_overlays_disabled
                             else -> R.string.export_hdr_preserve_description

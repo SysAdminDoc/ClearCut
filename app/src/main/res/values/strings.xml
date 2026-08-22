@@ -76,6 +76,7 @@
     <string name="export_hdr_preserve">Preserve HDR Metadata</string>
     <string name="export_hdr_preserve_description">Keep HDR color metadata when the source and selected encoder both support it.</string>
     <string name="export_hdr_preserve_disabled">Requires HEVC, AV1, or VP9. H.264 exports are SDR.</string>
+    <string name="export_hdr_preserve_feature_disabled">The selected encoder does not report FEATURE_HdrEditing or FEATURE_HlgEditing.</string>
     <string name="export_hdr_preserve_overlays_disabled">Unavailable with stroked text, animated images, or bitmap overlays without an Ultra HDR gain map. Export will use the SDR overlay path to prevent HDR color errors.</string>
     <string name="export_hdr_preserve_sampler_budget">Too many simultaneous HDR overlay samplers. Remove some overlays or turn off HDR before exporting.</string>
     <string name="export_constant_frame_rate">Constant frame rate</string>

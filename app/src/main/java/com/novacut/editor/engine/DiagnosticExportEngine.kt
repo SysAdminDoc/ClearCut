@@ -316,11 +316,17 @@ class DiagnosticExportEngine @Inject constructor(
     private fun buildMediaCodecSummary(): String = buildString {
         appendLine("# MediaCodecList.REGULAR_CODECS summary")
         appendLine("# Each row: kind, name, mime_types")
+        appendLine("# Encoder feature rows: encoder_features, name, mime, FEATURE_HdrEditing, FEATURE_HlgEditing")
         try {
             val codecs = MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos
             for (codec in codecs) {
                 val kind = if (codec.isEncoder) "encoder" else "decoder"
                 appendLine("$kind\t${codec.name}\t${codec.supportedTypes.joinToString(",")}")
+                if (codec.isEncoder) {
+                    codec.supportedTypes.forEach { mimeType ->
+                        appendLine(EncoderCapabilityProbe.diagnosticHdrFeatureLine(codec, mimeType))
+                    }
+                }
             }
         } catch (e: Throwable) {
             appendLine(
