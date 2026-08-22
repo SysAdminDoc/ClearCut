@@ -28,6 +28,7 @@ CATALOG = ROOT / "gradle" / "libs.versions.toml"
 SNAPSHOT = ROOT / "scripts" / "dependency_freshness_snapshot.json"
 USER_AGENT = "ClearCut-dependency-freshness/1"
 STABLE_VERSION = re.compile(r"^\d+(?:\.\d+)*$")
+REVIEW_HORIZON_DAYS = 30
 
 
 SOURCE_SPECS: dict[str, dict[str, str]] = {
@@ -368,6 +369,9 @@ def refresh(reviewed_on: str) -> dict[str, Any]:
             "probeTasks": [":app:testQaUnitTest", ":app:lintQa", ":app:assembleQa"],
             "dependencyVerification": "strict",
             "offlineGate": "DependencyFreshnessTest and LintDetectorRatchetTest",
+            "reviewHorizonDays": REVIEW_HORIZON_DAYS,
+            "staleEvidenceAction": "fail",
+            "offlineReportCommand": "python scripts/check_dependency_freshness.py",
         },
         "facts": {
             key: {**value, "reviewedOn": reviewed_on}

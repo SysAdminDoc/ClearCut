@@ -11,7 +11,10 @@
       ":app:assembleQa"
     ],
     "dependencyVerification": "strict",
-    "offlineGate": "DependencyFreshnessTest and LintDetectorRatchetTest"
+    "offlineGate": "DependencyFreshnessTest and LintDetectorRatchetTest",
+    "reviewHorizonDays": 30,
+    "staleEvidenceAction": "fail",
+    "offlineReportCommand": "python scripts/check_dependency_freshness.py"
   },
   "facts": {
     "agp_9_2_0": {

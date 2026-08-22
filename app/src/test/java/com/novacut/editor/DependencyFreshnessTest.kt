@@ -5,6 +5,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 
 /**
  * Offline dependency truth gate.
@@ -63,6 +66,22 @@ class DependencyFreshnessTest {
             "strict",
             snapshot.getJSONObject("policy").getString("dependencyVerification"),
         )
+        val policy = snapshot.getJSONObject("policy")
+        val reviewHorizonDays = policy.getInt("reviewHorizonDays")
+        assertTrue("Review horizon must be a positive bounded window.", reviewHorizonDays in 1..90)
+        assertTrue(
+            "Offline freshness report command must remain executable.",
+            policy.getString("offlineReportCommand").contains("scripts/check_dependency_freshness.py"),
+        )
+        val asOf = LocalDate.now(ZoneOffset.UTC)
+        val snapshotReviewedOn = LocalDate.parse(snapshot.getString("reviewedOn"))
+        val snapshotAgeDays = ChronoUnit.DAYS.between(snapshotReviewedOn, asOf)
+        assertTrue("Snapshot review date cannot be in the future.", snapshotAgeDays >= 0)
+        assertTrue(
+            "Dependency freshness evidence is stale: reviewed $snapshotReviewedOn, as of $asOf, " +
+                "horizon ${reviewHorizonDays}d. Run the offline report and refresh command.",
+            snapshotAgeDays <= reviewHorizonDays,
+        )
 
         val catalog = parseCatalogVersions(root)
         val dependencies = snapshot.getJSONObject("dependencies")
@@ -74,6 +93,13 @@ class DependencyFreshnessTest {
             assertHttpUrl(entry.getString("source"), "$key release source")
             assertHttpUrl(entry.getString("metadataSource"), "$key metadata source")
             assertIsoDate(entry.getString("reviewedOn"), "$key review date")
+            val entryReviewedOn = LocalDate.parse(entry.getString("reviewedOn"))
+            val entryAgeDays = ChronoUnit.DAYS.between(entryReviewedOn, asOf)
+            assertTrue(
+                "$key evidence is stale: reviewed $entryReviewedOn, as of $asOf, " +
+                    "horizon ${reviewHorizonDays}d.",
+                entryAgeDays in 0..reviewHorizonDays,
+            )
 
             val probe = entry.getJSONObject("compatibilityProbe")
             assertTrue(
@@ -106,6 +132,13 @@ class DependencyFreshnessTest {
                 assertTrue(
                     "$key unblock condition must be executable, not a vague reminder.",
                     entry.getString("unblockCondition").contains("scripts/probe_dependency_upgrade.py"),
+                )
+            }
+            if (entry.getString("state") == "held") {
+                assertEquals("Held candidates must declare a hold decision.", "hold", decision.getString("action"))
+                assertTrue(
+                    "Held candidate must differ from the pinned version until its probe passes.",
+                    decision.getString("candidateVersion") != pinned,
                 )
             }
         }

@@ -659,6 +659,11 @@ and `assembleQa` with Gradle dependency verification set to `strict`. Held
 entries name the source-backed reason and the command that can unblock them;
 the Benchmark beta is recorded separately from its stable alternative.
 
+The committed snapshot has a 30-day review horizon. Check it without network
+access with `python scripts\check_dependency_freshness.py`; the report labels
+stale evidence separately from intentionally held or pre-release candidates and
+returns a failing exit code when the horizon is exceeded.
+
 ### Release Signing
 Configure via `keystore.properties`:
 ```properties
