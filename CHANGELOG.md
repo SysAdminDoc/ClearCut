@@ -13,6 +13,7 @@ Current version: **v3.79.0** (`versionCode` 297).
 - Declared the OTIO 0.15 export and 0.15 through 0.16 adapter contract, rejected future OTIO schemas with an actionable warning, and added fixture coverage for lossy OTIO, FCPXML, and EDL imports through the official adapter gate.
 - Named platform presets now require fast-start MP4 output. Export verification reports invalid, playable-only, or stream-safe status and rejects non-progressive preset artifacts across stream-copy, batch resume, mixed, and Transformer paths.
 - New Project and Open Recent launcher shortcuts now route to their intended project flows, and static shortcut targets resolve the active application ID in the streaming build.
+- Dependency freshness now covers Activity, adopts the independently gated KSP, Compose BOM, Activity, and OkHttp updates, and records explicit hold or retained-beta decisions for the remaining candidates.
 
 ## v3.78.1
 

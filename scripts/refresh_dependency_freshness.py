@@ -76,6 +76,11 @@ SOURCE_SPECS: dict[str, dict[str, str]] = {
         "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/maven-metadata.xml",
         "source": "https://developer.android.com/jetpack/androidx/releases/core",
     },
+    "activity": {
+        "coordinate": "androidx.activity:activity-compose",
+        "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/activity/activity-compose/maven-metadata.xml",
+        "source": "https://developer.android.com/jetpack/androidx/releases/activity",
+    },
     "coroutines": {
         "coordinate": "org.jetbrains.kotlinx:kotlinx-coroutines-android",
         "metadataSource": "https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-coroutines-android/maven-metadata.xml",
@@ -219,7 +224,7 @@ def default_hold(key: str, pinned: str, latest: str) -> tuple[str, str]:
     if key == "agp":
         reason = (
             f"The catalog remains on AGP {pinned}; authoritative metadata reports {latest}, "
-            "and the wrapper/toolchain lane has not passed the candidate probe."
+            "but the current wrapper/toolchain lane is not ready for the candidate's Gradle requirement."
         )
         unblock = (
             f"Update the wrapper and toolchain for {latest}, then run `{command}`; keep the "
@@ -237,6 +242,24 @@ def default_hold(key: str, pinned: str, latest: str) -> tuple[str, str]:
             "a version-only catalog edit would not be a valid migration."
         )
         unblock = f"Complete the Room 3 coordinate/API migration, then run `{command}` before updating the catalog."
+    elif key == "onnxruntime":
+        reason = (
+            f"ONNX Runtime {latest} is newer than the pinned {pinned}; the prior 1.28 evaluation increased the "
+            "native payload and still lacked on-device Whisper, upscale, and inpaint comparison fixtures."
+        )
+        unblock = (
+            f"Complete the per-ABI size and model-output review, then run `{command}` and retain the candidate "
+            "only when the APK budget and on-device fixtures stay green."
+        )
+    elif key == "protobufJavalite":
+        reason = (
+            f"The pin stays on protobuf {pinned}; authoritative metadata reports {latest}, but MediaPipe's "
+            "generated classes and the advisory floor have not been validated against that runtime."
+        )
+        unblock = (
+            f"Move MediaPipe's generated-code floor first, then run `{command}` and the protobuf/MediaPipe "
+            "fixtures before changing this pin."
+        )
     else:
         reason = (
             f"The catalog pin {pinned} is below the {latest} stable version reported by authoritative metadata; "
@@ -254,6 +277,31 @@ def state_for(key: str, pinned: str, latest: str) -> str:
     if key == "androidxBenchmark" and not STABLE_VERSION.fullmatch(pinned):
         return "pre-release"
     return "held"
+
+
+def candidate_decision(key: str, pinned: str, latest: str, state: str) -> dict[str, str]:
+    command = probe_command(key, latest)
+    if key == "androidxBenchmark" and state == "pre-release":
+        return {
+            "action": "retain-beta",
+            "candidateVersion": pinned,
+            "releaseChannel": "beta",
+            "stableAlternative": latest,
+            "probe": command,
+        }
+    if state == "current":
+        return {
+            "action": "adopt",
+            "candidateVersion": pinned,
+            "releaseChannel": "stable",
+            "probe": command,
+        }
+    return {
+        "action": "hold",
+        "candidateVersion": latest,
+        "releaseChannel": "stable",
+        "probe": command,
+    }
 
 
 def refresh(reviewed_on: str) -> dict[str, Any]:
@@ -303,6 +351,7 @@ def refresh(reviewed_on: str) -> dict[str, Any]:
             "reason": reason,
             "unblockCondition": unblock,
             "compatibilityProbe": probe,
+            "candidateDecision": candidate_decision(key, pinned, latest, state),
         }
         if "latestCoordinate" in spec:
             entry["latestCoordinate"] = spec["latestCoordinate"]
@@ -317,6 +366,7 @@ def refresh(reviewed_on: str) -> dict[str, Any]:
         "policy": {
             "catalogChangesRequireProbe": True,
             "probeTasks": [":app:testQaUnitTest", ":app:lintQa", ":app:assembleQa"],
+            "dependencyVerification": "strict",
             "offlineGate": "DependencyFreshnessTest and LintDetectorRatchetTest",
         },
         "facts": {

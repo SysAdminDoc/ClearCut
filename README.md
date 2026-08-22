@@ -16,6 +16,7 @@
 - Export puts delivery facts, presets, editable output choices, and the export action in one visible path.
 - Dark and high-contrast screenshot coverage now renders at a 360 x 800 dp phone viewport with accessibility checks enabled.
 - Launcher shortcuts now open the new-project flow or the most recent project in every build variant, including streaming.
+- Dependency freshness now tracks Activity and records an explicit adopt, hold, or retained-beta decision for every catalog pin. Accepted upgrades carry a passing QA, lint, assemble, and strict verification probe.
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 
@@ -648,8 +649,10 @@ python scripts\refresh_dependency_freshness.py
 
 Candidate upgrades must be staged in the catalog and pass
 `python scripts\probe_dependency_upgrade.py --dependency <key> --version <candidate>`
-before they are treated as current. See the local dependency maintenance notes
-for the full review-lane contract.
+before they are treated as current. The probe runs `testQaUnitTest`, `lintQa`,
+and `assembleQa` with Gradle dependency verification set to `strict`. Held
+entries name the source-backed reason and the command that can unblock them;
+the Benchmark beta is recorded separately from its stable alternative.
 
 ### Release Signing
 Configure via `keystore.properties`:
@@ -720,7 +723,7 @@ Key external dependencies currently in `build.gradle.kts`:
 | ONNX Runtime | 1.26.0 | Whisper ASR and LaMa inpainting |
 | MediaPipe | 1.0.0 | Selfie segmentation and smart reframe |
 | Lottie Compose | 6.7.1 | Animated title templates |
-| OkHttp | 5.4.0 | Model downloads and future opt-in provider calls |
+| OkHttp | 5.5.0 | Model downloads and future opt-in provider calls |
 | Media3 | 1.11.0 | Transformer, ExoPlayer, effects, and muxing |
 | Coil Compose | 3.5.0 | Image and video thumbnails |
 | Hilt / Dagger | 2.60.1 | Dependency injection |

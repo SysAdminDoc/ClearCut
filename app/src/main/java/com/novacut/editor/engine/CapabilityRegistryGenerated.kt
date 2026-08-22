@@ -148,7 +148,7 @@ internal object CapabilityRegistryGenerated {
         PublicDependencyRecord(
             id = "okhttp",
             label = "OkHttp",
-            version = "5.4.0",
+            version = "5.5.0",
             coordinate = "com.squareup.okhttp3:okhttp",
             catalogKeys = listOf("okhttp"),
             purpose = "Model downloads and future opt-in provider calls",
@@ -264,7 +264,7 @@ internal object CapabilityRegistryGenerated {
         ),
         OpenSourceLicenseNotice(
             name = "OkHttp",
-            version = "5.4.0",
+            version = "5.5.0",
             artifact = "com.squareup.okhttp3:okhttp",
             licenseName = "The Apache Software License, Version 2.0",
             licenseText = "Apache License 2.0. Redistribution must keep the license and required notices, and the software is provided without warranties under the Apache terms.",

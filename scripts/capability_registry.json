@@ -52,7 +52,7 @@
     {
       "id": "okhttp",
       "label": "OkHttp",
-      "version": "5.4.0",
+      "version": "5.5.0",
       "coordinate": "com.squareup.okhttp3:okhttp",
       "catalogKeys": ["okhttp"],
       "purpose": "Model downloads and future opt-in provider calls",

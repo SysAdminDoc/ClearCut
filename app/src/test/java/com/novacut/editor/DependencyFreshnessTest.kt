@@ -30,6 +30,7 @@ class DependencyFreshnessTest {
         "room",
         "coroutines",
         "coreKtx",
+        "activity",
         "lifecycle",
         "navigation",
         "coil",
@@ -58,6 +59,10 @@ class DependencyFreshnessTest {
             "Catalog changes must be gated by the local compatibility probe.",
             snapshot.getJSONObject("policy").getBoolean("catalogChangesRequireProbe"),
         )
+        assertEquals(
+            "strict",
+            snapshot.getJSONObject("policy").getString("dependencyVerification"),
+        )
 
         val catalog = parseCatalogVersions(root)
         val dependencies = snapshot.getJSONObject("dependencies")
@@ -75,6 +80,19 @@ class DependencyFreshnessTest {
                 "$key must name the executable compatibility probe.",
                 probe.getString("command").contains("scripts/probe_dependency_upgrade.py"),
             )
+            val decision = entry.getJSONObject("candidateDecision")
+            assertNonBlank(decision.getString("action"), "$key candidate decision")
+            assertNonBlank(decision.getString("candidateVersion"), "$key candidate version")
+            assertTrue(
+                "$key candidate decision must retain an executable probe.",
+                decision.getString("probe").contains("scripts/probe_dependency_upgrade.py"),
+            )
+            if (key == "androidxBenchmark") {
+                assertEquals("pre-release", entry.getString("state"))
+                assertEquals("retain-beta", decision.getString("action"))
+                assertEquals("beta", decision.getString("releaseChannel"))
+                assertTrue(decision.has("stableAlternative"))
+            }
             if (probe.getString("status") == "passed") {
                 assertEquals(
                     "A passing probe cannot describe a different catalog pin.",

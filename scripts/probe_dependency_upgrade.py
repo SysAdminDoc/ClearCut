@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import subprocess
 import sys
@@ -22,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "gradle" / "libs.versions.toml"
 SNAPSHOT = ROOT / "scripts" / "dependency_freshness_snapshot.json"
 TASKS = [":app:testQaUnitTest", ":app:lintQa", ":app:assembleQa"]
+DEFAULT_GRADLE_JVMARGS = os.environ.get("CLEARCUT_GRADLE_JVMARGS", "-Xmx2048m")
 
 
 def parse_catalog() -> dict[str, str]:
@@ -129,7 +131,9 @@ def main() -> int:
         *TASKS,
         "--no-daemon",
         "--max-workers=1",
-        "-Dorg.gradle.jvmargs=-Xmx1024m",
+        "--dependency-verification",
+        "strict",
+        f"-Dorg.gradle.jvmargs={DEFAULT_GRADLE_JVMARGS}",
         "-Dorg.gradle.workers.max=1",
     ]
     process_command = [str(ROOT / "gradlew.bat"), *display_command[1:]]
