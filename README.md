@@ -21,6 +21,7 @@
 - Subtitle filter paths now escape every FFmpeg filtergraph metacharacter before ASS/SSA burn-in.
 - Audio tracks now expose signed, frame-grid clip sync offsets that persist through autosave and edit-decision JSON and feed the shared preview, export, mixdown, and stem timing path.
 - Translation contributors now have a documented locale, resource-parity, locale-config, and Play metadata path, with a recursive UI literal ratchet and locale registration test.
+- Timeline toolbar rendering now has its own callback-driven owner and zoom policy, with focused behavior coverage and reviewed byte budgets for the largest editor coordination files.
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 

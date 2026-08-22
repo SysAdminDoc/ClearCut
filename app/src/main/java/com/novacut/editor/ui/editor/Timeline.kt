@@ -70,11 +70,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
-// Minimum zoom — low enough that a ~10-minute video fits on a phone screen. The old
-// 0.1f floor meant long videos could never fit the viewport, which combined with no
-// auto-fit-on-add made the timeline appear to only show a tiny portion of the media.
-// File-private to avoid clashing with the same-named const in EditorViewModel.kt,
-// which maintains its own copy so the VM logic doesn't have a cross-file dependency.
+// Minimum zoom keeps long clips discoverable on a phone viewport.
 private const val MIN_TIMELINE_ZOOM = 0.01f
 private const val MAX_TIMELINE_ZOOM = 10f
 
@@ -305,102 +301,6 @@ private fun TimelineHeaderSummary(
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-private fun TimelineToolbarControls(
-    compact: Boolean,
-    zoomLevel: Float,
-    fitZoomLevel: Float,
-    canSplitAtPlayhead: Boolean,
-    selectedClipId: String?,
-    selectedTimelineRange: TimelineRange?,
-    isRangeSelectionMode: Boolean,
-    onZoomChanged: (Float) -> Unit,
-    onScrollChanged: (Long) -> Unit,
-    onSplitAtPlayhead: () -> Unit,
-    onDeleteSelectedClip: () -> Unit,
-    onBeginRangeSelection: () -> Unit,
-    onCancelRangeSelection: () -> Unit,
-    onMuteTimelineRange: () -> Unit,
-    onMoreClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TimelineToolbarButton(
-            icon = Icons.Default.Remove,
-            contentDescription = stringResource(R.string.cd_zoom_out),
-            compact = compact,
-            onClick = { onZoomChanged((zoomLevel * 0.75f).coerceAtLeast(MIN_TIMELINE_ZOOM)) }
-        )
-        TimelineToolbarButton(
-            icon = Icons.Default.FitScreen,
-            contentDescription = stringResource(R.string.cd_fit_timeline),
-            compact = compact,
-            onClick = {
-                onZoomChanged(fitZoomLevel)
-                onScrollChanged(0L)
-            }
-        )
-        TimelineToolbarButton(
-            icon = Icons.Default.Add,
-            contentDescription = stringResource(R.string.cd_zoom_in),
-            compact = compact,
-            onClick = { onZoomChanged((zoomLevel * 1.33f).coerceAtMost(MAX_TIMELINE_ZOOM)) }
-        )
-        TimelineToolbarButton(
-            icon = Icons.Default.SelectAll,
-            contentDescription = stringResource(
-                if (isRangeSelectionMode) {
-                    R.string.timeline_cancel_range_selection
-                } else {
-                    R.string.timeline_select_range
-                }
-            ),
-            compact = compact,
-            highlight = isRangeSelectionMode,
-            onClick = if (isRangeSelectionMode) onCancelRangeSelection else onBeginRangeSelection,
-        )
-        if (selectedTimelineRange != null) {
-            TimelineToolbarButton(
-                icon = Icons.AutoMirrored.Filled.VolumeOff,
-                contentDescription = stringResource(R.string.timeline_mute_range),
-                compact = compact,
-                highlight = true,
-                onClick = onMuteTimelineRange,
-            )
-        }
-        TimelineToolbarButton(
-            icon = Icons.Default.ContentCut,
-            contentDescription = stringResource(R.string.cd_split_at_playhead),
-            compact = compact,
-            highlight = true,
-            enabled = canSplitAtPlayhead,
-            testTag = ClearCutTestTags.TIMELINE_SPLIT,
-            onClick = onSplitAtPlayhead
-        )
-        if (selectedClipId != null) {
-            TimelineToolbarButton(
-                icon = Icons.Default.Delete,
-                contentDescription = stringResource(R.string.timeline_clip_action_delete),
-                compact = compact,
-                highlight = true,
-                destructive = true,
-                testTag = ClearCutTestTags.TIMELINE_DELETE,
-                onClick = onDeleteSelectedClip
-            )
-        }
-        TimelineToolbarButton(
-            icon = Icons.Default.MoreHoriz,
-            contentDescription = stringResource(R.string.editor_more),
-            compact = compact,
-            onClick = onMoreClick,
         )
     }
 }

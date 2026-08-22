@@ -84,6 +84,7 @@ class TrackedFilesAuditTest {
             "docs/models.md",
             "docs/privacy-policy.md",
             "docs/play-data-safety.md",
+            "docs/translations.md",
         )
         val trackedPrivateMarkdown = tracked.filter { path ->
             path.endsWith(".md") && path !in releaseContractMarkdown
