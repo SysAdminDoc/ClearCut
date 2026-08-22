@@ -21,6 +21,12 @@ import tempfile
 from pathlib import Path
 from typing import Iterable
 
+OTIO_ROOT_SCHEMA = "Timeline.1"
+SUPPORTED_OTIO_SCHEMA_VERSIONS = {"0.15", "0.16"}
+OTIO_ADAPTER_RANGE = "0.15-0.16"
+OTIO_SCHEMA_METADATA_KEY = "clearcut_otio_schema_version"
+OTIO_ADAPTER_METADATA_KEY = "clearcut_otio_adapter_range"
+
 
 def load_otio():
     try:
@@ -50,8 +56,9 @@ def validate_file(otio, path: Path) -> None:
     # Parse the raw JSON first so the error names malformed JSON separately
     # from an OTIO schema/adapter failure.
     root = json.loads(path.read_text(encoding="utf-8"))
-    if root.get("OTIO_SCHEMA", "") != "Timeline.1":
-        raise ValueError(f"{path}: root OTIO_SCHEMA must be Timeline.1")
+    if root.get("OTIO_SCHEMA", "") != OTIO_ROOT_SCHEMA:
+        raise ValueError(f"{path}: root OTIO_SCHEMA must be {OTIO_ROOT_SCHEMA}")
+    validate_contract_metadata(root, path)
     timeline = otio.adapters.read_from_file(str(path), media_linker_name=None)
     if not isinstance(timeline, otio.schema.Timeline):
         raise ValueError(f"{path}: adapter returned {type(timeline).__name__}, not Timeline")
@@ -59,11 +66,33 @@ def validate_file(otio, path: Path) -> None:
         raise ValueError(f"{path}: Timeline.tracks is missing")
 
 
+def validate_contract_metadata(root: dict, path: Path) -> None:
+    """Validate ClearCut's optional metadata without rejecting third-party OTIO."""
+    metadata = root.get("metadata") or {}
+    declared_version = metadata.get(OTIO_SCHEMA_METADATA_KEY)
+    declared_range = metadata.get(OTIO_ADAPTER_METADATA_KEY)
+    if declared_version is None and declared_range is None:
+        return
+    if declared_version not in SUPPORTED_OTIO_SCHEMA_VERSIONS:
+        raise ValueError(
+            f"{path}: ClearCut OTIO schema version metadata must be one of "
+            f"{sorted(SUPPORTED_OTIO_SCHEMA_VERSIONS)}, got {declared_version!r}"
+        )
+    if declared_range != OTIO_ADAPTER_RANGE:
+        raise ValueError(
+            f"{path}: ClearCut OTIO adapter range metadata must be {OTIO_ADAPTER_RANGE!r}, "
+            f"got {declared_range!r}"
+        )
+
+
 def self_test(otio) -> None:
     fixture = {
         "OTIO_SCHEMA": "Timeline.1",
         "name": "ClearCut OTIO gate fixture",
-        "metadata": {},
+        "metadata": {
+            OTIO_SCHEMA_METADATA_KEY: "0.15",
+            OTIO_ADAPTER_METADATA_KEY: OTIO_ADAPTER_RANGE,
+        },
         "tracks": {
             "OTIO_SCHEMA": "Stack.1",
             "name": "tracks",

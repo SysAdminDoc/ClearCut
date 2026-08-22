@@ -1,0 +1,94 @@
+{
+  "OTIO_SCHEMA": "Timeline.1",
+  "name": "OTIO 0.16 lossy fixture",
+  "metadata": {
+    "clearcut_otio_schema_version": "0.16",
+    "clearcut_otio_adapter_range": "0.15-0.16",
+    "clearcut_timebase_numerator": 30000,
+    "clearcut_timebase_denominator": 1001
+  },
+  "tracks": {
+    "OTIO_SCHEMA": "Stack.1",
+    "name": "tracks",
+    "children": [
+      {
+        "OTIO_SCHEMA": "Track.1",
+        "name": "Picture",
+        "kind": "Video",
+        "children": [
+          {
+            "OTIO_SCHEMA": "Clip.1",
+            "name": "Unprobeable shot",
+            "effects": [
+              {
+                "OTIO_SCHEMA": "Effect.1",
+                "name": "Unsupported effect",
+                "effect_name": "ColorPipeline"
+              }
+            ],
+            "source_range": {
+              "OTIO_SCHEMA": "TimeRange.1",
+              "start_time": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "value": 0,
+                "rate": 29.97002997003
+              },
+              "duration": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "value": 30,
+                "rate": 29.97002997003
+              }
+            },
+            "media_reference": {
+              "OTIO_SCHEMA": "ExternalReference.1",
+              "target_url": "javascript:alert('x')",
+              "available_range": {
+                "OTIO_SCHEMA": "TimeRange.1",
+                "start_time": {
+                  "OTIO_SCHEMA": "RationalTime.1",
+                  "value": 0,
+                  "rate": 29.97002997003
+                },
+                "duration": {
+                  "OTIO_SCHEMA": "RationalTime.1",
+                  "value": 30,
+                  "rate": 29.97002997003
+                }
+              }
+            },
+            "metadata": {
+              "clearcut_clip_id": "otio-016-clip"
+            }
+          },
+          {
+            "OTIO_SCHEMA": "Clip.1",
+            "name": "missing-media",
+            "effects": [],
+            "source_range": {
+              "OTIO_SCHEMA": "TimeRange.1",
+              "start_time": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "value": 0,
+                "rate": 29.97002997003
+              },
+              "duration": {
+                "OTIO_SCHEMA": "RationalTime.1",
+                "value": 15,
+                "rate": 29.97002997003
+              }
+            },
+            "metadata": {
+              "clearcut_clip_id": "otio-016-missing"
+            }
+          },
+          {
+            "OTIO_SCHEMA": "Track.1",
+            "name": "unknown child schema",
+            "kind": "Video",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

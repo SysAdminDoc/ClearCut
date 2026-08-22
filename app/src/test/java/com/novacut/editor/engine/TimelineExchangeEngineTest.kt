@@ -26,6 +26,15 @@ class TimelineExchangeEngineTest {
     private val engine = TimelineExchangeEngine(null)
 
     @Test
+    fun interchangeContractsDeclareTheSupportedAdapterRange() {
+        val otio = TimelineExchangeEngine.TimelineExchangeFormat.OTIO
+        assertEquals("0.15", otio.contract?.schema)
+        assertEquals("0.15-0.16", otio.contract?.adapterRange)
+        assertEquals("1.11", TimelineExchangeEngine.TimelineExchangeFormat.FCPXML.contract?.schema)
+        assertEquals("CMX 3600", TimelineExchangeEngine.TimelineExchangeFormat.EDL_CMX3600.contract?.schema)
+    }
+
+    @Test
     fun otioRoundTripPreservesRationalTimingMetadataTransitionsAndNestedClips() {
         val nested = clip(
             id = "nested",
@@ -84,6 +93,8 @@ class TimelineExchangeEngineTest {
         )
         val root = JSONObject(json)
         assertEquals("Timeline.1", root.getString("OTIO_SCHEMA"))
+        assertEquals("0.15", root.getJSONObject("metadata").getString("clearcut_otio_schema_version"))
+        assertEquals("0.15-0.16", root.getJSONObject("metadata").getString("clearcut_otio_adapter_range"))
         assertEquals(24_000, root.getJSONObject("metadata").getInt("clearcut_timebase_numerator"))
         assertEquals(1_001, root.getJSONObject("metadata").getInt("clearcut_timebase_denominator"))
         assertTrue(json.contains("TimeRange.1"))
@@ -305,6 +316,92 @@ class TimelineExchangeEngineTest {
     }
 
     @Test
+    fun otio015FixtureIsAcceptedByTheDeclaredContract() {
+        val imported = engine.importFromOtio(fixture("otio-0.15-supported.otio"), ::testUri)
+
+        assertTrue(imported.warnings.isEmpty())
+        assertTrue(imported.unresolvedMediaUris.isEmpty())
+        assertEquals(0, imported.droppedEffects)
+        assertEquals("otio-015-clip", imported.tracks.single().clips.single().id)
+        assertEquals(2_000L, imported.tracks.single().clips.single().trimEndMs)
+    }
+
+    @Test
+    fun otio016FixturePreservesTimebaseAndLossReports() {
+        val imported = engine.importFromOtio(fixture("otio-0.16-lossy.otio"), ::testUri)
+
+        val clip = imported.tracks.single().clips.single()
+        assertEquals("otio-016-clip", clip.id)
+        assertEquals(1_001L, clip.trimEndMs)
+        assertTrue(imported.unresolvedMediaUris.contains("javascript:alert('x')"))
+        assertTrue(imported.unresolvedMediaUris.contains("<missing:missing-media>"))
+        assertTrue(imported.droppedEffects >= 1)
+        assertTrue(imported.warnings.any { it.contains("Unsupported OTIO schema in track") })
+        assertTrue(imported.warnings.any { it.contains("Unsupported effect") })
+    }
+
+    @Test
+    fun otioInvalidTimebaseFixtureReportsAnActionableFallback() {
+        val imported = engine.importFromOtio(fixture("otio-invalid-timebase.otio"), ::testUri)
+
+        assertTrue(imported.warnings.any { it.contains("timebase", ignoreCase = true) })
+        assertTrue(imported.warnings.any { it.contains("30 fps") })
+    }
+
+    @Test
+    fun otioFutureFixtureIsRejectedBeforeParsingTracks() {
+        val imported = engine.importFromOtio(fixture("otio-future.otio"), ::testUri)
+
+        assertTrue(imported.schemaTooNew)
+        assertEquals(2, imported.schemaVersion)
+        assertTrue(imported.tracks.isEmpty())
+        assertTrue(imported.warnings.single().contains("nothing was imported"))
+    }
+
+    @Test
+    fun futureClearCutOtioMetadataIsRejectedWithItsVersionCode() {
+        val future = JSONObject(fixture("otio-0.15-supported.otio")).apply {
+            getJSONObject("metadata").put("clearcut_otio_schema_version", "0.17")
+        }
+
+        val imported = engine.importFromOtio(future.toString(), ::testUri)
+
+        assertTrue(imported.schemaTooNew)
+        assertEquals(17, imported.schemaVersion)
+        assertTrue(imported.warnings.single().contains("0.17"))
+        assertTrue(imported.warnings.single().contains("nothing was imported"))
+    }
+
+    @Test
+    fun fcpxmlFixturePreservesMissingMediaAndTransitionWarnings() {
+        val imported = engine.importFromFcpxml(fixture("fcpxml-lossy.fcpxml"), ::testUri)
+
+        assertEquals(1, imported.tracks.single().clips.size)
+        assertEquals("file:///media/opening.mp4", imported.tracks.single().clips.single().sourceUri.toString())
+        assertEquals(listOf("missing-asset"), imported.unresolvedMediaUris)
+        assertTrue(imported.warnings.any { it.contains("transition", ignoreCase = true) })
+        assertTrue(imported.warnings.any { it.contains("no resolvable media reference") })
+    }
+
+    @Test
+    fun edlFixturePreservesTimingAndDroppedEffectReport() {
+        val imported = engine.importFromEdl(
+            edl = fixture("edl-lossy.edl"),
+            timebase = TimelineTimebase(30),
+            uriParser = ::testUri,
+        )
+
+        val clip = imported.tracks.single().clips.single()
+        assertEquals("file:///media/source.mp4", clip.sourceUri.toString())
+        assertEquals(TransitionType.DISSOLVE, clip.headTransition?.type)
+        assertEquals(100L, clip.headTransition?.durationMs)
+        assertEquals(2f, clip.speed, 0.001f)
+        assertEquals(1, imported.droppedEffects)
+        assertTrue(imported.warnings.any { it.contains("invalid timecode") })
+        assertTrue(imported.warnings.any { it.contains("effect comment") })
+    }
+
+    @Test
     fun edlImportPreservesCutTimingTransitionSourceCommentAndSpeed() {
         val edl = """
             TITLE: Conform
@@ -358,6 +455,11 @@ class TimelineExchangeEngineTest {
         isCompound = compoundClips.isNotEmpty(),
         compoundClips = compoundClips,
     )
+
+    private fun fixture(name: String): String =
+        checkNotNull(javaClass.getResource("/interchange/$name")) {
+            "Missing interchange fixture: $name"
+        }.readText()
 
     private fun testUri(raw: String): Uri {
         val scheme = raw.substringBefore(':', missingDelimiterValue = "")

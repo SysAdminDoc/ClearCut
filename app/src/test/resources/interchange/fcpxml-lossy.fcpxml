@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE fcpxml>
+<fcpxml version="1.11">
+  <resources>
+    <format id="r0" name="Fixture 29.97p" frameDuration="1001/30000s" width="1920" height="1080"/>
+    <asset id="r1" name="Opening" src="file:///media/opening.mp4" duration="2s"/>
+  </resources>
+  <library>
+    <event name="Fixture">
+      <project name="Fixture">
+        <sequence format="r0" duration="4s" tcStart="0s" tcFormat="NDF">
+          <spine>
+            <asset-clip ref="r1" name="Opening" offset="0s" start="0s" duration="2s"/>
+            <transition offset="2s" duration="1/2s"/>
+            <asset-clip ref="missing-asset" name="Missing media" offset="2s" start="0s" duration="1s"/>
+          </spine>
+        </sequence>
+      </project>
+    </event>
+  </library>
+</fcpxml>

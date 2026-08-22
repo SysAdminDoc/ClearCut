@@ -1,0 +1,13 @@
+{
+  "OTIO_SCHEMA": "Timeline.2",
+  "name": "Future OTIO fixture",
+  "metadata": {
+    "clearcut_otio_schema_version": "0.17",
+    "clearcut_otio_adapter_range": "0.17-0.18"
+  },
+  "tracks": {
+    "OTIO_SCHEMA": "Stack.1",
+    "name": "tracks",
+    "children": []
+  }
+}

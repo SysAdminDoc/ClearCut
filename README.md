@@ -422,7 +422,7 @@ Planning files are local-only in the development checkout:
 - Multi-sequence Media3 Composition export for visible video and overlay tracks, with dedicated audio-track mixdown
 - Batch export with multiple presets simultaneously
 - Background export with progress notification, ETA display, and cancel
-- **Timeline interchange**: OTIO (OpenTimelineIO), FCPXML, EDL, and portable edit-decision JSON export for desktop/local-tool handoff; incoming files show a guarded fidelity/media-relink preview before one atomic editor commit
+- **Timeline interchange**: OTIO (OpenTimelineIO) exports declare schema 0.15 with official adapter coverage for 0.15 and 0.16. FCPXML exports use v1.11, EDL exports use CMX 3600, and incoming files show a guarded fidelity and media-relink preview before one atomic editor commit. The documented official-adapter gate is `python scripts/verify_otio_exports.py`.
 - **Portable edit-decision JSON**: `.clearcut-edl.json` uses schema `com.clearcut.edit-decision` v1 with millisecond `tracks[].clips[]` source/range decisions, `markers[]`, caption timing under each clip, optional text overlays, and project timebase metadata. `source` values are URI strings (`content://`, `file://`, `asset://`, `http://`, or `https://`). Newer schema versions are rejected before parsing; missing media and mapped clips/markers/captions are shown in the non-mutating preview.
 - EDL export (CMX 3600) with sanitized reel names and proper timecodes
 - Chapter markers and subtitle export (SRT, VTT with word-level cues, ASS/SSA with full styling)
@@ -554,6 +554,9 @@ com.novacut.editor/
 ./gradlew :app:recordJvmVisualVerification
 ./gradlew :app:verifyJvmVisualVerification
 ./gradlew :app:compareJvmVisualVerification
+# Validate OTIO exports with the official OpenTimelineIO adapter
+python scripts/verify_otio_exports.py --self-test
+python scripts/verify_otio_exports.py app/build/exports
 # Run instrumentation only on a dedicated QA device or emulator
 ./gradlew :app:connectedQaAndroidTest
 

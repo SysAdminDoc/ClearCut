@@ -34,6 +34,23 @@ class TimelineExchangeEngine @Inject constructor(
     private val videoEngine: VideoEngine?
 ) {
 
+    /** Version and adapter promises kept alongside each interchange format. */
+    data class TimelineExchangeContract(
+        val schema: String,
+        val adapterRange: String? = null,
+    )
+
+    /** Stable interchange identifiers shared by the app, fixtures, and release gate. */
+    object InterchangeContracts {
+        const val OTIO_ROOT_SCHEMA = "Timeline.1"
+        const val OTIO_SCHEMA_VERSION = "0.15"
+        const val OTIO_ADAPTER_RANGE = "0.15-0.16"
+        const val FCPXML_VERSION = "1.11"
+        const val EDL_STANDARD = "CMX 3600"
+        const val OTIO_SCHEMA_METADATA_KEY = "clearcut_otio_schema_version"
+        const val OTIO_ADAPTER_METADATA_KEY = "clearcut_otio_adapter_range"
+    }
+
     /**
      * Supported timeline interchange formats.
      */
@@ -41,16 +58,42 @@ class TimelineExchangeEngine @Inject constructor(
         val displayName: String,
         val extension: String,
         val canImport: Boolean,
-        val canExport: Boolean
+        val canExport: Boolean,
+        val contract: TimelineExchangeContract? = null,
     ) {
-        OTIO("OpenTimelineIO", ".otio", canImport = true, canExport = true),
-        FCPXML("Final Cut Pro XML", ".fcpxml", canImport = true, canExport = true),
-        EDL_CMX3600("EDL (CMX 3600)", ".edl", canImport = true, canExport = true),
+        OTIO(
+            "OpenTimelineIO",
+            ".otio",
+            canImport = true,
+            canExport = true,
+            contract = TimelineExchangeContract(
+                schema = InterchangeContracts.OTIO_SCHEMA_VERSION,
+                adapterRange = InterchangeContracts.OTIO_ADAPTER_RANGE,
+            ),
+        ),
+        FCPXML(
+            "Final Cut Pro XML",
+            ".fcpxml",
+            canImport = true,
+            canExport = true,
+            contract = TimelineExchangeContract(InterchangeContracts.FCPXML_VERSION),
+        ),
+        EDL_CMX3600(
+            "EDL (CMX 3600)",
+            ".edl",
+            canImport = true,
+            canExport = true,
+            contract = TimelineExchangeContract(InterchangeContracts.EDL_STANDARD),
+        ),
         EDIT_DECISION_JSON(
             "ClearCut edit-decision JSON",
             ".${EditDecisionJsonEngine.FILE_EXTENSION}",
             canImport = true,
             canExport = true,
+            contract = TimelineExchangeContract(
+                schema = EditDecisionJsonEngine.SCHEMA_ID,
+                adapterRange = "v${EditDecisionJsonEngine.SCHEMA_VERSION}",
+            ),
         ),
         AAF("Advanced Authoring Format", ".aaf", canImport = false, canExport = false)
     }
@@ -126,11 +169,13 @@ class TimelineExchangeEngine @Inject constructor(
         timebase: TimelineTimebase
     ): String {
         val timeline = JSONObject().apply {
-            put("OTIO_SCHEMA", "Timeline.1")
+            put("OTIO_SCHEMA", InterchangeContracts.OTIO_ROOT_SCHEMA)
             put("name", projectName)
             put("metadata", JSONObject().apply {
                 put("clearcut_version", "3.0.0")
                 put("export_format", "otio")
+                put(InterchangeContracts.OTIO_SCHEMA_METADATA_KEY, InterchangeContracts.OTIO_SCHEMA_VERSION)
+                put(InterchangeContracts.OTIO_ADAPTER_METADATA_KEY, InterchangeContracts.OTIO_ADAPTER_RANGE)
                 put("clearcut_timebase_numerator", timebase.numerator)
                 put("clearcut_timebase_denominator", timebase.denominator)
             })
@@ -479,8 +524,53 @@ class TimelineExchangeEngine @Inject constructor(
         try {
             val root = JSONObject(json)
             val schema = root.optString("OTIO_SCHEMA", "")
-            if (!schema.startsWith("Timeline")) {
+            val rootSchemaVersion = parseOtioSchemaVersion(schema)
+            if (rootSchemaVersion != null && rootSchemaVersion > 1) {
+                return ExchangeResult(
+                    tracks = emptyList(),
+                    textOverlays = emptyList(),
+                    warnings = listOf(
+                        "OTIO root schema '$schema' is newer than ClearCut's supported " +
+                            "${InterchangeContracts.OTIO_ROOT_SCHEMA}; nothing was imported."
+                    ),
+                    schemaVersion = rootSchemaVersion,
+                    schemaTooNew = true,
+                )
+            }
+            if (schema != InterchangeContracts.OTIO_ROOT_SCHEMA) {
                 warnings.add("Unexpected root schema: $schema (expected Timeline)")
+            }
+
+            val metadata = root.optJSONObject("metadata")
+            val declaredSchemaVersion = metadata
+                ?.optString(InterchangeContracts.OTIO_SCHEMA_METADATA_KEY, "")
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+            val declaredSchemaCode = declaredSchemaVersion?.let(::parseOtioMetadataVersion)
+            if (declaredSchemaVersion != null && declaredSchemaCode == null) {
+                warnings.add(
+                    "OTIO metadata schema version '$declaredSchemaVersion' is not recognised; " +
+                        "import will use the Timeline.1 contract."
+                )
+            } else if (declaredSchemaCode != null && declaredSchemaCode > OTIO_MAX_SUPPORTED_SCHEMA_CODE) {
+                return ExchangeResult(
+                    tracks = emptyList(),
+                    textOverlays = emptyList(),
+                    warnings = listOf(
+                        "OTIO metadata schema version '$declaredSchemaVersion' is newer than " +
+                            "ClearCut's supported range ${InterchangeContracts.OTIO_ADAPTER_RANGE}; " +
+                            "nothing was imported."
+                    ),
+                    schemaVersion = declaredSchemaCode,
+                    schemaTooNew = true,
+                )
+            } else if (declaredSchemaVersion != null &&
+                declaredSchemaVersion !in SUPPORTED_OTIO_SCHEMA_VERSIONS
+            ) {
+                warnings.add(
+                    "OTIO metadata schema version '$declaredSchemaVersion' is outside the " +
+                        "documented range ${InterchangeContracts.OTIO_ADAPTER_RANGE}; known Timeline.1 fields will be used."
+                )
             }
 
             val stack = root.optJSONObject("tracks") ?: run {
@@ -488,7 +578,7 @@ class TimelineExchangeEngine @Inject constructor(
                 return ExchangeResult(emptyList(), emptyList(), warnings)
             }
 
-            val documentTimebase = otioTimebaseFromMetadata(root.optJSONObject("metadata"))
+            val documentTimebase = otioTimebaseFromMetadata(metadata, warnings)
             val children = stack.optJSONArray("children") ?: JSONArray()
             var trackIndex = 0
 
@@ -542,6 +632,20 @@ class TimelineExchangeEngine @Inject constructor(
             unresolvedMediaUris = diagnostics.unresolvedMediaUris.distinct(),
             droppedEffects = diagnostics.droppedEffects,
         )
+    }
+
+    private fun parseOtioSchemaVersion(schema: String): Int? {
+        if (!schema.startsWith("Timeline.")) return null
+        return schema.substringAfter('.', missingDelimiterValue = "").toIntOrNull()
+    }
+
+    private fun parseOtioMetadataVersion(version: String): Int? {
+        val parts = version.split('.', limit = 3)
+        if (parts.size != 2) return null
+        val major = parts[0].toIntOrNull() ?: return null
+        val minor = parts[1].toIntOrNull() ?: return null
+        if (major < 0 || minor !in 0..99) return null
+        return major * 100 + minor
     }
 
     private data class ImportDiagnostics(
@@ -1128,7 +1232,7 @@ class TimelineExchangeEngine @Inject constructor(
         val sb = StringBuilder()
         sb.appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
         sb.appendLine("""<!DOCTYPE fcpxml>""")
-        sb.appendLine("""<fcpxml version="1.11">""")
+        sb.appendLine("""<fcpxml version="${InterchangeContracts.FCPXML_VERSION}">""")
         sb.appendLine("""  <resources>""")
         sb.appendLine("""    <format id="r0" name="ClearCut ${safeFrameRate}p" frameDuration="$frameDuration" width="1920" height="1080"/>""")
 
@@ -1200,13 +1304,26 @@ class TimelineExchangeEngine @Inject constructor(
         return if (asFloat.isFinite()) asFloat else default
     }
 
-    private fun otioTimebaseFromMetadata(metadata: JSONObject?): TimelineTimebase {
+    private fun otioTimebaseFromMetadata(
+        metadata: JSONObject?,
+        warnings: MutableList<String>,
+    ): TimelineTimebase {
+        val hasNumerator = metadata?.has("clearcut_timebase_numerator") == true
+        val hasDenominator = metadata?.has("clearcut_timebase_denominator") == true
+        if (!hasNumerator && !hasDenominator) return TimelineTimebase(30)
+
         val numerator = metadata?.optInt("clearcut_timebase_numerator", 0) ?: 0
         val denominator = metadata?.optInt("clearcut_timebase_denominator", 0) ?: 0
         if (numerator > 0 && denominator > 0) {
             return runCatching { TimelineTimebase(numerator, denominator) }
+                .onFailure {
+                    warnings.add(
+                        "OTIO timebase metadata '$numerator/$denominator' is invalid; defaulted to 30 fps."
+                    )
+                }
                 .getOrDefault(TimelineTimebase(30))
         }
+        warnings.add("OTIO timebase metadata is incomplete or invalid; defaulted to 30 fps.")
         return TimelineTimebase(30)
     }
 
@@ -1365,6 +1482,8 @@ class TimelineExchangeEngine @Inject constructor(
         const val MAX_EFFECTS = 256
         const val MAX_FCPXML_ASSETS = 10_000
         const val MAX_FCPXML_CHILDREN = 10_000
+        const val OTIO_MAX_SUPPORTED_SCHEMA_CODE = 16
+        val SUPPORTED_OTIO_SCHEMA_VERSIONS = setOf("0.15", "0.16")
         val PROBEABLE_URI_SCHEMES = setOf("content", "file", "asset", "http", "https")
     }
 }

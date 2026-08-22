@@ -1,0 +1,9 @@
+TITLE: ClearCut fixture
+FCM: NON-DROP FRAME
+
+001  REEL     V     D     003 00:00:00:00 00:00:02:00 00:00:05:00 00:00:07:00
+M2   REEL     60.0
+* FROM CLIP NAME: file:///media/source.mp4
+* EFFECT NAME: Unsupported grade
+
+002  BAD      V     C     00:00:00:00 00:00:01:30 00:00:08:00 00:00:09:30
