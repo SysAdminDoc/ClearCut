@@ -239,7 +239,7 @@ fun MaskEditorPanel(
                 MaskType.entries.forEach { type ->
                     OutlinedButton(
                         onClick = { onMaskAdded(type) },
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue)
                     ) {
@@ -291,7 +291,7 @@ fun MaskEditorPanel(
                             }
                             OutlinedButton(
                                 onClick = { onMaskDeleted(selectedMask.id) },
-                                shape = RoundedCornerShape(18.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.25f)),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Red)
                             ) {
@@ -325,7 +325,7 @@ fun MaskEditorPanel(
 
                             OutlinedButton(
                                 onClick = { onMaskDeleted(selectedMask.id) },
-                                shape = RoundedCornerShape(18.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, ClearCutAccents.Red.copy(alpha = 0.25f)),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Red)
                             ) {
@@ -416,7 +416,7 @@ private fun MaskMetric(
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Column(
@@ -452,7 +452,7 @@ private fun MaskChip(
 
     Surface(
         color = if (isSelected) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (isSelected) accent.copy(alpha = 0.2f) else semanticColors.cardStroke
@@ -538,7 +538,7 @@ private fun MaskToggleRow(
     val switchState = stringResource(if (checked) R.string.settings_on else R.string.settings_off)
     Surface(
         color = semanticColors.panelRaised,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Row(

@@ -215,7 +215,7 @@ fun StickerPickerPanel(
                         .fillMaxWidth()
                         .background(
                             color = semanticColors.panelRaised.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(22.dp)
+                            shape = RoundedCornerShape(12.dp)
                         )
                         .padding(horizontal = 18.dp, vertical = 24.dp),
                     contentAlignment = Alignment.Center
@@ -226,7 +226,7 @@ fun StickerPickerPanel(
                     ) {
                         Surface(
                             color = accent.copy(alpha = 0.18f),
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, accent.copy(alpha = 0.28f))
                         ) {
                             Icon(
@@ -256,7 +256,7 @@ fun StickerPickerPanel(
                                 containerColor = accent,
                                 contentColor = semanticColors.surfaceBase
                             ),
-                            shape = RoundedCornerShape(18.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Image,
@@ -345,7 +345,7 @@ private fun StickerTile(
             .aspectRatio(1f)
             .clickable(onClickLabel = selectLabel, onClick = onClick),
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.9f))
     ) {
         Box(
@@ -353,7 +353,7 @@ private fun StickerTile(
                 .fillMaxSize()
                 .background(
                     color = accent.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(22.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
         ) {

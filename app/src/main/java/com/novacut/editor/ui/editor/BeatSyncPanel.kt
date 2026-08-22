@@ -135,7 +135,7 @@ fun BeatSyncPanel(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = semanticColors.surfaceLow,
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.beat_sync_playback_hint),
@@ -161,7 +161,7 @@ fun BeatSyncPanel(
                             disabledContainerColor = ClearCutAccents.Peach.copy(alpha = 0.45f),
                             disabledContentColor = semanticColors.onAccent.copy(alpha = 0.8f)
                         ),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         if (isAnalyzing) {
                             CircularProgressIndicator(
@@ -185,7 +185,7 @@ fun BeatSyncPanel(
                         onClick = onTapBeat,
                         enabled = isPlaying,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = if (isPlaying) semanticColors.text else semanticColors.subtext
                         )
@@ -213,7 +213,7 @@ fun BeatSyncPanel(
                             disabledContainerColor = ClearCutAccents.Peach.copy(alpha = 0.45f),
                             disabledContentColor = semanticColors.onAccent.copy(alpha = 0.8f)
                         ),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         if (isAnalyzing) {
                             CircularProgressIndicator(
@@ -237,7 +237,7 @@ fun BeatSyncPanel(
                         onClick = onTapBeat,
                         enabled = isPlaying,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = if (isPlaying) semanticColors.text else semanticColors.subtext
                         )
@@ -273,14 +273,14 @@ fun BeatSyncPanel(
 
             Surface(
                 color = semanticColors.surfaceBase,
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 if (hasBeats) {
                     Canvas(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(76.dp)
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(semanticColors.surfaceBase)
                     ) {
                         if (totalDurationMs > 0) {
@@ -337,7 +337,7 @@ fun BeatSyncPanel(
                 OutlinedButton(
                     onClick = onClearBeats,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Red)
                 ) {
                     Text(text = stringResource(R.string.panel_beat_sync_clear))
@@ -369,7 +369,7 @@ fun BeatSyncPanel(
                     disabledContainerColor = semanticColors.surface,
                     disabledContentColor = semanticColors.subtext
                 ),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(text = stringResource(R.string.beat_sync_apply))
             }
@@ -388,7 +388,7 @@ private fun BeatSyncMetric(
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),

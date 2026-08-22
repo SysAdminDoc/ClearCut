@@ -158,7 +158,7 @@ private fun SmartReframeCard(
     Surface(
         modifier = modifier,
         color = if (isSelected) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             width = 1.dp,
             color = if (isSelected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
@@ -179,7 +179,7 @@ private fun SmartReframeCard(
                     .height(previewHeight)
                     .background(
                         color = if (isSelected) accent.copy(alpha = 0.18f) else semanticColors.surfaceBase,
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {

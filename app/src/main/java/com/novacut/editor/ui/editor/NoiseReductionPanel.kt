@@ -116,7 +116,7 @@ fun NoiseReductionPanel(
                     disabledContainerColor = ClearCutAccents.Mauve.copy(alpha = 0.45f),
                     disabledContentColor = semanticColors.surfaceBase.copy(alpha = 0.85f)
                 ),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 if (isAnalyzing) {
                     CircularProgressIndicator(

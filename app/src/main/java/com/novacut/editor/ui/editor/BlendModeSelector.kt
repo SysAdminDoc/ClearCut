@@ -155,7 +155,7 @@ private fun BlendModeOptionCard(
         onClick = onClick,
         modifier = modifier,
         color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (selected) accent.copy(alpha = 0.24f) else semanticColors.cardStroke

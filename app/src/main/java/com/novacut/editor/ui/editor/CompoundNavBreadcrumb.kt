@@ -57,8 +57,8 @@ fun CompoundNavBreadcrumb(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .testTag(ClearCutTestTags.EDITOR_COMPOUND_BREADCRUMB)
-            .clip(RoundedCornerShape(20.dp))
-            .border(BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.55f)), RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .border(BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.55f)), RoundedCornerShape(12.dp))
             .background(ClearCutAccents.Mauve.copy(alpha = 0.14f))
             .clickable(onClick = onExit)
             .padding(horizontal = 12.dp, vertical = 7.dp),

@@ -132,7 +132,7 @@ private fun SpeedPresetCard(
         modifier = Modifier.width(164.dp),
         onClick = onClick,
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.24f))
     ) {
         Column(
@@ -141,7 +141,7 @@ private fun SpeedPresetCard(
         ) {
             Surface(
                 color = accent.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, semanticColors.cardStroke)
             ) {
                 Canvas(

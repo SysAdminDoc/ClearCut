@@ -62,7 +62,7 @@ fun AudioPanel(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(semanticColors.panel),
                         contentAlignment = Alignment.Center
                     ) {
@@ -128,7 +128,7 @@ fun AudioPanel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(88.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(semanticColors.panel)
                         .padding(horizontal = 8.dp, vertical = 10.dp)
                 ) {
@@ -141,7 +141,7 @@ fun AudioPanel(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = semanticColors.panelRaised,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Text(
@@ -207,7 +207,7 @@ fun AudioPanel(
                     containerColor = ClearCutAccents.Rosewater,
                     contentColor = semanticColors.background
                 ),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
                     Icons.Default.Mic,
@@ -394,7 +394,7 @@ fun VoiceoverRecorder(
         OutlinedButton(
             onClick = onClose,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, semanticColors.cardStroke),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext)
         ) {

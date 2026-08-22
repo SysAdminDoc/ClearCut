@@ -206,7 +206,7 @@ private fun EffectLibraryActionCard(
     Surface(
         modifier = modifier,
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (enabled) accent.copy(alpha = 0.24f) else semanticColors.cardStroke
@@ -221,7 +221,7 @@ private fun EffectLibraryActionCard(
         ) {
             Surface(
                 color = accent.copy(alpha = if (enabled) 0.16f else 0.08f),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(
                     1.dp,
                     accent.copy(alpha = if (enabled) 0.24f else 0.14f)
@@ -263,7 +263,7 @@ private fun EffectLibraryActionCard(
                             disabledContainerColor = semanticColors.surfaceLow,
                             disabledContentColor = semanticColors.overlay
                         ),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = icon,
@@ -288,7 +288,7 @@ private fun EffectLibraryActionCard(
                             1.dp,
                             if (enabled) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
                         ),
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         androidx.compose.material3.Icon(
                             imageVector = icon,

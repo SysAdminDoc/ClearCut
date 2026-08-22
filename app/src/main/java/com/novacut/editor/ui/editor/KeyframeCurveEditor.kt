@@ -356,7 +356,7 @@ fun KeyframeCurveEditor(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(216.dp)
-                        .background(semanticColors.surfaceLow, RoundedCornerShape(18.dp))
+                        .background(semanticColors.surfaceLow, RoundedCornerShape(12.dp))
                         .padding(8.dp)
                 )
             } else {

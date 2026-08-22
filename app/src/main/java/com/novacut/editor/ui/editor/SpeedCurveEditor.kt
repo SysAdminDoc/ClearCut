@@ -143,7 +143,7 @@ fun SpeedCurveEditor(
 
             Surface(
                 color = semanticColors.panelRaised,
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -157,7 +157,7 @@ fun SpeedCurveEditor(
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(
                                     if (curveMode == isCurve) ClearCutAccents.Mauve.copy(alpha = 0.18f) else Color.Transparent
                                 )
@@ -282,7 +282,7 @@ fun SpeedCurveEditor(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(semanticColors.surfaceLow)
                 )
                 SpeedPointNumericEditor(

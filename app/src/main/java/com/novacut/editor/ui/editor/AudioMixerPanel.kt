@@ -251,7 +251,7 @@ fun AudioMixerPanel(
                     if (track.audioEffects.isEmpty()) {
                         Surface(
                             color = semanticColors.panelRaised,
-                            shape = RoundedCornerShape(20.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, semanticColors.cardStroke)
                         ) {
                             Text(
@@ -303,7 +303,7 @@ private fun AddEffectButton(
     Box {
         Surface(
             color = ClearCutAccents.Green.copy(alpha = 0.14f),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, ClearCutAccents.Green.copy(alpha = 0.24f))
         ) {
             Row(
@@ -375,7 +375,7 @@ private fun ChannelStrip(
             .width(132.dp)
             .fillMaxHeight(),
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (isEffectsExpanded) accent.copy(alpha = 0.55f) else semanticColors.cardStrokeStrong
@@ -547,7 +547,7 @@ private fun MixerControlBlock(
     val semanticColors = LocalClearCutColors.current
     Surface(
         color = semanticColors.panelRaised.copy(alpha = 0.92f),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.12f))
     ) {
         Column(
@@ -585,7 +585,7 @@ private fun MixerToggleButton(
     Surface(
         modifier = modifier.semantics { this.contentDescription = contentDescription },
         color = if (active) accent.copy(alpha = 0.18f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (active) accent.copy(alpha = 0.26f) else semanticColors.cardStroke)
     ) {
         Text(
@@ -677,7 +677,7 @@ private fun MasterBusStrip() {
             .width(132.dp)
             .fillMaxHeight(),
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.32f))
     ) {
         Box(
@@ -737,7 +737,7 @@ private fun AudioEffectChip(
     val removeEffectLabel = androidx.compose.ui.res.stringResource(R.string.cd_mixer_remove_effect)
     Surface(
         color = if (isSelected) ClearCutAccents.Mauve.copy(alpha = 0.16f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (isSelected) ClearCutAccents.Mauve.copy(alpha = 0.3f) else semanticColors.cardStroke
@@ -793,7 +793,7 @@ private fun AudioEffectParams(
     val semanticColors = LocalClearCutColors.current
     Surface(
         color = semanticColors.panelRaised,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStrokeStrong)
     ) {
         Column(

@@ -48,6 +48,32 @@ class SemanticThemeSourcePolicyTest {
         }
     }
 
+    @Test
+    fun roundedGeometryStaysWithinTheTwelveDpScale() {
+        val root = locateRepoRoot()
+        val uiRoot = File(root, "app/src/main/java/com/novacut/editor/ui")
+        val violations = uiRoot.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .flatMap { file ->
+                val source = file.readText()
+                    .replace(BLOCK_COMMENT, "")
+                    .replace(LINE_COMMENT, "")
+                ROUNDED_CORNER_CALL.findAll(source).flatMap { call ->
+                    DP_LITERAL.findAll(call.value)
+                        .filter { literal -> literal.groupValues[1].toFloat() > MAX_RADIUS_DP }
+                        .map { literal ->
+                            "${file.relativeTo(root)} uses ${literal.value} in ${call.value.trim()}"
+                        }
+                }
+            }
+            .toList()
+
+        assertTrue(
+            "Rounded UI geometry must stay within the 0/4/6/8/10/12dp scale:\n${violations.joinToString("\n")}",
+            violations.isEmpty(),
+        )
+    }
+
     private fun locateRepoRoot(): File {
         val userDir = requireNotNull(System.getProperty("user.dir")) { "user.dir is unavailable" }
         var directory: File? = File(userDir).absoluteFile
@@ -63,6 +89,14 @@ class SemanticThemeSourcePolicyTest {
         const val RAW_MOCHA_IMPORT = "import com.novacut.editor.ui.theme.Mocha"
         val APPROVED_ACCENT = Regex("ClearCutAccents\\.([A-Za-z0-9_]+)")
         val RAW_COLOR_LITERAL = Regex("Color\\(0x[0-9A-Fa-f]+\\)")
+        val BLOCK_COMMENT = Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL)
+        val LINE_COMMENT = Regex("//[^\\r\\n]*")
+        val ROUNDED_CORNER_CALL = Regex(
+            "RoundedCornerShape\\(([^)]*)\\)",
+            RegexOption.DOT_MATCHES_ALL,
+        )
+        val DP_LITERAL = Regex("([0-9]+(?:\\.[0-9]+)?)\\.dp")
+        const val MAX_RADIUS_DP = 12f
         /**
          * Scope traces are instrument colours with fixed signal meaning, so they are
          * intentionally independent of the UI theme. Every structural editor colour

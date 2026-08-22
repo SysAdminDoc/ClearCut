@@ -275,7 +275,7 @@ private fun MarkerRow(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = semanticColors.panelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Column(
@@ -416,7 +416,7 @@ private fun MarkerAction(
 ) {
     Surface(
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Row(

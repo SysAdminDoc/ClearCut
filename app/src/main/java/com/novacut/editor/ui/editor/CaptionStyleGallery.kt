@@ -239,7 +239,7 @@ private fun StyleMetric(
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Column(
@@ -351,7 +351,7 @@ private fun CaptionStyleCard(
             }
             .clickable(onClick = onClick),
         color = semanticColors.panelRaised,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStroke)
     ) {
         Column {

@@ -1834,7 +1834,7 @@ private fun TextOverlayList(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = semanticColors.panel,
-        shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
+        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStroke.copy(alpha = 0.85f))
     ) {
         Column(

@@ -100,7 +100,7 @@ fun RenderPreviewSheet(
                 ) {
                     Surface(
                         color = outlook.accent.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, outlook.accent.copy(alpha = 0.18f))
                     ) {
                         androidx.compose.material3.Icon(
@@ -260,7 +260,7 @@ fun RenderPreviewSheet(
                         onClick = onRenderPreview,
                         enabled = hasSegments,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, ClearCutAccents.Peach.copy(alpha = 0.4f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Peach)
                     ) {
@@ -276,7 +276,7 @@ fun RenderPreviewSheet(
                         onClick = onRenderFull,
                         enabled = hasSegments,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                     ) {
                         androidx.compose.material3.Icon(
@@ -296,7 +296,7 @@ fun RenderPreviewSheet(
                         onClick = onRenderPreview,
                         enabled = hasSegments,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, ClearCutAccents.Peach.copy(alpha = 0.4f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Peach)
                     ) {
@@ -312,7 +312,7 @@ fun RenderPreviewSheet(
                         onClick = onRenderFull,
                         enabled = hasSegments,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                     ) {
                         androidx.compose.material3.Icon(
@@ -354,7 +354,7 @@ private fun RenderMetric(
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Column(
@@ -388,7 +388,7 @@ private fun RenderMessageCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Row(
@@ -400,7 +400,7 @@ private fun RenderMessageCard(
         ) {
             Surface(
                 color = accent.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
             ) {
                 androidx.compose.material3.Icon(
@@ -451,7 +451,7 @@ private fun RenderSegmentRow(segment: SmartRenderEngine.RenderSegment) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = if (segment.needsReEncode) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (segment.needsReEncode) accent.copy(alpha = 0.2f) else semanticColors.cardStroke
@@ -471,7 +471,7 @@ private fun RenderSegmentRow(segment: SmartRenderEngine.RenderSegment) {
             ) {
                 Surface(
                     color = accent.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
                 ) {
                     androidx.compose.material3.Icon(

@@ -246,7 +246,7 @@ fun AutoEditPanel(
                     disabledContainerColor = semanticColors.surface,
                     disabledContentColor = semanticColors.subtext
                 ),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 if (isProcessing) {
                     CircularProgressIndicator(

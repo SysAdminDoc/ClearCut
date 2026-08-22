@@ -161,7 +161,7 @@ fun TtsPanel(
                     .fillMaxWidth()
                     .heightIn(min = 120.dp, max = 180.dp),
                 maxLines = 6,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = ClearCutAccents.Mauve,
                     unfocusedBorderColor = semanticColors.cardStroke,
@@ -305,7 +305,7 @@ private fun VoiceStyleCard(
         onClick = onClick,
         modifier = modifier,
         color = if (selected) accent.copy(alpha = 0.12f) else semanticColors.panelHighest,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (selected) accent.copy(alpha = 0.3f) else semanticColors.cardStroke
@@ -363,7 +363,7 @@ private fun TtsPreviewButton(
             1.dp,
             if (enabled) ClearCutAccents.Mauve else semanticColors.cardStroke
         ),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         androidx.compose.material3.Icon(
             imageVector = Icons.Default.PlayArrow,
@@ -395,7 +395,7 @@ private fun TtsGenerateButton(
             containerColor = ClearCutAccents.Mauve,
             contentColor = semanticColors.surfaceBase
         ),
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         if (isSynthesizing) {
             CircularProgressIndicator(

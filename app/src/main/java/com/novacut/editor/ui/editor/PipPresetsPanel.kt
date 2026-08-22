@@ -352,7 +352,7 @@ private fun PipPresetCard(
         modifier = Modifier.width(148.dp),
         onClick = onClick,
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.22f))
     ) {
         Column(
@@ -363,7 +363,7 @@ private fun PipPresetCard(
                 modifier = Modifier
                     .width(116.dp)
                     .height(84.dp)
-                    .background(semanticColors.surfaceBase, RoundedCornerShape(18.dp))
+                    .background(semanticColors.surfaceBase, RoundedCornerShape(12.dp))
             ) {
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier
@@ -425,7 +425,7 @@ private fun KeyColorSwatch(
     Surface(
         onClick = onClick,
         color = color.copy(alpha = 0.14f),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (selected) ClearCutAccents.Mauve else color.copy(alpha = 0.28f)

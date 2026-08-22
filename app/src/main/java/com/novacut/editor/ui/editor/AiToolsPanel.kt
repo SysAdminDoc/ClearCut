@@ -1018,7 +1018,7 @@ private fun AiToolCard(
             .semantics { contentDescription = toolLabel }
             .clickable(enabled = !isProcessing, onClick = onClick),
         color = if (isEnabled) semanticColors.panelHighest else semanticColors.panelRaised.copy(alpha = 0.85f),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             when {
@@ -1052,7 +1052,7 @@ private fun AiToolCard(
                 ) {
                     Surface(
                         color = tool.color.copy(alpha = 0.16f),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, tool.color.copy(alpha = 0.2f))
                     ) {
                         Box(

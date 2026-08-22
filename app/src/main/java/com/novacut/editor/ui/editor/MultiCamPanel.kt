@@ -138,7 +138,7 @@ fun MultiCamPanel(
                     containerColor = ClearCutAccents.Mauve,
                     contentColor = semanticColors.surfaceBase
                 ),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Sync,
@@ -162,7 +162,7 @@ fun MultiCamPanel(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = semanticColors.panelRaised,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Text(
@@ -224,7 +224,7 @@ private fun MultiCamAngleCard(
     Surface(
         modifier = modifier,
         color = if (isActive) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             width = 1.dp,
             color = if (isActive) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
@@ -243,7 +243,7 @@ private fun MultiCamAngleCard(
                     .aspectRatio(16f / 9f)
                     .background(
                         color = if (isActive) accent.copy(alpha = 0.2f) else semanticColors.surfaceBase,
-                        shape = RoundedCornerShape(18.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {

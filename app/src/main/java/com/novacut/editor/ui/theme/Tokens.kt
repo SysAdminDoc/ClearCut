@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
  *
  * Centralized spacing / radius / motion / elevation values so the editor surfaces have a
  * single, coherent rhythm instead of every panel inventing its own scale. Use these in place
- * of inline `8.dp` / `tween(120)` / `RoundedCornerShape(14.dp)` literals where practical.
+ * of inline `8.dp` / `tween(120)` / `RoundedCornerShape(12.dp)` literals where practical.
  *
  * The scales are deliberately small. Every unit has a purpose.
  */

@@ -458,7 +458,7 @@ private fun CurvesContent(
                     val selected = activeCurve == id
                     Surface(
                         color = if (selected) color.copy(alpha = 0.16f) else semanticColors.panelRaised,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, if (selected) color.copy(alpha = 0.24f) else semanticColors.cardStroke)
                     ) {
                         Text(
@@ -490,7 +490,7 @@ private fun CurvesContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp)
-                    .background(semanticColors.panelRaised, RoundedCornerShape(20.dp))
+                    .background(semanticColors.panelRaised, RoundedCornerShape(12.dp))
             )
         }
     }
@@ -875,7 +875,7 @@ private fun LutContent(
                 containerColor = ClearCutAccents.Mauve.copy(alpha = 0.18f),
                 contentColor = ClearCutAccents.Mauve
             ),
-            shape = RoundedCornerShape(18.dp)
+            shape = RoundedCornerShape(12.dp)
         ) {
             Icon(Icons.Default.FileOpen, stringResource(R.string.cd_import_lut), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
@@ -900,7 +900,7 @@ private fun ColorGradingTabChip(
 
     Surface(
         color = if (selected) accent.copy(alpha = 0.16f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, if (selected) accent.copy(alpha = 0.24f) else semanticColors.cardStroke)
     ) {
         Text(

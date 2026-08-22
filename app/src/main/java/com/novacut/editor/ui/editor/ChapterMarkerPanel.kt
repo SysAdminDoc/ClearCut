@@ -204,7 +204,7 @@ private fun ChapterRow(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = if (isEditing) ClearCutAccents.Yellow.copy(alpha = 0.14f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (isEditing) ClearCutAccents.Yellow.copy(alpha = 0.28f) else semanticColors.cardStroke
@@ -323,7 +323,7 @@ private fun ChapterAction(
 ) {
     Surface(
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Row(

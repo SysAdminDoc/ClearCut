@@ -358,7 +358,7 @@ fun BatchExportPanel(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = semanticColors.panelRaised,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Column(
@@ -422,7 +422,7 @@ fun BatchExportPanel(
                     onClick = onStartBatch,
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     androidx.compose.material3.Icon(
                         imageVector = Icons.Default.RocketLaunch,
@@ -503,7 +503,7 @@ private fun BatchExportItemRow(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = if (item.status == BatchExportStatus.IN_PROGRESS) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (item.status == BatchExportStatus.IN_PROGRESS) accent.copy(alpha = 0.22f) else semanticColors.cardStroke

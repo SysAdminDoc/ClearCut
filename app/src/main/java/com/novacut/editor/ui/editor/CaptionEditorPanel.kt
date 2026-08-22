@@ -285,7 +285,7 @@ fun CaptionEditorPanel(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = semanticColors.panelRaised,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Column(
@@ -311,7 +311,7 @@ fun CaptionEditorPanel(
                                 OutlinedButton(
                                     onClick = onGenerateAutoCaption,
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(18.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, ClearCutAccents.Yellow.copy(alpha = 0.35f)),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Yellow)
                                 ) {
@@ -326,7 +326,7 @@ fun CaptionEditorPanel(
                                 Button(
                                     onClick = ::createCaption,
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(18.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                                 ) {
                                     androidx.compose.material3.Icon(
@@ -345,7 +345,7 @@ fun CaptionEditorPanel(
                                 OutlinedButton(
                                     onClick = onGenerateAutoCaption,
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(18.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, ClearCutAccents.Yellow.copy(alpha = 0.35f)),
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Yellow)
                                 ) {
@@ -360,7 +360,7 @@ fun CaptionEditorPanel(
                                 Button(
                                     onClick = ::createCaption,
                                     modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(18.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve)
                                 ) {
                                     androidx.compose.material3.Icon(
@@ -520,7 +520,7 @@ private fun CaptionMetric(
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Column(
@@ -563,7 +563,7 @@ private fun CaptionListCard(
             .fillMaxWidth()
             .clickable(onClick = onEdit),
         color = if (isEditing) accent.copy(alpha = 0.12f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (isEditing || isActive) accent.copy(alpha = 0.2f) else semanticColors.cardStroke
@@ -775,7 +775,7 @@ private fun CaptionEditForm(
                 OutlinedButton(
                     onClick = onDone,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, semanticColors.cardStroke),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext)
                 ) {
@@ -801,7 +801,7 @@ private fun CaptionEditForm(
                     enabled = text.isNotBlank(),
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(text = stringResource(R.string.panel_caption_save))
                 }
@@ -814,7 +814,7 @@ private fun CaptionEditForm(
                 OutlinedButton(
                     onClick = onDone,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, semanticColors.cardStroke),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext)
                 ) {
@@ -840,7 +840,7 @@ private fun CaptionEditForm(
                     enabled = text.isNotBlank(),
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(text = stringResource(R.string.panel_caption_save))
                 }

@@ -602,7 +602,7 @@ private fun TemplateCard(
     Surface(
         onClick = onClick,
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.9f))
     ) {
         Column {
@@ -708,7 +708,7 @@ private fun TemplateModeCard(
         onClick = onClick,
         modifier = modifier,
         color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelHighest,
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (selected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke
@@ -768,7 +768,7 @@ private fun AnimatedTemplateCard(
     Surface(
         onClick = onClick,
         color = semanticColors.panelHighest,
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, template.accent.copy(alpha = 0.24f))
     ) {
         Column {

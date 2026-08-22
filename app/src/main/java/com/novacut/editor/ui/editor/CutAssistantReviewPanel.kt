@@ -373,7 +373,7 @@ private fun CutAssistantEmptyState(
         ) {
             Surface(
                 color = ClearCutAccents.Green.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, ClearCutAccents.Green.copy(alpha = 0.2f))
             ) {
                 Icon(
@@ -469,7 +469,7 @@ private fun CutProposalReviewCard(
                 )
                 Surface(
                     color = accent.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, accent.copy(alpha = 0.2f))
                 ) {
                     Icon(

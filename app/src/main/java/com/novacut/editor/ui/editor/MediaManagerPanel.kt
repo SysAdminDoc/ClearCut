@@ -332,7 +332,7 @@ fun MediaManagerPanel(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = semanticColors.panelRaised,
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, semanticColors.cardStroke)
                 ) {
                     Row(
@@ -367,7 +367,7 @@ fun MediaManagerPanel(
                         }
                         OutlinedButton(
                             onClick = ::cancelScan,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                         ) {
                             Text(text = stringResource(R.string.media_manager_scan_cancel))
                         }
@@ -429,7 +429,7 @@ fun MediaManagerPanel(
                     OutlinedButton(
                         onClick = ::startScan,
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(text = stringResource(R.string.media_manager_scan_retry))
                     }
@@ -454,7 +454,7 @@ fun MediaManagerPanel(
                     containerColor = ClearCutAccents.Red,
                     contentColor = semanticColors.surfaceBase
                 ),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Link,
@@ -656,7 +656,7 @@ fun MediaManagerPanel(
                     disabledContainerColor = semanticColors.surface,
                     disabledContentColor = semanticColors.subtext
                 ),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.CleaningServices,
@@ -680,7 +680,7 @@ private fun MediaHealthMetric(
     Surface(
         modifier = modifier,
         color = accent.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Column(
@@ -714,7 +714,7 @@ private fun MediaManagerMessageCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Row(
@@ -726,7 +726,7 @@ private fun MediaManagerMessageCard(
         ) {
             Surface(
                 color = accent.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
             ) {
                 androidx.compose.material3.Icon(
@@ -769,7 +769,7 @@ private fun MediaScanIssueCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
     ) {
         Column(
@@ -836,7 +836,7 @@ private fun MediaScanIssueCard(
             OutlinedButton(
                 onClick = onRetry,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(text = stringResource(R.string.media_manager_scan_retry))
             }
@@ -861,7 +861,7 @@ private fun MetadataSidecarExportCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f)),
     ) {
         Column(
@@ -900,7 +900,7 @@ private fun MetadataSidecarExportCard(
                     )
                     OutlinedButton(
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
                     ) {
@@ -930,7 +930,7 @@ private fun MetadataSidecarExportCard(
                     ) {
                         OutlinedButton(
                             onClick = { onShare(file) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
                         ) {
@@ -943,7 +943,7 @@ private fun MetadataSidecarExportCard(
                         }
                         OutlinedButton(
                             onClick = onDismiss,
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, semanticColors.cardStroke),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext),
                         ) {
@@ -993,7 +993,7 @@ private fun MediaAssetCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = if (asset.isAccessible) semanticColors.panelRaised else ClearCutAccents.Red.copy(alpha = 0.08f),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (asset.isAccessible) semanticColors.cardStroke else ClearCutAccents.Red.copy(alpha = 0.2f)
@@ -1017,7 +1017,7 @@ private fun MediaAssetCard(
                 ) {
                     Surface(
                         color = accent.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
                     ) {
                         androidx.compose.material3.Icon(
@@ -1111,7 +1111,7 @@ private fun MediaAssetCard(
                             )
                             isEditingMetadata = false
                         },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, ClearCutAccents.Teal.copy(alpha = 0.25f)),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Teal),
                     ) {
@@ -1123,7 +1123,7 @@ private fun MediaAssetCard(
                             tagsDraft = asset.tags.joinToString(", ")
                             isEditingMetadata = false
                         },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, semanticColors.cardStroke),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = semanticColors.subtext),
                     ) {
@@ -1135,7 +1135,7 @@ private fun MediaAssetCard(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = semanticColors.surface,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, semanticColors.cardStroke),
                     ) {
                         Column(
@@ -1168,7 +1168,7 @@ private fun MediaAssetCard(
                 }
                 OutlinedButton(
                     onClick = { isEditingMetadata = true },
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, ClearCutAccents.Teal.copy(alpha = 0.25f)),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Teal),
                 ) {
@@ -1208,7 +1208,7 @@ private fun MediaAssetCard(
                     if (!asset.isAccessible) {
                         OutlinedButton(
                             onClick = { onRelinkMedia(asset.uri) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, accent.copy(alpha = 0.25f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = accent)
                         ) {
@@ -1224,7 +1224,7 @@ private fun MediaAssetCard(
                     if (asset.usedInClipIds.isNotEmpty()) {
                         OutlinedButton(
                             onClick = { onJumpToClip(asset.usedInClipIds.first()) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue)
                         ) {
@@ -1261,7 +1261,7 @@ private fun MediaDiagnosticCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = semanticColors.surface,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStroke),
     ) {
         Column(
@@ -1396,7 +1396,7 @@ private fun MediaDiagnosticCard(
                                     .forEach { format ->
                                         OutlinedButton(
                                             onClick = { onExportMetadataSidecar(sidecar, format) },
-                                            shape = RoundedCornerShape(14.dp),
+                                            shape = RoundedCornerShape(12.dp),
                                             border = BorderStroke(
                                                 1.dp,
                                                 ClearCutAccents.Teal.copy(alpha = 0.25f),
@@ -1441,7 +1441,7 @@ private fun MediaDiagnosticCard(
                     ) {
                         OutlinedButton(
                             onClick = { onJumpToSyncFrame(clipId, SyncFrameDirection.PREVIOUS) },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue),
                         ) {
@@ -1449,7 +1449,7 @@ private fun MediaDiagnosticCard(
                         }
                         OutlinedButton(
                             onClick = { onJumpToSyncFrame(clipId, SyncFrameDirection.NEXT) },
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, ClearCutAccents.Blue.copy(alpha = 0.25f)),
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = ClearCutAccents.Blue),
                         ) {

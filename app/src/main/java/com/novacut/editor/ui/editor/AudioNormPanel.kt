@@ -220,7 +220,7 @@ fun AudioNormPanel(
                 onClick = { onNormalize(targetLufs) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Mauve),
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(12.dp),
                 enabled = hasSelectedClip
             ) {
                 androidx.compose.material3.Icon(
@@ -237,7 +237,7 @@ fun AudioNormPanel(
                 onClick = { onNormalizeAll(targetLufs) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = ClearCutAccents.Green),
-                shape = RoundedCornerShape(18.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Equalizer,
@@ -267,7 +267,7 @@ private fun NormalizationModeRow(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = if (selected) accent.copy(alpha = 0.14f) else semanticColors.panelRaised,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             if (selected) accent.copy(alpha = 0.28f) else semanticColors.cardStroke

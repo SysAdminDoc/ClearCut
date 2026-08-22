@@ -168,7 +168,7 @@ fun TextEditorSheet(
                     disabledContainerColor = semanticColors.panelHighest,
                     disabledContentColor = semanticColors.subtext
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     text = stringResource(R.string.text_editor_save),
@@ -187,7 +187,7 @@ fun TextEditorSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.verticalGradient(
                             listOf(
@@ -238,7 +238,7 @@ fun TextEditorSheet(
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.panel_text_editor_text_label)) },
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = ClearCutAccents.Mauve,
                     unfocusedBorderColor = semanticColors.cardStroke,

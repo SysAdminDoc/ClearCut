@@ -89,7 +89,7 @@ fun VideoScopesOverlay(
     Surface(
         modifier = modifier.widthIn(min = 264.dp, max = 320.dp),
         color = semanticColors.panel.copy(alpha = 0.96f),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, semanticColors.cardStrokeStrong.copy(alpha = 0.9f))
     ) {
         Column(
@@ -187,7 +187,7 @@ fun VideoScopesOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(168.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(semanticColors.canvas),
                 contentAlignment = Alignment.Center
             ) {

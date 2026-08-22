@@ -144,7 +144,7 @@ fun UndoHistoryPanel(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             color = semanticColors.surfaceLow,
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                             border = BorderStroke(1.dp, semanticColors.cardStroke)
                         ) {
                             Text(
@@ -190,7 +190,7 @@ private fun UndoHistoryMessageCard(
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = accent.copy(alpha = 0.08f),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
     ) {
         Row(
@@ -202,7 +202,7 @@ private fun UndoHistoryMessageCard(
         ) {
             Surface(
                 color = accent.copy(alpha = 0.12f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, accent.copy(alpha = 0.18f))
             ) {
                 androidx.compose.material3.Icon(
@@ -258,7 +258,7 @@ private fun UndoHistoryRow(
             isFuture -> semanticColors.panelHighest
             else -> semanticColors.panelRaised
         },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         border = BorderStroke(
             1.dp,
             when {

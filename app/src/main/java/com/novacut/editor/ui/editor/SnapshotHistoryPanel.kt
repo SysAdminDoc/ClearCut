@@ -376,7 +376,7 @@ private fun SnapshotMessageCard(
         ) {
             Surface(
                 color = ClearCutAccents.Mauve.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.18f))
             ) {
                 Icon(
@@ -441,7 +441,7 @@ private fun SnapshotRow(
                 ) {
                     Surface(
                         color = ClearCutAccents.Mauve.copy(alpha = 0.14f),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         border = BorderStroke(1.dp, ClearCutAccents.Mauve.copy(alpha = 0.22f))
                     ) {
                         Icon(
