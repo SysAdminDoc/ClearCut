@@ -855,6 +855,7 @@ fun ExportSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
+                .testTag(ClearCutTestTags.EXPORT_PRIMARY_ACTION)
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1726,6 +1727,7 @@ fun ExportSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
+                    .testTag(ClearCutTestTags.EXPORT_PRIMARY_ACTION)
             )
         }
 

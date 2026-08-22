@@ -14,6 +14,16 @@ def write_results(directory: str, cases: str) -> Path:
 
 
 class Api37QaClassifierTest(unittest.TestCase):
+    def test_baseline_includes_large_text_viewport_matrix(self) -> None:
+        large_text_tests = {
+            test_id
+            for test_id in run_api37_qa.EXPECTED_TESTS
+            if ".LargeTextLayoutTest." in test_id
+        }
+
+        self.assertEqual(len(run_api37_qa.EXPECTED_TESTS), 27)
+        self.assertEqual(len(large_text_tests), 6)
+
     def test_known_failure_is_reported_without_becoming_a_regression(self) -> None:
         test_id = "example.DeviceTest.codecFixture"
         assumption = run_api37_qa.KnownAssumption(
@@ -68,6 +78,43 @@ class Api37QaClassifierTest(unittest.TestCase):
 
         self.assertEqual(report["outcome"], "regression")
         self.assertEqual(report["summary"]["regressions"], 1)
+
+    def test_cfr_assumption_requires_the_recorded_encoder_fingerprint(self) -> None:
+        test_id = (
+            "com.novacut.editor.engine.Media3ExportRobustnessInstrumentationTest."
+            "constantFrameRateExportNormalizesVariableInputCadence"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            result_path = write_results(
+                directory,
+                '<testcase classname="com.novacut.editor.engine.'
+                'Media3ExportRobustnessInstrumentationTest" '
+                'name="constantFrameRateExportNormalizesVariableInputCadence">'
+                '<failure message="CFR export reported an error">'
+                "Constant frame-rate normalization failed"
+                "</failure></testcase>",
+            )
+            (Path(directory) / (
+                "logcat-com.novacut.editor.engine."
+                "Media3ExportRobustnessInstrumentationTest-"
+                "constantFrameRateExportNormalizesVariableInputCadence.txt"
+            )).write_text(
+                "c2.android.avc.encoder\n"
+                "Error submitting video frame to the encoder\n"
+                "Error flushing encoder: Try again\n",
+                encoding="utf-8",
+            )
+            results = run_api37_qa.parse_results(result_path)
+
+        report = run_api37_qa.evaluate(
+            results,
+            expected_tests=frozenset({test_id}),
+            known_failures={test_id: run_api37_qa.KNOWN_FAILURES[test_id]},
+            known_skips={},
+        )
+
+        self.assertEqual(report["outcome"], "pass-with-assumptions")
+        self.assertEqual(report["summary"]["knownAssumptions"], 1)
 
     def test_missing_baseline_test_is_a_regression(self) -> None:
         report = run_api37_qa.evaluate(

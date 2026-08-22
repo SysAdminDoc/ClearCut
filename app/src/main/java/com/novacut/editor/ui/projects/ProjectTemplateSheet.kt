@@ -271,6 +271,7 @@ fun ProjectTemplateSheet(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 168.dp),
             modifier = Modifier
+                .testTag(ClearCutTestTags.TEMPLATE_GRID)
                 .fillMaxWidth()
                 .heightIn(max = if (userTemplates.isEmpty()) 460.dp else 320.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),

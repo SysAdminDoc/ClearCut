@@ -591,9 +591,14 @@ private fun ProjectHomeHero(
     showSortControls: Boolean,
     actionsEnabled: Boolean
 ) {
+    val maximumHeight = (LocalConfiguration.current.screenHeightDp * 0.62f)
+        .coerceAtLeast(320f)
+        .dp
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(max = maximumHeight)
+            .verticalScroll(rememberScrollState())
             .background(LocalClearCutColors.current.background)
             .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
         verticalArrangement = Arrangement.spacedBy(Spacing.lg)

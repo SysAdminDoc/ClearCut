@@ -590,10 +590,12 @@ python scripts\run_api37_qa.py
 
 This command provisions a headless managed Pixel 6, runs every expected
 instrumentation case, and writes named JSON and text reports under
-`app/build/reports/connected-qa/`. It exits successfully only when all 21
+`app/build/reports/connected-qa/`. It exits successfully only when all 27
 expected cases are present and every non-passing result matches an explicit
 emulator assumption or optional-model skip. The accepted status is
 `PASS-WITH-ASSUMPTIONS`, not a generic green connected-test claim.
+The current clean-image baseline is 20 passes, six goldfish codec/player
+assumptions, one optional-model skip, and zero regressions.
 
 `python scripts\ensure_api37_avd.py --launch` remains available when a reusable
 16 KB-page-size AVD is useful for manual diagnosis. It starts headlessly, so it

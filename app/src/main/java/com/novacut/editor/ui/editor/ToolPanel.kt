@@ -579,6 +579,7 @@ private fun SubMenuGrid(
     ) {
         LazyRow(
             modifier = Modifier
+                .testTag(ClearCutTestTags.EDITOR_TOOL_ACTION_LIST)
                 .height(62.dp),
             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)

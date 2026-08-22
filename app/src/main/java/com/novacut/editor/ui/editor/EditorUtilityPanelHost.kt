@@ -31,10 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.novacut.editor.R
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ImageOverlayType
@@ -279,7 +281,8 @@ fun BoxScope.EditorUtilityPanelHost(
                 )
             },
             onDismissMetadataSidecarExport = viewModel::dismissMetadataSidecarExport,
-            onClose = viewModel::hideMediaManager
+            onClose = viewModel::hideMediaManager,
+            modifier = Modifier.testTag(ClearCutTestTags.MEDIA_MANAGER_PANEL),
         )
     }
 
@@ -338,7 +341,8 @@ fun BoxScope.EditorUtilityPanelHost(
             onPauseBatch = viewModel::pauseBatchExport,
             onCancelBatch = viewModel::cancelBatchExport,
             onStartBatch = viewModel::startBatchExport,
-            onClose = viewModel::hideBatchExport
+            onClose = viewModel::hideBatchExport,
+            modifier = Modifier.testTag(ClearCutTestTags.BATCH_EXPORT_PANEL),
         )
     }
 

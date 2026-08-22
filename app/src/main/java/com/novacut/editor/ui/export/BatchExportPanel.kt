@@ -41,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.model.BatchExportItem
 import com.novacut.editor.model.BatchExportSourceRange
 import com.novacut.editor.model.BatchExportStatus
@@ -102,6 +103,7 @@ fun BatchExportPanel(
         onClose = onClose,
         modifier = modifier,
         scrollable = true,
+        closeButtonTestTag = ClearCutTestTags.BATCH_EXPORT_CLOSE,
         headerActions = {
             PremiumPanelIconButton(
                 icon = if (showPresetPicker) Icons.Default.Close else Icons.Default.Add,

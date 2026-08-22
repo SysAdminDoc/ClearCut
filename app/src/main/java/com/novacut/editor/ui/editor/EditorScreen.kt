@@ -16,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -830,9 +831,11 @@ fun EditorScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 210.dp)
+                                .fillMaxHeight()
+                                .verticalScroll(rememberScrollState())
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
                         ) {
                             Icon(
                                 Icons.Default.VideoLibrary,
@@ -864,7 +867,8 @@ fun EditorScreen(
                                     .clip(RoundedCornerShape(Radius.md))
                                     .background(ClearCutAccents.Sky)
                                     .clickable(onClick = viewModel::showMediaPicker)
-                                    .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA),
+                                    .testTag(ClearCutTestTags.EDITOR_EMPTY_ADD_MEDIA)
+                                    .semantics { contentDescription = emptyAddMediaLabel },
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -1362,16 +1366,6 @@ private fun EditorTopBar(
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showAddTrackMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
-    // v3.69: honour layout mode. ONE_HANDED forces compact even on wider
-    // screens (user opted in). A forced desktop layout on a phone uses the
-    // same compact action density so its responsive rail remains usable.
-    val layoutMode = LocalLayoutMode.current
-    val isCompactBar = when (layoutMode) {
-        LayoutMode.ONE_HANDED -> true
-        LayoutMode.DESKTOP -> LocalConfiguration.current.screenWidthDp < 600
-        LayoutMode.PHONE -> LocalConfiguration.current.screenWidthDp < 430
-    }
-
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
@@ -1613,12 +1607,28 @@ private fun EditorTopBar(
         )
     }
 
-    Surface(
-        color = semanticColors.background,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(if (isCompactBar) 64.dp else 68.dp)
-    ) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val layoutMode = LocalLayoutMode.current
+        val isCompactBar = when (layoutMode) {
+            LayoutMode.ONE_HANDED -> true
+            LayoutMode.DESKTOP -> maxWidth < 600.dp
+            LayoutMode.PHONE -> maxWidth < 430.dp
+        }
+        val toolbarTouchTarget = if (layoutMode == LayoutMode.DESKTOP) 68.dp else {
+            TouchTarget.minimum
+        }
+        val toolbarHeight = if (layoutMode == LayoutMode.DESKTOP) 68.dp else if (isCompactBar) {
+            64.dp
+        } else {
+            68.dp
+        }
+
+        Surface(
+            color = semanticColors.background,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(toolbarHeight)
+        ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1637,7 +1647,7 @@ private fun EditorTopBar(
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier
-                            .size(if (isCompactBar) 60.dp else TouchTarget.minimum)
+                            .size(if (layoutMode == LayoutMode.DESKTOP) 68.dp else if (isCompactBar) 60.dp else 68.dp)
                             .testTag(ClearCutTestTags.EDITOR_BACK)
                     ) {
                         Icon(
@@ -1677,8 +1687,15 @@ private fun EditorTopBar(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clickable(onClick = onToggleEditorMode)
-                        .semantics { contentDescription = modeChipDescription },
+                        .then(
+                            if (layoutMode == LayoutMode.DESKTOP && isCompactBar) {
+                                Modifier
+                            } else {
+                                Modifier
+                                    .clickable(onClick = onToggleEditorMode)
+                                    .semantics { contentDescription = modeChipDescription }
+                            }
+                        ),
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
@@ -1722,7 +1739,7 @@ private fun EditorTopBar(
                                 onClick = onUndo,
                                 enabled = canUndo,
                                 modifier = Modifier
-                                    .size(TouchTarget.minimum)
+                                    .size(toolbarTouchTarget)
                                     .testTag(ClearCutTestTags.EDITOR_UNDO)
                             ) {
                                 Icon(
@@ -1736,7 +1753,7 @@ private fun EditorTopBar(
                                 onClick = onRedo,
                                 enabled = canRedo,
                                 modifier = Modifier
-                                    .size(TouchTarget.minimum)
+                                    .size(toolbarTouchTarget)
                                     .testTag(ClearCutTestTags.EDITOR_REDO)
                             ) {
                                 Icon(
@@ -1759,7 +1776,7 @@ private fun EditorTopBar(
                     ) {
                         IconButton(
                             onClick = { showOverflow = true },
-                            modifier = Modifier.size(TouchTarget.minimum)
+                            modifier = Modifier.size(toolbarTouchTarget)
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
@@ -1775,6 +1792,16 @@ private fun EditorTopBar(
                         containerColor = semanticColors.panelHighest
                     ) {
                         if (isCompactBar) {
+                            DropdownMenuItem(
+                                text = { Text(modeChipDescription) },
+                                onClick = {
+                                    showOverflow = false
+                                    onToggleEditorMode()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Tune, contentDescription = null)
+                                },
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.editor_undo)) },
                                 onClick = {
@@ -2007,7 +2034,7 @@ private fun EditorTopBar(
                     shape = RoundedCornerShape(Radius.md),
                     contentPadding = PaddingValues(horizontal = if (isCompactBar) 12.dp else 14.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .height(if (isCompactBar) 60.dp else TouchTarget.minimum)
+                        .height(if (layoutMode == LayoutMode.DESKTOP) 68.dp else if (isCompactBar) 60.dp else TouchTarget.minimum)
                         .testTag(ClearCutTestTags.EDITOR_EXPORT)
                 ) {
                     Icon(
@@ -2021,4 +2048,5 @@ private fun EditorTopBar(
             }
         }
     }
+}
 }

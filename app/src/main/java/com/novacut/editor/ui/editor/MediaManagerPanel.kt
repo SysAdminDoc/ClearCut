@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.novacut.editor.R
+import com.novacut.editor.ui.ClearCutTestTags
 import com.novacut.editor.engine.MediaDiagnostic
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.MediaRelinkProbe
@@ -245,6 +246,7 @@ fun MediaManagerPanel(
         accent = if (missingCount > 0) ClearCutAccents.Red else ClearCutAccents.Blue,
         onClose = onClose,
         closeContentDescription = stringResource(R.string.media_manager_close_cd),
+        closeButtonTestTag = ClearCutTestTags.MEDIA_MANAGER_CLOSE,
         modifier = modifier,
         scrollable = true
     ) {

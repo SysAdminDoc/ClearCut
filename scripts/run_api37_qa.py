@@ -22,6 +22,12 @@ EXPECTED_TESTS = frozenset(
         "com.novacut.editor.ClearCutSmokeTest.highContrastPhoneAndDesktopEditorSurfacesRender",
         "com.novacut.editor.ClearCutSmokeTest.projectEditorExportAndSettingsSurfacesOpen",
         "com.novacut.editor.ClearCutSmokeTest.pseudoLocalesRenderExpandedAndRtlExportSurfaces",
+        "com.novacut.editor.LargeTextLayoutTest.fontScale200_desktopSurfacesRemainUsable",
+        "com.novacut.editor.LargeTextLayoutTest.fontScale200_largeScreenSurfacesRemainUsable",
+        "com.novacut.editor.LargeTextLayoutTest.fontScale200_phoneSurfacesRemainUsable",
+        "com.novacut.editor.LargeTextLayoutTest.fontScale300_desktopSurfacesRemainUsable",
+        "com.novacut.editor.LargeTextLayoutTest.fontScale300_largeScreenSurfacesRemainUsable",
+        "com.novacut.editor.LargeTextLayoutTest.fontScale300_phoneSurfacesRemainUsable",
         "com.novacut.editor.engine.AudioOnlyExportContractTest.audioOnlyExportProducesTrackVerifiedM4a",
         "com.novacut.editor.engine.AudioOnlyExportContractTest.verifierRejectsRequestedVideoCodecMismatch",
         "com.novacut.editor.engine.AudioOnlyExportContractTest.verifierRejectsVideoOutputWhenAudioOnlyExpected",
@@ -59,8 +65,13 @@ KNOWN_FAILURES = {
     ),
     "com.novacut.editor.engine.Media3ExportRobustnessInstrumentationTest.constantFrameRateExportNormalizesVariableInputCadence": KnownAssumption(
         "emulator-codec",
-        "The API 37 managed image rejects the variable-cadence asset in Media3's asset loader.",
-        ("Asset loader error",),
+        "The API 37 managed image's MediaCodec encoder rejects the CFR pre-render frame.",
+        (
+            "Constant frame-rate normalization failed",
+            "c2.android.avc.encoder",
+            "Error submitting video frame to the encoder",
+            "Error flushing encoder: Try again",
+        ),
     ),
     "com.novacut.editor.engine.Media3ExportRobustnessInstrumentationTest.speedExportRemainsValidAndDoesNotAdvertiseBalloonedFrameRate": KnownAssumption(
         "emulator-codec",
@@ -102,22 +113,28 @@ def parse_results(path: Path) -> list[TestResult]:
     root = ElementTree.parse(path).getroot()
     results: list[TestResult] = []
     for testcase in root.findall(".//testcase"):
-        test_id = (
-            f"{testcase.attrib.get('classname', '')}.{testcase.attrib.get('name', '')}"
-        )
+        class_name = testcase.attrib.get("classname", "")
+        test_name = testcase.attrib.get("name", "")
+        test_id = f"{class_name}.{test_name}"
         failure = testcase.find("failure")
         error = testcase.find("error")
         skipped = testcase.find("skipped")
         problem = failure if failure is not None else error
         if problem is not None:
-            detail = " ".join(
+            detail_parts = [
                 part.strip()
                 for part in (
                     problem.attrib.get("message", ""),
                     "".join(problem.itertext()),
                 )
                 if part.strip()
-            )
+            ]
+            logcat_path = path.parent / f"logcat-{class_name}-{test_name}.txt"
+            if logcat_path.is_file():
+                detail_parts.append(
+                    logcat_path.read_text(encoding="utf-8", errors="replace")
+                )
+            detail = " ".join(detail_parts)
             status = "failed"
         elif skipped is not None:
             detail = " ".join(skipped.itertext()).strip()

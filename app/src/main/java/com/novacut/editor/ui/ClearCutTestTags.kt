@@ -6,6 +6,7 @@ object ClearCutTestTags {
     const val PROJECTS_SETTINGS = "projects.settings"
 
     const val TEMPLATE_SHEET = "templates.sheet"
+    const val TEMPLATE_GRID = "templates.grid"
     const val TEMPLATE_BLANK = "templates.blank"
 
     const val EDITOR_SCREEN = "editor.screen"
@@ -17,6 +18,7 @@ object ClearCutTestTags {
     const val EDITOR_UNDO = "editor.undo"
     const val EDITOR_REDO = "editor.redo"
     const val EDITOR_TOOL_TAB_PREFIX = "editor.toolTab."
+    const val EDITOR_TOOL_ACTION_LIST = "editor.toolActionList"
     const val EDITOR_TOOL_ACTION_PREFIX = "editor.toolAction."
 
     const val TIMELINE_SPLIT = "timeline.split"
@@ -31,6 +33,12 @@ object ClearCutTestTags {
 
     const val EXPORT_SHEET = "export.sheet"
     const val EXPORT_CLOSE = "export.close"
+    const val EXPORT_PRIMARY_ACTION = "export.primaryAction"
+
+    const val MEDIA_MANAGER_PANEL = "mediaManager.panel"
+    const val MEDIA_MANAGER_CLOSE = "mediaManager.close"
+    const val BATCH_EXPORT_PANEL = "batchExport.panel"
+    const val BATCH_EXPORT_CLOSE = "batchExport.close"
 
     const val SETTINGS_SCREEN = "settings.screen"
     const val SETTINGS_BACK = "settings.back"

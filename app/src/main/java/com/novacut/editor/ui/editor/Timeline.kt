@@ -525,7 +525,7 @@ fun Timeline(
     }
     // The compact rail still needs room for the track icon, label, and a pair
     // of 48dp track targets (visibility plus more-options).
-    val headerWidth = if (isCompactTimeline) 120.dp else 96.dp
+    val headerWidth = if (isCompactTimeline) 120.dp else 128.dp
     val chromePadding = if (isCompactTimeline) 4.dp else 10.dp
     val contentPadding = if (isCompactTimeline) 2.dp else 8.dp
     val trimHandleVisualWidth = 14.dp
@@ -1142,7 +1142,7 @@ fun Timeline(
                                         if (!track.isCollapsed) {
                                             Spacer(modifier = Modifier.height(if (isCompactTimeline) 2.dp else 6.dp))
                                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                if (isCompactTimeline && track.type == TrackType.AUDIO) {
+                                                if (track.type == TrackType.AUDIO) {
                                                     TimelineMiniIconButton(
                                                         icon = if (track.isMuted) {
                                                             Icons.AutoMirrored.Filled.VolumeOff
@@ -1154,15 +1154,6 @@ fun Timeline(
                                                         accent = trackColor,
                                                         compact = true,
                                                         onClick = { onToggleTrackMute(track.id) }
-                                                    )
-                                                } else if (track.type == TrackType.AUDIO) {
-                                                    TimelineMiniIconButton(
-                                                        icon = Icons.Default.GraphicEq,
-                                                        contentDescription = stringResource(R.string.track_waveform_toggle),
-                                                        active = track.showWaveform,
-                                                        accent = trackColor,
-                                                        compact = true,
-                                                        onClick = { onToggleTrackWaveform(track.id) }
                                                     )
                                                 } else {
                                                     TimelineMiniIconButton(
@@ -1172,28 +1163,6 @@ fun Timeline(
                                                         accent = trackColor,
                                                         compact = true,
                                                         onClick = { onToggleTrackVisible(track.id) }
-                                                    )
-                                                }
-                                                if (!isCompactTimeline) {
-                                                    TimelineMiniIconButton(
-                                                        icon = if (track.isMuted) {
-                                                            Icons.AutoMirrored.Filled.VolumeOff
-                                                        } else {
-                                                            Icons.AutoMirrored.Filled.VolumeUp
-                                                        },
-                                                        contentDescription = stringResource(R.string.timeline_toggle_mute),
-                                                        active = !track.isMuted,
-                                                        accent = trackColor,
-                                                        compact = true,
-                                                        onClick = { onToggleTrackMute(track.id) }
-                                                    )
-                                                    TimelineMiniIconButton(
-                                                        icon = if (track.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                                                        contentDescription = stringResource(R.string.timeline_toggle_lock),
-                                                        active = !track.isLocked,
-                                                        accent = trackColor,
-                                                        compact = true,
-                                                        onClick = { onToggleTrackLock(track.id) }
                                                     )
                                                 }
                                                 Box {
@@ -1211,44 +1180,46 @@ fun Timeline(
                                                         containerColor = semanticColors.panelHighest,
                                                         shape = RoundedCornerShape(Radius.md)
                                                     ) {
-                                                        if (isCompactTimeline) {
+                                                        DropdownMenuItem(
+                                                            text = { Text(stringResource(R.string.timeline_toggle_lock)) },
+                                                            leadingIcon = {
+                                                                Icon(
+                                                                    if (track.isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                                                    contentDescription = null,
+                                                                )
+                                                            },
+                                                            onClick = {
+                                                                trackMenuExpanded = false
+                                                                onToggleTrackLock(track.id)
+                                                            },
+                                                        )
+                                                        if (track.type == TrackType.AUDIO) {
                                                             DropdownMenuItem(
-                                                                text = { Text(stringResource(R.string.timeline_toggle_lock)) },
+                                                                text = { Text(stringResource(R.string.track_waveform_toggle)) },
+                                                                leadingIcon = { Icon(Icons.Default.GraphicEq, contentDescription = null) },
+                                                                onClick = {
+                                                                    trackMenuExpanded = false
+                                                                    onToggleTrackWaveform(track.id)
+                                                                },
+                                                            )
+                                                        } else {
+                                                            DropdownMenuItem(
+                                                                text = { Text(stringResource(R.string.timeline_toggle_mute)) },
                                                                 leadingIcon = {
                                                                     Icon(
-                                                                        if (track.isLocked) Icons.Default.LockOpen else Icons.Default.Lock,
+                                                                        if (track.isMuted) {
+                                                                            Icons.AutoMirrored.Filled.VolumeUp
+                                                                        } else {
+                                                                            Icons.AutoMirrored.Filled.VolumeOff
+                                                                        },
                                                                         contentDescription = null,
                                                                     )
                                                                 },
                                                                 onClick = {
                                                                     trackMenuExpanded = false
-                                                                    onToggleTrackLock(track.id)
+                                                                    onToggleTrackMute(track.id)
                                                                 },
                                                             )
-                                                            if (track.type == TrackType.AUDIO) {
-                                                                DropdownMenuItem(
-                                                                    text = { Text(stringResource(R.string.track_waveform_toggle)) },
-                                                                    leadingIcon = { Icon(Icons.Default.GraphicEq, contentDescription = null) },
-                                                                    onClick = {
-                                                                        trackMenuExpanded = false
-                                                                        onToggleTrackWaveform(track.id)
-                                                                    },
-                                                                )
-                                                            } else {
-                                                                DropdownMenuItem(
-                                                                    text = { Text(stringResource(R.string.timeline_toggle_visibility)) },
-                                                                    leadingIcon = {
-                                                                        Icon(
-                                                                            if (track.isVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                                                            contentDescription = null
-                                                                        )
-                                                                    },
-                                                                    onClick = {
-                                                                        trackMenuExpanded = false
-                                                                        onToggleTrackVisible(track.id)
-                                                                    },
-                                                                )
-                                                            }
                                                         }
                                                         DropdownMenuItem(
                                                             text = { Text(stringResource(R.string.timeline_track_offset_earlier)) },
