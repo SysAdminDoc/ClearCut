@@ -100,7 +100,7 @@ class StylePackPreviewCommitTest {
             .put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
             .put("packType", DeclarativePackKind.STYLE.wireName)
             .put("provenance", org.json.JSONObject().put("source", "test"))
-            .put("minAppVersion", "3.79.0")
+            .put("minAppVersion", "3.80.0")
             .put(
                 "requiredCapabilities",
                 org.json.JSONArray().put(DeclarativePackContract.STYLE_PACK_CAPABILITY),

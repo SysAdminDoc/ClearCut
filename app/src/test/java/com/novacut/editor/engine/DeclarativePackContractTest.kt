@@ -61,7 +61,7 @@ class DeclarativePackContractTest {
         val incompatible = DeclarativePackContract.inspect(
             newer,
             DeclarativePackKind.STYLE,
-            supportedAppVersion = "3.79.0",
+            supportedAppVersion = "3.80.0",
         )
         assertEquals(DeclarativePackIssue.INCOMPATIBLE_APP_VERSION, incompatible.issue)
         assertEquals("PACK_INCOMPATIBLE_APP_VERSION", incompatible.reasonCode)
@@ -76,7 +76,7 @@ class DeclarativePackContractTest {
             put("packType", "style")
             put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
             put("id", "pack")
-            put("minAppVersion", "3.79.0")
+            put("minAppVersion", "3.80.0")
             put("requiredCapabilities", org.json.JSONArray().put(DeclarativePackContract.STYLE_PACK_CAPABILITY))
         }
 
@@ -135,7 +135,7 @@ class DeclarativePackContractTest {
         put("schemaVersion", DeclarativePackContract.CURRENT_SCHEMA_VERSION)
         put("packType", "style")
         put("provenance", JSONObject().put("source", "test"))
-        put("minAppVersion", "3.79.0")
+        put("minAppVersion", "3.80.0")
         put("requiredCapabilities", org.json.JSONArray().put(DeclarativePackContract.STYLE_PACK_CAPABILITY))
         put("id", "pack")
         put("styles", org.json.JSONArray().put(JSONObject().put("id", "style-a")))

@@ -1,0 +1,3 @@
+- Ahora puedes importar y exportar perfiles de estabilización sin conexión como archivos locales seguros.
+- La revisión muestra lente, movimiento, recorte, sincronización, valores alternativos e integridad antes de activar el perfil.
+- El perfil seleccionado se usa en el próximo análisis y se conserva en los datos de estabilización guardados.

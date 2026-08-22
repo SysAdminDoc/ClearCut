@@ -4,11 +4,11 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.79.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.80.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
 
-### v3.79.0 A quieter workspace for every cut
+### v3.80.0 A quieter workspace for every cut
 
 - The dashboard now opens with a focused project launcher, a compact recent-project row, and direct access to built-in templates.
 - The editor gives footage more room, keeps transport and timeline controls dense, and uses a flatter tool bar that stays readable at a glance.

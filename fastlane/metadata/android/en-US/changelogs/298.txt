@@ -1,0 +1,1 @@
+- Added reusable offline stabilization profiles. The local-only .ncstabilization contract carries versioned lens, motion, crop, and sync assumptions, rejects executable or incompatible content before activation, previews fallback metadata and reason codes, and feeds the selected profile into the next analysis and saved stabilization data.
