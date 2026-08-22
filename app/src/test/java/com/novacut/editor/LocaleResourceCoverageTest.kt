@@ -43,6 +43,26 @@ class LocaleResourceCoverageTest {
     }
 
     @Test
+    fun everyTranslatedResourceDirectoryIsRegisteredInLocaleConfig() {
+        val repoRoot = locateRepoRoot()
+        val resourceRoot = File(repoRoot, "app/src/main/res")
+        val localesConfig = File(resourceRoot, "xml/locales_config.xml").readText()
+        val translatedLocaleTags = resourceRoot.listFiles()
+            .orEmpty()
+            .filter { it.isDirectory && it.name.startsWith("values-") }
+            .map { it.name.removePrefix("values-") }
+            .filter { it.isNotBlank() }
+            .toSet()
+
+        translatedLocaleTags.forEach { localeTag ->
+            assertTrue(
+                "values-$localeTag ships strings but locales_config.xml does not list $localeTag.",
+                "android:name=\"$localeTag\"" in localesConfig,
+            )
+        }
+    }
+
+    @Test
     fun debugBuildGeneratesXaAndXbPseudoLocales() {
         val repoRoot = locateRepoRoot()
         val buildFile = File(repoRoot, "app/build.gradle.kts").readText()

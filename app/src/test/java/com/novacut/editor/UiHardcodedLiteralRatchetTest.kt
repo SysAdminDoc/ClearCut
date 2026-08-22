@@ -35,6 +35,24 @@ class UiHardcodedLiteralRatchetTest {
         }
     }
 
+    @Test
+    fun everyUiSourceFileStaysWithinTheMeasuredLiteralBudget() {
+        val root = locateRepoRoot()
+        val uiRoot = File(root, "app/src/main/java/com/novacut/editor/ui")
+        val files = uiRoot.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .toList()
+        val total = files.sumOf { file ->
+            UI_LITERAL_PATTERNS.sumOf { pattern -> pattern.findAll(file.readText()).count() }
+        }
+
+        assertTrue("UI literal scan must cover source files", files.isNotEmpty())
+        assertTrue(
+            "UI source literal count grew: $total > $UI_LITERAL_TOTAL_BUDGET",
+            total <= UI_LITERAL_TOTAL_BUDGET,
+        )
+    }
+
     private fun locateRepoRoot(): File {
         var directory = File(System.getProperty("user.dir") ?: error("Could not read user.dir")).absoluteFile
         repeat(8) {
@@ -45,6 +63,11 @@ class UiHardcodedLiteralRatchetTest {
     }
 
     private companion object {
+        // Baseline measured across every Kotlin source file under ui/ on 2026-08-22.
+        // Raise this only when a localized resource migration or a reviewed UI
+        // addition changes the measured baseline.
+        const val UI_LITERAL_TOTAL_BUDGET = 97
+
         val UI_LITERAL_PATTERNS = listOf(
             Regex("(?m)^\\s*(?:text|title|subtitle|label|description|valueLabel)\\s*=\\s*\"(?:[^\"\\\\]|\\\\.)*\""),
             Regex("(?m)\\bText\\(\\s*\"(?:[^\"\\\\]|\\\\.)*\""),
