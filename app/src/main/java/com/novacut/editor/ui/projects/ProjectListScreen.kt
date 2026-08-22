@@ -325,6 +325,16 @@ fun ProjectListScreen(
                         )
                     }
 
+                    if (!hasActiveSearch && !hasActiveFilter) {
+                        item(key = "__templates_launcher") {
+                            ProjectTemplateLibraryRow(
+                                templateCount = projectTemplates.size,
+                                enabled = actionsEnabled,
+                                onClick = { showTemplateSheet = true },
+                            )
+                        }
+                    }
+
                     if (trashed.isNotEmpty()) {
                         item(key = "__trash_header") {
                             TrashSectionHeader(
@@ -1026,6 +1036,7 @@ private fun ProjectEmptyState(
                             modifier = Modifier.weight(1f)
                         )
                     }
+
                     repeat(3 - rowTemplates.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
@@ -1138,6 +1149,70 @@ private fun ProjectTemplateShortcut(
 }
 
 @Composable
+private fun ProjectTemplateLibraryRow(
+    templateCount: Int,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = LocalClearCutColors.current
+    val description = stringResource(R.string.projects_templates_count, templateCount)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 72.dp)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = description }
+            .testTag(ClearCutTestTags.PROJECTS_TEMPLATES),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(0.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.md),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        color = ClearCutAccents.Sapphire.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(Radius.md),
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesomeMosaic,
+                    contentDescription = null,
+                    tint = ClearCutAccents.Sapphire,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.template_built_in_section),
+                    color = colors.text,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    text = description,
+                    color = colors.subtext,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = colors.subtextStrong,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
+@Composable
 private fun ProjectActionRow(
     primaryLabel: String,
     primaryIcon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -1208,7 +1283,6 @@ private fun ProjectCard(
     onDelete: () -> Unit,
     onDuplicate: () -> Unit
 ) {
-    var showDeleteConfirm by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     val projectDuration = formatDuration(project.durationMs)
@@ -1224,7 +1298,7 @@ private fun ProjectCard(
 
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-            showDeleteConfirm = true
+            onDelete()
             dismissState.reset()
         }
     }
@@ -1269,6 +1343,7 @@ private fun ProjectCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 112.dp)
+                .testTag("${ClearCutTestTags.PROJECT_CARD_PREFIX}${project.id}")
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics {
                     contentDescription = projectCardDescription
@@ -1387,7 +1462,7 @@ private fun ProjectCard(
                                 },
                                 onClick = {
                                     showOverflowMenu = false
-                                    showDeleteConfirm = true
+                                    onDelete()
                                 }
                             )
                         }
@@ -1404,53 +1479,6 @@ private fun ProjectCard(
                 }
             }
         }
-    }
-
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            icon = {
-                ClearCutDialogIcon(
-                    icon = Icons.Default.Delete,
-                    accent = ClearCutAccents.Red
-                )
-            },
-            title = {
-                Text(
-                    text = stringResource(R.string.projects_delete_title),
-                    color = LocalClearCutColors.current.text,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(R.string.projects_delete_message, project.name),
-                    color = LocalClearCutColors.current.subtext,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                ClearCutSecondaryButton(
-                    text = stringResource(R.string.projects_delete),
-                    onClick = {
-                        onDelete()
-                        showDeleteConfirm = false
-                    },
-                    icon = Icons.Default.Delete,
-                    contentColor = ClearCutAccents.Red
-                )
-            },
-            dismissButton = {
-                ClearCutSecondaryButton(
-                    text = stringResource(R.string.cancel),
-                    onClick = { showDeleteConfirm = false }
-                )
-            },
-            containerColor = LocalClearCutColors.current.panelHighest,
-            titleContentColor = LocalClearCutColors.current.text,
-            textContentColor = LocalClearCutColors.current.subtext,
-            shape = RoundedCornerShape(Radius.xl)
-        )
     }
 
     if (showRenameDialog) {

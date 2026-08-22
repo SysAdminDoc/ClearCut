@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.PrivacyDashboard
@@ -202,9 +203,9 @@ private fun EntryCard(entry: DashboardEntry, actions: List<PrivacyDashboardActio
 
 @Composable
 private fun MetaLine(label: String, value: String, accent: Color = Color.Unspecified) {
-    Row(verticalAlignment = Alignment.Top) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
-            text = "$label · ",
+            text = label,
             color = if (accent == Color.Unspecified) LocalClearCutColors.current.subtextStrong else accent,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.SemiBold,
@@ -213,6 +214,8 @@ private fun MetaLine(label: String, value: String, accent: Color = Color.Unspeci
             text = value,
             color = LocalClearCutColors.current.subtext,
             style = MaterialTheme.typography.labelSmall,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

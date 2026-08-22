@@ -947,11 +947,9 @@ class EditorViewModel @Inject constructor(
         viewModelScope.launch { settingsRepo.updateDesktopOverride(value) }
     }
 
-    // Confirm-before-delete / show-waveforms / haptics (driven by user settings)
-    private val _confirmBeforeDelete = MutableStateFlow(true)
+    // Waveforms / haptics (driven by user settings)
     private val _showWaveforms = MutableStateFlow(true)
     private val _hapticsEnabled = MutableStateFlow(true)
-    val confirmBeforeDelete: Boolean get() = _confirmBeforeDelete.value
     val showWaveforms: Boolean get() = _showWaveforms.value
 
     /** Settings > Haptic feedback. Timeline gestures consult this before buzzing. */
@@ -1224,8 +1222,7 @@ class EditorViewModel @Inject constructor(
                 _snapToBeat.value = settings.snapToBeat
                 _snapToMarker.value = settings.snapToMarker
 
-                // Sync confirm-before-delete and waveform settings
-                _confirmBeforeDelete.value = settings.confirmBeforeDelete
+                // Sync waveform and haptic settings
                 _showWaveforms.value = settings.showWaveforms
                 _hapticsEnabled.value = settings.hapticEnabled
                 // The thumbnail cache used to be hard-wired to heap/8, so the size

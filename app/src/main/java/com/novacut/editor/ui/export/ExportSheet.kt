@@ -105,7 +105,6 @@ import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ExportQuality
 import com.novacut.editor.model.FrameCaptureFormat
 import com.novacut.editor.model.ImageOverlay
-import com.novacut.editor.model.PlatformPreset
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SubtitleFormat
 import com.novacut.editor.model.TargetSizePreset
@@ -716,63 +715,15 @@ fun ExportSheet(
 
         ExportSectionCard(
             title = stringResource(R.string.export_quick_presets),
-            description = stringResource(R.string.export_presets_description),
+            description = null,
             accent = ClearCutAccents.Green
         ) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(end = Spacing.sm),
-            ) {
-                items(PlatformPreset.entries, key = { it.name }) { preset ->
-                    val isSelected = config.platformPreset == preset
-                    FilterChip(
-                        onClick = {
-                            onConfigChanged(
-                                config.withPlatformPreset(preset)
-                            )
-                        },
-                        label = { Text(preset.displayName, style = MaterialTheme.typography.labelMedium) },
-                        selected = isSelected,
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = semanticColors.panelRaised,
-                            labelColor = semanticColors.subtext,
-                            selectedContainerColor = ClearCutAccents.Green.copy(alpha = 0.16f),
-                            selectedLabelColor = ClearCutAccents.Green
-                        )
-                    )
-                }
-            }
-            if (config.platformPreset != null && outputAspectRatio != aspectRatio) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = ClearCutAccents.Yellow.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(Radius.md),
-                    border = BorderStroke(1.dp, ClearCutAccents.Yellow.copy(alpha = 0.28f)),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.Top,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = ClearCutAccents.Yellow,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.export_preset_reframe_disclosure,
-                                aspectRatio.label,
-                                outputAspectRatio.label,
-                            ),
-                            color = semanticColors.text,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-            }
+            ExportQuickPresetSelector(
+                config = config,
+                sourceAspectRatio = aspectRatio,
+                outputAspectRatio = outputAspectRatio,
+                onConfigChanged = onConfigChanged,
+            )
         }
 
         Spacer(modifier = Modifier.height(Spacing.md))
@@ -1778,8 +1729,8 @@ private fun ExportSectionCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = Spacing.xs, vertical = Spacing.md),
-        verticalArrangement = Arrangement.spacedBy(Spacing.md)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(

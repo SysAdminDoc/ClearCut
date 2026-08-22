@@ -39,7 +39,6 @@ data class AppSettings(
     val snapToMarker: Boolean = true,
     /** Null means the cache follows the automatic heap/8 policy. */
     val thumbnailCacheSizeMb: Int? = null,
-    val confirmBeforeDelete: Boolean = true,
     val defaultExportQuality: String = "HIGH",
     val aiModelWifiOnly: Boolean = true,
     // v3.69: UI-mode flags. `desktopMode` is auto-detected from the device
@@ -107,7 +106,6 @@ internal object SettingsPreferenceKeys {
     val SNAP_TO_BEAT = booleanPreferencesKey("snap_to_beat")
     val SNAP_TO_MARKER = booleanPreferencesKey("snap_to_marker")
     val THUMBNAIL_CACHE_SIZE_MB = intPreferencesKey("thumbnail_cache_size_mb")
-    val CONFIRM_BEFORE_DELETE = booleanPreferencesKey("confirm_before_delete")
     val DEFAULT_EXPORT_QUALITY = stringPreferencesKey("default_export_quality")
     val AI_MODEL_WIFI_ONLY = booleanPreferencesKey("ai_model_wifi_only")
     val ONE_HANDED_MODE = booleanPreferencesKey("one_handed_mode")
@@ -142,7 +140,6 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
     snapToBeat = prefs[SettingsPreferenceKeys.SNAP_TO_BEAT] ?: false,
     snapToMarker = prefs[SettingsPreferenceKeys.SNAP_TO_MARKER] ?: true,
     thumbnailCacheSizeMb = prefs[SettingsPreferenceKeys.THUMBNAIL_CACHE_SIZE_MB]?.takeIf { it in 32..512 },
-    confirmBeforeDelete = prefs[SettingsPreferenceKeys.CONFIRM_BEFORE_DELETE] ?: true,
     defaultExportQuality = prefs[SettingsPreferenceKeys.DEFAULT_EXPORT_QUALITY]
         ?.takeIf { quality -> runCatching { ExportQuality.valueOf(quality) }.isSuccess }
         ?: ExportQuality.HIGH.name,
@@ -322,10 +319,6 @@ class SettingsRepository internal constructor(
 
     suspend fun clearThumbnailCacheSize() {
         dataStore.edit { it.remove(SettingsPreferenceKeys.THUMBNAIL_CACHE_SIZE_MB) }
-    }
-
-    suspend fun updateConfirmBeforeDelete(value: Boolean) {
-        dataStore.edit { it[SettingsPreferenceKeys.CONFIRM_BEFORE_DELETE] = value }
     }
 
     suspend fun updateDefaultExportQuality(value: String) {

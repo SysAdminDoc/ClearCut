@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">ClearCut</string>
     <!-- Cut list / marker import -->
-    <string name="cut_list_import_empty">Nothing to import — paste time ranges or markers first</string>
-    <string name="cut_list_import_no_valid_rows">No valid rows — %1$d line(s) need fixing</string>
+    <string name="cut_list_import_empty">Nothing to import. Paste time ranges or markers first.</string>
+    <string name="cut_list_import_no_valid_rows">No valid rows. Fix %1$d line(s) first.</string>
     <string name="cut_list_imported_summary">Imported %1$d markers and %2$d cuts (%3$d skipped)</string>
     <string name="cut_list_default_label">Cut</string>
     <string name="cut_list_range_in">%1$s ▸ in</string>
@@ -39,6 +39,7 @@
     <string name="export_failed">Export Failed</string>
     <string name="export_quick_presets">Quick presets</string>
     <string name="export_presets_description">Start with a platform-ready preset, then fine-tune the details if this render needs something custom.</string>
+    <string name="export_more_presets">More presets</string>
     <string name="export_preset_reframe_disclosure">This preset changes the output canvas from %1$s to %2$s. ClearCut will fit the source to that delivery frame; review the framing before export.</string>
     <string name="export_audio_only">Audio Only</string>
     <string name="export_audio_only_description">Skip video rendering and export a single audio master.</string>
@@ -70,7 +71,7 @@
     <string name="export_filename_template">Filename Template</string>
     <string name="export_filename_template_description">Tokens: {name}, {date}, {time}, {res}, {codec}, {fps}, {preset}, {duration}, {sizeMB}, {clipCount}, {projectFolder}.</string>
     <string name="export_warning_long_render">Heads up: estimated render time is %1$s. Exports run in the background, but plug in to avoid battery drain.</string>
-    <string name="export_warning_large_file">Estimated output is over 1 GB. Most share targets reject files this large — consider a Target File Size preset.</string>
+    <string name="export_warning_large_file">Estimated output is over 1 GB. Most share targets reject files this large. Try a Target File Size preset.</string>
     <string name="export_warning_av1_slow">AV1 can be slow when this device does not advertise hardware encode. If file size isn\'t critical, HEVC is safer for long renders.</string>
     <string name="export_warning_track_blend_unsupported">%1$d track blend mode(s) are not supported on export. They will render as Normal; switch them to Normal before exporting.</string>
     <string name="export_hdr_preserve">Preserve HDR Metadata</string>
@@ -116,7 +117,7 @@
     <string name="export_timeline_range">Timeline Range</string>
     <string name="export_timeline_range_description">Export only a frame-quantized section for reviews, previews, or partial deliverables. The project stays unchanged.</string>
     <string name="export_range_whole_timeline">Whole timeline</string>
-    <string name="export_range_summary">Selected %1$s–%2$s • %3$s</string>
+    <string name="export_range_summary">Selected %1$s-%2$s • %3$s</string>
     <string name="export_range_current_frame">Playhead: %1$s</string>
     <string name="export_range_set_start">Set Start</string>
     <string name="export_range_set_end">Set End</string>
@@ -220,7 +221,7 @@
     <string name="export_watermark_replace">Choose a different image</string>
     <string name="export_current_filename_template">Current template: %1$s</string>
     <string name="export_contact_sheet">Contact Sheet</string>
-    <string name="export_contact_sheet_description">Grid of clip thumbnails as a single PNG — great for review decks and teasers.</string>
+    <string name="export_contact_sheet_description">Grid of clip thumbnails as a single PNG. Useful for review decks and teasers.</string>
     <string name="export_contact_sheet_columns">Columns</string>
     <string name="export_contact_sheet_summary">Contact sheet · %1$d columns</string>
     <string name="export_contact_sheet_button">Export Contact Sheet</string>
@@ -269,7 +270,7 @@
     <!-- AiToolsPanel -->
     <string name="ai_tools_title">AI Tools</string>
     <string name="ai_whisper_active">Whisper speech-to-text active</string>
-    <string name="ai_on_device">On-device AI – no internet required</string>
+    <string name="ai_on_device">On-device AI. No internet required.</string>
     <string name="ai_whisper_ready">Whisper (speech-to-text)</string>
     <string name="ai_downloading_model">Downloading model\u2026</string>
     <string name="ai_download_failed">Download failed</string>
@@ -327,7 +328,7 @@
     <string name="ai_caption_source_energy_detection">energy detection</string>
     <string name="ai_captions_added_toast">Added %1$d captions (%2$s).</string>
     <string name="ai_speech_marker_label">Speech</string>
-    <string name="ai_caption_timing_only_toast">No transcript available. Marked %1$d speech segments on the timeline — energy detection finds when speech happens, not what was said. Download the caption model to transcribe.</string>
+    <string name="ai_caption_timing_only_toast">No transcript available. Marked %1$d speech segments on the timeline. Energy detection finds when speech happens, not what was said. Download the caption model to transcribe.</string>
     <string name="ai_caption_timing_only_no_new_toast">No transcript available, and every speech segment found is already marked on the timeline.</string>
     <string name="ai_crop_analyze_failed_toast">Could not analyze the frame for crop.</string>
     <string name="ai_smart_crop_applied_toast">Smart crop applied (%1$.0f%% confidence).</string>
@@ -568,7 +569,7 @@
     <string name="ai_requirement_title_dependency">Not yet in this build</string>
     <string name="ai_requirement_title_cloud">Cloud upload</string>
     <string name="ai_requirement_body_ready">The model is installed on this device. Tap to run.</string>
-    <string name="ai_requirement_body_download_format">%1$s needs to download about %2$d MB. The model runs on this device — no uploads.</string>
+    <string name="ai_requirement_body_download_format">%1$s needs to download about %2$d MB. The model runs on this device. Nothing is uploaded.</string>
     <string name="ai_requirement_body_dependency">%1$s isn\'t bundled in this build yet. We\'ll add it in a future release.</string>
     <string name="ai_requirement_body_cloud_format">%1$s sends frames to a cloud service. ClearCut never makes a network call until you confirm here.</string>
     <string name="ai_requirement_size_format">Download size · %1$d MB</string>
@@ -675,7 +676,7 @@
     <string name="settings_segmentation_model">Segmentation (Background)</string>
     <string name="settings_segmentation_size">~256 KB</string>
     <string name="settings_piper_model">Piper TTS Voices</string>
-    <string name="settings_piper_size">15–65 MB each</string>
+    <string name="settings_piper_size">15-65 MB each</string>
     <string name="settings_piper_system_voice_description">Uses Android system voices today; downloadable local voice packs will appear here when bundled.</string>
     <string name="settings_piper_system_voice_status">System voices</string>
     <string name="settings_download_size_format">Download size: %1$s</string>
@@ -784,7 +785,7 @@
     <string name="preview_playback_error_title">Can\'t play this clip</string>
     <string name="preview_playback_error_body">The source may have moved, become unreadable, or use a format this device can\'t decode.</string>
     <string name="preview_open_media_manager">Open Media Manager</string>
-    <string name="vm_preview_playback_failed_toast">Preview couldn\'t decode this clip — open Media Manager to relink or replace it</string>
+    <string name="vm_preview_playback_failed_toast">Preview couldn\'t decode this clip. Open Media Manager to relink or replace it.</string>
 
     <!-- TextEditorSheet -->
     <string name="text_editor_title">Text Overlay</string>
@@ -913,7 +914,7 @@
     <string name="speed_preset_slow_mo">Slow Mo</string>
     <string name="speed_preset_double">2x</string>
     <string name="speed_preset_quad">4x</string>
-    <string name="speed_preset_range">%1$s–%2$s</string>
+    <string name="speed_preset_range">%1$s-%2$s</string>
     <string name="speed_preset_bullet_time_name">Bullet Time</string>
     <string name="speed_preset_bullet_time_description">Dramatic slow-mo with speed ramp</string>
     <string name="speed_preset_bullet_time_feel">Hero</string>
@@ -1028,7 +1029,7 @@
     <string name="batch_export_add_targets_description">Tap any preset to add it to the queue, then keep stacking utility exports for audio-only or stems if you need them.</string>
     <string name="batch_export_source_cuts_title">Source-file cuts</string>
     <string name="batch_export_source_cuts_description">Queue an existing timeline clip as an independent source range. Each cut exports its own file with the current delivery settings.</string>
-    <string name="batch_export_source_cut_label">%1$s • %2$s–%3$s</string>
+    <string name="batch_export_source_cut_label">%1$s • %2$s-%3$s</string>
     <string name="batch_export_queued_title">Queued Exports</string>
     <string name="batch_export_queued_description">Review the stack, remove anything you no longer need, and launch the batch when it looks right.</string>
     <string name="batch_export_empty_title">Nothing queued yet</string>
@@ -1281,28 +1282,28 @@
     <string name="template_blank_duration">Any</string>
     <string name="template_vlog_name">Vlog</string>
     <string name="template_vlog_desc">Talk to camera with B-roll cutaways</string>
-    <string name="template_vlog_duration">5–15 min</string>
+    <string name="template_vlog_duration">5-15 min</string>
     <string name="template_tutorial_name">Tutorial</string>
     <string name="template_tutorial_desc">Screen recording with voiceover</string>
-    <string name="template_tutorial_duration">5–30 min</string>
+    <string name="template_tutorial_duration">5-30 min</string>
     <string name="template_short_tiktok_name">Short / TikTok</string>
     <string name="template_short_tiktok_desc">Vertical short-form content</string>
-    <string name="template_short_tiktok_duration">15–60s</string>
+    <string name="template_short_tiktok_duration">15-60s</string>
     <string name="template_reel_name">Instagram Reel</string>
     <string name="template_reel_desc">Vertical reel with music</string>
-    <string name="template_reel_duration">15–90s</string>
+    <string name="template_reel_duration">15-90s</string>
     <string name="template_cinematic_name">Cinematic</string>
     <string name="template_cinematic_desc">Widescreen cinematic look</string>
-    <string name="template_cinematic_duration">2–10 min</string>
+    <string name="template_cinematic_duration">2-10 min</string>
     <string name="template_slideshow_name">Slideshow</string>
     <string name="template_slideshow_desc">Photo slideshow with music</string>
-    <string name="template_slideshow_duration">1–5 min</string>
+    <string name="template_slideshow_duration">1-5 min</string>
     <string name="template_promo_name">Promo / Ad</string>
     <string name="template_promo_desc">Product or service promotion</string>
-    <string name="template_promo_duration">15–60s</string>
+    <string name="template_promo_duration">15-60s</string>
     <string name="template_square_name">Square (Social)</string>
     <string name="template_square_desc">1:1 for Instagram/Facebook</string>
-    <string name="template_square_duration">15–60s</string>
+    <string name="template_square_duration">15-60s</string>
     <string name="template_tracks_format">%1$d tracks</string>
     <string name="template_tracks_texts_format">%1$d tracks, %2$d texts</string>
     <string name="template_slots_format">%1$d slots</string>
@@ -1681,7 +1682,7 @@
     <string name="caption_empty_description">Auto-captions are best for a quick first pass. Manual captions are great for hero text and exact pacing.</string>
     <string name="caption_edit_title">Edit caption</string>
     <string name="caption_edit_description">Refine the line, tighten the timing, and place it exactly where it belongs.</string>
-    <string name="caption_time_range_format">%1$s – %2$s</string>
+    <string name="caption_time_range_format">%1$s to %2$s</string>
     <string name="caption_status_editing">Editing</string>
     <string name="caption_status_live">Live</string>
     <string name="caption_manual">Manual caption</string>
@@ -1854,7 +1855,7 @@
     <string name="auto_edit_duration_seconds">%1$d s</string>
     <string name="auto_edit_review_title">Review proposal</string>
     <string name="auto_edit_review_summary">%1$d excerpts · %2$.1f s · %3$.0f%% confidence</string>
-    <string name="auto_edit_review_segment">%1$d. Source %2$d · %3$s–%4$s · %5$d ms · score %6$.0f%%</string>
+    <string name="auto_edit_review_segment">%1$d. Source %2$d · %3$s-%4$s · %5$d ms · score %6$.0f%%</string>
     <string name="auto_edit_review_scores">Quality %1$.0f%% · motion %2$.0f%% · subject %3$.0f%% · audio %4$.0f%%</string>
     <string name="auto_edit_review_warning">The proposal could not fully satisfy the requested timing. Review every excerpt before applying.</string>
     <string name="auto_edit_discard">Discard</string>
@@ -1889,7 +1890,7 @@
     <string name="beat_sync_timeline_ready">Review the detected pulse before applying it to your edit decisions.</string>
     <string name="beat_sync_timeline_empty">Detected markers will appear here as soon as ClearCut maps the rhythm.</string>
     <string name="beat_sync_no_markers">No markers yet</string>
-    <string name="beat_sync_bpm_placeholder">—</string>
+    <string name="beat_sync_bpm_placeholder">Not available</string>
     <string name="beat_sync_apply_title">Apply beat sync</string>
     <string name="beat_sync_apply_description">Use the current beat map to drive timing decisions across the edit.</string>
 
@@ -1987,7 +1988,7 @@
         <item quantity="other">Ready with %1$d scan issues</item>
         <item quantity="many">Ready with %1$d scan issues</item>
     </plurals>
-    <string name="media_manager_scan_issue_asset">%1$s — %2$s</string>
+    <string name="media_manager_scan_issue_asset">%1$s: %2$s</string>
     <plurals name="media_manager_scan_issue_more">
         <item quantity="one">…and %1$d more</item>
         <item quantity="other">…and %1$d more</item>
@@ -2831,7 +2832,7 @@
     <string name="timeline_cancel_range_selection">Cancel range selection</string>
     <string name="timeline_mute_range">Mute selected range</string>
     <string name="timeline_range_selection_hint">Drag across the time ruler to select the section to mute.</string>
-    <string name="timeline_range_selected_hint">Selected %1$s–%2$s. Tap Mute to silence it without splitting.</string>
+    <string name="timeline_range_selected_hint">Selected %1$s-%2$s. Tap Mute to silence it without splitting.</string>
     <string name="timeline_zoom_value">Zoom %1$d%%</string>
     <string name="timeline_visible_value">View %1$s</string>
     <plurals name="timeline_marker_count">
@@ -2859,6 +2860,11 @@
     <string name="timeline_overlay_track_short">Overlay</string>
     <string name="timeline_text_track_short">Text</string>
     <string name="timeline_adjustment_track_short">Adjust</string>
+    <string name="timeline_video_track_initial">V</string>
+    <string name="timeline_audio_track_initial">A</string>
+    <string name="timeline_overlay_track_initial">O</string>
+    <string name="timeline_text_track_initial">T</string>
+    <string name="timeline_adjustment_track_initial">FX</string>
     <string name="timeline_video_clip">Video Clip</string>
     <string name="timeline_audio_clip">Audio Clip</string>
     <string name="timeline_overlay_clip">Overlay</string>
@@ -2987,7 +2993,7 @@
     <string name="cd_zoom_in">Zoom In</string>
     <string name="cd_split_at_playhead">Cut at playhead</string>
     <string name="cd_delete_selected">Delete selected clip</string>
-    <string name="cd_timeline_overview">Timeline overview — tap or drag to seek</string>
+    <string name="cd_timeline_overview">Timeline overview. Tap or drag to seek.</string>
 
     <!-- MarkerListPanel -->
     <string name="cd_close_markers">Close markers</string>
@@ -3107,8 +3113,8 @@
     <string name="v369_content_id_subtitle">Fingerprint the last export before upload for copyright-risk review.</string>
     <string name="v369_content_id_match">Match: %1$s</string>
     <string name="v369_content_id_no_match">Checked against the copyright database: no match found.</string>
-    <string name="v369_content_id_not_checked_no_key">Not checked — no AcoustID key is configured, so nothing was looked up. Only a local fingerprint was computed.</string>
-    <string name="v369_content_id_not_checked_no_backend">Not checked — the copyright lookup service is unavailable in this build, so nothing was looked up. Only a local fingerprint was computed.</string>
+    <string name="v369_content_id_not_checked_no_key">Not checked. No AcoustID key is configured, so nothing was looked up. Only a local fingerprint was computed.</string>
+    <string name="v369_content_id_not_checked_no_backend">Not checked. The copyright lookup service is unavailable in this build, so nothing was looked up. Only a local fingerprint was computed.</string>
     <string name="v369_content_id_hash">Local hash: %1$s...</string>
     <string name="v369_content_id_hint">Local hashing works now. Online lookup can be enabled when the fingerprint service is configured.</string>
     <string name="v369_check_last_export">Check last export</string>
@@ -3336,10 +3342,10 @@
     <string name="vm_effects_exported_toast">Effects exported: %1$s</string>
     <string name="vm_effects_export_failed_toast">Export failed</string>
     <string name="vm_effects_imported_toast">Imported: %1$s</string>
-    <string name="vm_effects_import_invalid_toast">Import failed — invalid .ncfx file</string>
+    <string name="vm_effects_import_invalid_toast">Import failed. The .ncfx file is invalid.</string>
     <string name="vm_no_audio_to_analyze_toast">Selected clip has no audio to analyze</string>
     <string name="vm_noise_reduction_applied_toast">Applied %1$s noise reduction</string>
-    <string name="vm_audio_clean_toast">Audio is clean — no noise reduction needed</string>
+    <string name="vm_audio_clean_toast">Audio is clean. No noise reduction is needed.</string>
     <string name="vm_noise_analysis_failed_toast">Noise analysis failed</string>
     <string name="vm_no_unused_tracks_toast">No unused tracks to remove</string>
     <string name="vm_removed_tracks_toast">Removed %1$d empty track(s)</string>
@@ -3402,14 +3408,14 @@
     <string name="vm_cut_scanning_toast">Cut Assistant: scanning %1$d clip(s)…</string>
     <string name="vm_cut_source_missing_toast">Cut Assistant: source clips no longer on timeline</string>
     <string name="vm_cut_none_selected_toast">No proposed cuts selected</string>
-    <string name="vm_cut_no_change_toast">No cuts applied — endpoints fell on clip boundaries</string>
-    <string name="vm_cut_applied_toast">Applied %1$d cut(s) — reclaimed %2$ds</string>
+    <string name="vm_cut_no_change_toast">No cuts applied. The endpoints fell on clip boundaries.</string>
+    <string name="vm_cut_applied_toast">Applied %1$d cut(s). Reclaimed %2$ds.</string>
     <string name="vm_exporting_archive_toast">Exporting project archive…</string>
-    <string name="vm_otio_blocked_toast">OTIO export blocked: %1$s — %2$s</string>
+    <string name="vm_otio_blocked_toast">OTIO export blocked. %1$s: %2$s</string>
     <string name="vm_otio_exported_toast">OTIO exported: %1$s%2$s</string>
-    <string name="vm_fcpxml_blocked_toast">FCPXML export blocked: %1$s — %2$s</string>
+    <string name="vm_fcpxml_blocked_toast">FCPXML export blocked. %1$s: %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exported: %1$s%2$s</string>
-    <string name="vm_edit_decision_json_blocked_toast">Edit-decision JSON export blocked: %1$s — %2$s</string>
+    <string name="vm_edit_decision_json_blocked_toast">Edit-decision JSON export blocked. %1$s: %2$s</string>
     <string name="vm_edit_decision_json_exported_toast">Edit-decision JSON exported: %1$s%2$s</string>
     <!-- Project storage -->
     <string name="settings_project_storage_title">Project Storage</string>
@@ -3428,7 +3434,7 @@
     <string name="v369_unable_to_open_toast">Unable to open %1$s</string>
     <!-- Multicam / speaker switch -->
     <string name="multicam_need_synced_tracks_toast">Need at least 2 synced video tracks</string>
-    <string name="multicam_no_speaker_turns_toast">No speaker turns available — transcribe first</string>
+    <string name="multicam_no_speaker_turns_toast">No speaker turns are available. Transcribe first.</string>
     <string name="multicam_no_switches_toast">No angle switches produced</string>
     <string name="multicam_applied_switches_toast">Applied %1$d speaker-based angle switches</string>
     <!-- V369 filler/chapter/caption -->
@@ -3544,7 +3550,7 @@
     </plurals>
     <string name="partial_restore_keep">Keep as recovered</string>
     <string name="partial_restore_use_backup">Try previous autosave</string>
-    <string name="vm_recovery_partial_toast">Some project data could not be restored (%1$s). Saving is paused so the loss is not written back — choose what to do.</string>
+    <string name="vm_recovery_partial_toast">Some project data could not be restored (%1$s). Saving is paused so the loss is not written back. Choose what to do.</string>
     <string name="vm_recovery_future_schema_toast">Autosave was made by a newer ClearCut version. It was left untouched to avoid losing edits.</string>
     <string name="vm_recovery_corrupt_toast">Autosave could not be read. The file was left untouched so you can retry recovery later.</string>
     <string name="vm_recovery_not_found_toast">No autosaved recovery data was found. Opening the saved project instead.</string>
@@ -3608,7 +3614,7 @@
     <string name="project_template_restore_success_generic">Template restored.</string>
     <string name="project_template_restore_failed">That template could not be restored.</string>
     <string name="project_template_restore_action">Undo delete</string>
-    <string name="editor_project_not_found">That project no longer exists. Nothing was created in its place — go back to your projects.</string>
+    <string name="editor_project_not_found">That project no longer exists. Nothing was created in its place. Go back to your projects.</string>
     <string name="media_picker_importing_progress">Importing %1$d of %2$d…</string>
     <string name="editor_project_not_found_title">Project not found</string>
     <string name="editor_project_not_found_back">Back to projects</string>
@@ -3618,7 +3624,7 @@
     <string name="settings_diagnostic_raw_error_text_description">Adds the exact error text from the encoder to a shared diagnostics bundle. Off by default: an encoder error can quote a file name or caption, and it cannot be redacted reliably. Without it, two different failures can look identical to whoever reads the report.</string>
     <string name="ai_caption_analysis_failed_toast">Captions could not be generated (%1$s). No conclusion was reached about the audio.</string>
     <string name="ai_stabilize_analysis_failed_toast">Camera motion could not be measured, so nothing is known about this clip\'s steadiness.</string>
-    <string name="export_ai_disclosure_sidecar_failed">The video exported, but the AI disclosure file could not be written next to it. Do not publish this file as disclosed — export again or attach the disclosure yourself.</string>
+    <string name="export_ai_disclosure_sidecar_failed">The video exported, but the AI disclosure file could not be written next to it. Do not publish this file as disclosed. Export again or attach the disclosure yourself.</string>
     <string name="ai_requirement_unmet_download">%1$s is not downloaded yet. Download it from AI Tools, then run this again.</string>
     <string name="ai_requirement_unmet_dependency">%1$s is not included in this build, so this tool cannot run here.</string>
     <string name="ai_requirement_unmet_generic">%1$s is not ready yet, so this tool cannot run.</string>

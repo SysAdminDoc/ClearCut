@@ -154,13 +154,19 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
         ) {
-        SettingsHero(
-            settings = settings,
-            editorModeLabel = selectedEditorMode.label,
-            onBack = onBack
-        )
+            SettingsHero(
+                settings = settings,
+                editorModeLabel = selectedEditorMode.label,
+                onBack = onBack
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(scrollState)
+            ) {
 
         aiModelStorage.feedbackMessage?.let { message ->
             SettingsFeedbackBanner(
@@ -532,14 +538,6 @@ fun SettingsScreen(
                 checked = settings.hapticEnabled,
                 onChanged = { viewModel.setHapticEnabled(it) }
             )
-            SettingsSwitch(
-                icon = Icons.Default.Delete,
-                accent = ClearCutAccents.Red,
-                label = stringResource(R.string.settings_confirm_delete),
-                description = stringResource(R.string.settings_confirm_delete_desc),
-                checked = settings.confirmBeforeDelete,
-                onChanged = { viewModel.setConfirmBeforeDelete(it) }
-            )
             SettingsChoiceHeader(
                 icon = Icons.Default.PhotoLibrary,
                 accent = ClearCutAccents.Peach,
@@ -752,7 +750,8 @@ fun SettingsScreen(
             SettingsInfo(Icons.Default.AutoAwesome, stringResource(R.string.settings_ai_models), stringResource(R.string.settings_ai_models_value), ClearCutAccents.Mauve)
         }
 
-        Spacer(Modifier.height(Spacing.xxl))
+            Spacer(Modifier.height(Spacing.xxl))
+            }
         }
 
         pendingAiModelRemoval?.let { target ->
@@ -782,38 +781,44 @@ fun SettingsScreen(
                     color = LocalClearCutColors.current.panelHighest,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 640.dp)
+                        .heightIn(min = 480.dp, max = 640.dp)
                         .testTag(ClearCutTestTags.SETTINGS_PRIVACY_DASHBOARD)
                 ) {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        val privacyActionLabels = privacyDashboardActionLabels()
-                        PrivacyDashboardPanel(
-                            actionsFor = { entry ->
-                                privacyDashboardActions(
-                                    entry = entry,
-                                    canRemoveWhisperModel = canRemoveWhisperModel,
-                                    canRemoveSegmentationModel = canRemoveSegmentationModel,
-                                    mediaPipeConsentGranted = settings.mediaPipeConsentVersion >=
-                                        com.novacut.editor.engine.MediaPipeUsageGate.CONSENT_VERSION,
-                                    updateCheckEnabled = settings.updateCheckEnabled,
-                                    onExportDiagnostics = {
-                                        showPrivacyDashboard = false
-                                        viewModel.exportDiagnosticBundle()
-                                    },
-                                    onRemoveWhisperModel = {
-                                        showPrivacyDashboard = false
-                                        pendingAiModelRemoval = SettingsAiModelRemovalTarget.WHISPER
-                                    },
-                                    onRemoveSegmentationModel = {
-                                        showPrivacyDashboard = false
-                                        pendingAiModelRemoval = SettingsAiModelRemovalTarget.SEGMENTATION
-                                    },
-                                    onRevokeMediaPipeConsent = { viewModel.setMediaPipeConsent(false) },
-                                    onDisableUpdateCheck = { viewModel.setUpdateCheckEnabled(false) },
-                                    labels = privacyActionLabels,
-                                )
-                            }
-                        )
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            val privacyActionLabels = privacyDashboardActionLabels()
+                            PrivacyDashboardPanel(
+                                actionsFor = { entry ->
+                                    privacyDashboardActions(
+                                        entry = entry,
+                                        canRemoveWhisperModel = canRemoveWhisperModel,
+                                        canRemoveSegmentationModel = canRemoveSegmentationModel,
+                                        mediaPipeConsentGranted = settings.mediaPipeConsentVersion >=
+                                            com.novacut.editor.engine.MediaPipeUsageGate.CONSENT_VERSION,
+                                        updateCheckEnabled = settings.updateCheckEnabled,
+                                        onExportDiagnostics = {
+                                            showPrivacyDashboard = false
+                                            viewModel.exportDiagnosticBundle()
+                                        },
+                                        onRemoveWhisperModel = {
+                                            showPrivacyDashboard = false
+                                            pendingAiModelRemoval = SettingsAiModelRemovalTarget.WHISPER
+                                        },
+                                        onRemoveSegmentationModel = {
+                                            showPrivacyDashboard = false
+                                            pendingAiModelRemoval = SettingsAiModelRemovalTarget.SEGMENTATION
+                                        },
+                                        onRevokeMediaPipeConsent = { viewModel.setMediaPipeConsent(false) },
+                                        onDisableUpdateCheck = { viewModel.setUpdateCheckEnabled(false) },
+                                        labels = privacyActionLabels,
+                                    )
+                                }
+                            )
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -840,13 +845,13 @@ fun SettingsScreen(
                     color = LocalClearCutColors.current.panelHighest,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 640.dp)
+                        .height(560.dp)
                         .testTag(ClearCutTestTags.SETTINGS_LICENSES_DIALOG)
                 ) {
                     Column {
                         Box(
                             modifier = Modifier
-                                .weight(1f, fill = false)
+                                .weight(1f)
                                 .verticalScroll(rememberScrollState())
                         ) {
                             OpenSourceLicensesPanel()
@@ -1777,7 +1782,7 @@ private fun SettingsTile(
         shape = RoundedCornerShape(0.dp)
     ) {
         Column {
-            Row(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(modifier)
@@ -1802,21 +1807,60 @@ private fun SettingsTile(
                         }
                     )
                     .padding(horizontal = Spacing.xs, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.md),
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                SettingsTileIcon(icon = icon, accent = accent)
-                SettingsTileText(
-                    label = label,
-                    description = description,
-                    modifier = Modifier.weight(1f),
-                    colors = colors
-                )
+                val compactTextLayout = maxWidth < 400.dp && description != null
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                     verticalAlignment = Alignment.CenterVertically,
-                    content = trailing
-                )
+                ) {
+                    SettingsTileIcon(icon = icon, accent = accent)
+                    if (compactTextLayout) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = label,
+                                    color = colors.text,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    content = trailing,
+                                )
+                            }
+                            Text(
+                                text = requireNotNull(description),
+                                color = colors.subtext,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    } else {
+                        SettingsTileText(
+                            label = label,
+                            description = description,
+                            modifier = Modifier.weight(1f),
+                            colors = colors,
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            content = trailing,
+                        )
+                    }
+                }
             }
             HorizontalDivider(
                 color = colors.cardStroke.copy(alpha = if (colors.highContrast) 1f else 0.78f)
@@ -1848,7 +1892,7 @@ private fun SettingsTileText(
                 it,
                 color = colors.subtext,
                 style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
         }

@@ -140,7 +140,6 @@ class SettingsViewModel @Inject constructor(
     fun setSnapToMarker(v: Boolean) = viewModelScope.launch { repo.updateSnapToMarker(v) }
     fun setThumbnailCacheSize(v: Int) = viewModelScope.launch { repo.updateThumbnailCacheSize(v) }
     fun setThumbnailCacheAutomatic() = viewModelScope.launch { repo.clearThumbnailCacheSize() }
-    fun setConfirmBeforeDelete(v: Boolean) = viewModelScope.launch { repo.updateConfirmBeforeDelete(v) }
     fun setDefaultExportQuality(v: String) = viewModelScope.launch { repo.updateDefaultExportQuality(v) }
     fun setAiModelWifiOnly(v: Boolean) = viewModelScope.launch { repo.updateAiModelWifiOnly(v) }
     fun setIncludeDiagnosticTimelineShape(v: Boolean) =

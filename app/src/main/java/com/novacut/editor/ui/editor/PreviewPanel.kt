@@ -380,33 +380,35 @@ fun PreviewPanel(
                             else -> Unit
                         }
 
-                        activeImageOverlays.forEach { overlay ->
-                            PreviewImageOverlay(
-                                overlay = overlay,
-                                frameWidth = frameWidth,
-                                frameHeight = frameHeight,
-                            )
-                        }
-                        activeTextOverlays.forEach { overlay ->
-                            PreviewTextOverlay(
-                                overlay = overlay,
-                                frameWidth = frameWidth,
-                                frameHeight = frameHeight,
-                            )
-                        }
+                        if (!hasPlaybackError) {
+                            activeImageOverlays.forEach { overlay ->
+                                PreviewImageOverlay(
+                                    overlay = overlay,
+                                    frameWidth = frameWidth,
+                                    frameHeight = frameHeight,
+                                )
+                            }
+                            activeTextOverlays.forEach { overlay ->
+                                PreviewTextOverlay(
+                                    overlay = overlay,
+                                    frameWidth = frameWidth,
+                                    frameHeight = frameHeight,
+                                )
+                            }
 
-                        if (showCompositionGuides && totalDurationMs > 0 && !showGapState) {
-                            CompositionGuidesOverlay()
-                        }
+                            if (showCompositionGuides && totalDurationMs > 0 && !showGapState) {
+                                CompositionGuidesOverlay()
+                            }
 
-                        if (isSplitPreviewEnabled && hasActiveEffects && currentTimelineClip != null && !showGapState) {
-                            SplitPreviewOverlay(
-                                engine = engine,
-                                clip = currentTimelineClip,
-                                playheadMs = playheadMs,
-                                frameWidthDp = frameWidth,
-                                frameHeightDp = frameHeight,
-                            )
+                            if (isSplitPreviewEnabled && hasActiveEffects && currentTimelineClip != null && !showGapState) {
+                                SplitPreviewOverlay(
+                                    engine = engine,
+                                    clip = currentTimelineClip,
+                                    playheadMs = playheadMs,
+                                    frameWidthDp = frameWidth,
+                                    frameHeightDp = frameHeight,
+                                )
+                            }
                         }
 
                         if (totalDurationMs > 0 && !showGapState) {

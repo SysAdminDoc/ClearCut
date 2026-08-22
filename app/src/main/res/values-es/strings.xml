@@ -36,6 +36,7 @@
     <string name="export_failed">Exportación fallida</string>
     <string name="export_quick_presets">Preajustes rápidos</string>
     <string name="export_presets_description">Comience con un ajuste preestablecido listo para la plataforma, luego ajuste los detalles si este renderizado necesita algo personalizado.</string>
+    <string name="export_more_presets">Más preajustes</string>
     <string name="export_preset_reframe_disclosure">Este preajuste cambia el lienzo de salida de %1$s a %2$s. ClearCut ajustará la fuente a ese encuadre de entrega; revise el encuadre antes de exportar.</string>
     <string name="export_audio_only">Sólo audio</string>
     <string name="export_audio_only_description">Omita la reproducción de video y exporte un solo maestro de audio.</string>
@@ -113,7 +114,7 @@
     <string name="export_timeline_range">Rango de la línea de tiempo</string>
     <string name="export_timeline_range_description">Exporte solo una sección cuantificada por fotogramas para revisiones, avances o entregas parciales. El proyecto permanece sin cambios.</string>
     <string name="export_range_whole_timeline">Línea de tiempo completa</string>
-    <string name="export_range_summary">Seleccionado %1$s–%2$s · %3$s</string>
+    <string name="export_range_summary">Seleccionado %1$s-%2$s · %3$s</string>
     <string name="export_range_current_frame">Cabezal: %1$s</string>
     <string name="export_range_set_start">Establecer inicio</string>
     <string name="export_range_set_end">Establecer final</string>
@@ -880,7 +881,7 @@
     <string name="speed_preset_slow_mo">cámara lenta</string>
     <string name="speed_preset_double">2x</string>
     <string name="speed_preset_quad">4x</string>
-    <string name="speed_preset_range">%1$s–%2$s</string>
+    <string name="speed_preset_range">%1$s-%2$s</string>
     <string name="speed_preset_bullet_time_name">Tiempo bala</string>
     <string name="speed_preset_bullet_time_description">Cámara lenta dramática con rampa</string>
     <string name="speed_preset_bullet_time_feel">Héroe</string>
@@ -989,7 +990,7 @@
     <string name="batch_export_add_targets_description">Toque cualquier ajuste preestablecido para agregarlo a la cola, luego siga acumulando exportaciones de utilidades para solo audio o temas si los necesita.</string>
     <string name="batch_export_source_cuts_title">Cortes de archivos fuente</string>
     <string name="batch_export_source_cuts_description">Ponga en cola un clip existente de la línea de tiempo como un intervalo de fuente independiente. Cada corte exporta su propio archivo con los ajustes de entrega actuales.</string>
-    <string name="batch_export_source_cut_label">%1$s • %2$s–%3$s</string>
+    <string name="batch_export_source_cut_label">%1$s • %2$s-%3$s</string>
     <string name="batch_export_queued_title">Exportaciones en cola</string>
     <string name="batch_export_queued_description">Revise la pila, elimine todo lo que ya no necesite y ejecute el lote cuando parezca correcto.</string>
     <string name="batch_export_empty_title">Nada en cola todavía</string>
@@ -1604,7 +1605,7 @@
     <string name="caption_empty_description">Los subtítulos automáticos sirven para una primera pasada rápida. Los manuales son ideales para texto destacado y tiempos exactos.</string>
     <string name="caption_edit_title">Editar subtítulo</string>
     <string name="caption_edit_description">Ajusta la línea, precisa el tiempo y colócala exactamente donde corresponde.</string>
-    <string name="caption_time_range_format">%1$s – %2$s</string>
+    <string name="caption_time_range_format">%1$s a %2$s</string>
     <string name="caption_status_editing">Editando</string>
     <string name="caption_status_live">Activo</string>
     <string name="caption_manual">Subtítulo manual</string>
@@ -1763,7 +1764,7 @@
     <string name="auto_edit_duration_seconds">%1$d s</string>
     <string name="auto_edit_review_title">Revisar propuesta</string>
     <string name="auto_edit_review_summary">%1$d extractos · %2$.1f s · %3$.0f%% de confianza</string>
-    <string name="auto_edit_review_segment">%1$d. Origen %2$d · %3$s–%4$s · %5$d ms · puntuación %6$.0f%%</string>
+    <string name="auto_edit_review_segment">%1$d. Origen %2$d · %3$s-%4$s · %5$d ms · puntuación %6$.0f%%</string>
     <string name="auto_edit_review_scores">Calidad %1$.0f%% · movimiento %2$.0f%% · sujeto %3$.0f%% · audio %4$.0f%%</string>
     <string name="auto_edit_review_warning">La propuesta no pudo cumplir completamente el tiempo solicitado. Revise cada extracto antes de aplicarlo.</string>
     <string name="auto_edit_discard">Descartar</string>
@@ -1796,7 +1797,7 @@
     <string name="beat_sync_timeline_ready">Revise el pulso detectado antes de aplicarlo a sus decisiones de edición.</string>
     <string name="beat_sync_timeline_empty">Los marcadores detectados aparecerán aquí tan pronto como ClearCut mapee el ritmo.</string>
     <string name="beat_sync_no_markers">Aún no hay marcadores</string>
-    <string name="beat_sync_bpm_placeholder">—</string>
+    <string name="beat_sync_bpm_placeholder">No disponible</string>
     <string name="beat_sync_apply_title">Aplicar sincronización de ritmo</string>
     <string name="beat_sync_apply_description">Utilice el mapa de ritmo actual para tomar decisiones de sincronización en toda la edición.</string>
     <string name="blend_mode_title">Modo de fusión</string>
@@ -1888,7 +1889,7 @@
         <item quantity="other">Listo con %1$d problemas de escaneo</item>
         <item quantity="many">Listo con %1$d problemas de escaneo</item>
     </plurals>
-    <string name="media_manager_scan_issue_asset">%1$s — %2$s</string>
+    <string name="media_manager_scan_issue_asset">%1$s: %2$s</string>
     <plurals name="media_manager_scan_issue_more">
         <item quantity="one">…y %1$d más</item>
         <item quantity="other">…y %1$d más</item>
@@ -2624,7 +2625,7 @@
     <string name="timeline_cancel_range_selection">Cancelar selección de rango</string>
     <string name="timeline_mute_range">Silenciar rango seleccionado</string>
     <string name="timeline_range_selection_hint">Arrastre sobre la regla de tiempo para seleccionar la sección que desea silenciar.</string>
-    <string name="timeline_range_selected_hint">Seleccionado %1$s–%2$s. Toque Silenciar para silenciarlo sin dividir.</string>
+    <string name="timeline_range_selected_hint">Seleccionado %1$s-%2$s. Toque Silenciar para silenciarlo sin dividir.</string>
     <string name="timeline_zoom_value">Zoom %1$d%%</string>
     <string name="timeline_visible_value">Ver %1$s</string>
     <plurals name="timeline_marker_count">
@@ -2652,6 +2653,11 @@
     <string name="timeline_overlay_track_short">Superposición</string>
     <string name="timeline_text_track_short">Texto</string>
     <string name="timeline_adjustment_track_short">Ajustar</string>
+    <string name="timeline_video_track_initial">V</string>
+    <string name="timeline_audio_track_initial">A</string>
+    <string name="timeline_overlay_track_initial">S</string>
+    <string name="timeline_text_track_initial">T</string>
+    <string name="timeline_adjustment_track_initial">FX</string>
     <string name="timeline_video_clip">Vídeoclip</string>
     <string name="timeline_audio_clip">Clip de audio</string>
     <string name="timeline_overlay_clip">Superposición</string>
@@ -3063,10 +3069,10 @@
     <string name="vm_effects_exported_toast">Efectos exportados: %1$s</string>
     <string name="vm_effects_export_failed_toast">La exportación falló</string>
     <string name="vm_effects_imported_toast">Importado: %1$s</string>
-    <string name="vm_effects_import_invalid_toast">Importación fallida — archivo .ncfx no válido</string>
+    <string name="vm_effects_import_invalid_toast">Importación fallida. El archivo .ncfx no es válido.</string>
     <string name="vm_no_audio_to_analyze_toast">El clip seleccionado no tiene audio para analizar</string>
     <string name="vm_noise_reduction_applied_toast">Reducción de ruido %1$s aplicada</string>
-    <string name="vm_audio_clean_toast">El audio está limpio — no se necesita reducción de ruido</string>
+    <string name="vm_audio_clean_toast">El audio está limpio. No se necesita reducción de ruido.</string>
     <string name="vm_noise_analysis_failed_toast">El análisis de ruido falló</string>
     <string name="vm_no_unused_tracks_toast">No hay pistas sin usar para eliminar</string>
     <string name="vm_removed_tracks_toast">Se eliminaron %1$d pista(s) vacía(s)</string>
@@ -3129,14 +3135,14 @@
     <string name="vm_cut_scanning_toast">Asistente de corte: escaneando %1$d clip(s)…</string>
     <string name="vm_cut_source_missing_toast">Asistente de corte: clips de origen ya no están en la línea de tiempo</string>
     <string name="vm_cut_none_selected_toast">No se seleccionaron cortes propuestos</string>
-    <string name="vm_cut_no_change_toast">No se aplicaron cortes — los puntos coinciden con los límites del clip</string>
-    <string name="vm_cut_applied_toast">%1$d corte(s) aplicados — %2$ds recuperados</string>
+    <string name="vm_cut_no_change_toast">No se aplicaron cortes. Los puntos coinciden con los límites del clip.</string>
+    <string name="vm_cut_applied_toast">%1$d corte(s) aplicados. %2$ds recuperados.</string>
     <string name="vm_exporting_archive_toast">Exportando archivo del proyecto…</string>
-    <string name="vm_otio_blocked_toast">Exportación OTIO bloqueada: %1$s — %2$s</string>
+    <string name="vm_otio_blocked_toast">Exportación OTIO bloqueada. %1$s: %2$s</string>
     <string name="vm_otio_exported_toast">OTIO exportado: %1$s%2$s</string>
-    <string name="vm_fcpxml_blocked_toast">Exportación FCPXML bloqueada: %1$s — %2$s</string>
+    <string name="vm_fcpxml_blocked_toast">Exportación FCPXML bloqueada. %1$s: %2$s</string>
     <string name="vm_fcpxml_exported_toast">FCPXML exportado: %1$s%2$s</string>
-    <string name="vm_edit_decision_json_blocked_toast">Exportación JSON de decisiones bloqueada: %1$s — %2$s</string>
+    <string name="vm_edit_decision_json_blocked_toast">Exportación JSON de decisiones bloqueada. %1$s: %2$s</string>
     <string name="vm_edit_decision_json_exported_toast">JSON de decisiones exportado: %1$s%2$s</string>
     <!-- Project storage -->
     <string name="settings_project_storage_title">Almacenamiento del proyecto</string>
@@ -3155,7 +3161,7 @@
     <string name="v369_unable_to_open_toast">No se pudo abrir %1$s</string>
     <!-- Multicam / speaker switch -->
     <string name="multicam_need_synced_tracks_toast">Se necesitan al menos 2 pistas de vídeo sincronizadas</string>
-    <string name="multicam_no_speaker_turns_toast">No hay turnos de hablante — transcribe primero</string>
+    <string name="multicam_no_speaker_turns_toast">No hay turnos de hablante. Transcribe primero.</string>
     <string name="multicam_no_switches_toast">No se produjeron cambios de ángulo</string>
     <string name="multicam_applied_switches_toast">Se aplicaron %1$d cambios de ángulo por hablante</string>
     <!-- V369 filler/chapter/caption -->

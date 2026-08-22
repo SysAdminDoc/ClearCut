@@ -254,7 +254,7 @@ fun ProjectTemplateSheet(
                         stringResource(R.string.template_import_description),
                         color = LocalClearCutColors.current.subtext,
                         style = MaterialTheme.typography.bodySmall,
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

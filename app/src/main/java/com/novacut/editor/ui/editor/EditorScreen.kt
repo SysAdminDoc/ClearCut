@@ -801,7 +801,6 @@ fun EditorScreen(
                     canRedo = state.redoStack.isNotEmpty(),
                     selectedClipId = state.selectedClipId,
                     onDelete = viewModel::deleteSelectedClip,
-                    confirmBeforeDelete = viewModel.confirmBeforeDelete,
                     onDuplicateClip = viewModel::duplicateSelectedClip,
                     onSplitClip = viewModel::splitClipAtPlayhead,
                     onAddMedia = viewModel::showMediaPicker,
@@ -1343,7 +1342,6 @@ private fun EditorTopBar(
     selectedClipId: String?,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
-    confirmBeforeDelete: Boolean = true,
     onDuplicateClip: () -> Unit,
     onSplitClip: () -> Unit,
     onAddMedia: () -> Unit,
@@ -1366,54 +1364,6 @@ private fun EditorTopBar(
     var showCutListDialog by remember { mutableStateOf(false) }
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showAddTrackMenu by remember { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-    if (showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
-            icon = {
-                ClearCutDialogIcon(
-                    icon = Icons.Default.Delete,
-                    accent = ClearCutAccents.Red
-                )
-            },
-            title = {
-                Text(
-                    text = stringResource(R.string.editor_delete),
-                    color = semanticColors.text,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(R.string.editor_delete_clip_message),
-                    color = semanticColors.subtext,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                ClearCutSecondaryButton(
-                    text = stringResource(R.string.editor_delete),
-                    onClick = {
-                        showDeleteConfirmation = false
-                        onDelete()
-                    },
-                    icon = Icons.Default.Delete,
-                    contentColor = ClearCutAccents.Red
-                )
-            },
-            dismissButton = {
-                ClearCutSecondaryButton(
-                    text = stringResource(R.string.editor_cancel),
-                    onClick = { showDeleteConfirmation = false }
-                )
-            },
-            containerColor = semanticColors.panelHighest,
-            titleContentColor = semanticColors.text,
-            textContentColor = semanticColors.subtext,
-            shape = RoundedCornerShape(Radius.xxl)
-        )
-    }
-
     if (showSaveTemplateDialog) {
         var templateName by remember(projectName) { mutableStateOf("$projectName Template") }
         val trimmedTemplateName = templateName.trim()
@@ -1837,7 +1787,7 @@ private fun EditorTopBar(
                                 text = { Text(stringResource(R.string.editor_delete), color = ClearCutAccents.Red) },
                                 onClick = {
                                     showOverflow = false
-                                    if (confirmBeforeDelete) showDeleteConfirmation = true else onDelete()
+                                    onDelete()
                                 },
                                 leadingIcon = {
                                     Icon(Icons.Default.Delete, contentDescription = null, tint = ClearCutAccents.Red)

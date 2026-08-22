@@ -427,9 +427,9 @@ fun Timeline(
             (timelineWidthPx / pixelsPerMs).toLong().coerceAtLeast(0L)
         }
     }
-    // The compact rail still needs room for the track icon, label, and a pair
-    // of 48dp track targets (visibility plus more-options).
-    val headerWidth = if (isCompactTimeline) 120.dp else 128.dp
+    // The compact rail uses single-character track marks, leaving the canvas
+    // more room while retaining two full 48dp track targets.
+    val headerWidth = if (isCompactTimeline) 108.dp else 128.dp
     val chromePadding = if (isCompactTimeline) 4.dp else 10.dp
     val contentPadding = if (isCompactTimeline) 2.dp else 8.dp
     val trimHandleVisualWidth = 14.dp
@@ -444,6 +444,11 @@ fun Timeline(
     val compactOverlayTrackLabel = stringResource(R.string.timeline_overlay_track_short)
     val compactTextTrackLabel = stringResource(R.string.timeline_text_track_short)
     val compactAdjustmentTrackLabel = stringResource(R.string.timeline_adjustment_track_short)
+    val compactVideoTrackInitial = stringResource(R.string.timeline_video_track_initial)
+    val compactAudioTrackInitial = stringResource(R.string.timeline_audio_track_initial)
+    val compactOverlayTrackInitial = stringResource(R.string.timeline_overlay_track_initial)
+    val compactTextTrackInitial = stringResource(R.string.timeline_text_track_initial)
+    val compactAdjustmentTrackInitial = stringResource(R.string.timeline_adjustment_track_initial)
     val videoClipLabel = stringResource(R.string.timeline_video_clip)
     val audioClipLabel = stringResource(R.string.timeline_audio_clip)
     val overlayClipLabel = stringResource(R.string.timeline_overlay_clip)
@@ -478,6 +483,15 @@ fun Timeline(
             TrackType.OVERLAY -> compactOverlayTrackLabel
             TrackType.TEXT -> compactTextTrackLabel
             TrackType.ADJUSTMENT -> compactAdjustmentTrackLabel
+        }
+    }
+    val compactTrackInitialForType: (TrackType) -> String = { trackType ->
+        when (trackType) {
+            TrackType.VIDEO -> compactVideoTrackInitial
+            TrackType.AUDIO -> compactAudioTrackInitial
+            TrackType.OVERLAY -> compactOverlayTrackInitial
+            TrackType.TEXT -> compactTextTrackInitial
+            TrackType.ADJUSTMENT -> compactAdjustmentTrackInitial
         }
     }
     val clipLabelForType: (TrackType) -> String = { trackType ->
@@ -900,7 +914,7 @@ fun Timeline(
                 Column(
                     modifier = Modifier
                         .width(headerWidth)
-                        .padding(end = 8.dp)
+                        .padding(end = if (isCompactTimeline) 4.dp else 8.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -994,7 +1008,7 @@ fun Timeline(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(
-                                                horizontal = if (isCompactTimeline) 5.dp else 9.dp,
+                                                horizontal = if (isCompactTimeline) 4.dp else 9.dp,
                                                 vertical = if (isCompactTimeline) 3.dp else if (track.isCollapsed) 6.dp else 7.dp
                                             ),
                                         verticalArrangement = Arrangement.Center
@@ -1020,7 +1034,7 @@ fun Timeline(
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = if (isCompactTimeline) {
-                                                        compactTrackLabelForType(track.type)
+                                                        compactTrackInitialForType(track.type)
                                                     } else {
                                                         stringResource(
                                                             R.string.timeline_track_number,
@@ -1030,12 +1044,19 @@ fun Timeline(
                                                     },
                                                     color = semanticColors.text,
                                                     style = if (isCompactTimeline) {
-                                                        MaterialTheme.typography.labelMedium
+                                                        MaterialTheme.typography.labelLarge
                                                     } else {
                                                         MaterialTheme.typography.labelLarge
                                                     },
                                                     maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = if (isCompactTimeline) {
+                                                        Modifier.semantics {
+                                                            contentDescription = trackLabelForType(track.type)
+                                                        }
+                                                    } else {
+                                                        Modifier
+                                                    },
                                                 )
                                                 if (!isCompactTimeline) {
                                                     Text(
