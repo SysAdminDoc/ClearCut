@@ -23,6 +23,10 @@ import java.time.temporal.ChronoUnit
  */
 class DependencyFreshnessTest {
 
+    private companion object {
+        const val REVIEW_HORIZON_DAYS = 30
+    }
+
     private val trackedVersionKeys = setOf(
         "agp",
         "kotlin",
@@ -68,12 +72,26 @@ class DependencyFreshnessTest {
         )
         val policy = snapshot.getJSONObject("policy")
         val reviewHorizonDays = policy.getInt("reviewHorizonDays")
-        assertTrue("Review horizon must be a positive bounded window.", reviewHorizonDays in 1..90)
+        assertEquals("Review horizon must remain the fixed 30-day policy.", REVIEW_HORIZON_DAYS, reviewHorizonDays)
         assertTrue(
             "Offline freshness report command must remain executable.",
             policy.getString("offlineReportCommand").contains("scripts/check_dependency_freshness.py"),
         )
+
         val asOf = LocalDate.now(ZoneOffset.UTC)
+        val facts = snapshot.getJSONObject("facts")
+        facts.keys().forEach { factKey ->
+            val fact = facts.getJSONObject(factKey)
+            assertIsoDate(fact.getString("reviewedOn"), "$factKey review date")
+            val factReviewedOn = LocalDate.parse(fact.getString("reviewedOn"))
+            val factAgeDays = ChronoUnit.DAYS.between(factReviewedOn, asOf)
+            assertTrue(
+                "$factKey evidence is stale: reviewed $factReviewedOn, as of $asOf, " +
+                    "horizon ${reviewHorizonDays}d.",
+                factAgeDays in 0..reviewHorizonDays,
+            )
+            assertHttpUrl(fact.getString("source"), "$factKey source")
+        }
         val snapshotReviewedOn = LocalDate.parse(snapshot.getString("reviewedOn"))
         val snapshotAgeDays = ChronoUnit.DAYS.between(snapshotReviewedOn, asOf)
         assertTrue("Snapshot review date cannot be in the future.", snapshotAgeDays >= 0)
@@ -126,7 +144,8 @@ class DependencyFreshnessTest {
                     probe.getString("version"),
                 )
             }
-            if (entry.getString("state") != "current") {
+            val state = entry.getString("state")
+            if (state != "current") {
                 assertNonBlank(entry.getString("reason"), "$key hold reason")
                 assertNonBlank(entry.getString("unblockCondition"), "$key unblock condition")
                 assertTrue(
@@ -134,12 +153,22 @@ class DependencyFreshnessTest {
                     entry.getString("unblockCondition").contains("scripts/probe_dependency_upgrade.py"),
                 )
             }
-            if (entry.getString("state") == "held") {
+            if (state == "held") {
                 assertEquals("Held candidates must declare a hold decision.", "hold", decision.getString("action"))
                 assertTrue(
                     "Held candidate must differ from the pinned version until its probe passes.",
                     decision.getString("candidateVersion") != pinned,
                 )
+            }
+            if (state == "pre-release") {
+                assertEquals("Pre-release entries must declare a retain-beta decision.", "retain-beta", decision.getString("action"))
+                assertTrue(
+                    "Pre-release candidate must retain an executable probe.",
+                    decision.getString("probe").contains("scripts/probe_dependency_upgrade.py"),
+                )
+            }
+            if (state == "migration-required") {
+                assertEquals("Migration-required entries must remain held.", "hold", decision.getString("action"))
             }
         }
     }

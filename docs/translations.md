@@ -4,7 +4,7 @@ ClearCut keeps the English resource file as the source of truth. Spanish is the 
 
 ## Add a locale
 
-1. Copy `app/src/main/res/values/strings.xml` to `app/src/main/res/values-<BCP47>/strings.xml`, where `<BCP47>` is the Android locale tag you are adding, such as `fr` or `pt-BR`.
+1. Copy `app/src/main/res/values/strings.xml` to `app/src/main/res/values-<BCP47>/strings.xml`, where `<BCP47>` is the Android resource qualifier you are adding, such as `fr` or `b+pt+BR`. Android uses the `b+` form for a BCP-47 language and region tag.
 2. Translate every string, plural item, and array item. Keep resource names, formatting placeholders such as `%1$s`, and markup intact.
 3. Add `<locale android:name="<BCP47>" />` to `app/src/main/res/xml/locales_config.xml`.
 4. Add the matching Google Play listing files under `fastlane/metadata/android/<Play locale>/`: `title.txt`, `short_description.txt`, `full_description.txt`, and `privacy_policy_url.txt`. Use the Play locale folder name, such as `fr-FR` or `pt-BR`.

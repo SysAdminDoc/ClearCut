@@ -9,6 +9,7 @@ Current version: **v3.79.0** (`versionCode` 297).
 - Extracted the timeline toolbar from `Timeline.kt` behind a callback-driven owner and pure zoom policy, with focused tests and ownership-size ratchets for the largest editor coordinators.
 - Corrected clip sync quantization at the ±60,000 ms limit so fractional frame-rate projects remain frame-aligned instead of clamping to an off-grid millisecond value.
 - Published a schema-v3 safe declarative-pack contract. Effect and style exports now declare minimum app version, required capabilities, hashes, and provenance; previews expose stable reason codes and reject unknown capabilities, incompatible versions, executable fields, and integrity failures before installation.
+- Tightened the translation, dependency, and timeline ownership gates after review. Locale parity now covers arrays, locale XML, and Play metadata; freshness ages upstream facts under a fixed 30-day horizon; and all timeline zoom inputs plus overflow actions use the extracted toolbar owner.
 - Reworked the dashboard, editor, settings, and export sheet around a flat AMOLED workspace with stronger hierarchy and a shared 12 dp radius ceiling.
 - Added a direct built-in template grid to the empty dashboard and a denser recent-project row for returning work.
 - Kept the export action visible after editable resolution, frame-rate, codec, and quality rows.

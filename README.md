@@ -24,6 +24,7 @@
 - Translation contributors now have a documented locale, resource-parity, locale-config, and Play metadata path, with a recursive UI literal ratchet and locale registration test.
 - Timeline toolbar rendering now has its own callback-driven owner and zoom policy, with focused behavior coverage and reviewed byte budgets for the largest editor coordination files.
 - Shareable effect and style packs now publish a schema-v3 compatibility manifest with minimum app version, required capabilities, payload hashes, provenance, and stable import reason codes. Unknown capabilities and incompatible app versions are rejected before any install, while legacy packs still migrate through the rollback-safe path.
+- Translation coverage now walks every `values-*` resource directory, checks strings, plurals, and arrays against English, parses locale registration, and requires the matching Play metadata files. Dependency freshness applies the fixed 30-day horizon to snapshot, dependency, and upstream fact evidence, while the timeline toolbar keeps one overflow owner and one shared zoom clamp across fit, pinch, and ViewModel updates.
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 

@@ -33,12 +33,12 @@ class LocaleResourceCoverageTest {
     @Test
     fun spanishLocaleIsRegisteredForPerAppLanguagePicker() {
         val repoRoot = locateRepoRoot()
-        val localesConfig = File(repoRoot, "app/src/main/res/xml/locales_config.xml").readText()
+        val localesConfig = readLocaleConfigTags(File(repoRoot, "app/src/main/res/xml/locales_config.xml"))
 
         assertTrue(
             "locales_config.xml must list es once values-es ships, otherwise " +
                 "Android 13+ per-app language settings cannot select it.",
-            """android:name="es"""" in localesConfig
+            "es" in localesConfig
         )
     }
 
@@ -46,19 +46,57 @@ class LocaleResourceCoverageTest {
     fun everyTranslatedResourceDirectoryIsRegisteredInLocaleConfig() {
         val repoRoot = locateRepoRoot()
         val resourceRoot = File(repoRoot, "app/src/main/res")
-        val localesConfig = File(resourceRoot, "xml/locales_config.xml").readText()
+        val localeTags = readLocaleConfigTags(File(resourceRoot, "xml/locales_config.xml"))
         val translatedLocaleTags = resourceRoot.listFiles()
             .orEmpty()
             .filter { it.isDirectory && it.name.startsWith("values-") }
-            .map { it.name.removePrefix("values-") }
+            .map { androidLocaleTag(it.name) }
             .filter { it.isNotBlank() }
             .toSet()
 
         translatedLocaleTags.forEach { localeTag ->
             assertTrue(
                 "values-$localeTag ships strings but locales_config.xml does not list $localeTag.",
-                "android:name=\"$localeTag\"" in localesConfig,
+                localeTag in localeTags,
             )
+        }
+    }
+
+    @Test
+    fun everyTranslatedLocaleMirrorsResourcesAndPlayMetadata() {
+        val repoRoot = locateRepoRoot()
+        val resourceRoot = File(repoRoot, "app/src/main/res")
+        val base = readResourceContracts(File(resourceRoot, "values"))
+        val localeTags = readLocaleConfigTags(File(resourceRoot, "xml/locales_config.xml"))
+        val translatedDirectories = resourceRoot.listFiles()
+            .orEmpty()
+            .filter { it.isDirectory && it.name.startsWith("values-") }
+
+        translatedDirectories.forEach { directory ->
+            val androidTag = androidLocaleTag(directory.name)
+            val translated = readResourceContracts(directory)
+            assertEquals("$directory must mirror English resource keys.", base.keys, translated.keys)
+            base.forEach { (key, contract) ->
+                assertEquals("$directory placeholder contract differs for $key.", contract, translated[key])
+            }
+            assertTrue("$directory must be listed in locales_config.xml.", androidTag in localeTags)
+
+            val playDirectory = File(repoRoot, "fastlane/metadata/android")
+                .listFiles()
+                .orEmpty()
+                .firstOrNull { candidate ->
+                    candidate.isDirectory && candidate.name.substringBefore('-')
+                        .equals(androidTag.substringBefore('-'), ignoreCase = true)
+            }
+            assertTrue("Missing Play metadata directory for $androidTag.", playDirectory?.isDirectory == true)
+            if (playDirectory == null) return@forEach
+            listOf("title.txt", "short_description.txt", "full_description.txt", "privacy_policy_url.txt")
+                .forEach { fileName ->
+                    assertTrue(
+                        "Missing Play metadata file $fileName for $androidTag.",
+                        File(playDirectory, fileName).isFile,
+                    )
+                }
         }
     }
 
@@ -117,17 +155,23 @@ class LocaleResourceCoverageTest {
     ) : Map<String, Set<String>> by contracts
 
     private fun readResourceContracts(file: File): ResourceContracts {
-        val document = DocumentBuilderFactory.newInstance()
-            .newDocumentBuilder()
-            .parse(file)
-        val resources = document.documentElement
         val keys = mutableListOf<String>()
         val contracts = linkedMapOf<String, Set<String>>()
 
-        for (index in 0 until resources.childNodes.length) {
-            val node = resources.childNodes.item(index)
-            if (node is Element) {
-                when (node.tagName) {
+        val xmlFiles = if (file.isDirectory) {
+            file.walkTopDown().filter { it.isFile && it.extension == "xml" }.toList()
+        } else {
+            listOf(file)
+        }
+        xmlFiles.forEach { xmlFile ->
+            val resources = DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder()
+                .parse(xmlFile)
+                .documentElement
+            for (index in 0 until resources.childNodes.length) {
+                val node = resources.childNodes.item(index)
+                if (node is Element) {
+                    when (node.tagName) {
                     "string" -> {
                         val key = "string:${node.getAttribute("name")}"
                         keys += key
@@ -144,6 +188,20 @@ class LocaleResourceCoverageTest {
                             }
                         }
                     }
+                    "string-array" -> {
+                        val arrayName = node.getAttribute("name")
+                        var itemIndex = 0
+                        for (itemIndexInNode in 0 until node.childNodes.length) {
+                            val item = node.childNodes.item(itemIndexInNode)
+                            if (item is Element && item.tagName == "item") {
+                                val key = "string-array:$arrayName:$itemIndex"
+                                keys += key
+                                contracts[key] = placeholders(item.textContent)
+                                itemIndex++
+                            }
+                        }
+                    }
+                    }
                 }
             }
         }
@@ -155,6 +213,28 @@ class LocaleResourceCoverageTest {
         FORMAT_PLACEHOLDER.findAll(value)
             .map { it.value }
             .toSet()
+
+    private fun readLocaleConfigTags(file: File): Set<String> {
+        val document = DocumentBuilderFactory.newInstance()
+            .newDocumentBuilder()
+            .parse(file)
+        return (0 until document.documentElement.childNodes.length)
+            .map { document.documentElement.childNodes.item(it) }
+            .filterIsInstance<Element>()
+            .filter { it.tagName == "locale" }
+            .map { it.getAttribute("android:name") }
+            .filter { it.isNotBlank() }
+            .toSet()
+    }
+
+    private fun androidLocaleTag(directoryName: String): String {
+        val raw = directoryName.removePrefix("values-")
+        return if (raw.startsWith("b+")) {
+            raw.removePrefix("b+").replace('+', '-')
+        } else {
+            raw.replace(Regex("-r(?=[A-Z])"), "-")
+        }
+    }
 
     private fun locateRepoRoot(): File {
         val userDir = System.getProperty("user.dir")

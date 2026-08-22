@@ -133,8 +133,6 @@ private const val TIMELINE_BASE_SCALE = 0.15f
 // when the user taps "fit to window" or when the timeline auto-fits on first layout.
 // Previously fit-zoom was clamped before it could reach a ratio that actually fit,
 // which is why long clips appeared to only show a narrow window of editable content.
-private const val MIN_TIMELINE_ZOOM = 0.01f
-private const val MAX_TIMELINE_ZOOM = 10f
 private const val WAVEFORM_PRELOAD_PADDING_MS = 3_000L
 private const val WAVEFORM_FALLBACK_WINDOW_MS = 15_000L
 private const val SUGGESTION_SNOOZE_STATE_KEY = "editingSuggestionSnoozeUntil"
@@ -1979,7 +1977,7 @@ class EditorViewModel @Inject constructor(
     // Zoom
     fun setZoomLevel(zoom: Float) {
         _state.update { state ->
-            val updatedState = state.copy(zoomLevel = zoom.coerceIn(MIN_TIMELINE_ZOOM, MAX_TIMELINE_ZOOM))
+            val updatedState = state.copy(zoomLevel = TimelineToolbarPolicy.clampZoom(zoom))
             updatedState.copy(
                 scrollOffsetMs = clampTimelineScrollOffset(updatedState.scrollOffsetMs, updatedState)
             )
@@ -2009,7 +2007,7 @@ class EditorViewModel @Inject constructor(
         if (width <= 0f || duration <= 0L) return
         // 0.92 leaves ~8% headroom so the last clip doesn't butt up against the edge.
         val fit = (width / duration.toFloat() / TIMELINE_BASE_SCALE * 0.92f)
-            .coerceIn(MIN_TIMELINE_ZOOM, MAX_TIMELINE_ZOOM)
+            .let(TimelineToolbarPolicy::clampZoom)
         _state.update { s -> s.copy(zoomLevel = fit, scrollOffsetMs = 0L) }
         preloadVisibleWaveforms(_state.value)
     }

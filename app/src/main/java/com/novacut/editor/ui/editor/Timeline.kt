@@ -70,9 +70,6 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 private const val BASE_SCALE = 0.15f // pixels per ms at zoom 1.0
-// Minimum zoom keeps long clips discoverable on a phone viewport.
-private const val MIN_TIMELINE_ZOOM = 0.01f
-private const val MAX_TIMELINE_ZOOM = 10f
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -406,7 +403,6 @@ fun Timeline(
         edges.sorted()
     }
     var lastScrubBoundaryIdx by remember { mutableIntStateOf(-1) }
-    var timelineOptionsExpanded by remember { mutableStateOf(false) }
     var trackOffsetDialogTrackId by remember { mutableStateOf<String?>(null) }
     var trackOffsetDialogText by remember { mutableStateOf("") }
     val trackOffsetDialogTrack = tracks.firstOrNull { it.id == trackOffsetDialogTrackId }
@@ -419,7 +415,9 @@ fun Timeline(
         if (timelineWidthPx <= 0f || totalDurationMs <= 0L) {
             1f
         } else {
-            ((timelineWidthPx / totalDurationMs.toFloat()) / BASE_SCALE * 0.92f).coerceIn(MIN_TIMELINE_ZOOM, MAX_TIMELINE_ZOOM)
+            TimelineToolbarPolicy.clampZoom(
+                (timelineWidthPx / totalDurationMs.toFloat()) / BASE_SCALE * 0.92f,
+            )
         }
     }
     val visibleDurationMs = remember(timelineWidthPx, pixelsPerMs, totalDurationMs) {
@@ -743,7 +741,9 @@ fun Timeline(
                         onBeginRangeSelection = onBeginRangeSelection,
                         onCancelRangeSelection = onCancelRangeSelection,
                         onMuteTimelineRange = onMuteTimelineRange,
-                        onMoreClick = { timelineOptionsExpanded = true },
+                        onAddMarker = onAddMarker,
+                        onCollapseAllTracks = onCollapseAllTracks,
+                        onExpandAllTracks = onExpandAllTracks,
                         modifier = Modifier
                     )
                 }
@@ -775,7 +775,9 @@ fun Timeline(
                         onBeginRangeSelection = onBeginRangeSelection,
                         onCancelRangeSelection = onCancelRangeSelection,
                         onMuteTimelineRange = onMuteTimelineRange,
-                        onMoreClick = { timelineOptionsExpanded = true },
+                        onAddMarker = onAddMarker,
+                        onCollapseAllTracks = onCollapseAllTracks,
+                        onExpandAllTracks = onExpandAllTracks,
                     )
                 }
             }
@@ -823,46 +825,6 @@ fun Timeline(
                     )
                 } else {
                     Spacer(modifier = Modifier.weight(1f))
-                }
-                Box {
-                    if (!isCompactTimeline) {
-                        TimelineToolbarButton(
-                            icon = Icons.Default.MoreHoriz,
-                            contentDescription = stringResource(R.string.editor_more),
-                            compact = false,
-                            onClick = { timelineOptionsExpanded = true }
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = timelineOptionsExpanded,
-                        onDismissRequest = { timelineOptionsExpanded = false },
-                        containerColor = semanticColors.panelHighest,
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.cd_add_marker)) },
-                            leadingIcon = { Icon(Icons.Default.BookmarkAdd, contentDescription = null) },
-                            onClick = {
-                                timelineOptionsExpanded = false
-                                onAddMarker()
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.collapse_all_tracks)) },
-                            leadingIcon = { Icon(Icons.Default.UnfoldLess, contentDescription = null) },
-                            onClick = {
-                                timelineOptionsExpanded = false
-                                onCollapseAllTracks()
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.expand_all_tracks)) },
-                            leadingIcon = { Icon(Icons.Default.UnfoldMore, contentDescription = null) },
-                            onClick = {
-                                timelineOptionsExpanded = false
-                                onExpandAllTracks()
-                            },
-                        )
-                    }
                 }
             }
 
@@ -1371,7 +1333,7 @@ fun Timeline(
                                 val safePan = if (pan.x.isFinite()) pan.x else 0f
                                 val safeCentroidX = if (centroid.x.isFinite()) centroid.x else 0f
                                 val oldPpm = (currentZoomLevel * BASE_SCALE).coerceAtLeast(0.0001f)
-                                val newZoom = (currentZoomLevel * safeZoomFactor).coerceIn(MIN_TIMELINE_ZOOM, MAX_TIMELINE_ZOOM)
+                                val newZoom = TimelineToolbarPolicy.clampZoom(currentZoomLevel * safeZoomFactor)
                                 val newPpm = (newZoom * BASE_SCALE).coerceAtLeast(0.0001f)
                                 // Adjust scroll to keep the pinch center point stable
                                 val centerMs = currentScrollOffsetMs + (safeCentroidX / oldPpm).toLong()

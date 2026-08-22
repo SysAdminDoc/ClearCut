@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SNAPSHOT = ROOT / "scripts" / "dependency_freshness_snapshot.json"
+REVIEW_HORIZON_DAYS = 30
 
 
 def parse_date(value: str, label: str) -> dt.date:
@@ -35,8 +36,10 @@ def main() -> int:
         policy = snapshot["policy"]
         horizon = int(policy["reviewHorizonDays"])
         reviewed_on = parse_date(snapshot["reviewedOn"], "snapshot reviewedOn")
-        if horizon < 1:
-            raise ValueError("policy reviewHorizonDays must be positive")
+        if horizon != REVIEW_HORIZON_DAYS:
+            raise ValueError(
+                f"policy reviewHorizonDays must remain {REVIEW_HORIZON_DAYS}, got {horizon}"
+            )
     except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         print(f"dependency freshness report failed: {exc}", file=sys.stderr)
         return 2
@@ -51,6 +54,13 @@ def main() -> int:
         stale.append(f"snapshot reviewed {reviewed_on.isoformat()} ({snapshot_age} days old)")
 
     intentionally_held: list[str] = []
+    facts = snapshot.get("facts", {})
+    for key, fact in facts.items():
+        fact_reviewed = parse_date(fact["reviewedOn"], f"facts.{key}.reviewedOn")
+        age = (as_of - fact_reviewed).days
+        if age < 0 or age > horizon:
+            stale.append(f"fact {key} reviewed {fact_reviewed.isoformat()} ({age} days old)")
+
     dependencies = snapshot.get("dependencies", {})
     for key, entry in dependencies.items():
         entry_reviewed = parse_date(entry["reviewedOn"], f"{key}.reviewedOn")
@@ -69,6 +79,19 @@ def main() -> int:
                 f"{key}: {decision.get('candidateVersion')} held at {entry.get('pinnedVersion')}"
             )
         elif state in {"pre-release", "migration-required"}:
+            decision = entry.get("candidateDecision", {})
+            reason = str(entry.get("reason", "")).strip()
+            unblock = str(entry.get("unblockCondition", "")).strip()
+            probe = str(decision.get("probe", "")).strip()
+            expected_action = "retain-beta" if state == "pre-release" else "hold"
+            if (
+                decision.get("action") != expected_action
+                or not reason
+                or not unblock
+                or "scripts/probe_dependency_upgrade.py" not in probe
+            ):
+                print(f"invalid non-current candidate provenance: {key}", file=sys.stderr)
+                return 1
             intentionally_held.append(f"{key}: {state} at {entry.get('pinnedVersion')}")
 
     if stale:

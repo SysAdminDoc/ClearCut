@@ -13,7 +13,7 @@ class EditorCoordinatorOwnershipTest {
             "app/src/main/java/com/novacut/editor/ui/editor/Timeline.kt" to 172_000L,
             "app/src/main/java/com/novacut/editor/ui/editor/ExportDelegate.kt" to 151_000L,
             "app/src/main/java/com/novacut/editor/ui/export/ExportSheet.kt" to 130_000L,
-            "app/src/main/java/com/novacut/editor/ui/editor/TimelineToolbar.kt" to 6_000L,
+            "app/src/main/java/com/novacut/editor/ui/editor/TimelineToolbar.kt" to 8_000L,
         )
 
         budgets.forEach { (relativePath, budget) ->
@@ -34,6 +34,10 @@ class EditorCoordinatorOwnershipTest {
         assertTrue("Timeline must call the extracted toolbar boundary.", "TimelineToolbarControls(" in timeline)
         assertTrue("Toolbar rendering must live in its own owner.", "internal fun TimelineToolbarControls(" in toolbar)
         assertTrue("Timeline must not regain a private toolbar owner.", "private fun TimelineToolbarControls(" !in timeline)
+        assertTrue("Timeline must not render a second overflow button.", "TimelineToolbarButton(" !in timeline)
+        assertTrue("Timeline must not retain the old toolbar menu state.", "timelineOptionsExpanded" !in timeline)
+        assertTrue("Toolbar owner must render the overflow menu.", "moreMenuExpanded" in toolbar)
+        assertTrue("Timeline must use the shared zoom policy boundary.", "TimelineToolbarPolicy.clampZoom" in timeline)
     }
 
     private fun locate(relativePath: String): File = listOf(

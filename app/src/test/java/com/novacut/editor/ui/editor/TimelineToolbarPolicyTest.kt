@@ -20,4 +20,23 @@ class TimelineToolbarPolicyTest {
         assertEquals(0.75f, TimelineToolbarPolicy.zoomOut(1f), 0.0001f)
         assertEquals(1.33f, TimelineToolbarPolicy.zoomIn(1f), 0.0001f)
     }
+
+    @Test
+    fun zoomActionsNormalizeOutOfRangeInputs() {
+        assertEquals(
+            TIMELINE_TOOLBAR_MIN_ZOOM,
+            TimelineToolbarPolicy.zoomOut(-2f),
+            0f,
+        )
+        assertEquals(
+            TIMELINE_TOOLBAR_MAX_ZOOM,
+            TimelineToolbarPolicy.zoomIn(200f),
+            0f,
+        )
+        assertEquals(
+            TIMELINE_TOOLBAR_MIN_ZOOM,
+            TimelineToolbarPolicy.clampZoom(Float.NaN),
+            0f,
+        )
+    }
 }

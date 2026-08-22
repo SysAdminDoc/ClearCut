@@ -7,13 +7,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.UnfoldLess
+import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,11 +37,18 @@ internal const val TIMELINE_TOOLBAR_MIN_ZOOM = 0.01f
 internal const val TIMELINE_TOOLBAR_MAX_ZOOM = 10f
 
 internal object TimelineToolbarPolicy {
+    fun clampZoom(zoomLevel: Float): Float =
+        if (zoomLevel.isFinite()) {
+            zoomLevel.coerceIn(TIMELINE_TOOLBAR_MIN_ZOOM, TIMELINE_TOOLBAR_MAX_ZOOM)
+        } else {
+            TIMELINE_TOOLBAR_MIN_ZOOM
+        }
+
     fun zoomOut(zoomLevel: Float): Float =
-        (zoomLevel * 0.75f).coerceAtLeast(TIMELINE_TOOLBAR_MIN_ZOOM)
+        clampZoom(clampZoom(zoomLevel) * 0.75f)
 
     fun zoomIn(zoomLevel: Float): Float =
-        (zoomLevel * 1.33f).coerceAtMost(TIMELINE_TOOLBAR_MAX_ZOOM)
+        clampZoom(clampZoom(zoomLevel) * 1.33f)
 }
 
 @Composable
@@ -49,9 +67,12 @@ internal fun TimelineToolbarControls(
     onBeginRangeSelection: () -> Unit,
     onCancelRangeSelection: () -> Unit,
     onMuteTimelineRange: () -> Unit,
-    onMoreClick: () -> Unit,
+    onAddMarker: () -> Unit,
+    onCollapseAllTracks: () -> Unit,
+    onExpandAllTracks: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var moreMenuExpanded by remember { mutableStateOf(false) }
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -124,7 +145,36 @@ internal fun TimelineToolbarControls(
             icon = Icons.Default.MoreHoriz,
             contentDescription = stringResource(R.string.editor_more),
             compact = compact,
-            onClick = onMoreClick,
+            onClick = { moreMenuExpanded = true },
         )
+        DropdownMenu(
+            expanded = moreMenuExpanded,
+            onDismissRequest = { moreMenuExpanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.cd_add_marker)) },
+                leadingIcon = { Icon(Icons.Default.BookmarkAdd, contentDescription = null) },
+                onClick = {
+                    moreMenuExpanded = false
+                    onAddMarker()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.collapse_all_tracks)) },
+                leadingIcon = { Icon(Icons.Default.UnfoldLess, contentDescription = null) },
+                onClick = {
+                    moreMenuExpanded = false
+                    onCollapseAllTracks()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.expand_all_tracks)) },
+                leadingIcon = { Icon(Icons.Default.UnfoldMore, contentDescription = null) },
+                onClick = {
+                    moreMenuExpanded = false
+                    onExpandAllTracks()
+                },
+            )
+        }
     }
 }
