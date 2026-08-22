@@ -19,5 +19,6 @@
 <full-backup-content>
     <include domain="database" path="." />
     <include domain="file" path="autosave" />
+    <include domain="file" path="stabilization_profiles" />
     <exclude domain="file" path="autosave/*.tmp" />
 </full-backup-content>

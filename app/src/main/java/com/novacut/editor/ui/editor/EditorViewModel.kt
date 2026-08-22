@@ -72,6 +72,7 @@ import com.novacut.editor.engine.InpaintingEngine
 import com.novacut.editor.engine.UpscaleEngine
 import com.novacut.editor.engine.VideoMattingEngine
 import com.novacut.editor.engine.StabilizationEngine
+import com.novacut.editor.engine.StabilizationProfileManager
 import com.novacut.editor.engine.StyleTransferEngine
 import com.novacut.editor.engine.SmartReframeEngine
 import com.novacut.editor.engine.TimelineExportCoordinator
@@ -468,6 +469,8 @@ data class EditorState(
     val aiProcessingTool: String? get() = ai.processingTool
     val aiProcessingProgress: Float get() = ai.processingProgress
     val stabilizationPreview: StabilizationPreview? get() = ai.stabilizationPreview
+    val stabilizationProfileImportPreview: com.novacut.editor.engine.StabilizationProfileValidation?
+        get() = ai.stabilizationProfileImportPreview
     val aiSuggestion: AiSuggestion? get() = ai.suggestion
     val aiUsageLedger: List<AiUsageLedger.Entry> get() = ai.usageLedger
     val cutAssistantReview: com.novacut.editor.engine.CutAssistantEngine.ReviewSet?
@@ -671,6 +674,7 @@ class EditorViewModel @Inject constructor(
     private val upscaleEngine: UpscaleEngine,
     private val videoMattingEngine: VideoMattingEngine,
     private val stabilizationEngine: StabilizationEngine,
+    private val stabilizationProfileManager: StabilizationProfileManager,
     private val smartReframeEngine: SmartReframeEngine,
     private val editingSuggestionEngine: EditingSuggestionEngine,
     private val timelineExportCoordinator: TimelineExportCoordinator,
@@ -812,6 +816,7 @@ class EditorViewModel @Inject constructor(
         frameInterpolationEngine = frameInterpolationEngine, inpaintingEngine = inpaintingEngine,
         upscaleEngine = upscaleEngine, videoMattingEngine = videoMattingEngine,
         stabilizationEngine = stabilizationEngine,
+        stabilizationProfileManager = stabilizationProfileManager,
         appContext = appContext, scope = viewModelScope,
         saveUndoState = ::saveUndoState, showToast = ::showToast,
         getSelectedClip = ::getSelectedClip,
@@ -6532,6 +6537,10 @@ class EditorViewModel @Inject constructor(
     fun cancelAiTool() = aiToolsDelegate.cancelAiTool()
     fun applyStabilizationPreview() = aiToolsDelegate.applyStabilizationPreview()
     fun dismissStabilizationPreview() = aiToolsDelegate.dismissStabilizationPreview()
+    fun previewStabilizationProfile(uri: Uri) = aiToolsDelegate.previewStabilizationProfile(uri)
+    fun applyStabilizationProfileImport() = aiToolsDelegate.applyStabilizationProfileImport()
+    fun dismissStabilizationProfileImport() = aiToolsDelegate.dismissStabilizationProfileImport()
+    fun exportStabilizationProfile() = aiToolsDelegate.exportStabilizationProfile()
     fun dismissAiRequirementPrompt() {
         val current = _state.value.aiRequirementPrompt ?: return
         _state.update {

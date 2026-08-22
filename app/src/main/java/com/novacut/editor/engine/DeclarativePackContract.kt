@@ -16,6 +16,7 @@ enum class DeclarativePackKind(val wireName: String) {
     EFFECT("effect"),
     LUT("lut"),
     FONT("font"),
+    STABILIZATION_PROFILE("stabilization-profile"),
 }
 
 enum class DeclarativePackIssue(val reasonCode: String) {
@@ -55,6 +56,7 @@ object DeclarativePackContract {
     const val FONT_PACK_CAPABILITY = "font-pack-v1"
     const val EMBEDDED_LUT_CAPABILITY = "embedded-lut-v1"
     const val AUDIO_EFFECTS_CAPABILITY = "audio-effects-v1"
+    const val STABILIZATION_PROFILE_CAPABILITY = "stabilization-profile-v1"
 
     val supportedCapabilities: Set<String> = setOf(
         EFFECT_PACK_CAPABILITY,
@@ -63,6 +65,7 @@ object DeclarativePackContract {
         FONT_PACK_CAPABILITY,
         EMBEDDED_LUT_CAPABILITY,
         AUDIO_EFFECTS_CAPABILITY,
+        STABILIZATION_PROFILE_CAPABILITY,
     )
 
     private val executableKeyMarkers = setOf(

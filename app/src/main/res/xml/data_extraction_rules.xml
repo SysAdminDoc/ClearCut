@@ -10,6 +10,7 @@
     <cloud-backup disableIfNoEncryptionCapabilities="true">
         <include domain="database" path="." />
         <include domain="file" path="autosave" />
+        <include domain="file" path="stabilization_profiles" />
         <exclude domain="file" path="autosave/*.tmp" />
     </cloud-backup>
     <!-- Device-to-device transfer has no size quota: carry everything. -->
@@ -22,6 +23,7 @@
         <include domain="file" path="tts" />
         <include domain="file" path="noise_reduced" />
         <include domain="file" path="stabilized" />
+        <include domain="file" path="stabilization_profiles" />
         <include domain="file" path="media/imports" />
         <!-- App-owned project dependencies travel with device transfer. -->
         <include domain="file" path="fonts" />

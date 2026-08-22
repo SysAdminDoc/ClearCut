@@ -226,6 +226,10 @@ class IncomingDocumentIntentParserTest {
             IncomingDocumentIntentParser.classify("captions.ncstyle", "application/octet-stream")
         )
         assertEquals(
+            IncomingDocumentKind.STABILIZATION_PROFILE,
+            IncomingDocumentIntentParser.classify("handheld.ncstabilization", "application/json")
+        )
+        assertEquals(
             IncomingDocumentKind.CAPTION_SRT,
             IncomingDocumentIntentParser.classify("captions.srt", "text/plain")
         )

@@ -31,7 +31,8 @@ class FileProviderPathsTest {
             ProviderRoot("files-path", "legacy_tts_output", "tts/"),
             ProviderRoot("files-path", "noise_reduced", "noise_reduced/"),
             ProviderRoot("files-path", "stabilized", "stabilized/"),
-            ProviderRoot("files-path", "luts", "luts/")
+            ProviderRoot("files-path", "luts", "luts/"),
+            ProviderRoot("files-path", "stabilization_profiles", "stabilization_profiles/")
         )
 
         assertEquals(expected, roots)
@@ -111,6 +112,13 @@ class FileProviderPathsTest {
                 sourcePath = "src/main/java/com/novacut/editor/ui/editor/ExportDelegate.kt",
                 marker = "lastExportedFilePath",
                 requiredRoots = shareableExportRoots()
+            ),
+            ProducerContract(
+                sourcePath = "src/main/java/com/novacut/editor/ui/editor/AiToolsDelegate.kt",
+                marker = "FileProvider.getUriForFile",
+                requiredRoots = setOf(
+                    ProviderRoot("files-path", "stabilization_profiles", "stabilization_profiles/")
+                )
             )
         )
 

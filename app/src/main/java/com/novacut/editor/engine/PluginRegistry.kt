@@ -60,6 +60,12 @@ object PluginRegistry {
             "application/json",
             DeclarativePackContract.EFFECT_PACK_CAPABILITY,
         ),
+        STABILIZATION_PROFILE(
+            "Stabilization profile",
+            ".ncstabilization",
+            "application/json",
+            DeclarativePackContract.STABILIZATION_PROFILE_CAPABILITY,
+        ),
     }
 
     /**

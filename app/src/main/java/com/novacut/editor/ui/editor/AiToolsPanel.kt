@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.SlowMotionVideo
 import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
@@ -58,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.novacut.editor.R
 import com.novacut.editor.engine.InpaintingModelState
+import com.novacut.editor.engine.StabilizationProfileValidation
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
 import com.novacut.editor.ui.theme.ClearCutDialogIcon
@@ -241,6 +243,11 @@ fun AiToolsPanel(
     stabilizationPreview: StabilizationPreview? = null,
     onApplyStabilizationPreview: () -> Unit = {},
     onDismissStabilizationPreview: () -> Unit = {},
+    stabilizationProfileImportPreview: StabilizationProfileValidation? = null,
+    onImportStabilizationProfile: () -> Unit = {},
+    onExportStabilizationProfile: () -> Unit = {},
+    onApplyStabilizationProfileImport: () -> Unit = {},
+    onDismissStabilizationProfileImport: () -> Unit = {},
     whisperModelState: WhisperModelState = WhisperModelState.NOT_DOWNLOADED,
     whisperDownloadProgress: Float = 0f,
     onDownloadWhisper: () -> Unit = {},
@@ -316,6 +323,40 @@ fun AiToolsPanel(
                         accent = ClearCutAccents.Blue
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        PremiumPanelCard(accent = ClearCutAccents.Sapphire) {
+            Text(
+                text = stringResource(R.string.ai_stabilization_profiles_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = semanticColors.text,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.ai_stabilization_profiles_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = semanticColors.subtext,
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ClearCutSecondaryButton(
+                    text = stringResource(R.string.ai_stabilization_profile_import),
+                    onClick = onImportStabilizationProfile,
+                    icon = Icons.Default.Download,
+                    modifier = Modifier.weight(1f),
+                )
+                ClearCutSecondaryButton(
+                    text = stringResource(R.string.ai_stabilization_profile_export),
+                    onClick = onExportStabilizationProfile,
+                    icon = Icons.Default.Upload,
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
 
@@ -565,6 +606,14 @@ fun AiToolsPanel(
             onApply = onApplyStabilizationPreview,
         )
     }
+
+    stabilizationProfileImportPreview?.let { validation ->
+        StabilizationProfileImportDialog(
+            validation = validation,
+            onDismissRequest = onDismissStabilizationProfileImport,
+            onApply = onApplyStabilizationProfileImport,
+        )
+    }
 }
 
 @Composable
@@ -616,6 +665,99 @@ private fun StabilizationPreviewDialog(
                 text = stringResource(R.string.ai_stabilization_preview_cancel),
                 onClick = onDismissRequest,
             )
+        },
+        containerColor = semanticColors.panelHighest,
+        titleContentColor = semanticColors.text,
+        textContentColor = semanticColors.subtext,
+        shape = RoundedCornerShape(Radius.xxl),
+    )
+}
+
+@Composable
+private fun StabilizationProfileImportDialog(
+    validation: StabilizationProfileValidation,
+    onDismissRequest: () -> Unit,
+    onApply: () -> Unit,
+) {
+    val semanticColors = LocalClearCutColors.current
+    val profile = validation.profile
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        icon = {
+            ClearCutDialogIcon(
+                icon = Icons.Default.Straighten,
+                accent = if (profile != null) ClearCutAccents.Sapphire else ClearCutAccents.Red,
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(
+                    if (profile != null) {
+                        R.string.ai_stabilization_profile_preview_title
+                    } else {
+                        R.string.ai_stabilization_profile_import_failed
+                    },
+                ),
+                color = semanticColors.text,
+                style = MaterialTheme.typography.titleLarge,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = if (profile != null) {
+                        stringResource(
+                            R.string.ai_stabilization_profile_preview_body,
+                            profile.name,
+                            profile.lens.name,
+                            profile.motion.algorithm,
+                            profile.cropScale,
+                            profile.syncOffsetMs,
+                        )
+                    } else {
+                        validation.warnings.firstOrNull()
+                            ?: stringResource(R.string.ai_stabilization_profile_import_failed)
+                    },
+                    color = semanticColors.subtext,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                validation.warnings.forEach { warning ->
+                    Text(
+                        text = warning,
+                        color = ClearCutAccents.Peach,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.ai_stabilization_profile_reason_code, validation.reasonCode),
+                    color = semanticColors.subtext,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        },
+        confirmButton = {
+            if (profile != null) {
+                ClearCutPrimaryButton(
+                    text = stringResource(R.string.ai_stabilization_profile_activate),
+                    onClick = onApply,
+                    icon = Icons.Default.Straighten,
+                )
+            } else {
+                ClearCutSecondaryButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismissRequest,
+                )
+            }
+        },
+        dismissButton = if (profile != null) {
+            {
+                ClearCutSecondaryButton(
+                    text = stringResource(R.string.cancel),
+                    onClick = onDismissRequest,
+                )
+            }
+        } else {
+            null
         },
         containerColor = semanticColors.panelHighest,
         titleContentColor = semanticColors.text,

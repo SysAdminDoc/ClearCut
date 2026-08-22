@@ -40,6 +40,11 @@ enum class IncomingDocumentKind(
         targetAction = "Validate interchange metadata",
         maxBytes = 1_000_000L,
     ),
+    STABILIZATION_PROFILE(
+        displayName = "Offline stabilization profile",
+        targetAction = "Review and activate stabilization assumptions",
+        maxBytes = StabilizationProfileManager.MAX_PROFILE_BYTES,
+    ),
     PROJECT_ARCHIVE(
         displayName = "ClearCut project archive",
         targetAction = "Validate project archive",
@@ -84,6 +89,7 @@ enum class IncomingDocumentKind(
             PluginRegistry.Kind.LUT_CUBE -> LUT_CUBE
             PluginRegistry.Kind.LUT_3DL -> LUT_3DL
             PluginRegistry.Kind.OPENFX_DESCRIPTOR -> OPENFX_DESCRIPTOR
+            PluginRegistry.Kind.STABILIZATION_PROFILE -> STABILIZATION_PROFILE
         }
     }
 }

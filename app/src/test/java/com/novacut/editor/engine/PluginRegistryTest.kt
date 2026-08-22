@@ -57,6 +57,18 @@ class PluginRegistryTest {
     }
 
     @Test
+    fun stabilizationProfile_extensionAndCapability() {
+        assertEquals(
+            PluginRegistry.Kind.STABILIZATION_PROFILE,
+            PluginRegistry.kindForFileName("Handheld.ncstabilization"),
+        )
+        assertEquals(
+            DeclarativePackContract.STABILIZATION_PROFILE_CAPABILITY,
+            PluginRegistry.requiredDeclarativeCapability(PluginRegistry.Kind.STABILIZATION_PROFILE),
+        )
+    }
+
+    @Test
     fun longerExtensionsWinOverShorterFalsePositives() {
         // `.ncfx` would substring-match inside `.ncfxd`. Verify the
         // longest-extension-first sort returns the right Kind.

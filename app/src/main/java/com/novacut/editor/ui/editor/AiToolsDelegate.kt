@@ -37,6 +37,7 @@ class AiToolsDelegate(
     private val upscaleEngine: UpscaleEngine,
     private val videoMattingEngine: VideoMattingEngine,
     private val stabilizationEngine: StabilizationEngine,
+    private val stabilizationProfileManager: StabilizationProfileManager,
     private val appContext: Context,
     private val scope: CoroutineScope,
     private val saveUndoState: (String) -> Unit,
@@ -1137,10 +1138,12 @@ class AiToolsDelegate(
     }
 
     private suspend fun applyStabilization(clip: Clip) {
-        val config = StabilizationEngine.StabilizationConfig(
-            smoothingStrength = 0.5f, cropPercentage = 0.15f,
-            algorithm = StabilizationEngine.StabilizationConfig.Algorithm.LK_OPTICAL_FLOW
+        val importedProfile = stabilizationProfileManager.activeProfile()
+        val profileForAnalysis = importedProfile ?: StabilizationProfile(
+            name = "Device default",
+            cropScale = 1.1f,
         )
+        val config = stabilizationProfileManager.configFor(profileForAnalysis)
         val capability = withContext(Dispatchers.Default) {
             stabilizationEngine.capability(clip.sourceUri, config)
         }
@@ -1171,14 +1174,24 @@ class AiToolsDelegate(
             showToast(text(R.string.ai_motion_analysis_failed_toast))
             return
         }
+        val previewProfile = profileForAnalysis.copy(
+            cropScale = importedProfile?.cropScale
+                ?: motionData.recommendedCropScale.coerceIn(1f, 1.3f),
+        )
+        val profileMotionData = motionData.copy(
+            lensProfile = stabilizationProfileManager.lensFor(previewProfile),
+            syncOffsetMs = previewProfile.syncOffsetMs,
+            recommendedCropScale = previewProfile.cropScale,
+        )
         stateFlow.update {
             it.copyAi { ai ->
                 ai.copy(
                     stabilizationPreview = StabilizationPreview(
                         clipId = clip.id,
                         sourceName = clip.name ?: clip.sourceUri.lastPathSegment ?: "clip",
-                        motionData = motionData,
+                        motionData = profileMotionData,
                         config = config,
+                        profile = previewProfile,
                     ),
                     processingProgress = 1f,
                 )
@@ -1189,6 +1202,68 @@ class AiToolsDelegate(
 
     fun dismissStabilizationPreview() {
         stateFlow.update { it.copyAi { ai -> ai.copy(stabilizationPreview = null) } }
+    }
+
+    fun previewStabilizationProfile(uri: Uri) {
+        scope.launch {
+            val validation = stabilizationProfileManager.validateUri(uri)
+            stateFlow.update { it.copyAi { ai -> ai.copy(stabilizationProfileImportPreview = validation) } }
+        }
+    }
+
+    fun applyStabilizationProfileImport() {
+        val validation = stateFlow.value.stabilizationProfileImportPreview ?: return
+        if (!validation.isValid) {
+            dismissStabilizationProfileImport()
+            showToast(text(R.string.ai_stabilization_profile_import_failed))
+            return
+        }
+        val installed = stabilizationProfileManager.install(validation)
+        stateFlow.update { it.copyAi { ai -> ai.copy(stabilizationProfileImportPreview = null) } }
+        if (installed.isValid) {
+            showToast(text(R.string.ai_stabilization_profile_activated, installed.profile?.name.orEmpty()))
+        } else {
+            showToast(text(R.string.ai_stabilization_profile_import_failed))
+        }
+    }
+
+    fun dismissStabilizationProfileImport() {
+        stateFlow.update { it.copyAi { ai -> ai.copy(stabilizationProfileImportPreview = null) } }
+    }
+
+    fun exportStabilizationProfile() {
+        scope.launch(Dispatchers.IO) {
+            val profile = stateFlow.value.stabilizationPreview?.profile
+                ?: stabilizationProfileManager.activeProfile()
+                ?: StabilizationProfileManager.DEFAULT_PROFILE
+            val file = stabilizationProfileManager.exportProfileFile(profile)
+            if (file == null) {
+                showToast(text(R.string.ai_stabilization_profile_export_failed))
+                return@launch
+            }
+            try {
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    appContext,
+                    "${appContext.packageName}.fileprovider",
+                    file,
+                )
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "application/json"
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                withContext(Dispatchers.Main) {
+                    appContext.startActivity(
+                        android.content.Intent.createChooser(shareIntent, text(R.string.ai_stabilization_profile_share_title))
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                    showToast(text(R.string.ai_stabilization_profile_exported, profile.name))
+                }
+            } catch (error: Exception) {
+                AppLog.w("AiToolsDelegate", "Could not share stabilization profile", error)
+                showToast(text(R.string.ai_stabilization_profile_export_failed))
+            }
+        }
     }
 
     fun applyStabilizationPreview() {
@@ -1213,13 +1288,13 @@ class AiToolsDelegate(
                 )
             },
             lensProfile = StabilizationLensProfile(
-                name = preview.motionData.lensProfile.name,
-                focalLengthMm = preview.motionData.lensProfile.focalLengthMm,
-                distortionK1 = preview.motionData.lensProfile.distortionK1,
-                distortionK2 = preview.motionData.lensProfile.distortionK2,
+                name = preview.profile.lens.name,
+                focalLengthMm = preview.profile.lens.focalLengthMm,
+                distortionK1 = preview.profile.lens.distortionK1,
+                distortionK2 = preview.profile.lens.distortionK2,
             ),
-            syncOffsetMs = preview.motionData.syncOffsetMs,
-            cropScale = preview.motionData.recommendedCropScale.coerceIn(1f, 1.3f),
+            syncOffsetMs = preview.profile.syncOffsetMs,
+            cropScale = preview.profile.cropScale.coerceIn(1f, 1.3f),
             sourceDurationMs = preview.motionData.sourceDurationMs.coerceAtLeast(0L),
         )
         if (!stabilizationData.isUsable) {

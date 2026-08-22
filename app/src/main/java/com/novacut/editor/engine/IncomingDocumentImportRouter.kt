@@ -35,6 +35,7 @@ class IncomingDocumentImportRouter @Inject constructor(
     private val effectShareEngine: EffectShareEngine,
     private val timelineImportEngine: TimelineImportEngine,
     private val stylePackManager: StylePackManager,
+    private val stabilizationProfileManager: StabilizationProfileManager,
 ) {
     suspend fun preview(item: IncomingDocumentItem): IncomingDocumentImportPreview = withContext(Dispatchers.IO) {
         val readability = validateReadable(item)
@@ -47,6 +48,7 @@ class IncomingDocumentImportRouter @Inject constructor(
             IncomingDocumentKind.LUT_CUBE -> previewLut(item) { LutEngine.parseCube(it) }
             IncomingDocumentKind.LUT_3DL -> previewLut(item) { LutEngine.parse3dl(it) }
             IncomingDocumentKind.OPENFX_DESCRIPTOR -> previewOpenFxDescriptor(item)
+            IncomingDocumentKind.STABILIZATION_PROFILE -> previewStabilizationProfile(item)
             IncomingDocumentKind.PROJECT_ARCHIVE -> previewProjectArchive(item)
             IncomingDocumentKind.TIMELINE_OTIO,
             IncomingDocumentKind.TIMELINE_FCPXML,
@@ -69,6 +71,7 @@ class IncomingDocumentImportRouter @Inject constructor(
         return when (item.kind) {
             IncomingDocumentKind.TEMPLATE -> importTemplate(item)
             IncomingDocumentKind.STYLE_PACK -> importStylePack(item)
+            IncomingDocumentKind.STABILIZATION_PROFILE -> importStabilizationProfile(item)
             IncomingDocumentKind.EFFECT_PACK,
             IncomingDocumentKind.LUT_CUBE,
             IncomingDocumentKind.LUT_3DL,
@@ -232,6 +235,63 @@ class IncomingDocumentImportRouter @Inject constructor(
                 "Reason code: ${validation.reasonCode}",
             ),
             warnings = validation.warnings + "No clip was changed from the Projects screen.",
+            canImportNow = false,
+        )
+    }
+
+    private suspend fun previewStabilizationProfile(item: IncomingDocumentItem): IncomingDocumentImportPreview {
+        val result = stabilizationProfileManager.validateUri(item.uri)
+        val profile = result.profile
+            ?: return invalid(
+                item = item,
+                body = stabilizationProfileFailureMessage(result.failure),
+                warnings = result.warnings,
+                reasonCode = result.reasonCode,
+            )
+        return IncomingDocumentImportPreview(
+            item = item,
+            status = IncomingDocumentImportStatus.READY,
+            title = "Stabilization profile ready",
+            body = "${profile.name} contains reusable offline lens, motion, crop, and sync assumptions.",
+            details = baseDetails(item) + listOf(
+                "Profile: ${profile.name}",
+                "Lens: ${profile.lens.name}",
+                "Motion: ${profile.motion.algorithm}",
+                "Crop scale: ${"%.2f".format(profile.cropScale)}",
+                "Sync offset: ${profile.syncOffsetMs} ms",
+                "Schema: v${result.schemaVersion}",
+                "Content hash: ${result.contentHash ?: "not recorded"}",
+                "Source: ${result.provenanceSource ?: "not specified"}",
+                "Reason code: ${result.reasonCode}",
+            ),
+            warnings = result.warnings + "Nothing was activated during preview; choose Import to make this the active offline profile.",
+            canImportNow = true,
+        )
+    }
+
+    private suspend fun importStabilizationProfile(item: IncomingDocumentItem): IncomingDocumentImportPreview {
+        val result = stabilizationProfileManager.importFromUri(item.uri)
+        val profile = result.profile
+            ?: return invalid(
+                item = item,
+                body = stabilizationProfileFailureMessage(result.failure),
+                warnings = result.warnings,
+                reasonCode = result.reasonCode,
+            )
+        return IncomingDocumentImportPreview(
+            item = item,
+            status = IncomingDocumentImportStatus.IMPORTED,
+            title = "Stabilization profile activated",
+            body = "${profile.name} will be used by the next offline stabilization analysis.",
+            details = baseDetails(item) + listOf(
+                "Profile: ${profile.name}",
+                "Lens: ${profile.lens.name}",
+                "Motion: ${profile.motion.algorithm}",
+                "Crop scale: ${"%.2f".format(profile.cropScale)}",
+                "Sync offset: ${profile.syncOffsetMs} ms",
+                "Reason code: ${result.reasonCode}",
+            ),
+            warnings = result.warnings,
             canImportNow = false,
         )
     }
@@ -573,6 +633,23 @@ class IncomingDocumentImportRouter @Inject constructor(
             EffectShareEngine.EffectPackFailure.HASH_MISMATCH -> "Effect pack content failed its integrity check."
             EffectShareEngine.EffectPackFailure.INVALID_ENTRY -> "Effect pack contains an unsupported or invalid effect entry."
             EffectShareEngine.EffectPackFailure.INVALID_LUT -> "Effect pack contains a malformed or unsupported embedded LUT."
+        }
+    }
+
+    private fun stabilizationProfileFailureMessage(failure: StabilizationProfileFailure): String {
+        return when (failure) {
+            StabilizationProfileFailure.NONE -> "Stabilization profile validation failed."
+            StabilizationProfileFailure.UNREADABLE -> "ClearCut could not read this stabilization profile."
+            StabilizationProfileFailure.INVALID_JSON -> "Stabilization profile is not valid JSON."
+            StabilizationProfileFailure.INVALID_SCHEMA -> "Stabilization profile schemaVersion is invalid."
+            StabilizationProfileFailure.WRONG_KIND -> "This file declares a different declarative pack type."
+            StabilizationProfileFailure.INCOMPATIBLE_VERSION,
+            StabilizationProfileFailure.INCOMPATIBLE_APP_VERSION -> "Stabilization profile requires a newer ClearCut version."
+            StabilizationProfileFailure.MISSING_REQUIRED_METADATA -> "Profile is missing required lens, motion, crop, or provenance metadata."
+            StabilizationProfileFailure.UNSAFE_CONTENT -> "Profile contains executable or plugin content, which ClearCut rejects."
+            StabilizationProfileFailure.MISSING_CONTENT_HASH -> "Current-schema profiles must include a content hash."
+            StabilizationProfileFailure.HASH_MISMATCH -> "Profile content failed its integrity check."
+            StabilizationProfileFailure.UNKNOWN_REQUIRED_CAPABILITY -> "Profile requires a capability this ClearCut build does not support."
         }
     }
 

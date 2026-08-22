@@ -2,6 +2,8 @@ package com.novacut.editor.ui.editor
 
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.novacut.editor.engine.InpaintingModelState
@@ -20,6 +22,11 @@ fun BoxScope.EditorAiPanelHost(
     inpaintingDownloadProgress: Float,
     networkAvailable: Boolean,
 ) {
+    val stabilizationProfileImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let(viewModel::previewStabilizationProfile)
+    }
     BottomSheetSlot(
         visible = state.panels.isOpen(PanelId.AI_TOOLS),
         modifier = Modifier.align(Alignment.BottomCenter)
@@ -41,6 +48,13 @@ fun BoxScope.EditorAiPanelHost(
             stabilizationPreview = state.stabilizationPreview,
             onApplyStabilizationPreview = viewModel::applyStabilizationPreview,
             onDismissStabilizationPreview = viewModel::dismissStabilizationPreview,
+            stabilizationProfileImportPreview = state.stabilizationProfileImportPreview,
+            onImportStabilizationProfile = {
+                stabilizationProfileImportLauncher.launch(arrayOf("application/json", "*/*"))
+            },
+            onExportStabilizationProfile = viewModel::exportStabilizationProfile,
+            onApplyStabilizationProfileImport = viewModel::applyStabilizationProfileImport,
+            onDismissStabilizationProfileImport = viewModel::dismissStabilizationProfileImport,
             whisperModelState = whisperModelState,
             whisperDownloadProgress = whisperDownloadProgress,
             onDownloadWhisper = viewModel::downloadWhisperModel,

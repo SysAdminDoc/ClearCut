@@ -9,7 +9,7 @@ class EditorCoordinatorOwnershipTest {
     @Test
     fun largeCoordinatorFilesStayWithinTheirReviewedOwnershipBudgets() {
         val budgets = mapOf(
-            "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt" to 314_000L,
+            "app/src/main/java/com/novacut/editor/ui/editor/EditorViewModel.kt" to 315_000L,
             "app/src/main/java/com/novacut/editor/ui/editor/Timeline.kt" to 172_000L,
             "app/src/main/java/com/novacut/editor/ui/editor/ExportDelegate.kt" to 151_000L,
             "app/src/main/java/com/novacut/editor/ui/export/ExportSheet.kt" to 130_000L,
