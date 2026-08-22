@@ -6,7 +6,9 @@ package com.novacut.editor.engine
  *
  * Static shortcuts in `res/xml/shortcuts.xml` cover the two project-agnostic
  * actions ("New Project", "Recent Projects") via `<meta-data android:name=
- * "android.app.shortcuts">`. They're available the moment the app installs.
+ * "android.app.shortcuts">`. They're available the moment the app installs,
+ * and MainActivity routes them into the same new-project and recent-project
+ * flows as the visible dashboard controls.
  *
  * Dynamic shortcuts in this planner adapt to runtime state — they appear
  * only when there's a useful target:

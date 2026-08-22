@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
     private var pendingIncomingMedia by mutableStateOf<List<IncomingMediaItem>>(emptyList())
     private var pendingIncomingDocuments by mutableStateOf<List<IncomingDocumentItem>>(emptyList())
     private var pendingEditorOpen by mutableStateOf<PendingEditorOpen?>(null)
+    private var pendingNewProjectShortcut by mutableStateOf(false)
     private var shortcutValidationJob: Job? = null
     private var incomingIntentJob: Job? = null
 
@@ -131,6 +132,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(pendingNewProjectShortcut, currentRoute) {
+                    if (pendingNewProjectShortcut && currentRoute != null && currentRoute != "projects") {
+                        navController.navigate("projects") {
+                            launchSingleTop = true
+                            popUpTo("projects") { inclusive = false }
+                        }
+                    }
+                }
+
                 LaunchedEffect(pendingEditorOpen, currentRoute) {
                     val pending = pendingEditorOpen ?: return@LaunchedEffect
                     if (currentRoute == null) return@LaunchedEffect
@@ -154,6 +164,8 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("editor/${Uri.encode(projectId)}?expectRecovery=false")
                                 },
                                 onSettings = { navController.navigate("settings") },
+                                openNewProject = pendingNewProjectShortcut,
+                                onNewProjectOpened = { pendingNewProjectShortcut = false },
                                 pendingImportItems = pendingIncomingMedia,
                                 onPendingImportHandled = { pendingIncomingMedia = emptyList() },
                                 pendingDocumentItems = pendingIncomingDocuments,
@@ -225,20 +237,35 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
-        when (intent.action) {
-            Intent.ACTION_VIEW, Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE -> handleIncomingMediaIntent(intent)
-            ACTION_NEW_PROJECT, ACTION_OPEN_RECENT -> {
-                // Both App Shortcuts land on the Projects gallery. The gallery
-                // surfaces "New Project" + recent list; no extra plumbing
-                // required today. Future enhancement: ACTION_NEW_PROJECT could
-                // pre-open the Template sheet — left as a follow-up so the
-                // shortcut shape is stable for users who pin it.
+        when (projectShortcutRoute(intent.action)) {
+            ProjectShortcutRoute.NEW_PROJECT -> {
+                pendingNewProjectShortcut = true
             }
-            ProjectShortcutPlanner.ACTION_RESUME_RECOVERED -> {
-                validateShortcutProject(intent, expectRecovery = true)
+            ProjectShortcutRoute.OPEN_RECENT -> {
+                openMostRecentProject()
             }
-            ProjectShortcutPlanner.ACTION_OPEN_LAST_PROJECT -> {
-                validateShortcutProject(intent, expectRecovery = false)
+            ProjectShortcutRoute.NONE -> when (intent.action) {
+                Intent.ACTION_VIEW, Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE -> handleIncomingMediaIntent(intent)
+                ProjectShortcutPlanner.ACTION_RESUME_RECOVERED -> {
+                    validateShortcutProject(intent, expectRecovery = true)
+                }
+                ProjectShortcutPlanner.ACTION_OPEN_LAST_PROJECT -> {
+                    validateShortcutProject(intent, expectRecovery = false)
+                }
+            }
+        }
+    }
+
+    private fun openMostRecentProject() {
+        shortcutValidationJob?.cancel()
+        shortcutValidationJob = lifecycleScope.launch {
+            val projectId = withContext(Dispatchers.IO) {
+                projectDao.getAllProjectsSnapshot()
+                    .maxByOrNull { it.updatedAt }
+                    ?.id
+            }
+            if (projectId != null) {
+                pendingEditorOpen = PendingEditorOpen(projectId = projectId, expectRecovery = false)
             }
         }
     }
@@ -363,6 +390,18 @@ private data class PendingEditorOpen(
     val projectId: String,
     val expectRecovery: Boolean,
 )
+
+internal enum class ProjectShortcutRoute {
+    NEW_PROJECT,
+    OPEN_RECENT,
+    NONE,
+}
+
+internal fun projectShortcutRoute(action: String?): ProjectShortcutRoute = when (action) {
+    MainActivity.ACTION_NEW_PROJECT -> ProjectShortcutRoute.NEW_PROJECT
+    MainActivity.ACTION_OPEN_RECENT -> ProjectShortcutRoute.OPEN_RECENT
+    else -> ProjectShortcutRoute.NONE
+}
 
 /**
  * The launch intent should be parsed only on a genuinely fresh start:

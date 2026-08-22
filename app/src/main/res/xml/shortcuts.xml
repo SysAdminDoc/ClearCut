@@ -2,10 +2,9 @@
 <!--
     App Shortcuts for the launcher long-press menu and Android Assistant
     suggestion surface. Statically declared because the entries here are
-    project-agnostic — the dynamic "Resume recovered draft" / "Open last
-    project" entries that need DataStore state will be added via
-    ShortcutManagerCompat.pushDynamicShortcut from the ProjectListViewModel
-    in a follow-up pass.
+    project-agnostic. Dynamic "Resume recovered draft" and "Open last
+    project" entries are added by ProjectListViewModel when project state is
+    available.
 
     See https://developer.android.com/develop/ui/views/launch/shortcuts
 -->
@@ -19,8 +18,8 @@
         android:shortcutLongLabel="@string/shortcut_new_project_long">
         <intent
             android:action="com.novacut.editor.action.NEW_PROJECT"
-            android:targetPackage="com.novacut.editor"
-            android:targetClass="com.novacut.editor.MainActivity" />
+            android:targetPackage="${applicationId}"
+            android:targetClass="${applicationId}.MainActivity" />
         <!-- Not a conversation shortcut — removed android.shortcut.conversation -->
 
     </shortcut>
@@ -33,8 +32,8 @@
         android:shortcutLongLabel="@string/shortcut_recent_long">
         <intent
             android:action="com.novacut.editor.action.OPEN_RECENT"
-            android:targetPackage="com.novacut.editor"
-            android:targetClass="com.novacut.editor.MainActivity" />
+            android:targetPackage="${applicationId}"
+            android:targetClass="${applicationId}.MainActivity" />
     </shortcut>
 
 </shortcuts>

@@ -83,6 +83,8 @@ private const val PROJECT_RENAME_MAX_CHARS = 80
 fun ProjectListScreen(
     onProjectSelected: (String) -> Unit,
     onSettings: () -> Unit = {},
+    openNewProject: Boolean = false,
+    onNewProjectOpened: () -> Unit = {},
     pendingImportItems: List<IncomingMediaItem> = emptyList(),
     onPendingImportHandled: () -> Unit = {},
     pendingDocumentItems: List<IncomingDocumentItem> = emptyList(),
@@ -109,6 +111,13 @@ fun ProjectListScreen(
     ) { uri ->
         if (uri != null) {
             viewModel.importTemplate(uri)
+        }
+    }
+
+    LaunchedEffect(openNewProject) {
+        if (openNewProject) {
+            showTemplateSheet = true
+            onNewProjectOpened()
         }
     }
 

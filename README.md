@@ -15,6 +15,7 @@
 - Settings uses compact rows and clearer value hierarchy without hiding ClearCut's existing controls.
 - Export puts delivery facts, presets, editable output choices, and the export action in one visible path.
 - Dark and high-contrast screenshot coverage now renders at a 360 x 800 dp phone viewport with accessibility checks enabled.
+- Launcher shortcuts now open the new-project flow or the most recent project in every build variant, including streaming.
 
 ### v3.78.1 CFR delivery and source-cut batch exports
 
@@ -705,6 +706,8 @@ Android developer verification is not complete. Starting in September 2026, Goog
 ClearCut is the public product name. The Android application ID and source namespace are intentionally frozen at `com.novacut.editor`: it is the legacy technical identity that preserves the existing install lineage, not public branding. The machine-readable contract lives in `scripts/package_identity.json` and is checked by the release gate.
 
 Keeping that ID and the pinned release certificate lets existing installs receive in-place updates and keeps app-private projects reachable. Provider authorities remain `${applicationId}.androidx-startup` and `${applicationId}.fileprovider`; `.clearcut` and `.clearcut-template` files and their document MIME associations remain stable.
+
+The launcher actions use the same `${applicationId}` placeholder, so New Project and Open Recent resolve correctly for release and streaming packages. New Project returns to the project launcher before opening the template sheet, while Open Recent selects the latest updated project.
 
 If a future legal, ownership, or distribution decision requires a different application ID, it must ship as a new install with an explicit export/import path. It must not masquerade as an upgrade. The current policy is to retain the existing ID, so current users do not need a clean-install migration.
 

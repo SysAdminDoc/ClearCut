@@ -44,8 +44,8 @@ class PackageIdentityTest {
             val action = shortcutActions.getString(index)
             assertTrue("Manifest must keep shortcut action $action", manifest.contains(action))
         }
-        assertTrue(shortcuts.contains("android:targetPackage=\"$applicationId\""))
-        assertTrue(shortcuts.contains("android:targetClass=\"$applicationId.MainActivity\""))
+        assertTrue(shortcuts.contains("android:targetPackage=\"\${applicationId}\""))
+        assertTrue(shortcuts.contains("android:targetClass=\"\${applicationId}.MainActivity\""))
 
         val associations = registry.getJSONObject("archiveAssociations")
         val extensions = associations.getJSONArray("extensions")
