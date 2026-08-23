@@ -27,7 +27,7 @@ class ProjectPersistenceCoordinatorTest {
             },
         )
 
-        val result = coordinator.save(document(), autoSaveEnabled = true)
+        val result = coordinator.save(document(), persistenceAllowed = true)
 
         assertEquals(listOf("database", "autosave"), writes)
         assertTrue(result.databaseSaved)
@@ -37,22 +37,24 @@ class ProjectPersistenceCoordinatorTest {
     }
 
     @Test
-    fun disabledAutosaveStillCommitsDatabaseButDoesNotClaimCompleteSave() = runBlocking {
+    fun blockedPersistenceTouchesNeitherDatabaseNorAutosave() = runBlocking {
+        var databaseCalls = 0
         var autoSaveCalls = 0
         val coordinator = ProjectPersistenceCoordinator(
-            databaseWriter = {},
+            databaseWriter = { databaseCalls++ },
             autoSaveWriter = {
                 autoSaveCalls++
                 true
             },
         )
 
-        val result = coordinator.save(document(), autoSaveEnabled = false)
+        val result = coordinator.save(document(), persistenceAllowed = false)
 
-        assertTrue(result.databaseSaved)
+        assertFalse(result.databaseSaved)
         assertFalse(result.autoSaveAttempted)
         assertFalse(result.autoSaveSaved)
         assertFalse(result.succeeded)
+        assertEquals(0, databaseCalls)
         assertEquals(0, autoSaveCalls)
     }
 
@@ -63,7 +65,7 @@ class ProjectPersistenceCoordinatorTest {
             autoSaveWriter = { false },
         )
 
-        val result = coordinator.save(document(), autoSaveEnabled = true)
+        val result = coordinator.save(document(), persistenceAllowed = true)
 
         assertTrue(result.databaseSaved)
         assertTrue(result.autoSaveAttempted)

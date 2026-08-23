@@ -49,8 +49,8 @@ class EditorDocumentCoordinator internal constructor(
     ) : this(
         loadProject = { projectDao.getProject(it) },
         loadRecovery = { autoSave.loadRecoveryDataWithOutcome(it) },
-        saveDocument = { document, autoSaveEnabled ->
-            persistence.save(document, autoSaveEnabled)
+        saveDocument = { document, persistenceAllowed ->
+            persistence.save(document, persistenceAllowed)
         },
         saveDatabase = { document -> persistence.saveDatabase(document) },
         loadBackup = { autoSave.loadBackupWithOutcome(it) },
@@ -87,10 +87,15 @@ class EditorDocumentCoordinator internal constructor(
 
     suspend fun save(
         document: ProjectDocument,
-        autoSaveEnabled: Boolean,
+        persistenceAllowed: Boolean,
     ): ProjectPersistenceCoordinator.SaveResult = saveMutex.withLock {
-        saveDocument(document, autoSaveEnabled)
+        saveDocument(document, persistenceAllowed)
     }
+
+    suspend fun commitRecovered(document: ProjectDocument): ProjectPersistenceCoordinator.SaveResult =
+        saveMutex.withLock {
+            saveDocument(document, true)
+        }
 
     suspend fun saveDatabase(document: ProjectDocument) = saveMutex.withLock {
         saveDatabase.invoke(document)

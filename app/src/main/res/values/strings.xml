@@ -3555,6 +3555,7 @@
     <string name="vm_recovery_corrupt_toast">Autosave could not be read. The file was left untouched so you can retry recovery later.</string>
     <string name="vm_recovery_not_found_toast">No autosaved recovery data was found. Opening the saved project instead.</string>
     <string name="vm_partial_restore_keep_toast">Keeping the recovered project. Saving resumed; %1$s stayed lost.</string>
+    <string name="vm_partial_restore_save_failed_toast">The recovered project could not be saved everywhere. Saving is still paused; try the recovery choice again.</string>
     <string name="vm_partial_restore_backup_incomplete">The previous autosave is also incomplete (%1$s). Saving is still paused.</string>
     <string name="vm_partial_restore_backup_success">Restored the previous autosave in full. Saving resumed.</string>
     <string name="vm_partial_restore_backup_missing">No usable previous autosave was found. The recovered project is unchanged and saving stays paused.</string>

@@ -245,72 +245,41 @@ class ProjectAutoSave @Inject constructor(
     }
 
     /**
-     * Like [loadRecoveryData] but distinguishes future-schema files from
-     * genuinely corrupt ones. A future-schema main file blocks the backup
-     * attempt — the backup is almost certainly also future-schema, and
-     * silently downgrading to a stale, *older* backup that happens to load
-     * would discard work the user did on the newer build.
+     * Read recovery state without changing any recovery artifact.
+     *
+     * The editor decides whether a loaded document may be persisted. A read must
+     * therefore leave the primary, backup, and interrupted temp file untouched so
+     * partial, corrupt, and future-schema projects retain every recovery option.
      */
     suspend fun loadRecoveryDataWithOutcome(projectId: String): LoadOutcome = withContext(Dispatchers.IO) {
         saveMutex.withLock {
-            val tempFile = getTempFile(projectId)
-            if (tempFile.exists()) {
-                AppLog.w(TAG, "Cleaning up stale temp file for $projectId")
-                tempFile.delete()
-            }
             val file = getAutoSaveFile(projectId)
             val backupFile = getBackupFile(projectId)
-            if (!file.exists() && backupFile.exists()) {
-                AppLog.w(TAG, "Restoring auto-save from backup for $projectId")
-                moveFileReplacing(backupFile, file)
+            val source = when {
+                file.exists() -> file
+                backupFile.exists() -> {
+                    AppLog.w(TAG, "Primary auto-save is missing; reading preserved backup for $projectId")
+                    backupFile
+                }
+                else -> return@withLock LoadOutcome.NotFound
             }
-            if (!file.exists()) return@withLock LoadOutcome.NotFound
-            val raw = try {
-                readAutoSaveText(file)
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to read auto-save for $projectId", e)
-                return@withLock LoadOutcome.Corrupt(e)
-            }
-            when (val primary = decodeLoadOutcome(raw)) {
+
+            when (val outcome = readLoadOutcome(source, projectId)) {
                 is LoadOutcome.FutureSchema -> {
                     AppLog.w(
                         TAG,
                         "Auto-save for $projectId was written by a newer ClearCut " +
-                            "(schema ${primary.fileVersion} > supported ${primary.supportedVersion}); " +
+                            "(schema ${outcome.fileVersion} > supported ${outcome.supportedVersion}); " +
                             "refusing to load to avoid data loss"
                     )
-                    return@withLock primary
+                    outcome
                 }
-                is LoadOutcome.Loaded -> {
-                // A partial restore keeps the backup: it is the only remaining copy of
-                // whatever was dropped, and the user may choose to fall back to it.
-                    if (!primary.report.isPartial) backupFile.delete()
-                    return@withLock primary
-                }
+                is LoadOutcome.Loaded -> outcome
                 is LoadOutcome.Corrupt -> {
-                    AppLog.e(TAG, "Failed to load recovery data for $projectId", primary.cause)
-                    if (!backupFile.exists()) return@withLock primary
-                    val backupRaw = try {
-                        readAutoSaveText(backupFile)
-                    } catch (readErr: Exception) {
-                        AppLog.e(TAG, "Backup auto-save read failed for $projectId", readErr)
-                        return@withLock LoadOutcome.Corrupt(readErr)
-                    }
-                    when (val backup = decodeLoadOutcome(backupRaw)) {
-                        is LoadOutcome.Loaded -> {
-                            AppLog.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
-                            moveFileReplacing(backupFile, file)
-                            backup
-                        }
-                        is LoadOutcome.FutureSchema -> backup
-                        is LoadOutcome.Corrupt -> {
-                            AppLog.e(TAG, "Backup auto-save restore failed for $projectId", backup.cause)
-                            backup
-                        }
-                        LoadOutcome.NotFound -> primary
-                    }
+                    AppLog.e(TAG, "Failed to load recovery data for $projectId", outcome.cause)
+                    outcome
                 }
-                LoadOutcome.NotFound -> primary
+                LoadOutcome.NotFound -> outcome
             }
         }
     }
@@ -327,14 +296,15 @@ class ProjectAutoSave @Inject constructor(
         saveMutex.withLock {
             val backupFile = getBackupFile(projectId)
             if (!backupFile.exists()) return@withLock LoadOutcome.NotFound
-            val raw = try {
-                readAutoSaveText(backupFile)
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Backup auto-save read failed for $projectId", e)
-                return@withLock LoadOutcome.Corrupt(e)
-            }
-            decodeLoadOutcome(raw)
+            readLoadOutcome(backupFile, projectId)
         }
+    }
+
+    private fun readLoadOutcome(file: File, projectId: String): LoadOutcome = try {
+        decodeLoadOutcome(readAutoSaveText(file))
+    } catch (e: Exception) {
+        AppLog.e(TAG, "Recovery artifact read failed for $projectId", e)
+        LoadOutcome.Corrupt(e)
     }
 
     private fun decodeLoadOutcome(raw: String): LoadOutcome = when (
@@ -355,58 +325,12 @@ class ProjectAutoSave @Inject constructor(
         is ProjectDocumentReadResult.Corrupt -> LoadOutcome.Corrupt(decoded.cause)
     }
 
-    suspend fun loadRecoveryData(projectId: String): AutoSaveState? = withContext(Dispatchers.IO) {
-        // Serialize load against in-flight writes. Without the mutex a load that
-        // races a `saveDocument()` (temp-write → rename) could see the rename
-        // midway and read either no file (null) or a half-renamed file whose
-        // JSON parse throws — the second branch would fall into the backup
-        // recovery path unnecessarily and clear the backup even though the
-        // primary was fine.
-        saveMutex.withLock {
-            val tempFile = getTempFile(projectId)
-            if (tempFile.exists()) {
-                AppLog.w(TAG, "Cleaning up stale temp file for $projectId")
-                tempFile.delete()
-            }
-            val file = getAutoSaveFile(projectId)
-            val backupFile = getBackupFile(projectId)
-            // If main file is missing but backup exists, a save was interrupted — restore
-            if (!file.exists() && backupFile.exists()) {
-                AppLog.w(TAG, "Restoring auto-save from backup for $projectId")
-                moveFileReplacing(backupFile, file)
-            }
-            if (!file.exists()) return@withLock null
-            try {
-                when (val outcome = decodeLoadOutcome(readAutoSaveText(file))) {
-                    is LoadOutcome.Loaded -> {
-                        backupFile.delete()
-                        outcome.state
-                    }
-                    is LoadOutcome.FutureSchema -> null
-                    is LoadOutcome.Corrupt -> throw outcome.cause
-                    LoadOutcome.NotFound -> null
-                }
-            } catch (e: Exception) {
-                AppLog.e(TAG, "Failed to load recovery data for $projectId", e)
-                if (!backupFile.exists()) {
-                    return@withLock null
-                }
-                try {
-                    AppLog.w(TAG, "Primary auto-save is corrupt; attempting backup restore for $projectId")
-                    when (val outcome = decodeLoadOutcome(readAutoSaveText(backupFile))) {
-                        is LoadOutcome.Loaded -> {
-                            moveFileReplacing(backupFile, file)
-                            outcome.state
-                        }
-                        is LoadOutcome.FutureSchema -> null
-                        is LoadOutcome.Corrupt -> throw outcome.cause
-                        LoadOutcome.NotFound -> null
-                    }
-                } catch (backupError: Exception) {
-                    AppLog.e(TAG, "Backup auto-save restore failed for $projectId", backupError)
-                    null
-                }
-            }
+    suspend fun loadRecoveryData(projectId: String): AutoSaveState? {
+        return when (val outcome = loadRecoveryDataWithOutcome(projectId)) {
+            is LoadOutcome.Loaded -> outcome.state
+            is LoadOutcome.FutureSchema,
+            is LoadOutcome.Corrupt,
+            LoadOutcome.NotFound -> null
         }
     }
 
@@ -502,8 +426,8 @@ class ProjectAutoSave @Inject constructor(
         autoSaveJob?.cancel()
         autoSaveJob = null
         // Cancel the entire scope which also cancels any in-flight save.
-        // This is safe because saveDocument() is idempotent — an incomplete write
-        // leaves only a .tmp file which loadRecoveryData() cleans up on next launch.
+        // This is safe because saveDocument() is idempotent. An incomplete write
+        // leaves a .tmp file that recovery reads preserve until an explicit save.
         scope.cancel()
         // Sweep any leftover .tmp files from interrupted saves so the autosave directory
         // doesn't accumulate orphans across process lifetimes (filesDir has quota pressure).

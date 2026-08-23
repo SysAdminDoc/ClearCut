@@ -726,6 +726,7 @@ class EditorViewModel @Inject constructor(
             ?: emptyMap()
     private var recoveryOpenComplete = false
     private var autoSaveBlockedByRecovery = false
+    private var recoveryCommitInProgress = false
     private var latestSettings: AppSettings? = null
     private var lastAutoSaveRunning: Boolean? = null
     private var lastAutoSaveIntervalSec: Int? = null
@@ -1269,56 +1270,79 @@ class EditorViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Accept the partially restored project as-is. Saving resumes, which means the
-     * next write drops whatever the restore could not read — so this is only ever
-     * reached through an explicit choice, never a timeout or a dismissal.
-     */
     fun keepPartialRestore() {
-        if (_state.value.partialRestore == null) return
-        val lost = _state.value.partialRestore?.let { partialRestoreSummary(appContext.resources, it) }.orEmpty()
-        _state.update { it.copy(partialRestore = null) }
-        autoSaveBlockedByRecovery = false
-        applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
-        applyAutoSaveSettings()
-        saveProject()
-        showToast(text(R.string.vm_partial_restore_keep_toast, lost), ToastSeverity.Warning)
+        val report = _state.value.partialRestore ?: return
+        if (!beginRecoveryCommit()) return
+        val lost = partialRestoreSummary(appContext.resources, report)
+        commitRecoveredProject { showToast(text(R.string.vm_partial_restore_keep_toast, lost), ToastSeverity.Warning) }
     }
 
-    /**
-     * Fall back to the previous autosave, which predates the write that produced the
-     * partial file and may still hold the dropped elements. Failing that, the project
-     * stays exactly as it is and saving stays blocked — never a silent downgrade.
-     */
     fun restorePartialFromBackup() {
         if (_state.value.partialRestore == null) return
+        if (!beginRecoveryCommit()) return
         val id = projectId ?: _state.value.project.id
         viewModelScope.launch {
-            when (val outcome = documentCoordinator.loadBackupWithOutcome(id)) {
-                is ProjectAutoSave.LoadOutcome.Loaded -> {
-                    restoreLoadedRecovery(outcome.state, outcome.document?.project)
-                    if (outcome.report.isPartial) {
-                        _state.update { it.copy(partialRestore = outcome.report) }
-                        showToast(
-                            text(
-                                R.string.vm_partial_restore_backup_incomplete,
-                                partialRestoreSummary(appContext.resources, outcome.report),
-                            ),
-                            ToastSeverity.Error,
-                        )
-                    } else {
-                        _state.update { it.copy(partialRestore = null) }
-                        autoSaveBlockedByRecovery = false
-                        applySavedStateStatus(savedStateTracker.establishBaseline(currentProjectFingerprint()))
-                        applyAutoSaveSettings()
-                        saveProject()
-                        showToast(text(R.string.vm_partial_restore_backup_success), ToastSeverity.Info)
+            var commitHandedOff = false
+            try {
+                when (val outcome = documentCoordinator.loadBackupWithOutcome(id)) {
+                    is ProjectAutoSave.LoadOutcome.Loaded -> {
+                        restoreLoadedRecovery(outcome.state, outcome.document?.project)
+                        if (outcome.report.isPartial) {
+                            _state.update { it.copy(partialRestore = outcome.report) }
+                            val summary = partialRestoreSummary(appContext.resources, outcome.report)
+                            showToast(text(R.string.vm_partial_restore_backup_incomplete, summary), ToastSeverity.Error)
+                        } else {
+                            commitHandedOff = true
+                            commitRecoveredProject { showToast(text(R.string.vm_partial_restore_backup_success), ToastSeverity.Info) }
+                        }
                     }
+                    else -> showToast(text(R.string.vm_partial_restore_backup_missing), ToastSeverity.Error)
                 }
-                else -> showToast(
-                    text(R.string.vm_partial_restore_backup_missing),
-                    ToastSeverity.Error,
-                )
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLog.e("EditorVM", "Backup recovery decision failed", e)
+                showToast(text(R.string.vm_partial_restore_backup_missing), ToastSeverity.Error)
+            } finally {
+                if (!commitHandedOff) recoveryCommitInProgress = false
+            }
+        }
+    }
+
+    private fun beginRecoveryCommit(): Boolean {
+        if (recoveryCommitInProgress) return false
+        recoveryCommitInProgress = true
+        return true
+    }
+
+    private fun commitRecoveredProject(onSuccess: () -> Unit) {
+        val snapshot = _state.value
+        val project = projectForSave(snapshot)
+        val document = buildProjectDocument(snapshot, project)
+        val fingerprint = projectStateFingerprint(project, document.state)
+        val (attempt, status) = savedStateTracker.beginSave(fingerprint)
+        applySavedStateStatus(status)
+
+        viewModelScope.launch {
+            try {
+                val result = documentCoordinator.commitRecovered(document)
+                if (result.succeeded) {
+                    applySavedProjectMetadata(project)
+                    _state.update { it.copy(partialRestore = null) }
+                    autoSaveBlockedByRecovery = false
+                    applySavedStateStatus(savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint()))
+                    applyAutoSaveSettings()
+                    onSuccess()
+                } else {
+                    applySavedStateStatus(savedStateTracker.saveFailed(attempt, currentProjectFingerprint()))
+                    showToast(text(R.string.vm_partial_restore_save_failed_toast), ToastSeverity.Error)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                AppLog.e("EditorVM", "Recovered project commit failed", e)
+                applySavedStateStatus(savedStateTracker.saveFailed(attempt, currentProjectFingerprint()))
+                showToast(text(R.string.vm_partial_restore_save_failed_toast), ToastSeverity.Error)
+            } finally {
+                recoveryCommitInProgress = false
             }
         }
     }
@@ -6264,12 +6288,13 @@ class EditorViewModel @Inject constructor(
             try {
                 val result = documentCoordinator.save(
                     document = document,
-                    autoSaveEnabled = recoveryOpenComplete && !autoSaveBlockedByRecovery,
+                    persistenceAllowed = recoveryOpenComplete && !autoSaveBlockedByRecovery,
                 )
-                applySavedProjectMetadata(project)
+                if (result.databaseSaved) {
+                    applySavedProjectMetadata(project)
+                }
 
-                // Persist the exact snapshot fingerprinted above. Capturing inside
-                // the coroutine allowed a newer edit to be mislabeled as saved.
+                // Credit snapshot; later edits stay dirty.
                 if (result.succeeded) {
                     applySavedStateStatus(
                         savedStateTracker.saveSucceeded(attempt, currentProjectFingerprint())

@@ -46,17 +46,17 @@ class ProjectPersistenceCoordinator internal constructor(
 
     suspend fun save(
         document: ProjectDocument,
-        autoSaveEnabled: Boolean,
+        persistenceAllowed: Boolean,
     ): SaveResult = withContext(Dispatchers.IO) {
-        saveDatabase(document)
-        if (!autoSaveEnabled) {
+        if (!persistenceAllowed) {
             return@withContext SaveResult(
-                databaseSaved = true,
+                databaseSaved = false,
                 autoSaveAttempted = false,
                 autoSaveSaved = false,
             )
         }
 
+        saveDatabase(document)
         SaveResult(
             databaseSaved = true,
             autoSaveAttempted = true,

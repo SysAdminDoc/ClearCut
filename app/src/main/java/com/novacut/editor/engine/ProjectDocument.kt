@@ -134,6 +134,15 @@ object ProjectDocumentApplicator {
         return try {
             val root = JSONObject(raw)
             if (!root.has(DOCUMENT_VERSION_KEY)) {
+                val stateVersion = AutoSaveState.peekSchemaVersion(raw)
+                if (stateVersion != null && stateVersion > AutoSaveState.FORMAT_VERSION) {
+                    return ProjectDocumentReadResult.FutureSchema(
+                        documentVersion = FORMAT_VERSION,
+                        stateVersion = stateVersion,
+                        supportedDocumentVersion = FORMAT_VERSION,
+                        supportedStateVersion = AutoSaveState.FORMAT_VERSION,
+                    )
+                }
                 val restored = AutoSaveState.deserializeWithReport(raw)
                 val warnings = mutableListOf("Legacy project state was wrapped in the current document format.")
                 appendRestoreWarning(warnings, restored.report)

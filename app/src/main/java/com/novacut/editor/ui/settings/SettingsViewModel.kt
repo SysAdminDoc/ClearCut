@@ -372,7 +372,8 @@ class SettingsViewModel @Inject constructor(
 
     private suspend fun latestTimelineShape(): DiagnosticExportEngine.TimelineShape? {
         val latestProject = projectDao.getAllProjectsSnapshot().firstOrNull() ?: return null
-        val state = autoSave.loadRecoveryData(latestProject.id) ?: return null
+        val outcome = autoSave.loadRecoveryDataWithOutcome(latestProject.id)
+        val state = (outcome as? ProjectAutoSave.LoadOutcome.Loaded)?.state ?: return null
         return DiagnosticExportEngine.summarizeTimelineShape(state.tracks)
     }
 

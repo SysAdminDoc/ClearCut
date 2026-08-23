@@ -12,6 +12,7 @@ Current version: **v3.81.0** (`versionCode` 299).
 - Expanded the visual workflow to 20 settled-frame golden screens across dark and high-contrast dark, including template, empty editor, media picker, populated editor, export, privacy, licenses, and tutorial states.
 - Tightened user-facing English and Spanish status copy and removed the obsolete delete-confirmation preference.
 - Bundle invocations now disable APK splits, so signed AAB packaging works while APK builds retain per-ABI and universal outputs. Release verification now follows the active QA instrumentation package and application-scoped shortcut targets.
+- Recovery opens and diagnostic exports now leave Room plus every autosave artifact untouched. A partial project stays write-blocked until its explicit recovery choice commits the database and recovery file successfully, and legacy future-schema files are rejected before deserialization.
 
 ## v3.80.0
 

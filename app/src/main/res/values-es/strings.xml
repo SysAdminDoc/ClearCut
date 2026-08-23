@@ -3282,6 +3282,7 @@
     <string name="vm_recovery_corrupt_toast">No se pudo leer el autoguardado. Se dejó intacto para que puedas volver a intentar la recuperación.</string>
     <string name="vm_recovery_not_found_toast">No se encontraron datos de recuperación autoguardados. Se abrirá el proyecto guardado.</string>
     <string name="vm_partial_restore_keep_toast">Se conservará el proyecto recuperado. Se reanudó el guardado; se perdió %1$s.</string>
+    <string name="vm_partial_restore_save_failed_toast">No se pudo guardar el proyecto recuperado en todos los almacenes. El guardado sigue en pausa; vuelva a elegir una opción de recuperación.</string>
     <string name="vm_partial_restore_backup_incomplete">El autoguardado anterior también está incompleto (%1$s). El guardado sigue pausado.</string>
     <string name="vm_partial_restore_backup_success">Se restauró por completo el autoguardado anterior. Se reanudó el guardado.</string>
     <string name="vm_partial_restore_backup_missing">No se encontró ningún autoguardado anterior utilizable. El proyecto recuperado no cambia y el guardado sigue pausado.</string>

@@ -81,11 +81,35 @@ class EditorDocumentCoordinatorTest {
             },
         )
 
-        val result = coordinator.save(document(), autoSaveEnabled = true)
+        val result = coordinator.save(document(), persistenceAllowed = true)
         coordinator.saveDatabase(document())
 
         assertEquals(expected, result)
         assertEquals(listOf("save:true", "database"), calls)
+    }
+
+    @Test
+    fun recoveredCommitInvokesOneExplicitAllStoreSave() = runBlocking {
+        val calls = mutableListOf<Boolean>()
+        val expected = ProjectPersistenceCoordinator.SaveResult(
+            databaseSaved = true,
+            autoSaveAttempted = true,
+            autoSaveSaved = true,
+        )
+        val coordinator = EditorDocumentCoordinator(
+            loadProject = { error("not used") },
+            loadRecovery = { error("not used") },
+            saveDocument = { _, allowed ->
+                calls += allowed
+                expected
+            },
+            saveDatabase = { error("not used") },
+        )
+
+        val result = coordinator.commitRecovered(document())
+
+        assertEquals(expected, result)
+        assertEquals(listOf(true), calls)
     }
 
     private fun document() = ProjectDocumentApplicator.capture(
