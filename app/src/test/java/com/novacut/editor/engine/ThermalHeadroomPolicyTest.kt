@@ -5,133 +5,205 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** R8.5 — ThermalHeadroomPolicy contract tests. */
 class ThermalHeadroomPolicyTest {
 
     @Test
     fun decide_noneStatusAndLowHeadroom_runsFullSpeed() {
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
-            headroom = 0.1f
-        )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.FULL_SPEED, d.action)
-        assertEquals(ThermalHeadroomPolicy.MAX_PARALLEL_PASSES_FULL, d.maxParallelFilterPasses)
-        assertFalse(d.useProxyResolution)
-        assertFalse(d.shouldNotifyUser)
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.NONE, headroom = 0.1f)
+
+        assertEquals(ThermalHeadroomPolicy.ExportAction.FULL_SPEED, decision.action)
+        assertFalse(decision.shouldNotifyUser)
     }
 
     @Test
-    fun decide_forecastLightThreshold_emitsThrottleLight() {
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
-            headroom = 0.72f
+    fun decide_fallbackLightThreshold_continuesWithTruthfulAdvisory() {
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.NONE, headroom = 0.72f)
+
+        assertEquals(
+            ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_LIGHT_ADVISORY,
+            decision.action,
         )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.THROTTLE_LIGHT, d.action)
-        assertEquals(ThermalHeadroomPolicy.MAX_PARALLEL_PASSES_LIGHT, d.maxParallelFilterPasses)
-        assertFalse(d.useProxyResolution)
-        assertTrue(d.shouldNotifyUser)
-        assertEquals(ThermalHeadroomPolicy.UserMessageKey.THROTTLE_LIGHT, d.userMessageKey)
+        assertTrue(decision.shouldNotifyUser)
     }
 
     @Test
-    fun decide_forecastHeavyThreshold_throttlesHeavyAndUsesProxy() {
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
-            headroom = 0.9f
+    fun decide_fallbackModerateThreshold_continuesWithHeavyAdvisory() {
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.NONE, headroom = 0.9f)
+
+        assertEquals(
+            ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_HEAVY_ADVISORY,
+            decision.action,
         )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.THROTTLE_HEAVY, d.action)
-        assertEquals(ThermalHeadroomPolicy.MAX_PARALLEL_PASSES_HEAVY, d.maxParallelFilterPasses)
-        assertTrue(d.useProxyResolution)
     }
 
     @Test
-    fun decide_forecastPauseThreshold_pauses() {
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
-            headroom = 0.96f
+    fun decide_fallbackSevereThreshold_advisesCoolingWithoutClaimingPause() {
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.NONE, headroom = 0.96f)
+
+        assertEquals(
+            ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_COOLING_ADVISORY,
+            decision.action,
         )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.PAUSE, d.action)
-        assertEquals(ThermalHeadroomPolicy.UserMessageKey.PAUSED_UNTIL_COOL, d.userMessageKey)
-        assertTrue(d.shouldNotifyUser)
     }
 
     @Test
-    fun decide_severeStatus_pausesEvenIfHeadroomLow() {
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.SEVERE,
-            headroom = 0.2f
-        )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.PAUSE, d.action)
-    }
-
-    @Test
-    fun decide_emergencyOrCritical_pauses() {
+    fun decide_severeThroughEmergencyStatus_advisesCoolingWhileContinuing() {
         listOf(
+            ThermalHeadroomPolicy.ThermalStatus.SEVERE,
+            ThermalHeadroomPolicy.ThermalStatus.CRITICAL,
             ThermalHeadroomPolicy.ThermalStatus.EMERGENCY,
-            ThermalHeadroomPolicy.ThermalStatus.CRITICAL
         ).forEach { status ->
-            val d = ThermalHeadroomPolicy.decide(status = status, headroom = 0.1f)
-            assertEquals("$status should PAUSE", ThermalHeadroomPolicy.ExportAction.PAUSE, d.action)
+            val decision = decide(status = status, headroom = 0.1f)
+            assertEquals(
+                "$status should continue with cooling advice",
+                ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_COOLING_ADVISORY,
+                decision.action,
+            )
         }
     }
 
     @Test
     fun decide_shutdown_cancels() {
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.SHUTDOWN,
-            headroom = 0.5f
-        )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.CANCEL, d.action)
-        assertEquals(ThermalHeadroomPolicy.UserMessageKey.EMERGENCY_STOP, d.userMessageKey)
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.SHUTDOWN, headroom = 0.5f)
+
+        assertEquals(ThermalHeadroomPolicy.ExportAction.CANCEL, decision.action)
+        assertTrue(decision.shouldNotifyUser)
     }
 
     @Test
-    fun decide_nanHeadroomFallsBackToStatusOnly() {
-        // NaN headroom + LIGHT status — status path picks THROTTLE_LIGHT.
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.LIGHT,
-            headroom = Float.NaN
+    fun decide_nanHeadroom_fallsBackToCurrentStatus() {
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.LIGHT, headroom = Float.NaN)
+
+        assertEquals(
+            ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_LIGHT_ADVISORY,
+            decision.action,
         )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.THROTTLE_LIGHT, d.action)
     }
 
     @Test
-    fun decide_picksMostConservativeAcrossForecastAndStatus() {
-        // MODERATE status maps to THROTTLE_HEAVY; lighter forecast must not soften it.
-        val d = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.MODERATE,
-            headroom = 0.4f
+    fun decide_deviceThresholdsOverrideFallbackThresholds() {
+        val thresholds = mapOf(
+            ThermalHeadroomPolicy.ThermalStatus.LIGHT.osValue to 0.40f,
+            ThermalHeadroomPolicy.ThermalStatus.MODERATE.osValue to 0.60f,
+            ThermalHeadroomPolicy.ThermalStatus.SEVERE.osValue to 0.80f,
         )
-        assertEquals(ThermalHeadroomPolicy.ExportAction.THROTTLE_HEAVY, d.action)
+
+        val decision = decide(
+            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
+            headroom = 0.65f,
+            thresholds = thresholds,
+        )
+
+        assertEquals(
+            ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_HEAVY_ADVISORY,
+            decision.action,
+        )
     }
 
     @Test
-    fun decide_notificationOnlyFiresOnTransition() {
-        // Same action twice in a row — no second notification.
-        val first = ThermalHeadroomPolicy.decide(
+    fun decide_invalidDeviceThresholdsUseDocumentedFallbacks() {
+        val decision = decide(
+            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
+            headroom = 0.90f,
+            thresholds = mapOf(
+                99 to 0.20f,
+                ThermalHeadroomPolicy.ThermalStatus.LIGHT.osValue to Float.NaN,
+            ),
+        )
+
+        assertEquals(
+            ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_HEAVY_ADVISORY,
+            decision.action,
+        )
+    }
+
+    @Test
+    fun decide_usesMostConservativeCurrentOrForecastSignal() {
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.MODERATE, headroom = 0.4f)
+
+        assertEquals(
+            ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_HEAVY_ADVISORY,
+            decision.action,
+        )
+    }
+
+    @Test
+    fun decide_notificationOnlyFiresWhenActionChanges() {
+        val first = decide(
             status = ThermalHeadroomPolicy.ThermalStatus.NONE,
             headroom = 0.72f,
-            previousAction = ThermalHeadroomPolicy.ExportAction.FULL_SPEED
+            previousAction = ThermalHeadroomPolicy.ExportAction.FULL_SPEED,
         )
+        val second = decide(
+            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
+            headroom = 0.72f,
+            previousAction = ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_LIGHT_ADVISORY,
+        )
+
         assertTrue(first.shouldNotifyUser)
-
-        val second = ThermalHeadroomPolicy.decide(
-            status = ThermalHeadroomPolicy.ThermalStatus.NONE,
-            headroom = 0.72f,
-            previousAction = ThermalHeadroomPolicy.ExportAction.THROTTLE_LIGHT
-        )
         assertFalse(second.shouldNotifyUser)
-        assertEquals(ThermalHeadroomPolicy.UserMessageKey.NONE, second.userMessageKey)
+        assertEquals(
+            ThermalHeadroomPolicy.UserMessageKey.NONE,
+            ThermalHeadroomPolicy.userMessageAfterTransition(
+                second,
+                ThermalHeadroomPolicy.EngineTransition.CONTINUING_UNCHANGED,
+            ),
+        )
+    }
+
+    @Test
+    fun advisoryCopyRequiresConfirmedContinuingEngineState() {
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.SEVERE, headroom = 0.2f)
+
+        assertEquals(
+            ThermalHeadroomPolicy.UserMessageKey.NONE,
+            ThermalHeadroomPolicy.userMessageAfterTransition(
+                decision,
+                ThermalHeadroomPolicy.EngineTransition.NOT_APPLIED,
+            ),
+        )
+        assertEquals(
+            ThermalHeadroomPolicy.UserMessageKey.ADVISORY_COOLING,
+            ThermalHeadroomPolicy.userMessageAfterTransition(
+                decision,
+                ThermalHeadroomPolicy.EngineTransition.CONTINUING_UNCHANGED,
+            ),
+        )
+    }
+
+    @Test
+    fun cancellationCopyRequiresConfirmedCancelledEngineState() {
+        val decision = decide(status = ThermalHeadroomPolicy.ThermalStatus.SHUTDOWN, headroom = 0.2f)
+
+        assertEquals(
+            ThermalHeadroomPolicy.UserMessageKey.NONE,
+            ThermalHeadroomPolicy.userMessageAfterTransition(
+                decision,
+                ThermalHeadroomPolicy.EngineTransition.NOT_APPLIED,
+            ),
+        )
+        assertEquals(
+            ThermalHeadroomPolicy.UserMessageKey.CANCELLED_FOR_SHUTDOWN,
+            ThermalHeadroomPolicy.userMessageAfterTransition(
+                decision,
+                ThermalHeadroomPolicy.EngineTransition.CANCELLED,
+            ),
+        )
+    }
+
+    @Test
+    fun forecastPollingFloor_matchesAndroidGuidance() {
+        assertEquals(10_000L, ThermalHeadroomPolicy.MIN_FORECAST_POLL_INTERVAL_MS)
     }
 
     @Test
     fun thermalStatus_fromOsRecognizesValidValuesAndFallsBackToNone() {
-        for (s in ThermalHeadroomPolicy.ThermalStatus.entries) {
-            assertEquals(s, ThermalHeadroomPolicy.ThermalStatus.fromOs(s.osValue))
+        ThermalHeadroomPolicy.ThermalStatus.entries.forEach { status ->
+            assertEquals(status, ThermalHeadroomPolicy.ThermalStatus.fromOs(status.osValue))
         }
         assertEquals(
             ThermalHeadroomPolicy.ThermalStatus.NONE,
-            ThermalHeadroomPolicy.ThermalStatus.fromOs(99)
+            ThermalHeadroomPolicy.ThermalStatus.fromOs(99),
         )
     }
 
@@ -142,4 +214,16 @@ class ThermalHeadroomPolicyTest {
         assertTrue(ThermalHeadroomPolicy.shouldOfferOvernightSchedule(30L * 60L * 1_000L))
         assertTrue(ThermalHeadroomPolicy.shouldOfferOvernightSchedule(2L * 3_600L * 1_000L))
     }
+
+    private fun decide(
+        status: ThermalHeadroomPolicy.ThermalStatus,
+        headroom: Float,
+        thresholds: Map<Int, Float> = emptyMap(),
+        previousAction: ThermalHeadroomPolicy.ExportAction = ThermalHeadroomPolicy.ExportAction.FULL_SPEED,
+    ): ThermalHeadroomPolicy.Decision = ThermalHeadroomPolicy.decide(
+        status = status,
+        forecastHeadroom = headroom,
+        thresholds = thresholds,
+        previousAction = previousAction,
+    )
 }

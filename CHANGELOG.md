@@ -13,6 +13,7 @@ Current version: **v3.81.0** (`versionCode` 299).
 - Tightened user-facing English and Spanish status copy and removed the obsolete delete-confirmation preference.
 - Bundle invocations now disable APK splits, so signed AAB packaging works while APK builds retain per-ABI and universal outputs. Release verification now follows the active QA instrumentation package and application-scoped shortcut targets.
 - Recovery opens and diagnostic exports now leave Room plus every autosave artifact untouched. A partial project stays write-blocked until its explicit recovery choice commits the database and recovery file successfully, and legacy future-schema files are rejected before deserialization.
+- Thermal export monitoring now uses Android 15 device thresholds, Android 16 headroom callbacks, and a ten-second forecast polling floor. Unsupported throttling and pause states are presented as honest advisories while export continues, and shutdown copy appears only after the encoder confirms cancellation.
 
 ## v3.80.0
 

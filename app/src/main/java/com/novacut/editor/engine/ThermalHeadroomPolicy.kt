@@ -1,30 +1,6 @@
 package com.novacut.editor.engine
 
-/**
- * R8.5 — Thermal-aware export scheduling policy.
- *
- * `PowerManager.getThermalHeadroom(forecastSeconds)` (API 30+) returns a
- * 0.0-1.0 prediction of how close the SoC is to `THERMAL_STATUS_SEVERE` in
- * the next N seconds, and `addThermalStatusListener` reacts to actual
- * throttling transitions. This object owns the pure decision math an
- * `ExportService` (or any long-running worker) calls to translate raw
- * thermal signals into a [ThrottleDecision] — pause, downgrade encoder
- * parallelism, switch to proxy, etc. — without itself touching
- * `PowerManager`. That lets the policy live in the JVM unit-test surface
- * alongside `AiUsageLedger`, `CutAssistantEngine`, etc.
- *
- * Background:
- * - The skin-temperature sensor underlying `getThermalHeadroom` is
- *   slow-moving; recommended polling is once per second. Calling more
- *   frequently than every ~10 s can return NaN.
- * - `THERMAL_STATUS_*` integers come from `PowerManager`:
- *     0 = NONE, 1 = LIGHT, 2 = MODERATE, 3 = SEVERE,
- *     4 = CRITICAL, 5 = EMERGENCY, 6 = SHUTDOWN.
- *
- * See ROADMAP.md R8.5 for the user-facing wiring plan: foreground service
- * progress chip, "Schedule for overnight" Settings entry, and the
- * resumable-marker handshake for SEVERE pause/resume.
- */
+/** Pure Android thermal-signal interpretation for long-running exports. */
 object ThermalHeadroomPolicy {
 
     /** Mirror of Android `PowerManager.THERMAL_STATUS_*` ranks. */
@@ -42,168 +18,130 @@ object ThermalHeadroomPolicy {
         }
     }
 
-    /** What the encoder loop should do this tick. */
+    /** What the current export actually does after a thermal observation. */
     enum class ExportAction {
-        /** Encode at full parallelism. */
         FULL_SPEED,
-        /** Drop one filter pass / lower bitrate hint. */
-        THROTTLE_LIGHT,
-        /** Switch to proxy encode + drop to single-pass. */
-        THROTTLE_HEAVY,
-        /** Stop encoder thread, persist resumable marker, raise notif. */
-        PAUSE,
-        /** Hard cancel — device is shutting down. */
-        CANCEL
+        CONTINUE_WITH_LIGHT_ADVISORY,
+        CONTINUE_WITH_HEAVY_ADVISORY,
+        CONTINUE_WITH_COOLING_ADVISORY,
+        CANCEL,
     }
 
-    /** Notification copy keys the UI can map to its own localized strings. */
+    /** Confirmed export-engine state after the service applies a decision. */
+    enum class EngineTransition {
+        CONTINUING_UNCHANGED,
+        CANCELLED,
+        NOT_APPLIED,
+    }
+
+    /** Localized notification copy selected only after [EngineTransition] is known. */
     enum class UserMessageKey {
         NONE,
-        THROTTLE_LIGHT,
-        THROTTLE_HEAVY,
-        PAUSED_UNTIL_COOL,
-        EMERGENCY_STOP
+        ADVISORY_LIGHT,
+        ADVISORY_HEAVY,
+        ADVISORY_COOLING,
+        CANCELLED_FOR_SHUTDOWN,
     }
 
-    /**
-     * Result of one decision tick.
-     *
-     * @param action What the encoder loop should do now.
-     * @param maxParallelFilterPasses Upper bound on simultaneous shader/filter passes.
-     *        Reflects an Snapdragon 7/8-class baseline; UI may scale further.
-     * @param useProxyResolution If true, switch the active encode to the
-     *        proxy/preview resolution instead of the full target. Implies
-     *        the user will see a re-encode estimate change in the progress chip.
-     * @param shouldNotifyUser Whether to surface a thermal notification this tick.
-     *        UI debounces — only flip true on action transitions, not every tick.
-     * @param userMessageKey i18n key the UI maps to localized notification copy.
-     */
-    data class ThrottleDecision(
+    data class Decision(
         val action: ExportAction,
-        val maxParallelFilterPasses: Int,
-        val useProxyResolution: Boolean,
         val shouldNotifyUser: Boolean,
-        val userMessageKey: UserMessageKey
     )
 
-    /** Forecast threshold above which we treat the next tick as concerning. */
-    const val HEADROOM_THROTTLE_LIGHT = 0.7f
+    /** Android's published safe floor for active forecast polling. */
+    const val MIN_FORECAST_POLL_INTERVAL_MS = 10_000L
 
-    /** Forecast threshold for heavy throttle / proxy fallback. */
-    const val HEADROOM_THROTTLE_HEAVY = 0.85f
+    /** Fallback thresholds for API 30 through 34 or devices without a threshold map. */
+    const val FALLBACK_LIGHT_THRESHOLD = 0.70f
+    const val FALLBACK_MODERATE_THRESHOLD = 0.85f
+    const val FALLBACK_SEVERE_THRESHOLD = 0.95f
 
-    /** Forecast threshold for pause-and-cool. */
-    const val HEADROOM_PAUSE = 0.95f
-
-    /** Maximum parallel filter passes at full speed. Tuned for SD 7/8-class. */
-    const val MAX_PARALLEL_PASSES_FULL = 4
-    const val MAX_PARALLEL_PASSES_LIGHT = 2
-    const val MAX_PARALLEL_PASSES_HEAVY = 1
-
-    /**
-     * Decide what to do this tick.
-     *
-     * @param status Current PowerManager thermal status.
-     * @param headroom Result of `getThermalHeadroom(forecastSeconds)`.
-     *        NaN means the platform refuses to forecast right now (too soon
-     *        after boot, or call rate exceeded); treat as "trust the status
-     *        signal only".
-     * @param previousAction Last tick's action; used to debounce notifications.
-     */
     fun decide(
         status: ThermalStatus,
-        headroom: Float,
-        previousAction: ExportAction = ExportAction.FULL_SPEED
-    ): ThrottleDecision {
-        // Hard floors: device is about to throttle itself or shut down.
-        if (status == ThermalStatus.SHUTDOWN) {
-            return decision(
-                ExportAction.CANCEL,
-                MAX_PARALLEL_PASSES_HEAVY,
-                useProxyResolution = false,
-                previousAction = previousAction,
-                userMessageKey = UserMessageKey.EMERGENCY_STOP
-            )
-        }
-        if (status == ThermalStatus.EMERGENCY || status == ThermalStatus.CRITICAL) {
-            return decision(
-                ExportAction.PAUSE,
-                MAX_PARALLEL_PASSES_HEAVY,
-                useProxyResolution = true,
-                previousAction = previousAction,
-                userMessageKey = UserMessageKey.PAUSED_UNTIL_COOL
-            )
-        }
-
-        // Forecast-driven preemptive throttle.
-        val safeHeadroom = if (headroom.isNaN()) null else headroom
-        val byHeadroom: ExportAction = when {
-            safeHeadroom == null -> null
-            safeHeadroom >= HEADROOM_PAUSE -> ExportAction.PAUSE
-            safeHeadroom >= HEADROOM_THROTTLE_HEAVY -> ExportAction.THROTTLE_HEAVY
-            safeHeadroom >= HEADROOM_THROTTLE_LIGHT -> ExportAction.THROTTLE_LIGHT
-            else -> ExportAction.FULL_SPEED
-        } ?: ExportAction.FULL_SPEED
-
-        val byStatus: ExportAction = when (status) {
-            ThermalStatus.SEVERE -> ExportAction.PAUSE
-            ThermalStatus.MODERATE -> ExportAction.THROTTLE_HEAVY
-            ThermalStatus.LIGHT -> ExportAction.THROTTLE_LIGHT
+        forecastHeadroom: Float,
+        thresholds: Map<Int, Float> = emptyMap(),
+        previousAction: ExportAction = ExportAction.FULL_SPEED,
+    ): Decision {
+        val predictedStatus = predictedStatus(forecastHeadroom, thresholds)
+        val effectiveStatus = if (predictedStatus.osValue > status.osValue) predictedStatus else status
+        val action = when (effectiveStatus) {
             ThermalStatus.NONE -> ExportAction.FULL_SPEED
-            else -> ExportAction.FULL_SPEED
+            ThermalStatus.LIGHT -> ExportAction.CONTINUE_WITH_LIGHT_ADVISORY
+            ThermalStatus.MODERATE -> ExportAction.CONTINUE_WITH_HEAVY_ADVISORY
+            ThermalStatus.SEVERE,
+            ThermalStatus.CRITICAL,
+            ThermalStatus.EMERGENCY -> ExportAction.CONTINUE_WITH_COOLING_ADVISORY
+            ThermalStatus.SHUTDOWN -> ExportAction.CANCEL
         }
-
-        // Choose the more conservative action between forecast and status.
-        val action = maxAction(byHeadroom, byStatus)
-        val (maxPasses, useProxy, msg) = paramsFor(action)
-        return decision(action, maxPasses, useProxy, previousAction, msg)
-    }
-
-    private fun decision(
-        action: ExportAction,
-        maxPasses: Int,
-        useProxyResolution: Boolean,
-        previousAction: ExportAction,
-        userMessageKey: UserMessageKey
-    ): ThrottleDecision {
-        val notify = action != previousAction && userMessageKey != UserMessageKey.NONE
-        return ThrottleDecision(
+        return Decision(
             action = action,
-            maxParallelFilterPasses = maxPasses,
-            useProxyResolution = useProxyResolution,
-            shouldNotifyUser = notify,
-            userMessageKey = if (notify) userMessageKey else UserMessageKey.NONE
+            shouldNotifyUser = action != ExportAction.FULL_SPEED && action != previousAction,
         )
     }
 
-    private fun paramsFor(action: ExportAction): Triple<Int, Boolean, UserMessageKey> = when (action) {
-        ExportAction.FULL_SPEED -> Triple(MAX_PARALLEL_PASSES_FULL, false, UserMessageKey.NONE)
-        ExportAction.THROTTLE_LIGHT -> Triple(MAX_PARALLEL_PASSES_LIGHT, false, UserMessageKey.THROTTLE_LIGHT)
-        ExportAction.THROTTLE_HEAVY -> Triple(MAX_PARALLEL_PASSES_HEAVY, true, UserMessageKey.THROTTLE_HEAVY)
-        ExportAction.PAUSE -> Triple(MAX_PARALLEL_PASSES_HEAVY, true, UserMessageKey.PAUSED_UNTIL_COOL)
-        ExportAction.CANCEL -> Triple(MAX_PARALLEL_PASSES_HEAVY, false, UserMessageKey.EMERGENCY_STOP)
-    }
-
-    private fun rank(action: ExportAction): Int = when (action) {
-        ExportAction.FULL_SPEED -> 0
-        ExportAction.THROTTLE_LIGHT -> 1
-        ExportAction.THROTTLE_HEAVY -> 2
-        ExportAction.PAUSE -> 3
-        ExportAction.CANCEL -> 4
-    }
-
-    private fun maxAction(a: ExportAction, b: ExportAction): ExportAction =
-        if (rank(a) >= rank(b)) a else b
-
     /**
-     * Whether this estimated total render duration is long enough that the
-     * UI should offer the "Schedule for overnight" option (WorkManager job
-     * gated on BATTERY_NOT_LOW + CHARGING + IDLE).
+     * Return copy only when it describes the transition the engine actually made.
+     * Advisory actions are truthful because they explicitly describe unchanged work.
      */
+    fun userMessageAfterTransition(
+        decision: Decision,
+        transition: EngineTransition,
+    ): UserMessageKey {
+        if (!decision.shouldNotifyUser) return UserMessageKey.NONE
+        return when (decision.action) {
+            ExportAction.FULL_SPEED -> UserMessageKey.NONE
+            ExportAction.CONTINUE_WITH_LIGHT_ADVISORY ->
+                UserMessageKey.ADVISORY_LIGHT.takeIf {
+                    transition == EngineTransition.CONTINUING_UNCHANGED
+                } ?: UserMessageKey.NONE
+            ExportAction.CONTINUE_WITH_HEAVY_ADVISORY ->
+                UserMessageKey.ADVISORY_HEAVY.takeIf {
+                    transition == EngineTransition.CONTINUING_UNCHANGED
+                } ?: UserMessageKey.NONE
+            ExportAction.CONTINUE_WITH_COOLING_ADVISORY ->
+                UserMessageKey.ADVISORY_COOLING.takeIf {
+                    transition == EngineTransition.CONTINUING_UNCHANGED
+                } ?: UserMessageKey.NONE
+            ExportAction.CANCEL ->
+                UserMessageKey.CANCELLED_FOR_SHUTDOWN.takeIf {
+                    transition == EngineTransition.CANCELLED
+                } ?: UserMessageKey.NONE
+        }
+    }
+
+    private fun predictedStatus(
+        headroom: Float,
+        thresholds: Map<Int, Float>,
+    ): ThermalStatus {
+        if (!headroom.isFinite() || headroom < 0f) return ThermalStatus.NONE
+
+        val deviceThresholds = thresholds.mapNotNull { (statusValue, threshold) ->
+            val status = ThermalStatus.entries.firstOrNull { it.osValue == statusValue }
+            if (status == null || status == ThermalStatus.NONE || !threshold.isFinite() || threshold < 0f) {
+                null
+            } else {
+                status to threshold
+            }
+        }
+        if (deviceThresholds.isNotEmpty()) {
+            return deviceThresholds
+                .filter { (_, threshold) -> headroom >= threshold }
+                .maxByOrNull { (status, _) -> status.osValue }
+                ?.first
+                ?: ThermalStatus.NONE
+        }
+
+        return when {
+            headroom >= FALLBACK_SEVERE_THRESHOLD -> ThermalStatus.SEVERE
+            headroom >= FALLBACK_MODERATE_THRESHOLD -> ThermalStatus.MODERATE
+            headroom >= FALLBACK_LIGHT_THRESHOLD -> ThermalStatus.LIGHT
+            else -> ThermalStatus.NONE
+        }
+    }
+
     fun shouldOfferOvernightSchedule(estimatedRenderMs: Long): Boolean {
         return estimatedRenderMs >= OVERNIGHT_OFFER_THRESHOLD_MS
     }
 
-    /** 30 minutes — chosen to match the typical creator's "I'll wait" tolerance. */
     const val OVERNIGHT_OFFER_THRESHOLD_MS = 30L * 60L * 1_000L
 }

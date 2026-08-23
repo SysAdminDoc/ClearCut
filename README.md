@@ -14,6 +14,7 @@
 - Export keeps three preset choices, editable output details, estimated size, and the main action visible on a phone screen.
 - Settings keeps its navigation fixed and gives narrow rows room to wrap. Close stays visible in long privacy and license panels.
 - Reversible project and clip deletion is immediate, while expanded visual checks cover 20 screens across both dark themes.
+- Thermal export notices no longer claim the encoder paused or reduced work when it did not. Android 15 device thresholds and Android 16 headroom callbacks guide the advisory, forecast polling waits at least ten seconds, and shutdown cancellation is announced only after the engine stops.
 
 ### v3.80.0 A quieter workspace for every cut
 

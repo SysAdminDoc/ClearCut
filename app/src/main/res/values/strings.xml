@@ -2783,16 +2783,16 @@
     <string name="export_notification_permission_allow">Allow notifications</string>
     <string name="export_notification_permission_not_now">Not now</string>
     <string name="export_notification_permission_fallback">Export notifications are off. Keep ClearCut open for progress and cancel controls.</string>
-    <string name="notif_export_thermal_progress_light">thermal watch</string>
-    <string name="notif_export_thermal_progress_heavy">thermal warning</string>
-    <string name="notif_export_thermal_progress_pause">too hot</string>
+    <string name="notif_export_thermal_progress_light">warming, export continuing</string>
+    <string name="notif_export_thermal_progress_heavy">hot, export continuing</string>
+    <string name="notif_export_thermal_progress_cooling">cooling advised, export continuing</string>
     <string name="notif_export_thermal_progress_stop">stopping</string>
-    <string name="notif_export_thermal_light_title">Thermal watch active</string>
-    <string name="notif_export_thermal_light_text">Device temperature is rising. ClearCut is monitoring the export and will warn before reliability drops.</string>
-    <string name="notif_export_thermal_heavy_title">Thermal warning active</string>
-    <string name="notif_export_thermal_heavy_text">Device temperature is high. Keep the device plugged in and allow it to cool while export continues.</string>
-    <string name="notif_export_thermal_pause_title">Device too hot for reliable export</string>
-    <string name="notif_export_thermal_pause_text">Android reports critical thermal pressure. ClearCut is keeping the export visible and will stop it if the device reaches shutdown risk.</string>
+    <string name="notif_export_thermal_light_title">Device warming. Export continuing</string>
+    <string name="notif_export_thermal_light_text">Device temperature is rising. Export is continuing unchanged, and ClearCut will keep monitoring it.</string>
+    <string name="notif_export_thermal_heavy_title">Device hot. Export continuing</string>
+    <string name="notif_export_thermal_heavy_text">Device temperature is high. This encoder cannot reduce its workload safely, so export is continuing unchanged. Let the device cool.</string>
+    <string name="notif_export_thermal_cooling_title">Cooling advised. Export continuing</string>
+    <string name="notif_export_thermal_cooling_text">Android reports critical thermal pressure. This encoder cannot pause safely, so export is continuing. ClearCut will cancel only if Android reports shutdown risk.</string>
     <string name="notif_export_thermal_stop_title">Export stopped for device safety</string>
     <string name="notif_export_thermal_stop_text">Android reported shutdown-level thermal pressure, so ClearCut cancelled the export.</string>
 

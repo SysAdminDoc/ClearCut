@@ -20,8 +20,9 @@ import javax.inject.Inject
 
 private const val TAG = "ExportService"
 private const val THERMAL_FORECAST_SECONDS = 30
-private const val THERMAL_POLL_INTERVAL_MS = 1_000L
+private const val THERMAL_POLL_INTERVAL_MS = ThermalHeadroomPolicy.MIN_FORECAST_POLL_INTERVAL_MS
 private const val THERMAL_NOTIFICATION_ID = 1003
+private const val THERMAL_TERMINAL_NOTIFICATION_ID = 1004
 
 @AndroidEntryPoint
 class ExportService : Service() {
@@ -40,8 +41,12 @@ class ExportService : Service() {
     private var latestOutputPath: String? = null
     private var thermalJob: Job? = null
     private var thermalStatusListener: Any? = null
+    private var thermalHeadroomListener: Any? = null
     private var latestThermalStatus = ThermalHeadroomPolicy.ThermalStatus.NONE
+    private var latestThermalThresholds: Map<Int, Float> = emptyMap()
+    private var latestForecastHeadroom = Float.NaN
     private var lastThermalAction = ThermalHeadroomPolicy.ExportAction.FULL_SPEED
+    private var thermalCancellationPending = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -56,6 +61,7 @@ class ExportService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_CANCEL) {
             AppLog.d(TAG, "Cancel requested")
+            thermalCancellationPending = false
             videoEngine.cancelExport()
             stopThermalMonitoring()
             return START_NOT_STICKY
@@ -224,9 +230,14 @@ class ExportService : Service() {
     }
 
     private fun notifyCancel() {
+        val cancelledForThermalSafety = thermalCancellationPending
         stopThermalMonitoring()
         val nm = getSystemService(NotificationManager::class.java)
         nm?.cancel(NOTIFICATION_ID)
+        if (cancelledForThermalSafety) {
+            notifyThermalCancellation(nm)
+        }
+        thermalCancellationPending = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -247,17 +258,36 @@ class ExportService : Service() {
 
         val powerManager = getSystemService(PowerManager::class.java) ?: return
         latestThermalStatus = ThermalHeadroomPolicy.ThermalStatus.fromOs(powerManager.currentThermalStatus)
+        latestThermalThresholds = readThermalThresholds(powerManager)
         lastThermalAction = ThermalHeadroomPolicy.ExportAction.FULL_SPEED
+        thermalCancellationPending = false
 
-        val listener = PowerManager.OnThermalStatusChangedListener { status ->
+        val statusListener = PowerManager.OnThermalStatusChangedListener { status ->
             latestThermalStatus = ThermalHeadroomPolicy.ThermalStatus.fromOs(status)
+            evaluateThermalObservation(latestForecastHeadroom, latestThermalThresholds)
         }
         runCatching {
-            powerManager.addThermalStatusListener(mainExecutor, listener)
-            thermalStatusListener = listener
+            powerManager.addThermalStatusListener(mainExecutor, statusListener)
+            thermalStatusListener = statusListener
         }.onFailure { error ->
             AppLog.w(TAG, "Unable to register thermal status listener", error)
             thermalStatusListener = null
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+            val headroomListener = PowerManager.OnThermalHeadroomChangedListener {
+                    headroom, forecastHeadroom, _, thresholds ->
+                latestThermalThresholds = thresholds.toMap()
+                val observation = forecastHeadroom.takeIf { it.isFinite() } ?: headroom
+                evaluateThermalObservation(observation, latestThermalThresholds)
+            }
+            runCatching {
+                powerManager.addThermalHeadroomListener(mainExecutor, headroomListener)
+                thermalHeadroomListener = headroomListener
+            }.onFailure { error ->
+                AppLog.w(TAG, "Unable to register thermal headroom listener", error)
+                thermalHeadroomListener = null
+            }
         }
 
         thermalJob = serviceScope.launch {
@@ -284,32 +314,89 @@ class ExportService : Service() {
             }
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+            val powerManager = getSystemService(PowerManager::class.java)
+            val listener = thermalHeadroomListener as? PowerManager.OnThermalHeadroomChangedListener
+            if (powerManager != null && listener != null) {
+                runCatching {
+                    powerManager.removeThermalHeadroomListener(listener)
+                }.onFailure { error ->
+                    AppLog.w(TAG, "Unable to unregister thermal headroom listener", error)
+                }
+            }
+        }
+
         thermalStatusListener = null
+        thermalHeadroomListener = null
         latestThermalStatus = ThermalHeadroomPolicy.ThermalStatus.NONE
+        latestThermalThresholds = emptyMap()
+        latestForecastHeadroom = Float.NaN
         lastThermalAction = ThermalHeadroomPolicy.ExportAction.FULL_SPEED
         getSystemService(NotificationManager::class.java)?.cancel(THERMAL_NOTIFICATION_ID)
+    }
+
+    private fun readThermalThresholds(powerManager: PowerManager): Map<Int, Float> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return emptyMap()
+        return runCatching { powerManager.thermalHeadroomThresholds.toMap() }
+            .onFailure { error -> AppLog.w(TAG, "Unable to read thermal headroom thresholds", error) }
+            .getOrDefault(emptyMap())
     }
 
     private fun evaluateThermalDecision(powerManager: PowerManager) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             latestThermalStatus = ThermalHeadroomPolicy.ThermalStatus.fromOs(powerManager.currentThermalStatus)
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            latestThermalThresholds = readThermalThresholds(powerManager)
+        }
         val headroom = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             powerManager.getThermalHeadroom(THERMAL_FORECAST_SECONDS)
         } else {
             Float.NaN
         }
+        evaluateThermalObservation(headroom, latestThermalThresholds)
+    }
 
+    private fun evaluateThermalObservation(
+        forecastHeadroom: Float,
+        thresholds: Map<Int, Float>,
+    ) {
+        if (videoEngine.exportState.value != ExportState.EXPORTING) return
+        latestForecastHeadroom = forecastHeadroom
         val previousAction = lastThermalAction
         val decision = ThermalHeadroomPolicy.decide(
             status = latestThermalStatus,
-            headroom = headroom,
-            previousAction = previousAction
+            forecastHeadroom = forecastHeadroom,
+            thresholds = thresholds,
+            previousAction = previousAction,
         )
-        lastThermalAction = decision.action
 
-        if (decision.shouldNotifyUser) {
-            notifyThermalDecision(decision)
+        if (decision.action == ThermalHeadroomPolicy.ExportAction.CANCEL) {
+            videoEngine.cancelExport()
+            val transition = if (videoEngine.exportState.value == ExportState.CANCELLED) {
+                ThermalHeadroomPolicy.EngineTransition.CANCELLED
+            } else {
+                ThermalHeadroomPolicy.EngineTransition.NOT_APPLIED
+            }
+            val message = ThermalHeadroomPolicy.userMessageAfterTransition(decision, transition)
+            if (message == ThermalHeadroomPolicy.UserMessageKey.CANCELLED_FOR_SHUTDOWN) {
+                lastThermalAction = ThermalHeadroomPolicy.ExportAction.CANCEL
+                thermalCancellationPending = true
+            }
+            return
+        }
+
+        val transition = if (videoEngine.exportState.value == ExportState.EXPORTING) {
+            ThermalHeadroomPolicy.EngineTransition.CONTINUING_UNCHANGED
+        } else {
+            ThermalHeadroomPolicy.EngineTransition.NOT_APPLIED
+        }
+        val message = ThermalHeadroomPolicy.userMessageAfterTransition(decision, transition)
+        if (transition == ThermalHeadroomPolicy.EngineTransition.CONTINUING_UNCHANGED) {
+            lastThermalAction = decision.action
+        }
+        if (message != ThermalHeadroomPolicy.UserMessageKey.NONE) {
+            notifyThermalDecision(message)
         } else if (
             decision.action == ThermalHeadroomPolicy.ExportAction.FULL_SPEED &&
             previousAction != ThermalHeadroomPolicy.ExportAction.FULL_SPEED
@@ -317,35 +404,27 @@ class ExportService : Service() {
             getSystemService(NotificationManager::class.java)?.cancel(THERMAL_NOTIFICATION_ID)
             refreshProgressNotification()
         }
-
-        if (decision.action == ThermalHeadroomPolicy.ExportAction.CANCEL) {
-            videoEngine.cancelExport()
-        }
     }
 
-    private fun notifyThermalDecision(decision: ThermalHeadroomPolicy.ThrottleDecision) {
+    private fun notifyThermalDecision(messageKey: ThermalHeadroomPolicy.UserMessageKey) {
         val nm = getSystemService(NotificationManager::class.java) ?: return
-        val (titleRes, textRes, priority) = when (decision.userMessageKey) {
-            ThermalHeadroomPolicy.UserMessageKey.THROTTLE_LIGHT -> Triple(
+        val (titleRes, textRes, priority) = when (messageKey) {
+            ThermalHeadroomPolicy.UserMessageKey.ADVISORY_LIGHT -> Triple(
                 R.string.notif_export_thermal_light_title,
                 R.string.notif_export_thermal_light_text,
                 NotificationCompat.PRIORITY_DEFAULT
             )
-            ThermalHeadroomPolicy.UserMessageKey.THROTTLE_HEAVY -> Triple(
+            ThermalHeadroomPolicy.UserMessageKey.ADVISORY_HEAVY -> Triple(
                 R.string.notif_export_thermal_heavy_title,
                 R.string.notif_export_thermal_heavy_text,
                 NotificationCompat.PRIORITY_HIGH
             )
-            ThermalHeadroomPolicy.UserMessageKey.PAUSED_UNTIL_COOL -> Triple(
-                R.string.notif_export_thermal_pause_title,
-                R.string.notif_export_thermal_pause_text,
+            ThermalHeadroomPolicy.UserMessageKey.ADVISORY_COOLING -> Triple(
+                R.string.notif_export_thermal_cooling_title,
+                R.string.notif_export_thermal_cooling_text,
                 NotificationCompat.PRIORITY_HIGH
             )
-            ThermalHeadroomPolicy.UserMessageKey.EMERGENCY_STOP -> Triple(
-                R.string.notif_export_thermal_stop_title,
-                R.string.notif_export_thermal_stop_text,
-                NotificationCompat.PRIORITY_HIGH
-            )
+            ThermalHeadroomPolicy.UserMessageKey.CANCELLED_FOR_SHUTDOWN,
             ThermalHeadroomPolicy.UserMessageKey.NONE -> return
         }
         val text = getString(textRes)
@@ -355,10 +434,24 @@ class ExportService : Service() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(priority)
-            .setAutoCancel(decision.action != ThermalHeadroomPolicy.ExportAction.PAUSE)
+            .setAutoCancel(true)
             .build()
         nm.notify(THERMAL_NOTIFICATION_ID, notification)
         refreshProgressNotification()
+    }
+
+    private fun notifyThermalCancellation(notificationManager: NotificationManager?) {
+        notificationManager ?: return
+        val text = getString(R.string.notif_export_thermal_stop_text)
+        val notification = NotificationCompat.Builder(this, ClearCutApp.CHANNEL_EXPORT)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(getString(R.string.notif_export_thermal_stop_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+        notificationManager.notify(THERMAL_TERMINAL_NOTIFICATION_ID, notification)
     }
 
     private fun refreshProgressNotification() {
@@ -397,12 +490,12 @@ class ExportService : Service() {
 
     private fun thermalProgressText(): String? = when (lastThermalAction) {
         ThermalHeadroomPolicy.ExportAction.FULL_SPEED -> null
-        ThermalHeadroomPolicy.ExportAction.THROTTLE_LIGHT ->
+        ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_LIGHT_ADVISORY ->
             getString(R.string.notif_export_thermal_progress_light)
-        ThermalHeadroomPolicy.ExportAction.THROTTLE_HEAVY ->
+        ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_HEAVY_ADVISORY ->
             getString(R.string.notif_export_thermal_progress_heavy)
-        ThermalHeadroomPolicy.ExportAction.PAUSE ->
-            getString(R.string.notif_export_thermal_progress_pause)
+        ThermalHeadroomPolicy.ExportAction.CONTINUE_WITH_COOLING_ADVISORY ->
+            getString(R.string.notif_export_thermal_progress_cooling)
         ThermalHeadroomPolicy.ExportAction.CANCEL ->
             getString(R.string.notif_export_thermal_progress_stop)
     }
