@@ -99,6 +99,7 @@ fun ProjectListScreen(
     val userTemplates by viewModel.userTemplates.collectAsStateWithLifecycle()
     val restorableTemplate by viewModel.restorableTemplate.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val loadFailed by viewModel.loadFailed.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val operationState by viewModel.operationState.collectAsStateWithLifecycle()
     val documentImportPreview by viewModel.documentImportPreview.collectAsStateWithLifecycle()
@@ -212,7 +213,40 @@ fun ProjectListScreen(
                 }
             }
 
-            if (ProjectListTrashVisibilityPolicy.showsLoadingState(projects.size, trashed.size, isLoading)) {
+            if (ProjectListTrashVisibilityPolicy.showsLoadFailureState(
+                    projects.size,
+                    trashed.size,
+                    loadFailed
+                )
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.lg),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(Spacing.md)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.projects_load_failed_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = stringResource(R.string.projects_load_failed_body),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Button(onClick = { viewModel.retryLoadProjects() }) {
+                            Text(stringResource(R.string.retry))
+                        }
+                    }
+                }
+            } else if (ProjectListTrashVisibilityPolicy.showsLoadingState(projects.size, trashed.size, isLoading)) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

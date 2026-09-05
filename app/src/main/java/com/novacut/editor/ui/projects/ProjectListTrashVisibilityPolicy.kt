@@ -31,6 +31,17 @@ object ProjectListTrashVisibilityPolicy {
     fun showsLoadingState(activeCount: Int, trashedCount: Int, isLoading: Boolean): Boolean =
         isLoading && activeCount <= 0 && trashedCount <= 0
 
+    /**
+     * True when the project query failed and there is nothing to fall back on.
+     *
+     * A Room exception used to terminate the project flow while the loading flag was
+     * still set, so the dashboard spun forever. Failure is a third state: it must be
+     * checked before the loading and empty states, or a failure renders as "No projects
+     * yet" and tells the user their work is gone.
+     */
+    fun showsLoadFailureState(activeCount: Int, trashedCount: Int, hasLoadFailure: Boolean): Boolean =
+        hasLoadFailure && activeCount <= 0 && trashedCount <= 0
+
     /** True when the list should render at all (projects, trash, or both). */
     fun showsList(activeCount: Int, trashedCount: Int): Boolean =
         !showsFullScreenEmptyState(activeCount, trashedCount)

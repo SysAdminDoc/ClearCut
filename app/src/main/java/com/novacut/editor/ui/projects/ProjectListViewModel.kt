@@ -53,13 +53,16 @@ import com.novacut.editor.model.TrackType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -117,15 +120,48 @@ class ProjectListViewModel @Inject constructor(
 
     private var toastDismissJob: Job? = null
 
-    private val allProjects: StateFlow<List<Project>> = projectDao.getAllProjects()
-        // Room re-emits on any table write even when the query result is identical; collapse
-        // those duplicates so the filtered/sorted StateFlow below doesn't force the grid to
-        // recompose on every unrelated project update (e.g. auto-save bumping updatedAt).
-        .distinctUntilChanged()
-        .onEach { _isLoading.value = false }
+    private val _loadRetryToken = MutableStateFlow(0)
+
+    private val _loadFailed = MutableStateFlow(false)
+
+    /**
+     * True when the project query itself failed. A Room exception used to terminate
+     * [allProjects] with [_isLoading] still true, so the dashboard sat on a spinner
+     * that could never resolve and offered no way back. Failure is a third state
+     * alongside loading and empty, and it is retryable.
+     */
+    val loadFailed: StateFlow<Boolean> = _loadFailed.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val allProjects: StateFlow<List<Project>> = _loadRetryToken
+        .flatMapLatest {
+            projectDao.getAllProjects()
+                // Room re-emits on any table write even when the query result is identical;
+                // collapse those duplicates so the filtered/sorted StateFlow below doesn't
+                // force the grid to recompose on every unrelated project update (e.g.
+                // auto-save bumping updatedAt).
+                .distinctUntilChanged()
+                .onEach {
+                    _loadFailed.value = false
+                    _isLoading.value = false
+                }
+                .catch { t ->
+                    AppLog.e(TAG, "Project query failed", t)
+                    _loadFailed.value = true
+                    _isLoading.value = false
+                    emit(emptyList())
+                }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _isLoading = MutableStateFlow(true)
+
+    /** Re-subscribe to the project query after a failure. */
+    fun retryLoadProjects() {
+        _loadFailed.value = false
+        _isLoading.value = true
+        _loadRetryToken.value += 1
+    }
 
     /**
      * True until Room first emits. The list seeded straight to an empty list, so the

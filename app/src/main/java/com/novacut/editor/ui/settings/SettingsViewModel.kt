@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -248,16 +249,43 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun clearProxyCache() {
-        _projectStorage.update { it.copy(isClearingProxies = true) }
+        if (_projectStorage.value.isClearingProxies) return
+        _projectStorage.update { it.copy(isClearingProxies = true, feedbackMessage = null) }
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { proxyEngine.clearProxies() }
-            val proxyBytes = withContext(Dispatchers.IO) { proxyEngine.getCacheSize() }
-            _projectStorage.update {
-                it.copy(
-                    proxyCacheBytes = proxyBytes,
-                    isClearingProxies = false,
-                    feedbackMessage = appContext.getString(R.string.settings_proxy_cleared_toast)
-                )
+            // A throw here used to leave isClearingProxies true forever, so the control
+            // stayed busy and the screen could never retry. Reset in finally, and report
+            // what the clear actually did instead of announcing success unconditionally.
+            var message: String? = null
+            try {
+                val result = withContext(Dispatchers.IO) { proxyEngine.clearProxies() }
+                message = when {
+                    result.failed > 0 -> appContext.getString(
+                        R.string.settings_proxy_clear_partial_toast,
+                        result.deleted,
+                        result.deleted + result.failed
+                    )
+                    result.keptInUse > 0 -> appContext.getString(
+                        R.string.settings_proxy_cleared_kept_toast,
+                        result.keptInUse
+                    )
+                    else -> appContext.getString(R.string.settings_proxy_cleared_toast)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                com.novacut.editor.engine.AppLog.w("SettingsViewModel", "proxy cache clear failed", t)
+                message = appContext.getString(R.string.settings_proxy_clear_failed_toast)
+            } finally {
+                val proxyBytes = runCatching {
+                    withContext(NonCancellable + Dispatchers.IO) { proxyEngine.getCacheSize() }
+                }.getOrElse { _projectStorage.value.proxyCacheBytes }
+                _projectStorage.update {
+                    it.copy(
+                        proxyCacheBytes = proxyBytes,
+                        isClearingProxies = false,
+                        feedbackMessage = message ?: it.feedbackMessage
+                    )
+                }
             }
         }
     }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The dashboard no longer spins forever when the project database fails to answer. A failed query now shows what happened and offers Retry, which genuinely re-subscribes, instead of leaving a spinner that could never resolve.
+- Clearing the proxy cache reports what it actually did. It used to announce "Proxy cache cleared" whatever happened, including when files could not be deleted and when proxies were deliberately kept for an open project. A failure now says so and the control can be used again, where before an error left the button stuck busy.
+- The OpenTimelineIO export gate now runs. The adapter it depends on is pinned in `scripts/requirements.txt`, its self-test exercises a real export shape rather than an empty timeline, and it round-trips ClearCut's output through the official adapter to prove tracks, clips, timing and rate survive.
+
 ## v3.81.0
 
 Current version: **v3.81.0** (`versionCode` 299).

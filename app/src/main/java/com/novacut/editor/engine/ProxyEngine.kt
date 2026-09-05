@@ -26,6 +26,22 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 /**
+ * What a proxy-cache clear actually did.
+ *
+ * Clearing is legitimately partial: proxies belonging to an open project are kept
+ * on purpose, and a delete can still fail. Settings used to report "Proxy cache
+ * cleared" unconditionally, so both cases read as a full success.
+ */
+data class ProxyClearResult(
+    val deleted: Int,
+    val failed: Int,
+    val keptInUse: Int,
+) {
+    /** True when every proxy that was eligible for deletion is gone. */
+    val isComplete: Boolean get() = failed == 0
+}
+
+/**
  * Generates low-resolution proxy files for smooth timeline editing.
  * Proxies are stored in app cache and swapped with originals during export.
  */
@@ -217,17 +233,30 @@ class ProxyEngine @Inject constructor(
         }
     }
 
-    fun clearProxies() {
+    fun clearProxies(): ProxyClearResult {
         val activeKeys = activeProxyKeys.toSet()
+        var deleted = 0
+        var failed = 0
+        var keptInUse = 0
         proxyDir.listFiles()?.forEach { file ->
             val managedFile = canonicalManagedProxyFile(file)?.takeIf { it.isFile } ?: return@forEach
             val key = managedFile.name.removePrefix("proxy_").removeSuffix(".mp4")
-            if (key !in activeKeys) {
-                managedFile.delete()
+            if (key in activeKeys) {
+                keptInUse++
+                return@forEach
+            }
+            // A proxy an open project is not using can still refuse to delete: another
+            // process may hold the handle. Reporting "cleared" for a file that is still
+            // on disk is the failure this counter exists to prevent.
+            if (managedFile.delete()) {
+                deleted++
                 proxyMap.remove(key)
+            } else {
+                failed++
             }
         }
         proxyMap.keys.removeIf { it !in activeKeys }
+        return ProxyClearResult(deleted = deleted, failed = failed, keptInUse = keptInUse)
     }
 
     suspend fun getCacheSize(): Long = withContext(Dispatchers.IO) {

@@ -17,6 +17,8 @@
     <string name="cancel">Cancel</string>
     <string name="done">Done</string>
     <string name="retry">Retry</string>
+    <string name="projects_load_failed_title">Could not load your projects</string>
+    <string name="projects_load_failed_body">The project database did not respond. Your projects are still on this device.</string>
     <string name="share">Share</string>
     <string name="get">Get</string>
     <string name="remove">Remove</string>
@@ -3423,6 +3425,9 @@
     <string name="settings_project_storage_proxy">Proxy cache: %1$s</string>
     <string name="settings_clear_proxy_cache">Clear Proxy Cache</string>
     <string name="settings_proxy_cleared_toast">Proxy cache cleared</string>
+    <string name="settings_proxy_cleared_kept_toast">Proxy cache cleared. %1$d kept for open projects.</string>
+    <string name="settings_proxy_clear_partial_toast">Cleared %1$d of %2$d proxy files. The rest could not be deleted.</string>
+    <string name="settings_proxy_clear_failed_toast">Could not clear the proxy cache. Try again.</string>
     <!-- V369Delegate toasts -->
     <string name="v369_no_words_selected_toast">No words selected</string>
     <string name="v369_nothing_to_cut_toast">Nothing to cut</string>
