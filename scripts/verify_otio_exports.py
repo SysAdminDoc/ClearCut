@@ -33,8 +33,9 @@ def load_otio():
         import opentimelineio as otio
     except ImportError as exc:  # pragma: no cover - environment-dependent
         raise SystemExit(
-            "OpenTimelineIO is required for this gate. Install the maintained "
-            "Python package with: python -m pip install opentimelineio"
+            "OpenTimelineIO is required for this gate and is not installed, so the "
+            "gate cannot vouch for anything. Install the pinned version with: "
+            "python -m pip install -r scripts/requirements.txt"
         ) from exc
     return otio
 
@@ -64,6 +65,62 @@ def validate_file(otio, path: Path) -> None:
         raise ValueError(f"{path}: adapter returned {type(timeline).__name__}, not Timeline")
     if timeline.tracks is None:
         raise ValueError(f"{path}: Timeline.tracks is missing")
+    validate_structure(otio, timeline, root, path)
+
+
+def timeline_shape(timeline) -> list:
+    """The content a ClearCut export promises, reduced to comparable values.
+
+    Deliberately not a JSON diff: the adapter is free to reorder keys, normalise
+    numbers and add defaults. What must survive is the edit itself — how many tracks,
+    what sits on each one, where it sits, at what rate, and what media it points at.
+    """
+    shape = []
+    for track in timeline.tracks:
+        children = []
+        for child in track:
+            source_range = getattr(child, "source_range", None)
+            timing = None
+            if source_range is not None:
+                timing = (
+                    source_range.start_time.value,
+                    source_range.duration.value,
+                    source_range.start_time.rate,
+                )
+            children.append(
+                (
+                    type(child).__name__,
+                    child.name,
+                    timing,
+                    len(getattr(child, "effects", []) or []),
+                    getattr(getattr(child, "media_reference", None), "target_url", None),
+                )
+            )
+        shape.append((track.name, track.kind, children))
+    return shape
+
+
+def validate_structure(otio, timeline, root: dict, path: Path) -> None:
+    """Round-trip a ClearCut export through the adapter and prove nothing was lost.
+
+    Comparing the parsed timeline against the same file's JSON would be a tautology:
+    both sides come from the same bytes, so any file agrees with itself. The real
+    question is whether the official adapter preserves ClearCut's edit through a
+    write and re-read, which is what an interchange claim actually rests on. Only
+    ClearCut's own exports are round-tripped, so third-party OTIO stays readable.
+    """
+    metadata = root.get("metadata") or {}
+    if OTIO_SCHEMA_METADATA_KEY not in metadata:
+        return
+
+    before = timeline_shape(timeline)
+    reserialized = otio.adapters.write_to_string(timeline, "otio_json")
+    after = timeline_shape(otio.adapters.read_from_string(reserialized, "otio_json"))
+    if before != after:
+        raise ValueError(
+            f"{path}: the official adapter did not preserve this timeline across a "
+            f"write and re-read.\n  wrote: {before}\n  read:  {after}"
+        )
 
 
 def validate_contract_metadata(root: dict, path: Path) -> None:
@@ -85,24 +142,120 @@ def validate_contract_metadata(root: dict, path: Path) -> None:
         )
 
 
-def self_test(otio) -> None:
-    fixture = {
+def _rational_time(frames: float, rate: float) -> dict:
+    return {"OTIO_SCHEMA": "RationalTime.1", "value": frames, "rate": rate}
+
+
+def _time_range(start: float, duration: float, rate: float) -> dict:
+    return {
+        "OTIO_SCHEMA": "TimeRange.1",
+        "start_time": _rational_time(start, rate),
+        "duration": _rational_time(duration, rate),
+    }
+
+
+def clearcut_export_fixture(rate: float = 24.0) -> dict:
+    """A timeline shaped like a real ClearCut export.
+
+    The gate used to self-test against a Timeline whose stack had no children, which
+    proved the adapter could load but nothing about ClearCut's actual output. This
+    mirrors what `TimelineExchangeEngine.buildOtioStack` emits: a video track carrying
+    a clip with an external reference, an intentional gap, a speed effect and a
+    transition, plus a separate audio track.
+    """
+    def clip(name: str, effects: list) -> dict:
+        return {
+            "OTIO_SCHEMA": "Clip.1",
+            "name": name,
+            "effects": effects,
+            "markers": [],
+            "enabled": True,
+            "source_range": _time_range(0, 48, rate),
+            "media_reference": {
+                "OTIO_SCHEMA": "ExternalReference.1",
+                "name": name,
+                "target_url": f"content://media/external/video/media/{name}",
+                "available_range": _time_range(0, 240, rate),
+                "metadata": {},
+            },
+            "metadata": {"clearcut_clip_id": name},
+        }
+
+    speed = {
+        "OTIO_SCHEMA": "LinearTimeWarp.1",
+        "name": "Speed 2.0x",
+        "effect_name": "LinearTimeWarp",
+        "time_scalar": 2.0,
+        "metadata": {},
+    }
+    gap = {
+        "OTIO_SCHEMA": "Gap.1",
+        "name": "ClearCut gap",
+        "effects": [],
+        "markers": [],
+        "enabled": True,
+        "source_range": _time_range(0, 24, rate),
+    }
+    transition = {
+        "OTIO_SCHEMA": "Transition.1",
+        "name": "Cross Dissolve",
+        "transition_type": "SMPTE_Dissolve",
+        "in_offset": _rational_time(12, rate),
+        "out_offset": _rational_time(12, rate),
+        "metadata": {"clearcut_transition_role": "tail"},
+    }
+
+    return {
         "OTIO_SCHEMA": "Timeline.1",
         "name": "ClearCut OTIO gate fixture",
         "metadata": {
+            "clearcut_version": "3.0.0",
+            "export_format": "otio",
             OTIO_SCHEMA_METADATA_KEY: "0.15",
             OTIO_ADAPTER_METADATA_KEY: OTIO_ADAPTER_RANGE,
+            "clearcut_timebase_numerator": 24,
+            "clearcut_timebase_denominator": 1,
         },
         "tracks": {
             "OTIO_SCHEMA": "Stack.1",
             "name": "tracks",
-            "children": [],
+            "children": [
+                {
+                    "OTIO_SCHEMA": "Track.1",
+                    "name": "Track 1",
+                    "kind": "Video",
+                    "children": [clip("opening", []), gap, transition, clip("closing", [speed])],
+                    "metadata": {"clearcut_track_type": "VIDEO"},
+                },
+                {
+                    "OTIO_SCHEMA": "Track.1",
+                    "name": "Track 2",
+                    "kind": "Audio",
+                    "children": [clip("voiceover", [])],
+                    "metadata": {"clearcut_track_type": "AUDIO"},
+                },
+            ],
         },
     }
+
+
+def self_test(otio) -> None:
     with tempfile.TemporaryDirectory(prefix="clearcut-otio-") as directory:
         path = Path(directory) / "fixture.otio"
-        path.write_text(json.dumps(fixture, indent=2), encoding="utf-8")
+        path.write_text(json.dumps(clearcut_export_fixture(), indent=2), encoding="utf-8")
         validate_file(otio, path)
+
+        # Prove the round-trip comparison can actually fail. A gate that only ever
+        # sees matching input is indistinguishable from one that asserts nothing, so
+        # drop a track from the parsed side and require the shapes to disagree.
+        timeline = otio.adapters.read_from_file(str(path), media_linker_name=None)
+        intact = timeline_shape(timeline)
+        del timeline.tracks[-1]
+        if timeline_shape(timeline) == intact:
+            raise AssertionError(
+                "timeline_shape did not notice a dropped track, so the round-trip "
+                "comparison would accept adapter data loss"
+            )
 
 
 def main() -> int:

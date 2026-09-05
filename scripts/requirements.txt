@@ -1,0 +1,10 @@
+# Python packages the release-side gates in this directory need.
+#
+# Pinned, not floating: verify_otio_exports.py is the only check that proves
+# ClearCut's timeline interchange is readable by the official ASWF adapter, and
+# an unpinned install means the gate silently vouches for whatever version the
+# machine happens to carry. OpenTimelineIO is pre-1.0 and every release is
+# flagged prerelease upstream, so the version is a deliberate choice.
+#
+# Install with: python -m pip install -r scripts/requirements.txt
+opentimelineio==0.18.1

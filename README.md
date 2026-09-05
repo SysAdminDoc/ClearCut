@@ -578,7 +578,10 @@ com.novacut.editor/
 ./gradlew :app:recordJvmVisualVerification
 ./gradlew :app:verifyJvmVisualVerification
 ./gradlew :app:compareJvmVisualVerification
-# Validate OTIO exports with the official OpenTimelineIO adapter
+# Validate OTIO exports with the official OpenTimelineIO adapter.
+# The pinned adapter is required: without it the gate exits non-zero rather
+# than passing, because it cannot vouch for the output it never read.
+python -m pip install -r scripts/requirements.txt
 python scripts/verify_otio_exports.py --self-test
 python scripts/verify_otio_exports.py app/build/exports
 # Run instrumentation only on a dedicated QA device or emulator
