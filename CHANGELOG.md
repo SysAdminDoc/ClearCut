@@ -14,6 +14,8 @@ Current version: **v3.81.0** (`versionCode` 299).
 - Bundle invocations now disable APK splits, so signed AAB packaging works while APK builds retain per-ABI and universal outputs. Release verification now follows the active QA instrumentation package and application-scoped shortcut targets.
 - Recovery opens and diagnostic exports now leave Room plus every autosave artifact untouched. A partial project stays write-blocked until its explicit recovery choice commits the database and recovery file successfully, and legacy future-schema files are rejected before deserialization.
 - Thermal export monitoring now uses Android 15 device thresholds, Android 16 headroom callbacks, and a ten-second forecast polling floor. Unsupported throttling and pause states are presented as honest advisories while export continues, and shutdown copy appears only after the encoder confirms cancellation.
+- Public capability and model documentation now matches the generated runtime registry, version catalog, and native lock. Stabilization is listed as built in, removed Settings and AI-stub claims are gone, the FFmpeg profile is correctly documented as LGPL without x264, and parity tests fail on future drift.
+- The pinned-key local release gate passed for debug, release, and QA instrumentation artifacts, including checksums, certificate sidecars, size budgets, package/distribution metadata, published sidecars, and 16 KB alignment. Its stale blocker and the shipped Media3 1.11 blocker were removed.
 
 ## v3.80.0
 

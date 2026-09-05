@@ -2,8 +2,12 @@ package com.novacut.editor.engine
 
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.json.JSONObject
 import org.junit.Test
 import java.io.File
+import java.text.NumberFormat
+import java.util.Locale
 
 /**
  * R7.2 model registry closure guard.
@@ -131,6 +135,63 @@ class ModelRegistryDocumentationTest {
         )
     }
 
+    @Test
+    fun aiToolActivationStatusesMatchRuntimeRequirements() {
+        val documentedStatuses = aiToolGateRows().associate { row ->
+            val columns = row.columns()
+            columns.first().trim('`') to columns.last().trim('`')
+        }
+
+        AiToolRequirements.Tool.entries.forEach { tool ->
+            val requirement = requireNotNull(AiToolRequirements.requirementFor(tool.toolId))
+            assertEquals(
+                "docs/models.md status drift for ${tool.toolId}",
+                requirement.availability.name,
+                documentedStatuses[tool.toolId],
+            )
+        }
+    }
+
+    @Test
+    fun nativeDependencyRowsMatchGeneratedDependencyVersions() {
+        val rowMarkers = mapOf(
+            "onnxruntime" to "`onnxruntime-android:",
+            "mediapipe" to "`mediapipe-tasks-vision:",
+            "lottie" to "`lottie-compose:",
+            "media3" to "`media3-effect-lottie:",
+            "deepfilternet" to "`android-deepfilternet:",
+        )
+        val rows = nativeDependencyRows()
+
+        rowMarkers.forEach { (dependencyId, marker) ->
+            val dependency = requireNotNull(CapabilityRegistry.dependencyFor(dependencyId))
+            val row = rows.singleOrNull { marker in it }
+                ?: error("docs/models.md has no unique native row for $dependencyId")
+            assertTrue(
+                "docs/models.md $dependencyId row must state ${dependency.version}: $row",
+                dependency.version in row,
+            )
+        }
+    }
+
+    @Test
+    fun ffmpegNativeDocumentationMatchesLockAndLgplProfile() {
+        val lock = JSONObject(locateProjectFile("third_party/ffmpeg-kit-next/native-lock.json").readText())
+        val artifact = lock.getJSONObject("artifact")
+        val source = lock.getJSONObject("source")
+        val build = lock.getJSONObject("build")
+        val row = nativeDependencyRows().single { "ffmpeg-kit-next-8.1.0.aar" in it }
+        val formattedSize = NumberFormat.getIntegerInstance(Locale.US).format(artifact.getLong("size"))
+
+        assertTrue(row.contains("FFmpeg ${source.getString("ffmpegVersion")}"))
+        assertTrue(row.contains("$formattedSize-byte AAR"))
+        assertTrue(row.contains(artifact.getString("sha256")))
+        assertTrue(row.contains(build.getString("license")))
+        assertTrue(row.contains("x264 is not included"))
+        assertTrue(row.contains("GPL build flag is disabled"))
+        assertFalse(row.contains("4b7654925340bb4a5eb0c4e50350a6f664f4568a228d46e9e128eb032406fd00"))
+    }
+
     private fun activeModelRows(): List<String> {
         val docs = locateModelsDoc()
             ?: error("Could not locate docs/models.md from the test working directory")
@@ -159,6 +220,20 @@ class ModelRegistryDocumentationTest {
             .toList()
     }
 
+    private fun nativeDependencyRows(): List<String> {
+        val docs = locateModelsDoc()
+            ?: error("Could not locate docs/models.md from the test working directory")
+        val text = docs.readText()
+        val start = text.indexOf("## 2. Native AARs")
+        val end = text.indexOf("### Still-image HDR metadata")
+        require(start >= 0 && end > start) { "docs/models.md native dependency section not found" }
+        return text.substring(start, end)
+            .lineSequence()
+            .map { it.trim() }
+            .filter { it.startsWith("| `") }
+            .toList()
+    }
+
     private fun String.columns(): List<String> =
         trim().trim('|').split('|').map { it.trim() }
 
@@ -178,6 +253,16 @@ class ModelRegistryDocumentationTest {
             File("../app/src/main/java"),
         )
         return candidates.firstOrNull { it.isDirectory }
+    }
+
+    private fun locateProjectFile(relative: String): File {
+        val candidates = listOf(
+            File(relative),
+            File("../$relative"),
+            File("../../$relative"),
+        )
+        return candidates.firstOrNull { it.isFile }
+            ?: error("Could not locate $relative from the test working directory")
     }
 
     private companion object {

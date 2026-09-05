@@ -22,7 +22,7 @@ internal object CapabilityRegistryGenerated {
         CapabilityRecord(
             id = "ai_green_screen",
             name = "AI Green Screen",
-            engine = "Planned -- RobustVideoMatting (requires model integration)",
+            engine = "Planned: RobustVideoMatting requires model integration",
             onDevice = "Planned",
             status = "planned",
             reachability = "dependency_missing",
@@ -38,7 +38,7 @@ internal object CapabilityRegistryGenerated {
         CapabilityRecord(
             id = "video_upscaling",
             name = "Video Upscaling",
-            engine = "Planned -- Real-ESRGAN (requires model integration)",
+            engine = "Planned: Real-ESRGAN requires model integration",
             onDevice = "Planned",
             status = "planned",
             reachability = "dependency_missing",
@@ -46,7 +46,7 @@ internal object CapabilityRegistryGenerated {
         CapabilityRecord(
             id = "frame_interpolation",
             name = "Frame Interpolation",
-            engine = "Planned -- RIFE v4.6 (requires NCNN dependency)",
+            engine = "Planned: RIFE v4.6 requires the NCNN dependency",
             onDevice = "Planned",
             status = "planned",
             reachability = "dependency_missing",
@@ -54,7 +54,7 @@ internal object CapabilityRegistryGenerated {
         CapabilityRecord(
             id = "style_transfer",
             name = "Style Transfer",
-            engine = "Planned -- AnimeGANv2 + Fast NST (requires model integration)",
+            engine = "Planned: AnimeGANv2 and Fast NST require model integration",
             onDevice = "Planned",
             status = "planned",
             reachability = "dependency_missing",
@@ -62,10 +62,10 @@ internal object CapabilityRegistryGenerated {
         CapabilityRecord(
             id = "stabilization",
             name = "Stabilization",
-            engine = "Planned -- OpenCV (requires dependency)",
-            onDevice = "Planned",
-            status = "planned",
-            reachability = "dependency_missing",
+            engine = "Built-in offline motion analysis with bounded translation search and shared preview/export transforms",
+            onDevice = "Yes",
+            status = "available",
+            reachability = "reachable",
         ),
         CapabilityRecord(
             id = "smart_reframe",
@@ -78,7 +78,7 @@ internal object CapabilityRegistryGenerated {
         CapabilityRecord(
             id = "tap_to_segment",
             name = "Tap-to-Segment",
-            engine = "Planned -- SAM 2.1 Hiera Tiny target with MobileSAM fallback",
+            engine = "Planned: SAM 2.1 Hiera Tiny with a MobileSAM fallback",
             onDevice = "Planned",
             status = "planned",
             reachability = "dependency_missing",

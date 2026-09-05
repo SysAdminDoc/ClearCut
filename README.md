@@ -15,6 +15,7 @@
 - Settings keeps its navigation fixed and gives narrow rows room to wrap. Close stays visible in long privacy and license panels.
 - Reversible project and clip deletion is immediate, while expanded visual checks cover 20 screens across both dark themes.
 - Thermal export notices no longer claim the encoder paused or reduced work when it did not. Android 15 device thresholds and Android 16 headroom callbacks guide the advisory, forecast polling waits at least ten seconds, and shutdown cancellation is announced only after the engine stops.
+- Stabilization, dependency versions, model requirements, and native-license details now come from current runtime and lock data. The local signed-release gate is verified, and completed Media3 plus artifact-gate blockers are retired.
 
 ### v3.80.0 A quieter workspace for every cut
 
@@ -405,14 +406,14 @@ Planning files are local-only in the development checkout:
 |------|--------|------------|
 | **Auto Captions** | ONNX Runtime Whisper tiny.en (English; multilingual Sherpa/Whisper path gated) | Yes |
 | **Background Removal** | MediaPipe Selfie Segmentation (~1-7MB, ~30fps) | Yes |
-| **AI Green Screen** | Planned -- RobustVideoMatting (requires model integration) | Planned |
+| **AI Green Screen** | Planned: RobustVideoMatting requires model integration | Planned |
 | **Object Removal** | LaMa-Dilated inpainting with rectangle, ellipse, and freehand mask rendering for stills and motion clips | Yes (explicit ~174 MB model download) |
-| **Video Upscaling** | Planned -- Real-ESRGAN (requires model integration) | Planned |
-| **Frame Interpolation** | Planned -- RIFE v4.6 (requires NCNN dependency) | Planned |
-| **Style Transfer** | Planned -- AnimeGANv2 + Fast NST (requires model integration) | Planned |
-| **Stabilization** | Planned -- OpenCV (requires dependency) | Planned |
+| **Video Upscaling** | Planned: Real-ESRGAN requires model integration | Planned |
+| **Frame Interpolation** | Planned: RIFE v4.6 requires the NCNN dependency | Planned |
+| **Style Transfer** | Planned: AnimeGANv2 and Fast NST require model integration | Planned |
+| **Stabilization** | Built-in offline motion analysis with bounded translation search and shared preview/export transforms | Yes |
 | **Smart Reframe** | MediaPipe BlazeFace detection, EMA-smoothed crop trajectory, 3 strategies (stationary/pan/track) | Yes |
-| **Tap-to-Segment** | Planned -- SAM 2.1 Hiera Tiny target with MobileSAM fallback | Planned |
+| **Tap-to-Segment** | Planned: SAM 2.1 Hiera Tiny with a MobileSAM fallback | Planned |
 | **Scene Detection** | Content-aware frame difference analysis with auto-split | Yes |
 | **Auto Color** | Histogram-based brightness/contrast/saturation/temperature | Yes |
 | **HDR Encoder Feature Gate** | MediaCodecInfo.CodecCapabilities FEATURE_HdrEditing / FEATURE_HlgEditing | Yes |
@@ -479,7 +480,6 @@ Planning files are local-only in the development checkout:
 - **Show waveforms**: Global waveform visibility toggle
 - **Snap to beat / snap to markers**: Timeline snap behavior toggles
 - **Default track height**: 48/64/80/96dp chips
-- **Confirm before delete**: Gate clip deletion dialog
 - **Thumbnail cache size**: 64/128/256 MB
 - **Default export quality**: LOW/MEDIUM/HIGH
 - All settings persist via DataStore
@@ -499,11 +499,11 @@ Planning files are local-only in the development checkout:
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
 | Segmentation | MediaPipe Tasks Vision 1.0.0 |
 | Video Matting | Planned (RobustVideoMatting, ONNX Runtime) |
-| Object Removal | LaMa-Dilated (ONNX Runtime) -- selected rectangle, ellipse, or freehand masks are rendered into still/video outputs |
+| Object Removal | LaMa-Dilated (ONNX Runtime). Selected rectangle, ellipse, or freehand masks are rendered into still/video outputs |
 | Upscaling | Planned (Real-ESRGAN) |
 | Frame Interpolation | Planned (NCNN + Vulkan) |
 | Style Transfer | Planned (AnimeGANv2 + Fast NST) |
-| Stabilization | Planned (OpenCV) |
+| Stabilization | Built-in offline motion analysis with bounded translation search and shared preview/export transforms |
 | TTS | Android System TTS (Piper via Sherpa-ONNX planned) |
 | ASR acceleration target | Sherpa-ONNX v1.13.2 AAR + Moonshine v2 Tiny EN policy (native backend still gated) |
 | Animated Titles | Lottie Compose 6.7.1 and Media3 Lottie overlay support |
@@ -794,7 +794,7 @@ Normal debug and release APKs omit dormant Nearby/local-network permissions. Tho
 - Multi-sequence export now honors track opacity through Media3 compositor settings, and all 18 fallback blend modes render distinctly; true source-over-destination blend math still needs a custom programmable compositor because Media3's public settings only expose alpha/transform
 - Reversed clip export pre-renders through FFmpeg (clips over 5 minutes export forward; FFmpeg unavailable falls back to forward playback)
 - Android Lint runs all source detectors on the AGP 9/Kotlin 2.4 toolchain; warning debt remains before it should become release-blocking
-- 11 AI/ML engine stubs awaiting dependency integration (see ROADMAP.md)
+- Model-backed green screen, upscaling, frame interpolation, style transfer, and tap-to-segment remain dependency-gated. The AI table above is generated from the capability registry.
 
 ## License
 

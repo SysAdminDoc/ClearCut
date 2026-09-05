@@ -732,10 +732,14 @@ tasks.withType<Test>().configureEach {
     listOf(
         "README.md",
         "LICENSE",
+        "docs/models.md",
+        "scripts/capability_registry.json",
         "scripts/package_identity.json",
+        "third_party/ffmpeg-kit-next/native-lock.json",
         "gradle/libs.versions.toml",
         "gradle/wrapper/gradle-wrapper.properties",
         "fastlane/metadata/android/en-US/full_description.txt",
+        "fastlane/metadata/android/es-ES/full_description.txt",
     ).forEach { relative ->
         val declared = rootProject.file(relative)
         if (declared.isFile) {
@@ -769,7 +773,7 @@ tasks.configureEach {
 
 dependencies {
     constraints {
-        // MediaPipe tasks-core 0.10.35 still resolves protobuf-javalite 4.26.1, which
+        // MediaPipe Tasks Vision still resolves protobuf-javalite 4.26.1, which
         // carries GHSA-735f-pc8j-v9w8 (unbounded recursion on malformed input -> DoS).
         // 4.27.5 is the first fixed release on the 4.27 line and stays gencode-compatible
         // with MediaPipe's 4.26 generated classes (runtime may lead gencode within v4).

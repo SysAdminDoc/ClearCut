@@ -2,7 +2,7 @@
 
 Authoritative list of every ML model and native AAR that ClearCut may fetch or bundle. Pairs with the [ModelDownloadManager](../app/src/main/java/com/novacut/editor/engine/ModelDownloadManager.kt) and is the single reference for F-Droid `NonFreeNet` audits, license review, reproducible build verification, and 16 KB page-size compliance tracking.
 
-**Last refresh:** 2026-06-04 · Runtime activation requirements are recorded in the AI tool activation gate matrix below.
+**Last refresh:** 2026-08-23. Runtime activation requirements are recorded in the AI tool activation gate matrix below.
 
 ---
 
@@ -18,19 +18,18 @@ Authoritative list of every ML model and native AAR that ClearCut may fetch or b
 
 ## 2. Native AARs (bundled or planned): 16 KB compliance gates
 
-Every native AAR shipped with ClearCut must be 16 KB page-size aligned. Google Play **blocks** uploads of non-compliant native libs at `targetSdk = 36` (Android 16) since 2025-11-01. Verify ELF segment alignment with `python scripts/check_16kb_alignment.py app/build/outputs/apk/debug/app-debug.apk` and APK packaging with SDK Build Tools `zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk` before each release. See [ROADMAP.md R6.1](../ROADMAP.md#r61--16-kb-page-size-compliance-play-store-gate).
+Every native AAR shipped with ClearCut must pass the repository's 16 KB page-size checks. Verify ELF segment alignment with `python scripts/check_16kb_alignment.py app/build/outputs/apk/qa/app-arm64-v8a-qa.apk` and APK packaging with SDK Build Tools `zipalign -c -P 16 -v 4 <apk>` before each release. The local release artifact gate repeats these checks for every packaged ABI.
 
 | AAR | Status | Source | 16 KB aligned? | License | Notes |
 |---|---|---|---|---|---|
 | `onnxruntime-android:1.26.0` | Bundled today | Microsoft / Maven Central | ✅ Verified 2026-05-17 with `scripts/check_16kb_alignment.py` and `zipalign -P 16` on the debug APK. | MIT | Bumped in R7.3 to move past the 1.17.x pre-Play-gate native package. Re-verify on every ORT bump. |
-| `mediapipe-tasks-vision:0.10.35` | Bundled today | Google / Maven Central | ✅ Verified 2026-05-17 with `scripts/check_16kb_alignment.py` and `zipalign -P 16` on the debug APK. | Apache-2.0 | Upgraded from 0.10.14 because the older `libmediapipe_tasks_vision_jni.so` used 4 KB ELF alignment. Current AAR packages `libmediapipe_tasks_jni.so`. |
-| `lottie-compose:6.7.1` | Bundled today | Airbnb / Maven Central | n/a (pure Kotlin) | Apache-2.0 | See R6.16 for `lottie-compose:7.x` bump (state-machines + dotLottie). |
-| `media3-effect-lottie:1.10.1` | Active Kotlin dep (R7.5 / R6.10a) | `androidx.media3:media3-effect-lottie:1.10.1` from Google Maven (`https://dl.google.com/dl/android/maven2/androidx/media3/media3-effect-lottie/1.10.1/media3-effect-lottie-1.10.1.aar`) | n/a (pure Kotlin; no native libraries) | Apache-2.0 | AAR SHA-256 `83b26f6f25e785b949263fc52cb7c0fb5f0e371445fa1d7b9a0ed0b71c05e69d`; used by `Media3LottieTextureOverlay` for non-HDR finite-window title overlays, with the legacy shader retained for HDR and over-long windows. |
+| `mediapipe-tasks-vision:1.0.0` | Bundled today | Google / Maven Central | ✅ The current QA package passes `scripts/check_16kb_alignment.py` and `zipalign -P 16`. | Apache-2.0 | Provides `libmediapipe_tasks_jni.so`; re-run the native package gate on every MediaPipe update. |
+| `lottie-compose:6.7.1` | Bundled today | Airbnb / Maven Central | n/a (pure Kotlin) | Apache-2.0 | Version-pinned in the catalog and covered by the dependency freshness probe. |
+| `media3-effect-lottie:1.11.0` | Bundled today | `androidx.media3:media3-effect-lottie:1.11.0` from Google Maven | n/a (pure Kotlin; no native libraries) | Apache-2.0 | Used by `Media3LottieTextureOverlay` for non-HDR finite-window title overlays, with the legacy shader retained for HDR and over-long windows. |
 | `sherpa-onnx-1.13.2.aar` | Targeted (A.1) | [GitHub release asset](https://github.com/k2-fsa/sherpa-onnx/releases) | ⚠ Verify per AAR release: Sherpa-ONNX 1.12.28+ targets NDK r27. | Apache-2.0 | Distributed via GitHub release assets, not Maven Central. Must be vendored into `app/libs/` or fetched via PAD. |
-| `ffmpeg-kit-next-8.1.0.aar` / FFmpeg 8.1.2 | Active source-pinned native dep | Vendored build from `arthenica/ffmpeg-kit-next@3e223118e6e8fb6208693ecf3952e77cd096f587`; exact recipe and component revisions in `third_party/ffmpeg-kit-next/native-lock.json` | ✅ Five build targets; 20 native libraries checked with 0 16 KB misalignments | GPL-3.0-only build (`--enable-gpl --enable-x264`) with packaged component licenses and exact source offer | Release preflight verifies the 64,228,197-byte AAR SHA-256 `4b7654925340bb4a5eb0c4e50350a6f664f4568a228d46e9e128eb032406fd00` and emits deterministic CycloneDX/SPDX inventories. |
+| `ffmpeg-kit-next-8.1.0.aar` / FFmpeg 8.1.2 | Active source-pinned native dep | Vendored build from `arthenica/ffmpeg-kit-next@3e223118e6e8fb6208693ecf3952e77cd096f587`; exact recipe and component revisions in `third_party/ffmpeg-kit-next/native-lock.json` | ✅ Five build targets; 20 native libraries checked with 0 16 KB misalignments | LGPL-3.0-or-later build. x264 is not included, and the GPL build flag is disabled. Packaged licenses and the exact source offer ship with the app. | Release preflight verifies the 62,247,665-byte AAR SHA-256 `7971240aff84ce59a4ab28400bb4af59d24c20ce68c25525d41d910246ccff62` and emits deterministic CycloneDX/SPDX inventories. |
 | `android-deepfilternet:0.0.8` | Active native dep (A.2 / R6.6) | `io.github.kaleyravideo:android-deepfilternet:0.0.8` (Maven Central) | ✅ AAR preflight verified 2026-05-17: arm64-v8a and x86_64 `libdf.so` pass `scripts/check_16kb_alignment.py`; debug APK re-verified after integration with 32 OK, 40 skipped, 0 misaligned. | Apache-2.0 | Bundled-model variant includes `res/raw/deep_filter_mobile_model` (~7.6 MiB), `NativeDeepFilterNet`, 48 kHz mono PCM API, and `libdf.so` for arm64-v8a / armeabi-v7a / x86 / x86_64. |
 | `librife.so` + RIFE v4.6 NCNN model | Planned (A.4) | [`nihui/rife-ncnn-vulkan`](https://github.com/nihui/rife-ncnn-vulkan) | ⚠ Self-build with NDK r28+ required | MIT (model: paper authors) | Vulkan-only; arm64-v8a only. ABI split required. |
-| OpenCV Android `:opencv:4.10.0+` | Planned (A.3) | opencv.org | ⚠ Verify per release | Apache-2.0 | arm64-only; ~40 MB. Must ABI-split to avoid Play 200 MB base ceiling. |
 | `com.google.oboe:oboe:1.9.0` | Planned (A.10) | Maven Central | ⚠ Verify on first integration: arm64 native blob ~700 KB | Apache-2.0 | High-quality sinc resampler for 44.1↔48 kHz mixing. Scaffold + reflection probe + output-frame estimator land 2026-05; runtime path waits for the dep wiring. |
 
 ### Still-image HDR metadata tracked outside model downloads
@@ -108,7 +107,7 @@ mode, and F-Droid posture are recorded here and in code.
 | `object_remove` | §1 `lama_dilated.onnx` | Explicit `ModelDownloadManager` download from the public Qualcomm Hugging Face revision | OK with NOTICE/license review | `checksumRequired = true`; SHA-256 pin in §1 | `MODEL_DOWNLOAD_REQUIRED` |
 | `denoise` | §1 `deep_filter_mobile_model` plus §2 `android-deepfilternet:0.0.8` | Bundled Maven AAR dependency | OK | Model-file and AAR SHA-256 pins documented in §1; build/release artifact checks cover packaged bytes | `READY` |
 | `ai_background` | §3 RVM planning row | Dependency not bundled | Review required because upstream is GPL-3.0 | Blocked until an exact model export, SHA-256, delivery mode, and redistribution posture are recorded | `DEPENDENCY_MISSING` |
-| `ai_stabilize` | §2 OpenCV Android planning row | Dependency not bundled | Review required | Blocked until the selected AAR/source build has SHA-256, 16 KB evidence, and license/NOTICE review | `DEPENDENCY_MISSING` |
+| `ai_stabilize` | Built-in ClearCut offline motion analysis; no downloaded model or native AAR | Built in | OK | Not applicable. The tool uses platform frame extraction and app code. | `READY` |
 | `ai_style_transfer` | §3 AnimeGANv2 / Fast NST planning row | Dependency not bundled | Review required per style | Blocked until each style model has exact source bytes, SHA-256, and redistribution terms | `DEPENDENCY_MISSING` |
 | `video_upscale` | §3 Real-ESRGAN planning row | Dependency not bundled | OK once the exact ONNX/NCNN export is pinned | Blocked until the chosen model artifact has a SHA-256 pin and loader wiring | `DEPENDENCY_MISSING` |
 | `frame_interp` | §2/§3 RIFE NCNN planning row | Dependency not bundled | OK with native-build review | Blocked until self-built native libs and model files have SHA-256 pins and 16 KB evidence | `DEPENDENCY_MISSING` |
@@ -128,6 +127,6 @@ For reproducibility (R5.6c), every entry above with a download URL must also rec
 - **Approximate size** for the user disclosure sheet (column 5)
 - **License** for the LICENSE/NOTICE shipping requirement (column 6)
 
-As of the 2026-06-04 v3.74.38 pass, every §1 active model row has an exact source locator and SHA-256 pin that is also wired through `ModelDownloadManager.ModelFile(checksumRequired = true)` or a documented build-artifact checksum path. `app/src/test/java/com/novacut/editor/engine/ModelRegistryDocumentationTest.kt` fails the JVM test suite if §1 reintroduces `TBD` checksum placeholders, malformed SHA-256 values, floating active URLs, or an AI tool gate matrix that omits a registered tool.
+As of the 2026-08-23 review, every §1 active model row has an exact source locator and SHA-256 pin that is also wired through `ModelDownloadManager.ModelFile(checksumRequired = true)` or a documented build-artifact checksum path. `app/src/test/java/com/novacut/editor/engine/ModelRegistryDocumentationTest.kt` fails the JVM test suite if §1 reintroduces `TBD` checksum placeholders, malformed SHA-256 values, floating active URLs, or an AI tool gate matrix that omits a registered tool.
 
 Future rows in §3 remain planning targets only. They must move into §1 with a public source locator, exact SHA-256, size disclosure, license posture, PAD/F-Droid decision, and runtime checksum wiring before any corresponding Tier A engine activates.

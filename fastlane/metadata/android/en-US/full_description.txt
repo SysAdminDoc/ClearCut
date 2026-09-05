@@ -8,7 +8,7 @@ Features:
 - Keyframe animation for opacity, scale, rotation, position, and volume
 - Color grading with lift/gamma/gain wheels, RGB curves, HSL qualifier, and 3D LUT import
 - 18 blend modes and freehand/rect/ellipse masks with feathering
-- AI-assisted tools with clear gates: auto captions (Whisper tiny.en), background removal (MediaPipe), object removal (LaMa), scene detection, smart crop, motion tracking, auto color, and audio denoise; planned stabilization and style transfer stay labeled until dependency review
+- AI-assisted tools with clear gates: auto captions (Whisper tiny.en), background removal (MediaPipe), object removal (LaMa), offline stabilization, scene detection, smart crop, motion tracking, auto color, and audio denoise. Style transfer stays labeled until its dependency review is complete.
 - Filler word auto-strip from generated captions
 - Beat detection and beat-sync editing
 - Audio mixing with per-track volume, pan, EQ, compressor, reverb, and 15 DSP effects

@@ -8,7 +8,7 @@ Funciones:
 - Animación con fotogramas clave para opacidad, escala, rotación, posición y volumen
 - Corrección de color con ruedas lift/gamma/gain, curvas RGB, selector HSL e importación de LUT 3D
 - 18 modos de fusión y máscaras a mano alzada, rectangulares o elípticas con suavizado
-- Herramientas de IA con estados claros: subtítulos automáticos, eliminación de fondo y objetos, detección de escenas, recorte inteligente, seguimiento de movimiento, color automático y reducción de ruido de audio
+- Herramientas de IA con estados claros: subtítulos automáticos, eliminación de fondo y objetos, estabilización sin conexión, detección de escenas, recorte inteligente, seguimiento de movimiento, color automático y reducción de ruido de audio
 - Eliminación automática de palabras de relleno en subtítulos generados
 - Detección de ritmos y edición sincronizada con el ritmo
 - Mezcla de audio con volumen por pista, panoramización, ecualizador, compresor, reverberación y 15 efectos DSP
