@@ -104,11 +104,6 @@ private data class MediaPickerOperationState(
     val total: Int? = null,
 )
 
-private data class MediaPickerBatchImportResult(
-    val imported: List<MediaPickerSelection>,
-    val insufficientSpace: IngestResult.InsufficientSpace? = null,
-)
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MediaPickerSheet(
@@ -254,56 +249,15 @@ fun MediaPickerSheet(
                 completed = 0,
                 total = selections.size,
             )
-            val operationContext = currentCoroutineContext()
             val importResult = try {
-                withContext(Dispatchers.IO) {
-                    val totalSize = selections.sumOf { selection ->
-                        querySourceSize(context, selection.uri).coerceAtLeast(0L)
-                    }
-                    insufficientSpaceFor(context, totalSize)?.let { failure ->
-                        return@withContext MediaPickerBatchImportResult(
-                            imported = emptyList(),
-                            insufficientSpace = failure,
+                // Rolls back every copy it made if the batch is cancelled or throws.
+                importMediaPickerBatch(context, selections) { completed ->
+                    withContext(Dispatchers.Main.immediate) {
+                        operationState = operationState?.copy(
+                            completed = completed,
+                            total = selections.size,
                         )
                     }
-                    val imported = mutableListOf<MediaPickerSelection>()
-                    for ((index, selection) in selections.withIndex()) {
-                        if (!operationContext.isActive) {
-                            throw CancellationException("Media import cancelled")
-                        }
-                        withContext(Dispatchers.Main.immediate) {
-                            operationState = operationState?.copy(
-                                completed = index,
-                                total = selections.size,
-                            )
-                        }
-                        when (
-                            val result = importUriToManagedMediaWithProgress(
-                                context = context,
-                                uri = selection.uri,
-                                mediaType = selection.mediaType,
-                                isCancelled = { !operationContext.isActive },
-                            )
-                        ) {
-                            is IngestResult.Success -> imported += selection.copy(uri = result.managedUri)
-                            is IngestResult.InsufficientSpace -> {
-                                return@withContext MediaPickerBatchImportResult(
-                                    imported = imported.toList(),
-                                    insufficientSpace = result,
-                                )
-                            }
-                            is IngestResult.Cancelled ->
-                                throw CancellationException("Media import cancelled")
-                            is IngestResult.Failed -> Unit
-                        }
-                        withContext(Dispatchers.Main.immediate) {
-                            operationState = operationState?.copy(
-                                completed = index + 1,
-                                total = selections.size,
-                            )
-                        }
-                    }
-                    MediaPickerBatchImportResult(imported = imported)
                 }
             } finally {
                 withContext(NonCancellable + Dispatchers.IO) {

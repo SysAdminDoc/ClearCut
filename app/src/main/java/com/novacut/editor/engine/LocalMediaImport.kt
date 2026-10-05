@@ -381,7 +381,8 @@ private fun createUniqueManagedMediaFile(
 }
 
 internal sealed class IngestResult {
-    data class Success(val managedUri: Uri) : IngestResult()
+    /** [createdNewCopy] is false when the source was already managed media and was reused as is. */
+    data class Success(val managedUri: Uri, val createdNewCopy: Boolean = true) : IngestResult()
     data class InsufficientSpace(val requiredBytes: Long, val availableBytes: Long) : IngestResult()
     data object Cancelled : IngestResult()
     data class Failed(val reason: String) : IngestResult()
@@ -458,7 +459,7 @@ internal fun importUriToManagedMediaWithProgress(
                     writeManagedMediaAssetSidecar(context, managedUri, uri, mediaType)
                 }
                 onProgress(1f)
-                return IngestResult.Success(managedUri)
+                return IngestResult.Success(managedUri, createdNewCopy = false)
             }
         }
     }

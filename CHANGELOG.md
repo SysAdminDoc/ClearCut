@@ -7,6 +7,7 @@
 - EDL import reads drop-frame timecode written with `;`, Sony's `,` or `.`, or plain colons under an `FCM: DROP FRAME` line, and recognizes 59.94 drop-frame on its own.
 - Exports no longer fail on phones whose video decoder reports a frame rate of 0, which hit many Samsung Galaxy A, OPPO, Realme, Xiaomi and vivo models. ClearCut now ships Media3 1.11.1, which carries the upstream fix, and a test fails if the app ever goes back to 1.11.0.
 - When a phone's first-choice video or audio decoder refuses to start, export and proxy generation now move on to the next decoder instead of failing. The export record notes which decoder took over, so a run that needed the fallback isn't reported as an exact one.
+- Cancelling a multi-file import, or one that fails part way, now deletes the copies it already made instead of leaving them in app storage with no project using them. Files that were already in ClearCut's media folder are reused and never deleted.
 
 ## v3.81.1
 
