@@ -5184,6 +5184,8 @@ class EditorViewModel @Inject constructor(
 
     fun exportToFcpxml() = exportTimeline(TimelineExportCoordinator.Format.FCPXML)
 
+    fun exportToEdl() = exportTimeline(TimelineExportCoordinator.Format.EDL)
+
     fun exportToEditDecisionJson() = exportTimeline(TimelineExportCoordinator.Format.EDIT_DECISION_JSON)
 
     private fun exportTimeline(format: TimelineExportCoordinator.Format) {
@@ -5214,6 +5216,7 @@ class EditorViewModel @Inject constructor(
                             when (format) {
                                 TimelineExportCoordinator.Format.OTIO -> R.string.editor_otio_export_failed_toast
                                 TimelineExportCoordinator.Format.FCPXML -> R.string.editor_fcpxml_export_failed_toast
+                                TimelineExportCoordinator.Format.EDL -> R.string.editor_edl_export_failed_toast
                                 TimelineExportCoordinator.Format.EDIT_DECISION_JSON ->
                                     R.string.editor_edit_decision_json_export_failed_toast
                             }
@@ -5247,6 +5250,7 @@ class EditorViewModel @Inject constructor(
                     when (result.format) {
                         TimelineExportCoordinator.Format.OTIO -> R.string.vm_otio_blocked_toast
                         TimelineExportCoordinator.Format.FCPXML -> R.string.vm_fcpxml_blocked_toast
+                        TimelineExportCoordinator.Format.EDL -> R.string.vm_edl_blocked_toast
                         TimelineExportCoordinator.Format.EDIT_DECISION_JSON ->
                             R.string.vm_edit_decision_json_blocked_toast
                     },
@@ -5279,6 +5283,7 @@ class EditorViewModel @Inject constructor(
                 when (result.format) {
                     TimelineExportCoordinator.Format.OTIO -> R.string.vm_otio_exported_toast
                     TimelineExportCoordinator.Format.FCPXML -> R.string.vm_fcpxml_exported_toast
+                    TimelineExportCoordinator.Format.EDL -> R.string.vm_edl_exported_toast
                     TimelineExportCoordinator.Format.EDIT_DECISION_JSON ->
                         R.string.vm_edit_decision_json_exported_toast
                 },

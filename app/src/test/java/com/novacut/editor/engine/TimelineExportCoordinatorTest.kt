@@ -102,6 +102,36 @@ class TimelineExportCoordinatorTest {
         }
     }
 
+    @Test
+    fun edlExportWritesDropFrameTimecodeForAnNtscProject() = runBlocking {
+        val outputDirectory = Files.createTempDirectory("clearcut-edl-export-").toFile()
+        try {
+            val result = coordinator.export(
+                TimelineExportCoordinator.Request(
+                    format = TimelineExportCoordinator.Format.EDL,
+                    tracks = listOf(videoTrack()),
+                    textOverlays = emptyList(),
+                    projectName = "Conform",
+                    frameRate = 30,
+                    outputDirectory = outputDirectory,
+                    timebase = TimelineTimebase.NTSC_29_97,
+                )
+            )
+
+            assertTrue(result.succeeded)
+            val file = result.outputFile ?: error("successful export did not return a file")
+            assertEquals("Conform.edl", file.name)
+            val lines = file.readText().lines()
+            assertEquals("FCM: DROP FRAME", lines[1])
+            assertEquals(
+                "001  CLIP     V     C        00:00:00;00 00:00:01;00 00:00:00;00 00:00:01;00",
+                lines[3],
+            )
+        } finally {
+            outputDirectory.deleteRecursively()
+        }
+    }
+
     private fun videoTrack() = Track(
         id = "video",
         type = TrackType.VIDEO,

@@ -454,6 +454,202 @@ class TimelineExchangeEngineTest {
         assertTrue(imported.warnings.any { it.contains("effect comment") })
     }
 
+    @Test
+    fun edlExportAtNtsc2997WritesDropFrameTimecodeByteForByte() {
+        val edl = engine.exportToEdl(conformTracks(), "Conform Test", TimelineTimebase.NTSC_29_97)
+
+        // 65 s of 29.97 is frame 1948. Non-drop would print 00:01:04:28; drop-frame keeps the clock.
+        val expected = listOf(
+            "TITLE: Conform Test",
+            "FCM: DROP FRAME",
+            "",
+            "001  VID20001 V     C        00:00:00;00 00:00:10;00 00:00:00;00 00:00:05;00",
+            "M2   VID20001       060.0                00:00:00;00",
+            "* FROM CLIP NAME: VID_20260105_101500.mp4",
+            "",
+            "002  SCORE    A     C        00:00:00;00 00:01:05;00 00:00:00;00 00:01:05;00",
+            "* FROM CLIP NAME: score.m4a",
+            "",
+            "003  VID20002 V     D    015 00:00:01;00 00:01:01;00 00:00:05;00 00:01:05;00",
+            "* FROM CLIP NAME: VID_20260105_101730.mp4",
+            "* EFFECT NAME: Brightness",
+            "",
+        ).joinToString("\n", postfix = "\n")
+        assertEquals(expected, edl)
+    }
+
+    @Test
+    fun edlExportAt25WritesNonDropTimecodeByteForByte() {
+        val edl = engine.exportToEdl(conformTracks(), "Conform Test", TimelineTimebase(25))
+
+        val expected = listOf(
+            "TITLE: Conform Test",
+            "FCM: NON-DROP FRAME",
+            "",
+            "001  VID20001 V     C        00:00:00:00 00:00:10:00 00:00:00:00 00:00:05:00",
+            "M2   VID20001       050.0                00:00:00:00",
+            "* FROM CLIP NAME: VID_20260105_101500.mp4",
+            "",
+            "002  SCORE    A     C        00:00:00:00 00:01:05:00 00:00:00:00 00:01:05:00",
+            "* FROM CLIP NAME: score.m4a",
+            "",
+            "003  VID20002 V     D    013 00:00:01:00 00:01:01:00 00:00:05:00 00:01:05:00",
+            "* FROM CLIP NAME: VID_20260105_101730.mp4",
+            "* EFFECT NAME: Brightness",
+            "",
+        ).joinToString("\n", postfix = "\n")
+        assertEquals(expected, edl)
+    }
+
+    @Test
+    fun edlExportPicksTheFrameCodeModeFromTheTimebase() {
+        val at5994 = engine.exportToEdl(conformTracks(), "Rates", TimelineTimebase.NTSC_59_94)
+        assertTrue(at5994.lines().contains("FCM: DROP FRAME"))
+        assertTrue(at5994.lines().any { it.startsWith("003 ") && it.endsWith("00:00:05;00 00:01:05;00") })
+
+        val at24 = engine.exportToEdl(conformTracks(), "Rates", TimelineTimebase(24))
+        assertTrue(at24.lines().contains("FCM: NON-DROP FRAME"))
+        assertFalse(at24.contains(';'))
+
+        // 23.976 has no drop-frame form: timecode counts 24 frames a second and runs behind the clock.
+        val at23976 = engine.exportToEdl(conformTracks(), "Rates", TimelineTimebase.NTSC_23_976)
+        assertTrue(at23976.lines().contains("FCM: NON-DROP FRAME"))
+        assertTrue(at23976.lines().any { it.startsWith("003 ") && it.endsWith("00:00:05:00 00:01:04:22") })
+    }
+
+    @Test
+    fun dropFrameTimecodeSkipsTheDroppedNumbersAtEachMinute() {
+        assertEquals("00:00:59;29", EdlTimecode.format(1_799L, 30, dropFrame = true))
+        assertEquals("00:01:00;02", EdlTimecode.format(1_800L, 30, dropFrame = true))
+        assertEquals("00:09:59;29", EdlTimecode.format(17_981L, 30, dropFrame = true))
+        assertEquals("00:10:00;00", EdlTimecode.format(17_982L, 30, dropFrame = true))
+        assertEquals("01:00:00;00", EdlTimecode.format(107_892L, 30, dropFrame = true))
+        assertEquals("00:01:00;04", EdlTimecode.format(3_600L, 60, dropFrame = true))
+        assertEquals("00:10:00;00", EdlTimecode.format(35_964L, 60, dropFrame = true))
+        assertEquals("01:00:00;00", EdlTimecode.format(215_784L, 60, dropFrame = true))
+        assertEquals("00:01:00:00", EdlTimecode.format(1_800L, 30, dropFrame = false))
+        // Drop-frame is meaningless at other rates, so it falls back to non-drop.
+        assertEquals("00:01:00:00", EdlTimecode.format(1_500L, 25, dropFrame = true))
+
+        for (fps in listOf(30, 60)) {
+            for (frame in 0L..(fps * 1_300L) step 7L) {
+                val text = EdlTimecode.format(frame, fps, dropFrame = true)
+                val fields = checkNotNull(EdlTimecode.parse(text)) { text }
+                assertEquals(text, frame, EdlTimecode.toFrame(fields, fps, dropFrame = true))
+            }
+        }
+        assertEquals(null, EdlTimecode.toFrame(checkNotNull(EdlTimecode.parse("00:01:00;00")), 30, true))
+        assertEquals(null, EdlTimecode.toFrame(checkNotNull(EdlTimecode.parse("00:01:00;03")), 60, true))
+        assertEquals(17_982L, EdlTimecode.toFrame(checkNotNull(EdlTimecode.parse("00:10:00;00")), 30, true))
+    }
+
+    @Test
+    fun edlImportReadsDropFrameInEverySeparatorDialect() {
+        fun importedStart(header: String, recordIn: String): Long? {
+            val edl = "TITLE: Dialect\n$header\n\n" +
+                "001  REEL     V     C        $recordIn 00:01:10;00 $recordIn 00:01:10;00\n"
+            return engine.importFromEdl(edl, TimelineTimebase(30), ::testUri)
+                .tracks.singleOrNull()?.clips?.single()?.timelineStartMs
+        }
+
+        // 00:01:00;02 is frame 1800 at 29.97, which is 60.06 s.
+        for (recordIn in listOf("00:01:00;02", "00:01:00,02", "00:01:00.02", "00;01;00;02")) {
+            assertEquals(recordIn, 60_060L, importedStart("FCM: NON-DROP FRAME", recordIn))
+        }
+        assertEquals(60_060L, importedStart("FCM: DROP FRAME", "00:01:00:02"))
+
+        val nonDrop = engine.importFromEdl(
+            "FCM: NON-DROP FRAME\n001  REEL     V     C        00:01:00:02 00:01:10:00 00:01:00:02 00:01:10:00\n",
+            TimelineTimebase(30),
+            ::testUri,
+        )
+        assertEquals(60_067L, nonDrop.tracks.single().clips.single().timelineStartMs)
+
+        val dropped = engine.importFromEdl(
+            "FCM: DROP FRAME\n001  REEL     V     C        00:01:00;00 00:01:10;00 00:01:00;00 00:01:10;00\n",
+            TimelineTimebase(30),
+            ::testUri,
+        )
+        assertTrue(dropped.tracks.isEmpty())
+        assertTrue(dropped.warnings.any { it.contains("invalid timecode") })
+
+        // A frame field past 29 can only be 59.94 drop-frame: 3,645 nominal minus 4 dropped is frame 3,641.
+        val at5994 = engine.importFromEdl(
+            "001  REEL     V     C        00:01:00;45 00:01:10;00 00:01:00;45 00:01:10;00\n",
+            TimelineTimebase(30),
+            ::testUri,
+        )
+        assertEquals(60_744L, at5994.tracks.single().clips.single().timelineStartMs)
+    }
+
+    @Test
+    fun edlExportFromNtscRoundTripsThroughTheReader() {
+        val edl = engine.exportToEdl(conformTracks(), "Round Trip", TimelineTimebase.NTSC_29_97)
+
+        val imported = engine.importFromEdl(edl, TimelineTimebase(30), ::testUri)
+
+        val video = imported.tracks.single { it.type == TrackType.VIDEO }.clips
+        assertEquals(2, video.size)
+        val second = video[1]
+        assertEquals("file:///VID_20260105_101730.mp4", second.sourceUri.toString())
+        assertTrue(kotlin.math.abs(second.timelineStartMs - 5_000L) <= 34L)
+        assertTrue(kotlin.math.abs(second.trimEndMs - 61_000L) <= 34L)
+        assertEquals(2f, video[0].speed, 0.001f)
+        val audio = imported.tracks.single { it.type == TrackType.AUDIO }.clips.single()
+        assertTrue(kotlin.math.abs(audio.trimEndMs - 65_000L) <= 34L)
+    }
+
+    @Test
+    fun edlReelsStayWithinEightCharactersAndNeverShareASource() {
+        val sources = listOf(
+            "file:///dcim/VID_20260105_101500.mp4",
+            "file:///dcim/VID_20260105_101730.mp4",
+            "file:///dcim/VID_20260105_102000.mp4",
+            "file:///dcim/AX.mp4",
+            "file:///dcim/Beach.mp4",
+            "file:///dcim/___.mp4",
+        )
+        val track = Track(
+            type = TrackType.VIDEO,
+            index = 0,
+            clips = sources.mapIndexed { i, uri -> clip("c$i", uri, 1_000L, timelineStartMs = i * 1_000L) },
+        )
+
+        val edl = engine.exportToEdl(listOf(track), "Reels", TimelineTimebase(30))
+
+        val reels = edl.lines().filter { it.matches(Regex("^\\d{3}  .*")) }.map { it.split(Regex("\\s+"))[1] }
+        assertEquals(listOf("VID20001", "VID20002", "VID20003", "AX001", "BEACH", "AX"), reels)
+        assertTrue(reels.all { it.length <= 8 })
+    }
+
+    private fun conformTracks(): List<Track> {
+        val fast = Clip(
+            id = "fast",
+            sourceUri = testUri("file:///VID_20260105_101500.mp4"),
+            sourceDurationMs = 20_000L,
+            timelineStartMs = 0L,
+            trimStartMs = 0L,
+            trimEndMs = 10_000L,
+            speed = 2f,
+        )
+        val graded = Clip(
+            id = "graded",
+            sourceUri = testUri("file:///VID_20260105_101730.mp4"),
+            sourceDurationMs = 90_000L,
+            timelineStartMs = 5_000L,
+            trimStartMs = 1_000L,
+            trimEndMs = 61_000L,
+            headTransition = Transition(type = TransitionType.DISSOLVE, durationMs = 500L),
+            effects = listOf(Effect(type = EffectType.BRIGHTNESS, params = mapOf("value" to 0.25f))),
+        )
+        return listOf(
+            Track(type = TrackType.VIDEO, index = 0, clips = listOf(fast, graded)),
+            Track(type = TrackType.AUDIO, index = 1, clips = listOf(clip("score", "file:///score.m4a", 65_000L))),
+            // CMX 3600 carries one picture track; this one must not leak into the list.
+            Track(type = TrackType.VIDEO, index = 2, clips = listOf(clip("overlay", "file:///overlay.mp4", 2_000L))),
+        )
+    }
+
     private fun clip(
         id: String,
         uri: String,

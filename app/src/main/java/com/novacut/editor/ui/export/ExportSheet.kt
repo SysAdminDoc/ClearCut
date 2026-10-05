@@ -247,6 +247,7 @@ fun ExportSheet(
     onResumeExport: (ExportHistoryEntry) -> Unit = {},
     onExportOtio: () -> Unit = {},
     onExportFcpxml: () -> Unit = {},
+    onExportEdl: () -> Unit = {},
     onExportEditDecisionJson: () -> Unit = {},
     onExportSubtitles: (SubtitleFormat) -> Unit = {},
     onCaptureFrame: () -> Unit = {},
@@ -1704,6 +1705,18 @@ fun ExportSheet(
                 ClearCutSecondaryButton(
                     text = stringResource(R.string.export_fcpxml),
                     onClick = onExportFcpxml,
+                    modifier = Modifier.weight(1f),
+                    contentColor = ClearCutAccents.Sapphire
+                )
+            }
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                ClearCutSecondaryButton(
+                    text = stringResource(R.string.export_edl),
+                    onClick = onExportEdl,
                     modifier = Modifier.weight(1f),
                     contentColor = ClearCutAccents.Sapphire
                 )

@@ -5,6 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.w3c.dom.Element
 import java.io.StringReader
+import java.util.Locale
 import javax.xml.parsers.DocumentBuilderFactory
 import org.xml.sax.InputSource
 import javax.inject.Inject
@@ -1040,20 +1041,34 @@ class TimelineExchangeEngine @Inject constructor(
         val audioClips = mutableListOf<Clip>()
         var currentClips: MutableList<Clip>? = null
         var currentIndex = -1
+        var currentTimebase = timebase
+        var fcmDropFrame = false
+        val dropFrameTimebase = edlDropFrameTimebase(edl, timebase)
         val eventPattern = Regex(
             "^\\s*\\d+\\s+(\\S+)\\s+([VA])\\s+([A-Z](?:\\s+\\d+)?)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$"
         )
         val speedPattern = Regex("^\\s*M2\\s+\\S+\\s+([0-9]+(?:\\.[0-9]+)?)")
+        val fcmPattern = Regex("^\\s*FCM:\\s*(NON[- ]?DROP|DROP)(?:\\s+FRAME)?\\s*$", RegexOption.IGNORE_CASE)
         for (line in edl.lineSequence()) {
+            val fcm = fcmPattern.matchEntire(line)
+            if (fcm != null) {
+                fcmDropFrame = fcm.groupValues[1].equals("DROP", ignoreCase = true)
+                continue
+            }
             val event = eventPattern.matchEntire(line)
             if (event != null) {
                 val reel = event.groupValues[1]
                 val kind = event.groupValues[2]
                 val transition = event.groupValues[3]
-                val sourceIn = parseEdlTimecode(event.groupValues[4], timebase)
-                val sourceOut = parseEdlTimecode(event.groupValues[5], timebase)
-                val recordIn = parseEdlTimecode(event.groupValues[6], timebase)
-                val recordOut = parseEdlTimecode(event.groupValues[7], timebase)
+                val fields = (4..7).map { EdlTimecode.parse(event.groupValues[it]) }
+                // FCM governs colon-only timecode; `;` (or Sony's `,` and `.`) marks drop-frame on its own.
+                val dropFrame = fcmDropFrame || fields.any { it?.dropFrame == true }
+                currentTimebase = if (dropFrame) dropFrameTimebase else timebase
+                val eventTimebase = currentTimebase
+                val (sourceIn, sourceOut, recordIn, recordOut) = fields.map { field ->
+                    field?.let { EdlTimecode.toFrame(it, eventTimebase.nominalFramesPerSecond, dropFrame) }
+                        ?.let { framesToMs(it, eventTimebase) }
+                }
                 if (sourceIn == null || sourceOut == null || recordIn == null || recordOut == null ||
                     sourceOut <= sourceIn || recordOut <= recordIn
                 ) {
@@ -1077,7 +1092,7 @@ class TimelineExchangeEngine @Inject constructor(
                     timelineStartMs = recordIn,
                     trimStartMs = sourceIn,
                     trimEndMs = sourceOut,
-                    headTransition = parseEdlTransition(transition, timebase),
+                    headTransition = parseEdlTransition(transition, eventTimebase),
                 )
                 currentClips = if (kind == "A") audioClips else videoClips
                 currentClips += clip
@@ -1103,7 +1118,7 @@ class TimelineExchangeEngine @Inject constructor(
                 val fps = speed.groupValues[1].toFloatOrNull()
                 if (fps != null && fps.isFinite() && fps > 0f) {
                     currentClips[currentIndex] = currentClips[currentIndex].copy(
-                        speed = (fps / timebase.nominalFramesPerSecond.toFloat()).coerceIn(0.01f, 100f)
+                        speed = (fps / currentTimebase.nominalFramesPerSecond.toFloat()).coerceIn(0.01f, 100f)
                     )
                 }
                 continue
@@ -1166,19 +1181,134 @@ class TimelineExchangeEngine @Inject constructor(
         else ms.roundToLong().coerceAtLeast(0L)
     }
 
-    private fun parseEdlTimecode(raw: String, timebase: TimelineTimebase): Long? {
-        val parts = raw.split(':')
-        if (parts.size != 4) return null
-        val hours = parts[0].toLongOrNull() ?: return null
-        val minutes = parts[1].toLongOrNull() ?: return null
-        val seconds = parts[2].toLongOrNull() ?: return null
-        val frames = parts[3].toLongOrNull() ?: return null
-        if (hours < 0L || minutes !in 0..59 || seconds !in 0..59 ||
-            frames !in 0 until timebase.nominalFramesPerSecond
-        ) return null
-        val totalFrames = (((hours * 60L) + minutes) * 60L + seconds) *
-            timebase.nominalFramesPerSecond.toLong() + frames
-        return framesToMs(totalFrames, timebase)
+    /**
+     * Drop-frame timecode only exists at 29.97 and 59.94, and an EDL doesn't say which.
+     * Trust a caller already at 59.94, otherwise a frame field of 30 or more means 59.94.
+     */
+    private fun edlDropFrameTimebase(edl: String, timebase: TimelineTimebase): TimelineTimebase {
+        if (timebase.nominalFramesPerSecond == 60) return TimelineTimebase.NTSC_59_94
+        val highestFrameField = EDL_TIMECODE_FRAME_FIELD.findAll(edl)
+            .mapNotNull { it.groupValues[1].toIntOrNull() }
+            .maxOrNull() ?: 0
+        return if (highestFrameField >= 30) TimelineTimebase.NTSC_59_94 else TimelineTimebase.NTSC_29_97
+    }
+
+    // ──────────────────────────────────────────────
+    // EDL Export
+    // ──────────────────────────────────────────────
+
+    /**
+     * Export a CMX 3600 EDL: the first visible video track as V events and the first
+     * unmuted audio track as A events, in record order.
+     *
+     * 29.97 and 59.94 timelines write `FCM: DROP FRAME` with `;` before the frame field,
+     * so the timecode keeps pace with the clock. Every other rate writes non-drop
+     * timecode counted in frames at the nominal rate, which is what a receiving editor
+     * reads back. Reels are unique per source and never longer than 8 characters.
+     */
+    fun exportToEdl(
+        tracks: List<Track>,
+        projectName: String,
+        timebase: TimelineTimebase,
+    ): String {
+        val dropFrame = EdlTimecode.isDropFrameRate(timebase)
+        val fps = timebase.nominalFramesPerSecond
+        fun timecode(ms: Long): String = EdlTimecode.format(msToFrames(ms, timebase), fps, dropFrame)
+
+        val videoTrack = tracks.firstOrNull { it.type == TrackType.VIDEO && it.isVisible }
+        val audioTrack = tracks.firstOrNull { it.type == TrackType.AUDIO && !it.isMuted }
+        val events = buildList {
+            videoTrack?.clips?.forEach { add(Triple(videoTrack, it, "V")) }
+            audioTrack?.clips?.forEach { add(Triple(audioTrack, it, "A")) }
+        }.sortedWith(
+            compareBy<Triple<Track, Clip, String>>({ (track, clip) -> track.effectiveTimelineStartMs(clip) })
+                .thenBy { it.third != "V" }
+        )
+        val reels = edlReelNames(events.map { it.second })
+
+        val sb = StringBuilder()
+        sb.appendLine("TITLE: ${edlSafeText(projectName, fallback = "ClearCut Project")}")
+        sb.appendLine(if (dropFrame) "FCM: DROP FRAME" else "FCM: NON-DROP FRAME")
+        sb.appendLine()
+        events.forEachIndexed { index, (track, clip, channel) ->
+            val reel = reels.getValue(clip.sourceUri.toString())
+            val recordInMs = track.effectiveTimelineStartMs(clip).coerceAtLeast(0L)
+            val recordOutMs = track.effectiveTimelineEndMs(clip).coerceAtLeast(recordInMs)
+            val sourceIn = timecode(clip.trimStartMs)
+            val sourceOut = EdlTimecode.format(
+                maxOf(msToFrames(clip.trimEndMs, timebase), msToFrames(clip.trimStartMs, timebase) + 1L),
+                fps,
+                dropFrame,
+            )
+            val recordOut = EdlTimecode.format(
+                maxOf(msToFrames(recordOutMs, timebase), msToFrames(recordInMs, timebase) + 1L),
+                fps,
+                dropFrame,
+            )
+            val transition = clip.headTransition?.let {
+                String.format(Locale.US, "D    %03d ", msToFrames(it.durationMs, timebase).coerceIn(1L, 999L))
+            } ?: "C        "
+            sb.appendLine(
+                String.format(
+                    Locale.US,
+                    "%03d  %-8s %-5s %s%s %s %s %s",
+                    index + 1, reel, channel, transition, sourceIn, sourceOut, timecode(recordInMs), recordOut,
+                )
+            )
+            val speed = clip.speedCurve?.averageSpeed((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L))
+                ?: clip.speed
+            val safeSpeed = if (speed.isFinite() && speed > 0f) speed.coerceIn(0.01f, 100f) else 1f
+            if (kotlin.math.abs(safeSpeed - 1f) > 0.001f) {
+                sb.appendLine(
+                    String.format(Locale.US, "M2   %-8s       %05.1f                %s", reel, fps * safeSpeed, sourceIn)
+                )
+            }
+            val fileName = clip.sourceUri.lastPathSegment?.substringAfterLast('/') ?: "unknown"
+            sb.appendLine("* FROM CLIP NAME: ${edlSafeText(fileName, fallback = "unknown")}")
+            clip.effects.filter { it.enabled }.forEach { effect ->
+                sb.appendLine("* EFFECT NAME: ${edlSafeText(effect.type.displayName, fallback = "Effect")}")
+            }
+            sb.appendLine()
+        }
+        return sb.toString()
+    }
+
+    /**
+     * CMX 3600 reels are at most 8 characters. Phone footage shares long prefixes
+     * (VID_20260105_...), so sources whose first 8 characters collide get a numbered
+     * reel instead of silently sharing one. Unnamed sources use the aux reel `AX`.
+     */
+    private fun edlReelNames(clips: List<Clip>): Map<String, String> {
+        val sources = clips.map { it.sourceUri }.distinctBy { it.toString() }
+        val bases = sources.associate { uri ->
+            uri.toString() to (uri.lastPathSegment ?: "")
+                .substringAfterLast('/')
+                .substringBeforeLast('.')
+                .filter { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' }
+                .uppercase(Locale.ROOT)
+        }
+        val counts = bases.values.groupingBy { it.take(8) }.eachCount()
+        fun keepsOwnName(base: String) =
+            base.isNotEmpty() && counts[base.take(8)] == 1 && base.take(8) !in EDL_RESERVED_REELS
+        val used = bases.values.filter(::keepsOwnName).map { it.take(8) }.toMutableSet()
+        return bases.mapValues { (_, base) ->
+            when {
+                base.isEmpty() -> "AX"
+                keepsOwnName(base) -> base.take(8)
+                else -> generateSequence(1) { it + 1 }
+                    .map { base.take(5) + String.format(Locale.US, "%03d", it) }
+                    .first { it !in used }
+                    .also { used += it }
+            }
+        }
+    }
+
+    private fun edlSafeText(value: String, fallback: String): String {
+        return value
+            .replace(Regex("[\\r\\n\\t]+"), " ")
+            .trim()
+            .ifBlank { fallback }
+            .take(120)
     }
 
     private fun parseEdlTransition(raw: String, timebase: TimelineTimebase): Transition? {
@@ -1198,7 +1328,7 @@ class TimelineExchangeEngine @Inject constructor(
      * Export tracks to Final Cut Pro XML format (FCPXML v1.11).
      *
      * FCPXML is widely supported by DaVinci Resolve, Final Cut Pro, and other NLEs.
-     * This improves on the existing EdlExporter by supporting multiple tracks,
+     * Unlike the single-track EDL export, it carries multiple tracks,
      * transitions, and richer metadata.
      *
      * @param tracks List of ClearCut tracks.
@@ -1485,5 +1615,77 @@ class TimelineExchangeEngine @Inject constructor(
         const val OTIO_MAX_SUPPORTED_SCHEMA_CODE = 16
         val SUPPORTED_OTIO_SCHEMA_VERSIONS = setOf("0.15", "0.16")
         val PROBEABLE_URI_SCHEMES = setOf("content", "file", "asset", "http", "https")
+        val EDL_TIMECODE_FRAME_FIELD = Regex("\\b\\d{1,2}[:;.,]\\d{2}[:;.,]\\d{2}[:;.,](\\d{2})\\b")
+
+        /** `BL` is black and `AX` is the aux source in CMX 3600, so a file can't claim either. */
+        val EDL_RESERVED_REELS = setOf("BL", "AX")
     }
+}
+
+/** SMPTE timecode as CMX 3600 EDLs write it, drop-frame included. */
+internal object EdlTimecode {
+    data class Fields(
+        val hours: Int,
+        val minutes: Int,
+        val seconds: Int,
+        val frames: Int,
+        /** True when a separator other than `:` marked the timecode as drop-frame. */
+        val dropFrame: Boolean,
+    )
+
+    private val PATTERN = Regex("^(\\d{1,2})([:;.,])(\\d{2})([:;.,])(\\d{2})([:;.,])(\\d{2})$")
+
+    /** Drop-frame exists only for the 1000/1001 versions of 30 and 60 fps. */
+    fun isDropFrameRate(timebase: TimelineTimebase): Boolean =
+        timebase.denominator == 1_001 && (timebase.numerator == 30_000 || timebase.numerator == 60_000)
+
+    /** `;` marks drop-frame, and so do Sony's `,` and `.`; colons alone leave it to the FCM line. */
+    fun parse(raw: String): Fields? {
+        val match = PATTERN.matchEntire(raw.trim()) ?: return null
+        val values = match.groupValues
+        return Fields(
+            hours = values[1].toInt(),
+            minutes = values[3].toInt(),
+            seconds = values[5].toInt(),
+            frames = values[7].toInt(),
+            dropFrame = listOf(values[2], values[4], values[6]).any { it != ":" },
+        )
+    }
+
+    /** Frame count for [fields], or null when a field is out of range or names a dropped frame. */
+    fun toFrame(fields: Fields, fps: Int, dropFrame: Boolean): Long? {
+        if (fields.minutes !in 0..59 || fields.seconds !in 0..59 || fields.frames !in 0 until fps) return null
+        val dropped = droppedPerMinute(fps, dropFrame)
+        if (dropped > 0 && fields.seconds == 0 && fields.minutes % 10 != 0 && fields.frames < dropped) return null
+        val totalMinutes = fields.hours * 60L + fields.minutes
+        val nominal = (totalMinutes * 60L + fields.seconds) * fps + fields.frames
+        return nominal - dropped * (totalMinutes - totalMinutes / 10L)
+    }
+
+    fun format(frame: Long, fps: Int, dropFrame: Boolean): String {
+        val dropped = droppedPerMinute(fps, dropFrame)
+        var frameNumber = frame.coerceAtLeast(0L)
+        if (dropped > 0) {
+            // Skip the dropped frame numbers: the first `dropped` of every minute except each tenth.
+            val framesPerMinute = fps * 60L - dropped
+            val framesPerTenMinutes = fps * 600L - dropped * 9L
+            val tens = frameNumber / framesPerTenMinutes
+            val remainder = frameNumber % framesPerTenMinutes
+            frameNumber += dropped * 9L * tens
+            if (remainder > dropped) frameNumber += dropped * ((remainder - dropped) / framesPerMinute)
+        }
+        val totalSeconds = frameNumber / fps
+        return String.format(
+            Locale.US,
+            "%02d:%02d:%02d%s%02d",
+            totalSeconds / 3_600L,
+            (totalSeconds / 60L) % 60L,
+            totalSeconds % 60L,
+            if (dropped > 0) ";" else ":",
+            frameNumber % fps,
+        )
+    }
+
+    private fun droppedPerMinute(fps: Int, dropFrame: Boolean): Long =
+        if (dropFrame && (fps == 30 || fps == 60)) fps / 15L else 0L
 }

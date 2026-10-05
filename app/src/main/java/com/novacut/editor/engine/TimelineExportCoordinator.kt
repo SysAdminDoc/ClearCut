@@ -31,6 +31,7 @@ class TimelineExportCoordinator @Inject constructor(
     ) {
         OTIO(TimelineExchangeEngine.TimelineExchangeFormat.OTIO, "otio"),
         FCPXML(TimelineExchangeEngine.TimelineExchangeFormat.FCPXML, "fcpxml"),
+        EDL(TimelineExchangeEngine.TimelineExchangeFormat.EDL_CMX3600, "edl"),
         EDIT_DECISION_JSON(
             TimelineExchangeEngine.TimelineExchangeFormat.EDIT_DECISION_JSON,
             EditDecisionJsonEngine.FILE_EXTENSION,
@@ -83,6 +84,11 @@ class TimelineExportCoordinator @Inject constructor(
                 tracks = request.tracks,
                 projectName = request.projectName,
                 frameRate = request.frameRate,
+            )
+            Format.EDL -> timelineExchangeEngine.exportToEdl(
+                tracks = request.tracks,
+                projectName = request.projectName,
+                timebase = request.timebase,
             )
             Format.EDIT_DECISION_JSON -> timelineExchangeEngine.exportToEditDecisionJson(
                 tracks = request.tracks,
