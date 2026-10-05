@@ -71,7 +71,6 @@ class EditorPlaybackCoordinator internal constructor(
         fun isPlaybackEnded(): Boolean
         fun seekTo(positionMs: Long)
         fun setScrubbingMode(enabled: Boolean)
-        fun setLooping(enabled: Boolean)
 
         companion object {
             fun from(videoEngine: VideoEngine): PlaybackPort = object : PlaybackPort {
@@ -106,14 +105,6 @@ class EditorPlaybackCoordinator internal constructor(
                 override fun setScrubbingMode(enabled: Boolean) {
                     videoEngine.setScrubbingMode(enabled)
                 }
-
-                override fun setLooping(enabled: Boolean) {
-                    videoEngine.getPlayer().repeatMode = if (enabled) {
-                        Player.REPEAT_MODE_ALL
-                    } else {
-                        Player.REPEAT_MODE_OFF
-                    }
-                }
             }
         }
     }
@@ -123,6 +114,8 @@ class EditorPlaybackCoordinator internal constructor(
     private var frameSyncJob: Job? = null
     private var playbackStartRecoveryJob: Job? = null
     private var surfaceRecoveryJob: Job? = null
+    private var loopRestartJob: Job? = null
+    private var looping = false
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(playing: Boolean) {
@@ -137,6 +130,10 @@ class EditorPlaybackCoordinator internal constructor(
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (playbackState != Player.STATE_ENDED) return
             cancelRecoveryJobs()
+            if (looping && port.isPlaybackRequested()) {
+                restartLoop()
+                return
+            }
             port.pause()
             callbacks?.let { active ->
                 active.onPlaybackEnded(active.snapshot().totalDurationMs)
@@ -203,7 +200,21 @@ class EditorPlaybackCoordinator internal constructor(
     }
 
     fun setLooping(enabled: Boolean) {
-        port.setLooping(enabled)
+        looping = enabled
+    }
+
+    // The player's own REPEAT_MODE_ALL wraps into a compositor that Media3 1.11
+    // has already ended, and every frame after the wrap failed (issue #54). A loop
+    // starts a fresh session from the top instead, once the ended callback returns.
+    private fun restartLoop() {
+        val scope = playbackScope ?: return
+        loopRestartJob = scope.launch {
+            wait(LOOP_RESTART_DELAY_MS)
+            val active = this@EditorPlaybackCoordinator.callbacks ?: return@launch
+            active.onSurfaceRecoveryPosition(0L)
+            port.playFromTimelinePosition(0L, restartSession = true)
+            armPlaybackStartRecovery(0L)
+        }
     }
 
     private fun handlePlayerError(error: PlaybackException) {
@@ -289,6 +300,8 @@ class EditorPlaybackCoordinator internal constructor(
         playbackStartRecoveryJob = null
         surfaceRecoveryJob?.cancel()
         surfaceRecoveryJob = null
+        loopRestartJob?.cancel()
+        loopRestartJob = null
     }
 
     private fun calculateScrollOffset(snapshot: PlaybackSnapshot, currentMs: Long): Long {
@@ -311,5 +324,6 @@ class EditorPlaybackCoordinator internal constructor(
         const val PLAYBACK_START_RECOVERY_DELAY_MS = 3_000L
         const val PLAYBACK_START_FAILURE_DELAY_MS = 7_000L
         const val PREVIEW_SURFACE_RECOVERY_DELAY_MS = 250L
+        const val LOOP_RESTART_DELAY_MS = 16L
     }
 }

@@ -18,6 +18,7 @@ import android.webkit.MimeTypeMap
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.util.UnstableApi
@@ -219,6 +220,33 @@ class VideoEngine @Inject constructor(
     private var player: CompositionPlayer? = null
     private var playerLease: CodecLease<Unit>? = null
     private var playerListener: Player.Listener? = null
+
+    // Media3 1.11's MultipleInputVideoGraph never clears a DefaultVideoCompositor
+    // input once it has signalled end of input, and CompositionPlayer builds that
+    // graph once per instance. After a sequence reaches its end, the next frame
+    // fails checkState(!isInputEnded), so every replay, loop, scrub, or project
+    // opened later showed "can't decode" until the app restarted (issue #54). Each
+    // player gets its own watch, and a spent player is replaced before it is asked
+    // for another frame. Looping is driven from outside for the same reason: the
+    // player's own REPEAT_MODE_ALL wraps straight into the dead compositor.
+    private var previewGraphWatch: EndOfInputWatchingVideoGraphFactory? = null
+    private val previewGraphSpent: Boolean get() = previewGraphWatch?.inputEnded == true
+    private var previewScrubbingEnabled = false
+    private val _previewPlayerGeneration = MutableStateFlow(0)
+
+    /** Bumped whenever the preview player instance is replaced; views rebind to [getPlayer]. */
+    val previewPlayerGeneration: StateFlow<Int> = _previewPlayerGeneration
+    private val previewGraphListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) previewGraphWatch?.inputEnded = true
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            if (error.errorCode == PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED) {
+                previewGraphWatch?.inputEnded = true
+            }
+        }
+    }
     private var previewCompositionPlan = PreviewCompositionPlan.create(emptyList())
     private var previewTracks: List<Track> = emptyList()
     private var previewMissingClipIds: Set<String> = emptySet()
@@ -403,14 +431,17 @@ class VideoEngine @Inject constructor(
                     .build()
                 val previewAudioAttributes = ClearCutAudioFocusPolicy.buildPreviewAttributes()
                 logAndroid15LoudnessIntegration("Preview")
+                val graphWatch = EndOfInputWatchingVideoGraphFactory(MultipleInputVideoGraph.Factory())
                 player = CompositionPlayer.Builder(context)
                     .setLoadControl(loadControl)
-                    .setVideoGraphFactory(MultipleInputVideoGraph.Factory())
+                    .setVideoGraphFactory(graphWatch)
                     .setAudioAttributes(previewAudioAttributes, true)
                     .build()
                     .apply {
+                        addListener(previewGraphListener)
                         playerListener?.let(::addListener)
                     }
+                previewGraphWatch = graphWatch
                 playerLease = lease
             } catch (t: Throwable) {
                 player?.release()
@@ -436,7 +467,32 @@ class VideoEngine @Inject constructor(
      */
     @androidx.annotation.OptIn(UnstableApi::class)
     fun setScrubbingMode(enabled: Boolean) {
+        previewScrubbingEnabled = enabled
         player?.setScrubbingModeEnabled(enabled)
+    }
+
+    /**
+     * Replaces a preview player whose compositor has seen end of input. The fresh
+     * instance keeps the scrubbing mode; callers set the composition.
+     */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun replaceSpentPreviewPlayer(): Boolean {
+        val spent = player ?: return false
+        if (!previewGraphSpent) return false
+        // Release can time out on a busy device and reports that as a player
+        // error. It belongs to an instance nobody watches any more, so it must not
+        // reach the session and stop the replacement.
+        spent.removeListener(previewGraphListener)
+        playerListener?.let(spent::removeListener)
+        spent.release()
+        player = null
+        previewGraphWatch = null
+        playerLease?.close()
+        playerLease = null
+        val fresh = getPlayer() as CompositionPlayer
+        if (previewScrubbingEnabled) fresh.setScrubbingModeEnabled(true)
+        _previewPlayerGeneration.value += 1
+        return true
     }
 
     fun setPlayerListener(listener: Player.Listener) {
@@ -458,8 +514,10 @@ class VideoEngine @Inject constructor(
         config: ExportConfig = ExportConfig(),
         trackedObjects: List<TrackedObject> = emptyList(),
     ) {
+        val previous = getPlayer() as CompositionPlayer
+        val resumePlayback = previous.playWhenReady && previous.playbackState != Player.STATE_ENDED
+        replaceSpentPreviewPlayer()
         val p = getPlayer() as CompositionPlayer
-        val resumePlayback = p.playWhenReady && p.playbackState != Player.STATE_ENDED
         p.pause()
         previewTrackedObjects = trackedObjects
         previewTracks = tracks
@@ -480,7 +538,23 @@ class VideoEngine @Inject constructor(
     }
 
     fun seekTo(positionMs: Long) {
+        if (renewSpentPreviewPlayer(positionMs)) return
         player?.seekTo(positionMs.coerceIn(0L, previewCompositionPlan.durationMs))
+    }
+
+    /** Swaps a spent preview player for a fresh one prepared at [positionMs]. */
+    @androidx.annotation.OptIn(UnstableApi::class)
+    private fun renewSpentPreviewPlayer(positionMs: Long): Boolean {
+        if (!previewGraphSpent || player == null) return false
+        replaceSpentPreviewPlayer()
+        prepareTimeline(
+            tracks = previewTracks,
+            missingClipIds = previewMissingClipIds,
+            startPositionMs = positionMs,
+            config = previewConfig,
+            trackedObjects = previewTrackedObjects,
+        )
+        return true
     }
 
     fun getAbsolutePositionMs(): Long = player?.currentPosition
@@ -489,6 +563,10 @@ class VideoEngine @Inject constructor(
     fun play() { player?.play() }
 
     fun playFromTimelinePosition(positionMs: Long, restartSession: Boolean = false) {
+        if (renewSpentPreviewPlayer(positionMs)) {
+            player?.play()
+            return
+        }
         val p = player ?: return
         val resetSession = playbackSessionNeedsReset(
             forceRestart = restartSession,
@@ -2932,6 +3010,7 @@ class VideoEngine @Inject constructor(
         removePlayerListener()
         player?.release()
         player = null
+        previewGraphWatch = null
         playerLease?.close()
         playerLease = null
         if (noisyReceiverRegistered) {

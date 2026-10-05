@@ -311,10 +311,15 @@ fun PreviewPanel(
                     ) {
                         var isBuffering by remember { mutableStateOf(false) }
                         var hasPlaybackError by remember { mutableStateOf(false) }
-                        DisposableEffect(engine) {
+                        // The engine replaces a player whose compositor has ended (issue #54),
+                        // so the listener and the PlayerView follow the current instance.
+                        val playerGeneration by engine.previewPlayerGeneration.collectAsState()
+                        val previewPlayer = remember(engine, playerGeneration) { engine.getPlayer() }
+                        DisposableEffect(previewPlayer) {
                             // Capture the player reference once; reuse on dispose to avoid
                             // attaching/removing on different player instances if engine state changes.
-                            val capturedPlayer = engine.getPlayer()
+                            val capturedPlayer = previewPlayer
+                            hasPlaybackError = false
                             val listener = object : Player.Listener {
                                 override fun onPlaybackStateChanged(state: Int) {
                                     isBuffering = state == Player.STATE_BUFFERING
@@ -346,8 +351,7 @@ fun PreviewPanel(
                                 }
                             },
                             update = { playerView ->
-                                val player = engine.getPlayer()
-                                if (playerView.player !== player) playerView.player = player
+                                if (playerView.player !== previewPlayer) playerView.player = previewPlayer
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                                     (playerView.videoSurfaceView as? SurfaceView)
                                         ?.setDesiredHdrHeadroom(desiredPreviewHdrHeadroom)

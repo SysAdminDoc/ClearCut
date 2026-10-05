@@ -3,7 +3,16 @@ package com.novacut.editor.engine
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.PixelFormat
+import android.media.ImageReader
 import android.net.Uri
+import android.os.Handler
+import android.os.HandlerThread
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
+import androidx.media3.common.util.Size
+import androidx.media3.transformer.CompositionPlayer
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.novacut.editor.engine.segmentation.SegmentationEngine
@@ -22,8 +31,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
-/** Device contracts for issue #54: photo timelines export. */
+/** Device contracts for issue #54: photo timelines export, and preview survives its own end. */
 @RunWith(AndroidJUnit4::class)
 class StillImageTimelineInstrumentationTest {
 
@@ -76,6 +88,151 @@ class StillImageTimelineInstrumentationTest {
         }
     }
 
+    @Test
+    fun previewPlaysAndScrubsAgainAfterTheTimelineEnds() = withPreviewSession { session ->
+        session.prepare(startPositionMs = 0L, play = true)
+        session.awaitEnded("first playback")
+
+        // The editor's loop and Play-at-end both restart from the top; each pass
+        // needs a player whose compositor has not already seen end of input.
+        repeat(3) { pass ->
+            session.playFromTop()
+            session.awaitEnded("replay ${pass + 1}")
+        }
+
+        session.seekTo(500L)
+        session.awaitReady("scrub after the end")
+    }
+
+    @Test
+    fun previewOpenedWithThePlayheadAtTheEndPlaysFromTheTop() = withPreviewSession { session ->
+        // A project reopens at its saved playhead. Parked at the end, the sequences
+        // signal end of input without the player ever reporting it ended.
+        session.prepare(startPositionMs = PREVIEW_TIMELINE_MS, play = false)
+        session.awaitReady("prepare at the end")
+
+        session.playFromTop()
+        session.awaitEnded("playback from the top")
+    }
+
+    private fun withPreviewSession(block: (PreviewSession) -> Unit) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val video = File(context.cacheDir, "replay-source.mp4")
+        instrumentation.context.assets.open("trim-boundary.mp4").use { input ->
+            video.outputStream().use(input::copyTo)
+        }
+        val still = writeStill(context, "replay-still.png", Color.GREEN)
+        val track = Track(
+            type = TrackType.VIDEO,
+            index = 0,
+            clips = listOf(
+                Clip(
+                    sourceUri = Uri.fromFile(video),
+                    sourceDurationMs = 1_000L,
+                    timelineStartMs = 0L,
+                ),
+                stillClip(still, timelineStartMs = 1_000L, trimEndMs = 1_000L, sourceDurationMs = 1_000L),
+            ),
+        )
+        val session = PreviewSession(buildVideoEngine(context), track)
+        try {
+            block(session)
+        } finally {
+            session.release()
+            video.delete()
+            still.delete()
+        }
+    }
+
+    /** Drives a [VideoEngine] preview the way the editor does, on the main thread. */
+    private class PreviewSession(private val engine: VideoEngine, private val track: Track) {
+        private val instrumentation = InstrumentationRegistry.getInstrumentation()
+        private val failure = AtomicReference<PlaybackException?>()
+        private val ended = AtomicReference(CountDownLatch(1))
+        private val ready = AtomicReference(CountDownLatch(1))
+        private val imageThread = HandlerThread("still-replay-frames").apply { start() }
+        private val imageReader = ImageReader.newInstance(64, 64, PixelFormat.RGBA_8888, 3).apply {
+            setOnImageAvailableListener({ reader ->
+                reader.acquireLatestImage()?.close()
+            }, Handler(imageThread.looper))
+        }
+        private var boundPlayer: Player? = null
+
+        init {
+            val listener = object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_READY) ready.get().countDown()
+                    if (playbackState == Player.STATE_ENDED) {
+                        ready.get().countDown()
+                        ended.get().countDown()
+                    }
+                }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    failure.set(error)
+                    ready.get().countDown()
+                    ended.get().countDown()
+                }
+            }
+            instrumentation.runOnMainSync { engine.setPlayerListener(listener) }
+        }
+
+        fun prepare(startPositionMs: Long, play: Boolean) = onMain {
+            bindSurface()
+            engine.prepareTimeline(listOf(track), startPositionMs = startPositionMs)
+            if (play) engine.play()
+        }
+
+        fun playFromTop() = onMain {
+            engine.playFromTimelinePosition(0L, restartSession = true)
+            if (bindSurface()) {
+                // The replacement asked for audio focus before bindSurface() could
+                // turn focus handling off, and the denial dropped its play request.
+                engine.pause()
+                engine.play()
+            }
+        }
+
+        fun seekTo(positionMs: Long) = onMain {
+            engine.seekTo(positionMs)
+            bindSurface()
+        }
+
+        fun awaitEnded(step: String) = await(ended, step, "end")
+
+        fun awaitReady(step: String) = await(ready, step, "settle")
+
+        private fun await(latch: AtomicReference<CountDownLatch>, step: String, what: String) {
+            assertTrue("$step did not $what", latch.get().await(30, TimeUnit.SECONDS))
+            assertNull("$step failed: ${failure.get()?.message}", failure.get())
+        }
+
+        private fun onMain(action: () -> Unit) {
+            ended.set(CountDownLatch(1))
+            ready.set(CountDownLatch(1))
+            instrumentation.runOnMainSync(action)
+        }
+
+        /** Returns true when the engine handed out a new player instance. */
+        private fun bindSurface(): Boolean {
+            val player = engine.getPlayer() as CompositionPlayer
+            if (player === boundPlayer) return false
+            // Android 15 denies audio focus to a process with no foreground
+            // activity, which would hold playback forever under instrumentation.
+            player.setAudioAttributes(AudioAttributes.DEFAULT, false)
+            player.setVideoSurface(imageReader.surface, Size(64, 64))
+            boundPlayer = player
+            return true
+        }
+
+        fun release() {
+            instrumentation.runOnMainSync { engine.release() }
+            imageReader.close()
+            imageThread.quitSafely()
+        }
+    }
+
     private fun stillClip(
         file: File,
         timelineStartMs: Long,
@@ -120,5 +277,9 @@ class StillImageTimelineInstrumentationTest {
             memoryTrimRegistry = MemoryTrimRegistry(),
             productHealthLedger = ProductHealthLedger(context),
         )
+    }
+
+    private companion object {
+        const val PREVIEW_TIMELINE_MS = 2_000L
     }
 }

@@ -34,6 +34,56 @@ class EditorPlaybackCoordinatorTest {
     }
 
     @Test
+    fun aLoopRestartsAFreshSessionFromTheTopInsteadOfWrapping() = runBlocking {
+        val port = FakePlaybackPort()
+        val events = mutableListOf<String>()
+        val coordinator = coordinator(
+            port = port,
+        )
+
+        coordinator.start(this, callbacks(
+            events = events,
+            snapshot = { snapshot(playheadMs = 5_000L, totalDurationMs = 5_000L) },
+        ))
+        coordinator.setLooping(true)
+        port.emitPlayWhenReady(true)
+        port.positionMs = 5_000L
+        port.emitEnded()
+        // Issue #54: the restart replaces the player, so it waits until the
+        // ended callback has returned rather than releasing it mid-dispatch.
+        assertEquals(0, port.playRequests)
+        yield()
+        coordinator.stop()
+
+        assertEquals(listOf("requested:true", "surface:0"), events)
+        assertEquals(1, port.playRequests)
+        assertTrue(port.lastRestartSession)
+        assertEquals(0L, port.positionMs)
+        assertEquals(0, port.pauseCount)
+    }
+
+    @Test
+    fun aLoopParkedAtTheEndDoesNotStartPlaybackOnItsOwn() = runBlocking {
+        val port = FakePlaybackPort()
+        val events = mutableListOf<String>()
+        val coordinator = coordinator(
+            port = port,
+        )
+
+        coordinator.start(this, callbacks(
+            events = events,
+            snapshot = { snapshot(totalDurationMs = 5_000L, isPlaybackRequested = false) },
+        ))
+        coordinator.setLooping(true)
+        port.emitEnded()
+        yield()
+        coordinator.stop()
+
+        assertEquals(listOf("ended:5000"), events)
+        assertEquals(0, port.playRequests)
+    }
+
+    @Test
     fun stalledPlaybackIsRestartedThenReportsAStartFailure() = runBlocking {
         val port = FakePlaybackPort()
         val events = mutableListOf<String>()
@@ -143,7 +193,7 @@ class EditorPlaybackCoordinatorTest {
         var playRequests = 0
         var pauseCount = 0
         var scrubbing = false
-        var loopingEnabled = false
+        var lastRestartSession = false
         private var listener: Player.Listener? = null
 
         override fun setPlayerListener(listener: Player.Listener) {
@@ -164,6 +214,7 @@ class EditorPlaybackCoordinatorTest {
             this.positionMs = positionMs
             requested = true
             ended = false
+            lastRestartSession = restartSession
             playRequests++
         }
 
@@ -183,10 +234,6 @@ class EditorPlaybackCoordinatorTest {
 
         override fun setScrubbingMode(enabled: Boolean) {
             scrubbing = enabled
-        }
-
-        override fun setLooping(enabled: Boolean) {
-            loopingEnabled = enabled
         }
 
         fun emitPlaying(playing: Boolean) {

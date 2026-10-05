@@ -60,7 +60,10 @@ class PreviewSurfaceRecoveryTest {
         val overlayStateIndex = source.indexOf("hasPlaybackError ->")
 
         assertTrue("PlayerView must exist before transient overlay branches", playerViewIndex in 0 until overlayStateIndex)
-        assertTrue(source.contains("if (playerView.player !== player) playerView.player = player"))
+        assertTrue(source.contains("if (playerView.player !== previewPlayer) playerView.player = previewPlayer"))
+        // Issue #54: the engine swaps out a player whose compositor has ended, and
+        // the view has to follow it rather than keep rendering the released one.
+        assertTrue(source.contains("remember(engine, playerGeneration) { engine.getPlayer() }"))
         assertFalse(source.contains("else -> {\n                                AndroidView("))
     }
 
