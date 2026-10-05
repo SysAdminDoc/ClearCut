@@ -19,6 +19,7 @@ import com.novacut.editor.model.ProxyResolution
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -162,9 +163,9 @@ class ProxyEngine @Inject constructor(
         // Hold the per-key mutex across the existence check + transformer
         // start so concurrent callers for the same source serialise: the
         // second caller sees the completed file on re-entry instead of
-        // kicking off a duplicate render.
-        mutexFor(key).lock()
-        try {
+        // kicking off a duplicate render. withLock releases it on every
+        // return, the cached-file one included.
+        mutexFor(key).withLock {
             // A previous export attempt may have left a zero-byte file on disk
             // (e.g. the transformer crashed before writing any data).  Treat
             // zero-length files as absent so we re-render rather than returning
@@ -173,116 +174,99 @@ class ProxyEngine @Inject constructor(
                 proxyMap[key] = Uri.fromFile(outFile)
                 return@withContext Uri.fromFile(outFile)
             }
-        } catch (t: Throwable) {
-            mutexFor(key).unlock()
-            throw t
-        }
 
-        val targetHeight = try {
-            when (val resolved = plan ?: planProxy(sourceUri, resolution)) {
+            val targetHeight = when (val resolved = plan ?: planProxy(sourceUri, resolution)) {
                 is ProxyResolutionPolicy.Plan.Generate -> resolved.targetHeight
                 is ProxyResolutionPolicy.Plan.UseSource -> {
                     AppLog.i("ProxyEngine", "No proxy generated: ${resolved.reason}")
-                    null
+                    return@withContext null
                 }
             }
-        } catch (t: Throwable) {
-            mutexFor(key).unlock()
-            throw t
-        }
-        if (targetHeight == null) {
-            mutexFor(key).unlock()
-            return@withContext null
-        }
 
-        activeProxyKeys.add(key)
-        var pipelineLease: CodecLease<Unit>? = null
-        try {
-            // Transformer owns the source decoder and output encoder. Hold a
-            // shared video-family permit for the complete proxy lifecycle so
-            // proxy generation queues behind preview/retriever work instead
-            // of turning a codec-ceiling collision into a failed render.
-            pipelineLease = CodecInstanceBudget.acquirePipelineBlocking()
-            suspendCancellableCoroutine { cont ->
-                val mediaItem = MediaItem.fromUri(sourceUri)
+            activeProxyKeys.add(key)
+            var pipelineLease: CodecLease<Unit>? = null
+            try {
+                // Transformer owns the source decoder and output encoder. Hold a
+                // shared video-family permit for the complete proxy lifecycle so
+                // proxy generation queues behind preview/retriever work instead
+                // of turning a codec-ceiling collision into a failed render.
+                pipelineLease = CodecInstanceBudget.acquirePipelineBlocking()
+                suspendCancellableCoroutine { cont ->
+                    val mediaItem = MediaItem.fromUri(sourceUri)
 
-                // Presentation sizes the displayed (rotated) frame, so the proxy keeps the
-                // source's orientation at the planned height.
-                val presentation = Presentation.createForHeight(targetHeight)
-                    .copyWithUnsetSideRoundedTo(Media3ExportRobustnessPolicy.ENCODER_DIMENSION_DIVISOR)
+                    // Presentation sizes the displayed (rotated) frame, so the proxy keeps the
+                    // source's orientation at the planned height.
+                    val presentation = Presentation.createForHeight(targetHeight)
+                        .copyWithUnsetSideRoundedTo(Media3ExportRobustnessPolicy.ENCODER_DIMENSION_DIVISOR)
 
-                val editedItem = EditedMediaItem.Builder(mediaItem)
-                    .setEffects(Effects(emptyList(), listOf(presentation)))
-                    .build()
+                    val editedItem = EditedMediaItem.Builder(mediaItem)
+                        .setEffects(Effects(emptyList(), listOf(presentation)))
+                        .build()
 
-                val transformer = Transformer.Builder(context)
-                    .setAssetLoaderFactory(
-                        Media3DecoderFallback.assetLoaderFactory(context) { note -> AppLog.w("ProxyEngine", note) }
-                    )
-                    .addListener(object : Transformer.Listener {
-                        override fun onCompleted(composition: Composition, exportResult: androidx.media3.transformer.ExportResult) {
-                            if (!cont.isActive) {
+                    val transformer = Transformer.Builder(context)
+                        .setAssetLoaderFactory(
+                            Media3DecoderFallback.assetLoaderFactory(context) { note -> AppLog.w("ProxyEngine", note) }
+                        )
+                        .addListener(object : Transformer.Listener {
+                            override fun onCompleted(composition: Composition, exportResult: androidx.media3.transformer.ExportResult) {
+                                if (!cont.isActive) {
+                                    outFile.delete()
+                                    proxyMap.remove(key)
+                                    return
+                                }
+                                if (outFile.isFile && outFile.length() > 0L) {
+                                    val proxyUri = Uri.fromFile(outFile)
+                                    proxyMap[key] = proxyUri
+                                    cont.resume(proxyUri)
+                                } else {
+                                    outFile.delete()
+                                    cont.resume(null)
+                                }
+                            }
+                            override fun onError(composition: Composition, exportResult: androidx.media3.transformer.ExportResult, exportException: androidx.media3.transformer.ExportException) {
+                                AppLog.e("ProxyEngine", "Proxy generation failed", exportException)
                                 outFile.delete()
                                 proxyMap.remove(key)
-                                return
+                                if (cont.isActive) cont.resume(null)
                             }
-                            if (outFile.isFile && outFile.length() > 0L) {
-                                val proxyUri = Uri.fromFile(outFile)
-                                proxyMap[key] = proxyUri
-                                cont.resume(proxyUri)
-                            } else {
-                                outFile.delete()
-                                cont.resume(null)
-                            }
-                        }
-                        override fun onError(composition: Composition, exportResult: androidx.media3.transformer.ExportResult, exportException: androidx.media3.transformer.ExportException) {
-                            AppLog.e("ProxyEngine", "Proxy generation failed", exportException)
+                        })
+                        .build()
+
+                    val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
+                        .addItem(editedItem)
+                        .build()
+                    transformer.start(
+                        Composition.Builder(sequence).build(),
+                        outFile.absolutePath
+                    )
+
+                    cont.invokeOnCancellation {
+                        // invokeOnCancellation runs on whichever thread triggers
+                        // cancellation (e.g. WorkManager's executor when a
+                        // CoroutineWorker is stopped mid-transcode). Media3
+                        // Transformer.cancel() must run on its application thread
+                        // (main) or it throws IllegalStateException — and an
+                        // exception inside a cancellation handler crashes the
+                        // process. Post it to the main looper.
+                        Handler(Looper.getMainLooper()).post {
+                            runCatching { transformer.cancel() }
                             outFile.delete()
                             proxyMap.remove(key)
-                            if (cont.isActive) cont.resume(null)
                         }
-                    })
-                    .build()
-
-                val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
-                    .addItem(editedItem)
-                    .build()
-                transformer.start(
-                    Composition.Builder(sequence).build(),
-                    outFile.absolutePath
-                )
-
-                cont.invokeOnCancellation {
-                    // invokeOnCancellation runs on whichever thread triggers
-                    // cancellation (e.g. WorkManager's executor when a
-                    // CoroutineWorker is stopped mid-transcode). Media3
-                    // Transformer.cancel() must run on its application thread
-                    // (main) or it throws IllegalStateException — and an
-                    // exception inside a cancellation handler crashes the
-                    // process. Post it to the main looper.
-                    Handler(Looper.getMainLooper()).post {
-                        runCatching { transformer.cancel() }
-                        outFile.delete()
-                        proxyMap.remove(key)
                     }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // Preserve structured cancellation — don't mask it as a null result.
+                proxyMap.remove(key)
+                throw e
+            } catch (e: Exception) {
+                AppLog.e("ProxyEngine", "Proxy generation error", e)
+                proxyMap.remove(key)
+                null
+            } finally {
+                pipelineLease?.close()
+                activeProxyKeys.remove(key)
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            // Preserve structured cancellation — don't mask it as a null result.
-            proxyMap.remove(key)
-            throw e
-        } catch (e: Exception) {
-            AppLog.e("ProxyEngine", "Proxy generation error", e)
-            proxyMap.remove(key)
-            null
-        } finally {
-            pipelineLease?.close()
-            activeProxyKeys.remove(key)
-            // Always release the per-key mutex so the next caller (or a
-            // retry after a failure) can try again. Using runCatching so a
-            // stray mutex-state mismatch can't mask the real exception
-            // being propagated out of this suspend fn.
-            runCatching { mutexFor(key).unlock() }
         }
     }
 

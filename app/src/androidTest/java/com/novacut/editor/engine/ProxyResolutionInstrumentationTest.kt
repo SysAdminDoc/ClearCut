@@ -8,6 +8,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.novacut.editor.engine.ProxyResolutionPolicy.Plan
 import com.novacut.editor.model.ProxyResolution
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -54,6 +55,18 @@ class ProxyResolutionInstrumentationTest {
         val proxy = checkNotNull(engine.generateProxy(source, ProxyResolution.EIGHTH))
 
         assertEquals(160 to 120, shownSize(proxy))
+    }
+
+    @Test
+    fun aCachedProxyCanBeAskedForAgainAndAgain() = runBlocking {
+        val source = Uri.fromFile(copyAsset("trim-boundary.mp4"))
+        val rendered = checkNotNull(engine.generateProxy(source, ProxyResolution.EIGHTH))
+
+        // Returning the cached file used to keep the per-source lock, so the request after
+        // it never came back.
+        repeat(2) {
+            assertEquals(rendered, withTimeout(10_000) { engine.generateProxy(source, ProxyResolution.EIGHTH) })
+        }
     }
 
     @Test
