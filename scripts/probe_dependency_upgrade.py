@@ -85,6 +85,30 @@ def preflight(dependency: str, candidate: str, catalog: dict[str, str]) -> None:
             )
 
 
+def write_snapshot(snapshot: dict) -> None:
+    temporary = SNAPSHOT.with_suffix(".tmp")
+    temporary.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(SNAPSHOT)
+
+
+def provisional_snapshot(snapshot: dict, dependency: str, candidate: str) -> dict:
+    """The snapshot as it must read while the probe runs.
+
+    The probe's own unit tests require the snapshot pin to match the staged catalog, so the
+    run sees the candidate pin marked as an unfinished probe. main() puts the original back
+    if the run does not pass.
+    """
+    provisional = json.loads(json.dumps(snapshot))
+    entry = provisional["dependencies"][dependency]
+    command = f"python scripts/probe_dependency_upgrade.py --dependency {dependency} --version {candidate}"
+    entry["pinnedVersion"] = candidate
+    entry["state"] = "probing"
+    entry["reason"] = f"A local compatibility probe for {candidate} is running and has not passed yet."
+    entry["unblockCondition"] = f"Let `{command}` finish; it records the result or restores the previous entry."
+    entry["compatibilityProbe"] = {"status": "running", "version": candidate, "command": command}
+    return provisional
+
+
 def write_probe_result(snapshot: dict, dependency: str, candidate: str, command: list[str]) -> None:
     entry = snapshot["dependencies"][dependency]
     entry["pinnedVersion"] = candidate
@@ -101,9 +125,14 @@ def write_probe_result(snapshot: dict, dependency: str, candidate: str, command:
         entry["state"] = "current"
         entry["reason"] = "The catalog pin matches the latest stable version after a passing local compatibility probe."
         entry["unblockCondition"] = "Run `python scripts/refresh_dependency_freshness.py` before changing this pin."
-    temporary = SNAPSHOT.with_suffix(".tmp")
-    temporary.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
-    temporary.replace(SNAPSHOT)
+        # Same shape refresh_dependency_freshness.py gives a current entry.
+        entry["candidateDecision"] = {
+            "action": "adopt",
+            "candidateVersion": candidate,
+            "releaseChannel": "stable",
+            "probe": f"python scripts/probe_dependency_upgrade.py --dependency {dependency} --version {candidate}",
+        }
+    write_snapshot(snapshot)
 
 
 def main() -> int:
@@ -138,7 +167,16 @@ def main() -> int:
     ]
     process_command = [str(ROOT / "gradlew.bat"), *display_command[1:]]
     print(f"running compatibility probe for {args.dependency} {args.version}")
-    result = subprocess.run(process_command, cwd=ROOT, check=False)
+    original_snapshot = SNAPSHOT.read_bytes()
+    write_snapshot(provisional_snapshot(snapshot, args.dependency, args.version))
+    passed = False
+    try:
+        result = subprocess.run(process_command, cwd=ROOT, check=False)
+        passed = result.returncode == 0
+    finally:
+        # Anything short of a pass, an interrupt included, leaves the snapshot as the probe found it.
+        if not passed:
+            SNAPSHOT.write_bytes(original_snapshot)
     if result.returncode != 0:
         print(f"dependency compatibility probe failed with exit code {result.returncode}", file=sys.stderr)
         return result.returncode or 1
