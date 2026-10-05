@@ -66,7 +66,6 @@ import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.requiresStreamSafeOutput
-import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -149,6 +148,7 @@ class ExportDelegate(
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
     @Volatile private var activeVideoExportJob: kotlinx.coroutines.Job? = null
     @Volatile private var videoRenderJob: kotlinx.coroutines.Job? = null
+    @Volatile private var videoFinishJob: kotlinx.coroutines.Job? = null
     private val saveToGalleryGate = ExportSaveGate()
     @Volatile private var activeResumeSession: ActiveResumeSession? = null
     private val preservedResumeOutputPaths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
@@ -705,6 +705,8 @@ class ExportDelegate(
             videoEngine.cancelExport()
         }
         val resumePartial = settleResumePartial(resumeSession, preservedOutput, ::deleteOwnedResumeFile)
+        // After the engine kept or dropped its partial: a stream copy only stops this way.
+        videoRenderJob?.cancel()
         lastCancelledBatchResumePath = if (activeBatchItemId != null) {
             resumePartial?.absolutePath
         } else {
@@ -738,12 +740,16 @@ class ExportDelegate(
         }
     }
 
-    /** Waits, up to 30 seconds, for the last export's coroutines to finish reporting. */
+    /**
+     * Waits, up to 30 seconds, for the last export's coroutines to finish reporting, then
+     * for finishing a completed render (burn-in, sidecars), which is real work and can fail it.
+     */
     private suspend fun awaitExportSettled() {
         val settled = kotlinx.coroutines.withTimeoutOrNull(30_000L) {
             listOfNotNull(activeVideoExportJob, videoRenderJob, nonVideoExportJob).forEach { it.join() }
         }
         if (settled == null) AppLog.w("ExportDelegate", "Batch item's export was still unwinding after 30 s")
+        videoFinishJob?.join()
     }
 
     /** Shows and records an export Android stopped or refused to start. */
@@ -798,7 +804,7 @@ class ExportDelegate(
                 startExportAsync(
                     outputDir = outputDir,
                     preferredOutputName = preferredOutputName,
-                    currentState = currentState,
+                    requestedState = currentState,
                     outputFileOverride = outputFileOverride,
                     batchResumePartialPath = batchResumePartialPath,
                 )
@@ -853,7 +859,7 @@ class ExportDelegate(
             startExportAsync(
                 outputDir = requireNotNull(partialFile.parentFile),
                 preferredOutputName = partialFile.nameWithoutExtension,
-                currentState = currentState,
+                requestedState = currentState,
                 resumeCandidate = entry,
             )
         }
@@ -872,7 +878,7 @@ class ExportDelegate(
             startExportAsync(
                 outputDir = File(request.outputDirPath),
                 preferredOutputName = request.preferredOutputName,
-                currentState = currentState,
+                requestedState = currentState,
                 acceptedConfirmation = request,
             )
         }
@@ -937,13 +943,14 @@ class ExportDelegate(
     private suspend fun startExportAsync(
         outputDir: File,
         preferredOutputName: String?,
-        currentState: EditorState,
+        requestedState: EditorState,
         acceptedConfirmation: ExportConfirmationRequest? = null,
         resumeCandidate: ExportHistoryEntry? = null,
         outputFileOverride: File? = null,
         batchResumePartialPath: String? = null,
     ) {
         updateExport { it.prepareForExportAttempt() }
+        val currentState = requestedState.withSourceColorInspected(appContext)
         acceptedFallbackNote = acceptedConfirmation?.acceptedFallbackSummary()
         runtimeExportNote = null
         val healthReport = mediaHealthPreflight(currentState)
@@ -1663,7 +1670,7 @@ class ExportDelegate(
               // thread-safe; ordering is preserved because the COMPLETE state that
               // exposes the Share/Save buttons is set only after the sidecars and
               // burn-in finish inside this same coroutine.
-              scope.launch(Dispatchers.IO) {
+              videoFinishJob = scope.launch(Dispatchers.IO) {
                 // If the project carries scratchpad notes, drop them next to the
                 // render as a `.txt` sidecar; failure is logged, never fatal.
                 val notes = currentState.project.notes
@@ -2327,48 +2334,6 @@ class ExportDelegate(
         updateBatchQueue { queue -> queue + item }
     }
 
-    private fun batchExportState(
-        baseState: EditorState,
-        item: BatchExportItem,
-    ): EditorState {
-        val sourceRange = item.sourceRange ?: return baseState.copyExport { export ->
-            export.copy(
-                config = item.config,
-                state = ExportState.IDLE,
-                progress = 0f,
-                errorMessage = null,
-                pendingConfirmation = null,
-            )
-        }
-        val sourceClip = sourceRange.toClip("batch-${item.id}-${sourceRange.clipId}")
-        val sourceTrack = Track(
-            id = "batch-${item.id}-track",
-            type = sourceRange.trackType,
-            index = 0,
-            clips = listOf(sourceClip),
-        )
-        return baseState.copy(
-            tracks = listOf(sourceTrack),
-            selectedClipId = sourceClip.id,
-            selectedTrackId = sourceTrack.id,
-            selectedClipIds = setOf(sourceClip.id),
-            totalDurationMs = sourceClip.durationMs,
-            textOverlays = emptyList(),
-            imageOverlays = emptyList(),
-            timelineMarkers = emptyList(),
-            globalTransitions = emptyList(),
-            trackedObjects = emptyList(),
-        ).copyExport { export ->
-            export.copy(
-                config = item.config.copy(timelineRange = null),
-                state = ExportState.IDLE,
-                progress = 0f,
-                errorMessage = null,
-                pendingConfirmation = null,
-            )
-        }
-    }
-
     private fun batchVideoOutputExtension(config: ExportConfig): String? = when {
         config.exportAudioOnly || config.exportStemsOnly ||
             config.exportAsGif || config.exportAsContactSheet -> null
@@ -2551,7 +2516,7 @@ class ExportDelegate(
                 "ClearCut"
             ).apply { mkdirs() }
             val batchState = stateFlow.value
-            val itemStates = queue.associateWith { item -> batchExportState(batchState, item) }
+            val itemStates = queue.associateWith { item -> batchState.forBatchItem(item) }
             val storageCheck = ExportStoragePolicy.checkBatch(
                 requests = queue.map { item ->
                     val itemState = requireNotNull(itemStates[item])
@@ -2705,10 +2670,13 @@ class ExportDelegate(
                         activeBatchItemId = null
                         continue
                     }
-                    val result = outcome.first
-                    // The engine's ERROR reaches this state before the render coroutine
-                    // records why, and the old run must unwind before the next item starts.
+                    // The engine's ERROR and COMPLETE reach this state before the render
+                    // coroutine records why or finishes the file, and the old run must
+                    // unwind before the next item starts.
                     awaitExportSettled()
+                    val result = stateFlow.value.exportState.takeIf {
+                        it == ExportState.COMPLETE || it == ExportState.ERROR || it == ExportState.CANCELLED
+                    } ?: outcome.first
                     val interruption = lastBatchInterruption.takeIf { result == ExportState.ERROR }
                     val interrupted = interruption != null || (result == ExportState.ERROR &&
                         videoEngine.exportFailureCause.value == VideoEngine.ExportFailureCause.SERVICE_TIMEOUT)

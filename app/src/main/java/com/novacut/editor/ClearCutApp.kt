@@ -10,6 +10,7 @@ import androidx.work.Configuration
 import com.novacut.editor.BuildConfig
 import com.novacut.editor.engine.CrashRecordStore
 import com.novacut.editor.engine.DebugRuntimePolicy
+import com.novacut.editor.engine.HdrDeviceSupport
 import com.novacut.editor.engine.HealthEvent
 import com.novacut.editor.engine.MemoryTrimDispatcher
 import com.novacut.editor.engine.MediaStorePendingRowSweeper
@@ -84,6 +85,9 @@ class ClearCutApp : Application(), Configuration.Provider {
         applicationScope.launch {
             productHealthLedger.record(HealthEvent.COLD_START)
         }
+        // The probe builds an EGL context and an HEVC decoder; run it here so the
+        // export sheet and preview read a cached answer on the main thread.
+        applicationScope.launch { HdrDeviceSupport.current }
     }
 
     override fun onTerminate() {

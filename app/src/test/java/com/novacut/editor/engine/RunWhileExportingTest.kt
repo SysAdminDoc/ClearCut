@@ -5,6 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
@@ -72,6 +73,30 @@ class RunWhileExportingTest {
         state.value = ExportState.CANCELLED
 
         val failure = withTimeout(5_000L) { run.await() }.exceptionOrNull()
+        assertTrue("got $failure", failure is CancellationException)
+    }
+
+    @Test
+    fun anOuterCancelStaysACancellationEvenWhenTheExportAlsoFailed() = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val caught = CompletableDeferred<Throwable>()
+        val run = launch {
+            try {
+                runWhileExporting(state, throwWhyItStopped) {
+                    started.complete(Unit)
+                    awaitCancellation()
+                }
+            } catch (e: Throwable) {
+                caught.complete(e)
+                throw e
+            }
+        }
+        started.await()
+
+        state.value = ExportState.ERROR
+        run.cancel()
+
+        val failure = withTimeout(5_000L) { caught.await() }
         assertTrue("got $failure", failure is CancellationException)
     }
 }

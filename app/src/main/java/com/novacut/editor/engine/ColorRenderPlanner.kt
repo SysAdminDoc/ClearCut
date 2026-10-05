@@ -117,6 +117,9 @@ enum class ColorPlanIssue(val blocking: Boolean) {
 
     /** The graphics driver can't sample HDR frames, so nothing can stay HDR on this device. */
     DEVICE_CANNOT_PROCESS_HDR(true),
+
+    /** Caption burn-in re-encodes the finished file with FFmpeg's H.264 or MPEG-4 encoder, which drops HDR. */
+    SUBTITLE_BURN_IN_IS_SDR(true),
 }
 
 data class ColorRenderPlan(
@@ -152,6 +155,7 @@ val ColorPlanIssue.messageRes: Int
         ColorPlanIssue.CODEC_CANNOT_CARRY_HDR -> R.string.color_plan_codec_cannot_carry_hdr
         ColorPlanIssue.OVERLAYS_NEED_SDR -> R.string.color_plan_overlays_need_sdr
         ColorPlanIssue.DEVICE_CANNOT_PROCESS_HDR -> R.string.color_plan_device_cannot_process_hdr
+        ColorPlanIssue.SUBTITLE_BURN_IN_IS_SDR -> R.string.color_plan_subtitle_burn_in_is_sdr
     }
 
 /**
@@ -160,6 +164,10 @@ val ColorPlanIssue.messageRes: Int
  * decision. The export adds its codec and overlays, which only add blockers: an export
  * stops before render rather than delivering something the preview didn't show.
  */
+/** The codec the render encodes with: a transparent background always renders VP9. */
+val ExportConfig.renderCodec: VideoCodec
+    get() = if (transparentBackground) VideoCodec.VP9 else codec
+
 object ColorRenderPlanner {
 
     fun plan(
@@ -228,14 +236,20 @@ object ColorRenderPlanner {
         device: HdrDeviceSupport = HdrDeviceSupport.OPEN_GL,
     ): ColorRenderPlan {
         val composition = CompositionPlanBuilder.build(tracks = tracks, additionalDurationsMs = overlayEndsMs)
-        return plan(
+        val plan = plan(
             policy = config.colorPolicy,
             visualTracks = composition.visualTracks,
             totalDurationMs = composition.durationMs,
-            codec = if (config.transparentBackground) VideoCodec.VP9 else config.codec,
+            codec = config.renderCodec,
             overlays = overlays,
             device = device,
         )
+        val burnsCaptions = config.burnSubtitles && tracks.any { track -> track.clips.any { it.captions.isNotEmpty() } }
+        return if (burnsCaptions && plan.hdrMode == ColorHdrMode.KEEP_HDR && plan.expected.isHdr) {
+            plan.copy(issues = plan.issues + ColorPlanIssue.SUBTITLE_BURN_IN_IS_SDR)
+        } else {
+            plan
+        }
     }
 
     /**

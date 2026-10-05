@@ -116,6 +116,8 @@ internal suspend fun <T> runWhileExporting(
     try {
         work.await()
     } catch (e: CancellationException) {
+        // Cancelled from outside, not by the watcher: that stays a cancellation.
+        ensureActive()
         stopped()
         throw e
     } finally {
@@ -2748,8 +2750,9 @@ class VideoEngine @Inject constructor(
 
             val listener = object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
-                    // Guard against callbacks arriving after cancellation or timeout
-                    if (_exportState.value != ExportState.EXPORTING) return
+                    // Guard against callbacks arriving after cancellation or timeout, or
+                    // after a newer export replaced this one.
+                    if (_exportState.value != ExportState.EXPORTING || activeTransformer !== transformer) return
                     if (trimOptimizationEnabled) {
                         val optimizationOutcome =
                             Media3TrimOptimizationPolicy.optimizationOutcome(exportResult.optimizationResult)
@@ -2849,8 +2852,9 @@ class VideoEngine @Inject constructor(
                     exportResult: ExportResult,
                     exportException: ExportException
                 ) {
-                    // Guard against callbacks arriving after cancellation or timeout
-                    if (_exportState.value != ExportState.EXPORTING) return
+                    // Guard against callbacks arriving after cancellation or timeout, or
+                    // after a newer export replaced this one.
+                    if (_exportState.value != ExportState.EXPORTING || activeTransformer !== transformer) return
                     AppLog.e(TAG, "Export failed", exportException)
                     failExport(ExportFailureCause.ENCODER_FAILED, exportException.message ?: "Export encoding failed")
                     _exportState.value = ExportState.ERROR

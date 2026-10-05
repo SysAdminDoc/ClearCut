@@ -388,8 +388,9 @@ fun V369FeaturesPanel(
                 com.novacut.editor.model.VideoCodec.H264
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(
-                    checked = hdr && codecCanCarryHdr,
-                    enabled = codecCanCarryHdr,
+                    checked = hdr,
+                    // Off is always allowed; on needs a codec that can carry HDR.
+                    enabled = hdr || codecCanCarryHdr,
                     onCheckedChange = { on ->
                         viewModel.updateExportConfig(
                             state.exportConfig.copy(colorPolicy = state.exportConfig.colorPolicy.withKeepHdr(on))

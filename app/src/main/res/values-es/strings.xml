@@ -88,11 +88,12 @@
     <string name="settings_project_color_new_default">SDR · Rec. 709</string>
     <string name="color_plan_no_hdr_clips">Mantener HDR está activado, pero ningún clip de la línea de tiempo es HDR, así que esta exportación será SDR.</string>
     <string name="color_plan_mixed_hdr_transfers">Esta línea de tiempo mezcla clips HLG y PQ. La exportación usa el formato HDR del primer clip y convierte los demás.</string>
-    <string name="color_plan_uninspected_clips">Algunos clips se importaron antes de que ClearCut revisara su color, así que no puede confirmar que sean HDR. Vuelva a importarlos para revisarlos.</string>
+    <string name="color_plan_uninspected_clips">Algunos clips se importaron antes de que ClearCut revisara su color, así que este plan no puede confirmar que sean HDR. Se revisan al exportar.</string>
     <string name="color_plan_hdr_read_as_sdr">Los clips HDR se leen como SDR, así que se verán deslavados.</string>
     <string name="color_plan_sdr_mixed_with_hdr">Mantener HDR requiere que todo en la pista de video sea HDR, sin huecos, fotos ni clips SDR. Quítelos o desactive Mantener HDR para adaptar los clips HDR a SDR.</string>
     <string name="color_plan_stacked_hdr">Mantener HDR funciona con una sola pista de video. Las pistas de video apiladas con clips HDR no se pueden combinar en HDR, así que desactive Mantener HDR o pase todo a una sola pista.</string>
     <string name="color_plan_codec_cannot_carry_hdr">H.264 no admite HDR. Elija HEVC, AV1 o VP9, o desactive Mantener HDR.</string>
+    <string name="color_plan_subtitle_burn_in_is_sdr">Grabar los subtítulos en el video lo vuelve a codificar sin HDR. Desactive la grabación y exporte los subtítulos como archivo, o desactive Mantener HDR.</string>
     <string name="color_plan_device_cannot_process_hdr">El controlador gráfico de este teléfono no puede procesar video HDR, así que no se puede mantener HDR. Los clips HDR se exportan en SDR.</string>
     <string name="color_plan_overlays_need_sdr">El texto delineado, las imágenes animadas y las superposiciones de fotos o la marca de agua sin mapa de ganancia Ultra HDR no pueden quedarse en HDR. Quítelos o desactive Mantener HDR.</string>
     <string name="export_history_color">Color: %1$s</string>

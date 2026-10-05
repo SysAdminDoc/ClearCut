@@ -8,8 +8,12 @@ import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.HdrDeviceSupport
 import com.novacut.editor.engine.HdrOverlayAssetInspector
 import com.novacut.editor.engine.HdrOverlayPolicy
+import com.novacut.editor.engine.MediaImportEngine
 import com.novacut.editor.engine.messageRes
+import com.novacut.editor.engine.renderCodec
+import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.SourceColorMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -25,6 +29,29 @@ internal fun EditorState.overlayEndsMs(): List<Long> = listOf(
 
 private val ExportConfig.rendersTaggedVideo: Boolean
     get() = !exportAudioOnly && !exportStemsOnly && !exportAsGif && !captureFrameOnly && !exportAsContactSheet
+
+/**
+ * Clips imported before color inspection, and batch source cuts, get inspected here the
+ * way import does, so the color plan and stream-copy eligibility see what the files are.
+ * A file that can't be read comes back inspected as SDR, which Keep HDR then refuses.
+ */
+internal suspend fun EditorState.withSourceColorInspected(context: Context): EditorState {
+    fun Clip.needsInspection(): Boolean =
+        !sourceColorMetadata.isInspected || compoundClips.any { it.needsInspection() }
+    if (!exportConfig.rendersTaggedVideo || tracks.none { track -> track.clips.any { it.needsInspection() } }) {
+        return this
+    }
+    val engine = MediaImportEngine(context)
+    val inspected = mutableMapOf<String, SourceColorMetadata>()
+    fun Clip.inspected(): Clip = copy(
+        sourceColorMetadata = sourceColorMetadata.takeIf { it.isInspected }
+            ?: inspected.getOrPut(sourceUri.toString()) { engine.inspectSourceColor(sourceUri) },
+        compoundClips = compoundClips.map { it.inspected() },
+    )
+    return withContext(Dispatchers.IO) {
+        copy(tracks = tracks.map { track -> track.copy(clips = track.clips.map { it.inspected() }) })
+    }
+}
 
 /**
  * The project color plan, overlay color and HDR encoder support, checked before a render
@@ -51,9 +78,9 @@ internal suspend fun exportColorPreflight(context: Context, state: EditorState):
     )
     val blockers = plan.blockers.mapTo(mutableListOf()) { context.getString(it.messageRes) }
     if (plan.hdrMode == ColorHdrMode.KEEP_HDR && plan.expected.isHdr) {
-        val support = withContext(Dispatchers.IO) { EncoderCapabilityProbe.queryHdrProfiles(config.codec) }
+        val support = withContext(Dispatchers.IO) { EncoderCapabilityProbe.queryHdrProfiles(config.renderCodec) }
         if (!support.canPreserveHdr) blockers += support.featureFailureReason()
-        HdrOverlayPolicy.evaluate(hdrRequested = true, codec = config.codec, overlays = overlays)
+        HdrOverlayPolicy.evaluate(hdrRequested = true, codec = config.renderCodec, overlays = overlays)
             .takeIf { it.samplerBudgetExceeded }
             ?.disclosure
             ?.let(blockers::add)

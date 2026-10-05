@@ -91,11 +91,12 @@
     <string name="settings_project_color_new_default">SDR · Rec. 709</string>
     <string name="color_plan_no_hdr_clips">Keep HDR is on, but no clip on the timeline is HDR, so this export is SDR.</string>
     <string name="color_plan_mixed_hdr_transfers">HLG and PQ clips share this timeline. The export uses the first clip\'s HDR format and converts the others.</string>
-    <string name="color_plan_uninspected_clips">Some clips were imported before ClearCut checked their color, so it can\'t confirm they\'re HDR. Import them again to check.</string>
+    <string name="color_plan_uninspected_clips">Some clips were imported before ClearCut checked their color, so this plan can\'t confirm they\'re HDR. They\'re checked when you export.</string>
     <string name="color_plan_hdr_read_as_sdr">HDR clips are read as SDR, so they\'ll look washed out.</string>
     <string name="color_plan_sdr_mixed_with_hdr">Keep HDR needs everything on the video track to be HDR, with no gaps, photos or SDR clips. Remove them, or turn off Keep HDR to tone-map the HDR clips to SDR.</string>
     <string name="color_plan_stacked_hdr">Keep HDR works with one video track. Stacked video tracks with HDR clips can\'t be combined in HDR, so turn off Keep HDR or move everything onto one track.</string>
     <string name="color_plan_codec_cannot_carry_hdr">H.264 can\'t carry HDR. Pick HEVC, AV1 or VP9, or turn off Keep HDR.</string>
+    <string name="color_plan_subtitle_burn_in_is_sdr">Burning in captions re-encodes the video without HDR. Turn off burn-in and export the captions as a file, or turn off Keep HDR.</string>
     <string name="color_plan_device_cannot_process_hdr">This phone\'s graphics driver can\'t process HDR video, so HDR can\'t be kept. HDR clips export in SDR.</string>
     <string name="color_plan_overlays_need_sdr">Stroked text, animated images, and photo overlays or a watermark without an Ultra HDR gain map can\'t stay HDR. Remove them, or turn off Keep HDR.</string>
     <string name="export_history_color">Color: %1$s</string>

@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.net.FakeUri
+import com.novacut.editor.model.Caption
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ProjectColorPolicy
@@ -150,6 +151,31 @@ class ColorRenderPlannerTest {
         assertTrue(ColorPlanIssue.CODEC_CANNOT_CARRY_HDR in opaque.blockers)
         assertFalse(transparent.isBlocked)
         assertEquals(DeliveredColor.HLG, transparent.expected)
+    }
+
+    @Test
+    fun burningCaptionsIntoAKeptHdrExportBlocksIt() {
+        val hlg = clip("a", 0L, transfer = "HLG")
+        val captioned = hlg.copy(captions = listOf(Caption(text = "Hi", startTimeMs = 0L, endTimeMs = 500L)))
+        val burn = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = keep, burnSubtitles = true)
+
+        val blocked = ColorRenderPlanner.planExport(burn, listOf(track(captioned)))
+        val noCaptions = ColorRenderPlanner.planExport(burn, listOf(track(hlg)))
+        val sidecarOnly = ColorRenderPlanner.planExport(burn.copy(burnSubtitles = false), listOf(track(captioned)))
+        val sdrPolicy = ColorRenderPlanner.planExport(
+            burn.copy(colorPolicy = ProjectColorPolicy.DEFAULT),
+            listOf(track(captioned)),
+        )
+        val sdrSource = ColorRenderPlanner.planExport(
+            burn,
+            listOf(track(clip("b", 0L, transfer = null).copy(captions = captioned.captions))),
+        )
+
+        assertEquals(listOf(ColorPlanIssue.SUBTITLE_BURN_IN_IS_SDR), blocked.blockers)
+        assertFalse(noCaptions.isBlocked)
+        assertFalse(sidecarOnly.isBlocked)
+        assertFalse(sdrPolicy.isBlocked)
+        assertFalse(sdrSource.isBlocked)
     }
 
     @Test

@@ -31,6 +31,7 @@ import com.novacut.editor.engine.StreamCopyMuxer
 import com.novacut.editor.engine.VideoEngine
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.model.BatchExportStatus
+import com.novacut.editor.model.Caption
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.Project
@@ -220,6 +221,57 @@ class ExportServiceInterruptionInstrumentationTest {
         assertEquals(0, pendingMediaStoreRows())
     }
 
+    @Test
+    fun aBatchWaitsForEachItemsCaptionBurnInBeforeTheNext() {
+        val (state, delegate, _) = buildDelegate(refuseServiceStart = false, ffmpeg = true)
+        mirrorEngineState(state)
+        state.update { current ->
+            val clip = current.tracks.single().clips.single().copy(
+                trimEndMs = 6_000L,
+                captions = listOf(Caption(text = "Burned in", startTimeMs = 500L, endTimeMs = 4_000L)),
+            )
+            current.copy(
+                tracks = listOf(current.tracks.single().copy(clips = listOf(clip))),
+                totalDurationMs = 6_000L,
+            ).copyExport { it.copy(config = it.config.copy(burnSubtitles = true)) }
+        }
+        val config = state.value.exportConfig
+
+        instrumentation.runOnMainSync {
+            delegate.addBatchExportItem(config, "first")
+            delegate.addBatchExportItem(config, "second")
+            delegate.startBatchExport()
+        }
+        waitUntil(240_000L, "the batch to finish", { "queue ${state.value.batchExportQueue.map { it.status }}" }) {
+            state.value.batchExportQueue.none {
+                it.status == BatchExportStatus.QUEUED || it.status == BatchExportStatus.IN_PROGRESS
+            }
+        }
+
+        val queue = state.value.batchExportQueue
+        assertEquals(
+            "errors ${queue.map { it.errorMessage }}",
+            listOf(BatchExportStatus.COMPLETED, BatchExportStatus.COMPLETED),
+            queue.map { it.status },
+        )
+        val outputs = queue.map { File(requireNotNull(it.outputPath) { "a completed item has no output" }) }
+        assertEquals(2, outputs.map { it.absolutePath }.toSet().size)
+        outputs.forEach { output ->
+            val verification = ExportOutputVerifier.verify(
+                outputFile = output,
+                expectVideo = true,
+                expectAudio = true,
+                expectedDurationMs = 6_000L,
+            )
+            assertTrue("$output failed verification: ${verification.reason}", verification.valid)
+        }
+        assertEquals(
+            2,
+            state.value.export.history.count { it.projectId == project.id && it.status == ExportHistoryStatus.COMPLETE },
+        )
+        assertEquals(0, pendingMediaStoreRows())
+    }
+
     /**
      * The editor's mirror (EditorViewModel) publishes engine state into the editor
      * state as it changes, so the batch loop sees ERROR before the render reports why.
@@ -256,6 +308,7 @@ class ExportServiceInterruptionInstrumentationTest {
 
     private fun buildDelegate(
         refuseServiceStart: Boolean,
+        ffmpeg: Boolean = false,
     ): Triple<MutableStateFlow<EditorState>, ExportDelegate, ServiceStartContext> {
         val source = File(workDir, "export-30s-av.mp4")
         instrumentation.context.assets.open("export-30s-av.mp4").use { input ->
@@ -291,6 +344,7 @@ class ExportServiceInterruptionInstrumentationTest {
             // The editor always passes a real fingerprint; a blank one is stored as
             // none, and resume then refuses the mismatch.
             projectFingerprint = { FINGERPRINT },
+            ffmpegEngine = if (ffmpeg) FFmpegEngine(target) else null,
         )
         return Triple(state, delegate, context)
     }
