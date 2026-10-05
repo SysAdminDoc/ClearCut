@@ -287,6 +287,32 @@ class EditDecisionJsonEngineTest {
     }
 
     @Test
+    fun entriesThatArentObjectsAreReportedRatherThanDroppedSilently() {
+        val root = JSONObject(export())
+        val clip = root.getJSONArray("tracks").getJSONObject(0).getJSONArray("clips").getJSONObject(0)
+        for (list in listOf("effects", "keyframes", "masks", "audioEffects", "captions")) {
+            (clip.optJSONArray(list) ?: JSONArray().also { clip.put(list, it) }).put("not an object")
+        }
+        clip.put("colorGrade", 7)
+        root.getJSONArray("markers").put(3)
+        root.getJSONArray("textOverlays").put(false)
+
+        val imported = EditDecisionJsonEngine.import(root.toString(), ::uri)
+
+        val importedClip = imported.tracks.first().clips.first()
+        assertEquals(graded.effects, importedClip.effects)
+        assertEquals(graded.keyframes, importedClip.keyframes)
+        assertEquals(graded.masks, importedClip.masks)
+        assertEquals(null, importedClip.colorGrade)
+        assertEquals(markers, imported.timelineMarkers)
+        val notObjects = imported.warnings.filter { it.contains("isn't an object") }
+        assertEquals(imported.warnings.toString(), 8, notObjects.size)
+        for (what in listOf("effect", "keyframe", "mask", "audio effect", "caption", "colorGrade", "marker", "text overlay")) {
+            assertTrue("$what in $notObjects", notObjects.any { it.startsWith("Skipped $what at") })
+        }
+    }
+
+    @Test
     fun aSchemaNewerThanThisBuildIsRejectedBeforeAnyTimelineIsBuilt() {
         val root = JSONObject(export()).put("schemaVersion", EditDecisionJsonEngine.SCHEMA_VERSION + 1)
 

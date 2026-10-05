@@ -425,7 +425,10 @@ internal object EditDecisionJsonEngine {
                 warnings += "Compound clip at $where has more than $MAX_CLIPS_PER_TRACK clips; the rest were ignored."
             }
             (0 until array.length().coerceAtMost(MAX_CLIPS_PER_TRACK)).mapNotNull { index ->
-                val inner = array.optJSONObject(index) ?: return@mapNotNull null
+                val inner = array.optJSONObject(index) ?: run {
+                    warnings += "Skipped clip inside the compound clip at $where, index $index: it isn't an object."
+                    return@mapNotNull null
+                }
                 runCatching {
                     parseClip(inner, trackIndex, index, warnings, unresolved, uriParser, depth + 1)
                 }.onFailure { error ->
@@ -498,7 +501,10 @@ internal object EditDecisionJsonEngine {
     ): List<Effect> {
         if (array == null) return emptyList()
         return (0 until array.length().coerceAtMost(MAX_EFFECTS_PER_CLIP)).mapNotNull { index ->
-            val json = array.optJSONObject(index) ?: return@mapNotNull null
+            val json = array.optJSONObject(index) ?: run {
+                warnings += "Skipped effect at track $trackIndex, clip $clipIndex, index $index: it isn't an object."
+                return@mapNotNull null
+            }
             // The project decoder falls back to a default type; an import drops an unknown one instead.
             if (runCatching { EffectType.valueOf(json.optString("type")) }.isFailure) {
                 warnings += "Unknown effect at track $trackIndex, clip $clipIndex, index $index; it was dropped."
@@ -526,7 +532,10 @@ internal object EditDecisionJsonEngine {
         if (array == null) return emptyList()
         if (array.length() > max) warnings += "$where has more than $max $what; the rest were ignored."
         return (0 until array.length().coerceAtMost(max)).mapNotNull { index ->
-            val json = array.optJSONObject(index) ?: return@mapNotNull null
+            val json = array.optJSONObject(index) ?: run {
+                warnings += "Skipped $what at $where, index $index: it isn't an object."
+                return@mapNotNull null
+            }
             runCatching { decode(json) }.onFailure { error ->
                 warnings += "Skipped malformed $what at $where, index $index: ${error.message ?: error.javaClass.simpleName}."
             }.getOrNull()
@@ -541,7 +550,11 @@ internal object EditDecisionJsonEngine {
         warnings: MutableList<String>,
         decode: (JSONObject) -> T,
     ): T? {
-        val value = json.optJSONObject(name) ?: return null
+        if (!json.has(name) || json.isNull(name)) return null
+        val value = json.optJSONObject(name) ?: run {
+            warnings += "Skipped $name at $where: it isn't an object."
+            return null
+        }
         return runCatching { decode(value) }.onFailure { error ->
             warnings += "Skipped malformed $name at $where: ${error.message ?: error.javaClass.simpleName}."
         }.getOrNull()
@@ -558,7 +571,10 @@ internal object EditDecisionJsonEngine {
             warnings += "Clip at track $trackIndex, index $clipIndex has too many captions; remaining captions were ignored."
         }
         return (0 until array.length().coerceAtMost(MAX_CAPTIONS_PER_CLIP)).mapNotNull { index ->
-            val json = array.optJSONObject(index) ?: return@mapNotNull null
+            val json = array.optJSONObject(index) ?: run {
+                warnings += "Skipped caption at track $trackIndex, clip $clipIndex, index $index: it isn't an object."
+                return@mapNotNull null
+            }
             runCatching {
                 val start = json.optLong("startTimeMs", 0L).coerceAtLeast(0L)
                 val end = json.optLong("endTimeMs", start).coerceAtLeast(start)
@@ -613,7 +629,10 @@ internal object EditDecisionJsonEngine {
             warnings += "Edit-decision file contains more than $MAX_MARKERS markers; remaining markers were ignored."
         }
         return (0 until array.length().coerceAtMost(MAX_MARKERS)).mapNotNull { index ->
-            val json = array.optJSONObject(index) ?: return@mapNotNull null
+            val json = array.optJSONObject(index) ?: run {
+                warnings += "Skipped marker at index $index: it isn't an object."
+                return@mapNotNull null
+            }
             runCatching {
                 TimelineMarker(
                     id = json.optString("id", UUID.randomUUID().toString()).ifBlank { UUID.randomUUID().toString() },
@@ -634,7 +653,10 @@ internal object EditDecisionJsonEngine {
             warnings += "Edit-decision file contains more than $MAX_TEXT_OVERLAYS text overlays; remaining overlays were ignored."
         }
         return (0 until array.length().coerceAtMost(MAX_TEXT_OVERLAYS)).mapNotNull { index ->
-            val json = array.optJSONObject(index) ?: return@mapNotNull null
+            val json = array.optJSONObject(index) ?: run {
+                warnings += "Skipped text overlay at index $index: it isn't an object."
+                return@mapNotNull null
+            }
             runCatching {
                 val overlay = AutoSaveState.deserializeTextOverlay(json)
                 if (overlay == null) warnings += "Skipped text overlay at index $index: it has no text."
