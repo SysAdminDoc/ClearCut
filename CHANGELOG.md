@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- The dashboard no longer spins forever when the project database fails to answer. A failed query now shows what happened and offers Retry, which genuinely re-subscribes, instead of leaving a spinner that could never resolve.
+- The release fingerprint script reads the signer lines that Android Build Tools 37 prints. Lines like `V3.0 Signer:` and `V3.1 Signer: (minSdkVersion=33, ...)` used to be skipped, so an APK signed only with v3, or with a rotated key, reported no signer at all.
+- The dashboard no longer spins forever when the project database fails to answer. A failed query now shows what happened and offers Retry, which really re-subscribes, instead of leaving a spinner that could never resolve.
 - Clearing the proxy cache reports what it actually did. It used to announce "Proxy cache cleared" whatever happened, including when files could not be deleted and when proxies were deliberately kept for an open project. A failure now says so and the control can be used again, where before an error left the button stuck busy.
 - The OpenTimelineIO export gate now runs. The adapter it depends on is pinned in `scripts/requirements.txt`, its self-test exercises a real export shape rather than an empty timeline, and it round-trips ClearCut's output through the official adapter to prove tracks, clips, timing and rate survive.
 

@@ -14,7 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APK_ROOT = ROOT / "app" / "build" / "outputs" / "apk"
 FINGERPRINT_RE = re.compile(
-    r"(?:Signer #\d+\s+|V\d+ Signer:\s*)certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)"
+    r"(?:Signer #\d+\s+|Signer\s+\(minSdkVersion=\d+, maxSdkVersion=\d+\)\s+"
+    r"|V\d+(?:\.\d+)? Signer:\s*(?:\(minSdkVersion=\d+, maxSdkVersion=\d+\)\s*)?)"
+    r"certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)"
 )
 # The signer every shipped GitHub Release APK carries (verified against
 # v3.74.117's asset). Sidecar freshness alone cannot catch a wrong key —
@@ -148,11 +150,18 @@ Verified using v1 scheme (JAR signing): true
 Signer #1 certificate SHA-256 digest: AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99
 Signer #2 certificate SHA-256 digest: 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
 V2 Signer: certificate SHA-256 digest: 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
+V3.0 Signer: certificate SHA-256 digest: 1111111111111111111111111111111111111111111111111111111111111111
+V3.1 Signer: (minSdkVersion=33, maxSdkVersion=2147483647) certificate SHA-256 digest: 2222222222222222222222222222222222222222222222222222222222222222
+Signer (minSdkVersion=28, maxSdkVersion=32) certificate SHA-256 digest: 3333333333333333333333333333333333333333333333333333333333333333
+Source Stamp Signer: certificate SHA-256 digest: 4444444444444444444444444444444444444444444444444444444444444444
 """
     parsed = parse_fingerprints(sample)
     if parsed != [
         "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899",
         "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+        "1" * 64,
+        "2" * 64,
+        "3" * 64,
     ]:
         raise FingerprintError("self-test fingerprint parsing mismatch")
 
