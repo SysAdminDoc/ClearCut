@@ -2772,10 +2772,13 @@ class VideoEngine @Inject constructor(
             transformer.addListener(listener)
             activeTransformer = transformer
             if (resumeFromFile != null) {
+                // resume(composition, outputFilePath, oldFilePath): the new file comes
+                // first. Swapped, Media3 writes the result over the old partial and
+                // leaves the new output empty.
                 transformer.resume(
                     composition,
-                    resumeFromFile.absolutePath,
                     outputFile.absolutePath,
+                    resumeFromFile.absolutePath,
                 )
             } else {
                 transformer.start(composition, outputFile.absolutePath)
