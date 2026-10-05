@@ -980,11 +980,20 @@ data class AutoSaveState(
             raw: String,
             uriParser: (String) -> Uri? = { Uri.parse(it) },
         ): RestoredProject {
+            val (state, drops) = collectingDrops { deserialize(raw, uriParser) }
+            return RestoredProject(state, ProjectRestoreReport(drops))
+        }
+
+        /**
+         * Runs [block] and returns what the decoders below dropped while it ran.
+         * Edit-decision JSON import reuses those decoders and reports the same way.
+         */
+        internal fun <T> collectingDrops(block: () -> T): Pair<T, List<DroppedElement>> {
             val sink = mutableListOf<DroppedElement>()
             val previous = activeDropSink.get()
             activeDropSink.set(sink)
             return try {
-                RestoredProject(deserialize(raw, uriParser), ProjectRestoreReport(sink.toList()))
+                block() to sink.toList()
             } finally {
                 activeDropSink.set(previous)
             }
@@ -1507,7 +1516,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeEffect(effect: Effect): JSONObject {
+        internal fun serializeEffect(effect: Effect): JSONObject {
             return JSONObject().apply {
                 put("id", effect.id)
                 put("type", effect.type.name)
@@ -1539,7 +1548,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeKeyframe(kf: Keyframe): JSONObject {
+        internal fun serializeKeyframe(kf: Keyframe): JSONObject {
             return JSONObject().apply {
                 put("timeOffsetMs", kf.timeOffsetMs)
                 put("property", kf.property.name)
@@ -1553,7 +1562,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeColorGrade(g: ColorGrade): JSONObject {
+        internal fun serializeColorGrade(g: ColorGrade): JSONObject {
             return JSONObject().apply {
                 put("enabled", g.enabled)
                 putSafeFloat("liftR", g.liftR); putSafeFloat("liftG", g.liftG); putSafeFloat("liftB", g.liftB)
@@ -1597,7 +1606,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeSpeedCurve(sc: SpeedCurve): JSONObject {
+        internal fun serializeSpeedCurve(sc: SpeedCurve): JSONObject {
             return JSONObject().apply {
                 put("points", JSONArray().apply {
                     sc.points.forEach { pt ->
@@ -1613,7 +1622,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeMask(mask: Mask): JSONObject {
+        internal fun serializeMask(mask: Mask): JSONObject {
             return JSONObject().apply {
                 put("id", mask.id)
                 put("type", mask.type.name)
@@ -1657,7 +1666,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeAudioEffect(ae: AudioEffect): JSONObject {
+        internal fun serializeAudioEffect(ae: AudioEffect): JSONObject {
             return JSONObject().apply {
                 put("id", ae.id)
                 put("type", ae.type.name)
@@ -1700,7 +1709,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeTransition(t: Transition): JSONObject {
+        internal fun serializeTransition(t: Transition): JSONObject {
             return JSONObject().apply {
                 put("type", t.type.name)
                 put("durationMs", t.durationMs)
@@ -1716,7 +1725,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun serializeTextOverlay(t: TextOverlay): JSONObject {
+        internal fun serializeTextOverlay(t: TextOverlay): JSONObject {
             return JSONObject().apply {
                 put("id", t.id)
                 put("text", t.text)
@@ -2036,7 +2045,7 @@ data class AutoSaveState(
             )
         }
 
-        private fun deserializeEffect(json: JSONObject): Effect {
+        internal fun deserializeEffect(json: JSONObject): Effect {
             val paramsJson = json.optJSONObject("params")
             val params = buildMap {
                 val keys = paramsJson?.keys()
@@ -2074,7 +2083,7 @@ data class AutoSaveState(
             )
         }
 
-        private fun deserializeKeyframe(json: JSONObject): Keyframe {
+        internal fun deserializeKeyframe(json: JSONObject): Keyframe {
             return Keyframe(
                 timeOffsetMs = json.optLong("timeOffsetMs", 0L),
                 property = safeValueOf(json.optString("property", "OPACITY"), KeyframeProperty.OPACITY),
@@ -2097,7 +2106,7 @@ data class AutoSaveState(
             return if (f.isFinite()) f else default
         }
 
-        private fun deserializeColorGrade(json: JSONObject): ColorGrade {
+        internal fun deserializeColorGrade(json: JSONObject): ColorGrade {
             return ColorGrade(
                 enabled = json.optBoolean("enabled", true),
                 liftR = safeFloat(json.optDouble("liftR", 0.0), 0f), liftG = safeFloat(json.optDouble("liftG", 0.0), 0f), liftB = safeFloat(json.optDouble("liftB", 0.0), 0f),
@@ -2157,7 +2166,7 @@ data class AutoSaveState(
             }.takeIf { it.isNotEmpty() }
         }
 
-        private fun deserializeSpeedCurve(json: JSONObject): SpeedCurve {
+        internal fun deserializeSpeedCurve(json: JSONObject): SpeedCurve {
             val pointsArr = json.optJSONArray("points") ?: JSONArray()
             // Corrupted control points (speed<=0, position outside [0,1], NaN handles) feed
             // directly into the harmonic-mean duration math and the bezier evaluator — clamp
@@ -2186,7 +2195,7 @@ data class AutoSaveState(
             return SpeedCurve(points.ifEmpty { listOf(SpeedPoint(0f, 1f), SpeedPoint(1f, 1f)) })
         }
 
-        private fun deserializeMask(json: JSONObject): Mask {
+        internal fun deserializeMask(json: JSONObject): Mask {
             val pointsArr = json.optJSONArray("points") ?: JSONArray()
             return Mask(
                 id = json.optString("id", java.util.UUID.randomUUID().toString()),
@@ -2235,7 +2244,7 @@ data class AutoSaveState(
             )
         }
 
-        private fun deserializeAudioEffect(json: JSONObject): AudioEffect {
+        internal fun deserializeAudioEffect(json: JSONObject): AudioEffect {
             val paramsJson = json.optJSONObject("params")
             val params = buildMap {
                 val keys = paramsJson?.keys()
@@ -2305,7 +2314,7 @@ data class AutoSaveState(
             )
         }
 
-        private fun deserializeTransition(json: JSONObject): Transition {
+        internal fun deserializeTransition(json: JSONObject): Transition {
             return Transition(
                 type = safeValueOf(json.optString("type", "DISSOLVE"), TransitionType.DISSOLVE),
                 durationMs = json.optLong("durationMs", 500L).coerceIn(100L, 2000L),
@@ -2321,7 +2330,7 @@ data class AutoSaveState(
             }
         }
 
-        private fun deserializeTextOverlay(json: JSONObject): TextOverlay? {
+        internal fun deserializeTextOverlay(json: JSONObject): TextOverlay? {
             val text = boundedText(json.optString("text", ""), MAX_TEXT_VALUE_CHARS)
             if (text.isEmpty()) return null // TextOverlay requires non-empty text
             val startMs = json.optLong("startTimeMs", 0L).coerceAtLeast(0L)

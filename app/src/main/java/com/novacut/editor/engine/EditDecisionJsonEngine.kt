@@ -11,8 +11,6 @@ import com.novacut.editor.model.ClipLabel
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.MarkerColor
-import com.novacut.editor.model.TextAlignment
-import com.novacut.editor.model.TextAnimation
 import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.model.TimelineTimebase
@@ -29,11 +27,16 @@ import java.util.UUID
  *
  * The format intentionally uses milliseconds and URI strings rather than
  * ClearCut database IDs, so a script can generate it without opening a
- * project store. It carries the edit decisions that are useful at the
- * preview/import boundary: source ranges, timeline placement, common clip
- * transforms, captions, markers, and text overlays. Unknown optional fields
- * are ignored; unsupported schema versions are rejected before any candidate
- * timeline is constructed.
+ * project store. It carries every authored edit decision: source ranges,
+ * timeline placement, clip transforms, effects and their keyframes, clip
+ * keyframes, masks, speed curves, transitions, color grades, audio effects,
+ * compound clips, captions, markers, and text overlays. Effects, keyframes,
+ * masks, speed curves, transitions, grades, audio effects and text overlays
+ * use the project file's own encoding (AutoSaveState). Analysis a device
+ * recomputes (motion tracking, stabilization, proxies, inspected source
+ * color) stays with the project. Unknown optional fields are ignored;
+ * unsupported schema versions are rejected before any candidate timeline is
+ * constructed.
  */
 internal object EditDecisionJsonEngine {
     const val SCHEMA_ID = "com.clearcut.edit-decision"
@@ -50,6 +53,11 @@ internal object EditDecisionJsonEngine {
     private const val MAX_TEXT_CHARS = 1_000_000
     private const val MAX_URI_CHARS = 16_384
     private const val MAX_DURATION_MS = 24L * 60L * 60L * 1_000L
+    private const val MAX_KEYFRAMES_PER_CLIP = 2_000
+    private const val MAX_MASKS_PER_CLIP = 256
+    private const val MAX_AUDIO_EFFECTS = 128
+    private const val MAX_COMPOUND_DEPTH = 8
+    private const val MAX_DROP_WARNINGS = 10
 
     fun export(
         tracks: List<Track>,
@@ -109,14 +117,23 @@ internal object EditDecisionJsonEngine {
             }
 
             val unresolved = mutableListOf<String>()
-            val tracks = parseTracks(
-                root.optJSONArray("tracks") ?: JSONArray(),
-                warnings,
-                unresolved,
-                uriParser,
-            )
+            val (parsed, drops) = AutoSaveState.collectingDrops {
+                val tracks = parseTracks(
+                    root.optJSONArray("tracks") ?: JSONArray(),
+                    warnings,
+                    unresolved,
+                    uriParser,
+                )
+                tracks to parseTextOverlays(root.optJSONArray("textOverlays"), warnings)
+            }
+            val (tracks, textOverlays) = parsed
+            drops.take(MAX_DROP_WARNINGS).forEach { drop ->
+                warnings += "Left out ${drop.kind} ${drop.index}: ${drop.detail}."
+            }
+            if (drops.size > MAX_DROP_WARNINGS) {
+                warnings += "Left out ${drops.size - MAX_DROP_WARNINGS} more malformed items."
+            }
             val markers = parseMarkers(root.optJSONArray("markers"), warnings)
-            val textOverlays = parseTextOverlays(root.optJSONArray("textOverlays"), warnings)
             TimelineExchangeEngine.ExchangeResult(
                 tracks = tracks,
                 textOverlays = textOverlays,
@@ -168,12 +185,17 @@ internal object EditDecisionJsonEngine {
         put("showWaveform", track.showWaveform)
         put("trackHeight", track.trackHeight)
         put("isCollapsed", track.isCollapsed)
+        if (track.audioEffects.isNotEmpty()) {
+            put("audioEffects", JSONArray().apply {
+                track.audioEffects.take(MAX_AUDIO_EFFECTS).forEach { put(AutoSaveState.serializeAudioEffect(it)) }
+            })
+        }
         put("clips", JSONArray().apply {
             track.clips.take(MAX_CLIPS_PER_TRACK).forEach { put(exportClip(it)) }
         })
     }
 
-    private fun exportClip(clip: Clip): JSONObject = JSONObject().apply {
+    private fun exportClip(clip: Clip, depth: Int = 0): JSONObject = JSONObject().apply {
         put("id", clip.id)
         clip.assetId?.let { put("assetId", it) }
         put("source", clip.sourceUri.toString())
@@ -204,18 +226,32 @@ internal object EditDecisionJsonEngine {
         clip.name?.let { put("name", it) }
         if (clip.effects.isNotEmpty()) {
             put("effects", JSONArray().apply {
-                clip.effects.take(MAX_EFFECTS_PER_CLIP).forEach { effect ->
-                    put(JSONObject().apply {
-                        put("id", effect.id)
-                        put("type", effect.type.name)
-                        put("enabled", effect.enabled)
-                        put("params", JSONObject().apply {
-                            effect.params.entries.take(MAX_EFFECTS_PER_CLIP).forEach { (key, value) ->
-                                putFiniteFloat(key, value, 0f)
-                            }
-                        })
-                    })
-                }
+                clip.effects.take(MAX_EFFECTS_PER_CLIP).forEach { put(AutoSaveState.serializeEffect(it)) }
+            })
+        }
+        if (clip.keyframes.isNotEmpty()) {
+            put("keyframes", JSONArray().apply {
+                clip.keyframes.take(MAX_KEYFRAMES_PER_CLIP).forEach { put(AutoSaveState.serializeKeyframe(it)) }
+            })
+        }
+        clip.headTransition?.let { put("headTransition", AutoSaveState.serializeTransition(it)) }
+        clip.tailTransition?.let { put("tailTransition", AutoSaveState.serializeTransition(it)) }
+        clip.colorGrade?.let { put("colorGrade", AutoSaveState.serializeColorGrade(it)) }
+        clip.speedCurve?.let { put("speedCurve", AutoSaveState.serializeSpeedCurve(it)) }
+        if (clip.masks.isNotEmpty()) {
+            put("masks", JSONArray().apply {
+                clip.masks.take(MAX_MASKS_PER_CLIP).forEach { put(AutoSaveState.serializeMask(it)) }
+            })
+        }
+        if (clip.audioEffects.isNotEmpty()) {
+            put("audioEffects", JSONArray().apply {
+                clip.audioEffects.take(MAX_AUDIO_EFFECTS).forEach { put(AutoSaveState.serializeAudioEffect(it)) }
+            })
+        }
+        if (clip.isCompound && depth < MAX_COMPOUND_DEPTH) {
+            put("isCompound", true)
+            put("compoundClips", JSONArray().apply {
+                clip.compoundClips.take(MAX_CLIPS_PER_TRACK).forEach { put(exportClip(it, depth + 1)) }
             })
         }
         if (clip.captions.isNotEmpty()) {
@@ -267,36 +303,8 @@ internal object EditDecisionJsonEngine {
         put("notes", marker.notes.take(MAX_TEXT_CHARS))
     }
 
-    private fun exportTextOverlay(overlay: TextOverlay): JSONObject = JSONObject().apply {
-        put("id", overlay.id)
-        put("text", overlay.text.take(MAX_TEXT_CHARS))
-        put("fontFamily", overlay.fontFamily.take(256))
-        putFiniteFloat("fontSize", overlay.fontSize, 48f)
-        put("color", overlay.color)
-        put("backgroundColor", overlay.backgroundColor)
-        put("strokeColor", overlay.strokeColor)
-        putFiniteFloat("strokeWidth", overlay.strokeWidth, 0f)
-        put("bold", overlay.bold)
-        put("italic", overlay.italic)
-        put("alignment", overlay.alignment.name)
-        putFiniteFloat("positionX", overlay.positionX, 0.5f)
-        putFiniteFloat("positionY", overlay.positionY, 0.5f)
-        put("startTimeMs", overlay.startTimeMs)
-        put("endTimeMs", overlay.endTimeMs)
-        put("animationIn", overlay.animationIn.name)
-        put("animationOut", overlay.animationOut.name)
-        putFiniteFloat("rotation", overlay.rotation, 0f)
-        putFiniteFloat("scaleX", overlay.scaleX, 1f)
-        putFiniteFloat("scaleY", overlay.scaleY, 1f)
-        put("shadowColor", overlay.shadowColor)
-        putFiniteFloat("shadowOffsetX", overlay.shadowOffsetX, 0f)
-        putFiniteFloat("shadowOffsetY", overlay.shadowOffsetY, 0f)
-        putFiniteFloat("shadowBlur", overlay.shadowBlur, 0f)
-        putFiniteFloat("letterSpacing", overlay.letterSpacing, 0f)
-        putFiniteFloat("lineHeight", overlay.lineHeight, 1.2f)
-        overlay.templateId?.let { put("templateId", it) }
-        put("wordStaggerMs", overlay.wordStaggerMs)
-    }
+    private fun exportTextOverlay(overlay: TextOverlay): JSONObject =
+        AutoSaveState.serializeTextOverlay(overlay.copy(text = overlay.text.take(MAX_TEXT_CHARS)))
 
     private fun parseTracks(
         array: JSONArray,
@@ -343,6 +351,10 @@ internal object EditDecisionJsonEngine {
                     showWaveform = json.optBoolean("showWaveform", true),
                     trackHeight = json.optInt("trackHeight", 64).coerceIn(24, 512),
                     isCollapsed = json.optBoolean("isCollapsed", false),
+                    audioEffects = parseList(
+                        json.optJSONArray("audioEffects"), MAX_AUDIO_EFFECTS, "audio effect", "track $index", warnings,
+                        AutoSaveState::deserializeAudioEffect,
+                    ),
                 )
             }.onFailure { error ->
                 warnings += "Skipped malformed track at index $index: ${error.message ?: error.javaClass.simpleName}."
@@ -381,6 +393,7 @@ internal object EditDecisionJsonEngine {
         warnings: MutableList<String>,
         unresolved: MutableList<String>,
         uriParser: (String) -> Uri?,
+        depth: Int = 0,
     ): Clip? {
         val sourceRaw = json.optString("source", json.optString("sourceUri", ""))
             .take(MAX_URI_CHARS)
@@ -402,6 +415,24 @@ internal object EditDecisionJsonEngine {
             warnings += "Clip at track $trackIndex, index $clipIndex has an empty trim range and was skipped."
             return null
         }
+        val where = "track $trackIndex, clip $clipIndex"
+        val compoundJson = json.optJSONArray("compoundClips")?.takeIf { json.optBoolean("isCompound", false) }
+        if (compoundJson != null && depth >= MAX_COMPOUND_DEPTH) {
+            warnings += "Compound clip at $where is nested more than $MAX_COMPOUND_DEPTH levels deep; its inner clips were left out."
+        }
+        val compoundClips = compoundJson?.takeIf { depth < MAX_COMPOUND_DEPTH }?.let { array ->
+            if (array.length() > MAX_CLIPS_PER_TRACK) {
+                warnings += "Compound clip at $where has more than $MAX_CLIPS_PER_TRACK clips; the rest were ignored."
+            }
+            (0 until array.length().coerceAtMost(MAX_CLIPS_PER_TRACK)).mapNotNull { index ->
+                val inner = array.optJSONObject(index) ?: return@mapNotNull null
+                runCatching {
+                    parseClip(inner, trackIndex, index, warnings, unresolved, uriParser, depth + 1)
+                }.onFailure { error ->
+                    warnings += "Skipped malformed clip inside the compound clip at $where, index $index: ${error.message ?: error.javaClass.simpleName}."
+                }.getOrNull()
+            }
+        }.orEmpty()
 
         return Clip(
             id = json.optString("id", UUID.randomUUID().toString()).ifBlank { UUID.randomUUID().toString() },
@@ -438,6 +469,24 @@ internal object EditDecisionJsonEngine {
             },
             captions = parseCaptions(json.optJSONArray("captions"), warnings, trackIndex, clipIndex),
             name = json.optString("name", "").takeIf { it.isNotBlank() }?.take(MAX_TEXT_CHARS),
+            keyframes = parseList(
+                json.optJSONArray("keyframes"), MAX_KEYFRAMES_PER_CLIP, "keyframe", where, warnings,
+                AutoSaveState::deserializeKeyframe,
+            ).distinctBy { it.timeOffsetMs to it.property },
+            headTransition = parseOptional(json, "headTransition", where, warnings, AutoSaveState::deserializeTransition),
+            tailTransition = parseOptional(json, "tailTransition", where, warnings, AutoSaveState::deserializeTransition),
+            colorGrade = parseOptional(json, "colorGrade", where, warnings, AutoSaveState::deserializeColorGrade),
+            speedCurve = parseOptional(json, "speedCurve", where, warnings, AutoSaveState::deserializeSpeedCurve),
+            masks = parseList(
+                json.optJSONArray("masks"), MAX_MASKS_PER_CLIP, "mask", where, warnings,
+                AutoSaveState::deserializeMask,
+            ),
+            audioEffects = parseList(
+                json.optJSONArray("audioEffects"), MAX_AUDIO_EFFECTS, "audio effect", where, warnings,
+                AutoSaveState::deserializeAudioEffect,
+            ),
+            isCompound = compoundClips.isNotEmpty(),
+            compoundClips = compoundClips,
         )
     }
 
@@ -450,23 +499,52 @@ internal object EditDecisionJsonEngine {
         if (array == null) return emptyList()
         return (0 until array.length().coerceAtMost(MAX_EFFECTS_PER_CLIP)).mapNotNull { index ->
             val json = array.optJSONObject(index) ?: return@mapNotNull null
-            val type = runCatching { EffectType.valueOf(json.optString("type")) }.getOrNull()
-            if (type == null) {
+            // The project decoder falls back to a default type; an import drops an unknown one instead.
+            if (runCatching { EffectType.valueOf(json.optString("type")) }.isFailure) {
                 warnings += "Unknown effect at track $trackIndex, clip $clipIndex, index $index; it was dropped."
                 return@mapNotNull null
             }
-            val params = mutableMapOf<String, Float>()
-            val paramsJson = json.optJSONObject("params")
-            paramsJson?.keys()?.forEach { key ->
-                params[key.take(128)] = paramsJson.safeFloat(key, 0f)
-            }
-            Effect(
-                id = json.optString("id", UUID.randomUUID().toString()).ifBlank { UUID.randomUUID().toString() },
-                type = type,
-                params = params,
-                enabled = json.optBoolean("enabled", true),
-            )
+            runCatching {
+                AutoSaveState.deserializeEffect(json).let {
+                    if (it.id.isBlank()) it.copy(id = UUID.randomUUID().toString()) else it
+                }
+            }.onFailure { error ->
+                warnings += "Skipped malformed effect at track $trackIndex, clip $clipIndex, index $index: ${error.message ?: error.javaClass.simpleName}."
+            }.getOrNull()
         }
+    }
+
+    /** Up to [max] items of [array], each decoded by [decode]; malformed ones are warned about and skipped. */
+    private fun <T> parseList(
+        array: JSONArray?,
+        max: Int,
+        what: String,
+        where: String,
+        warnings: MutableList<String>,
+        decode: (JSONObject) -> T,
+    ): List<T> {
+        if (array == null) return emptyList()
+        if (array.length() > max) warnings += "$where has more than $max $what; the rest were ignored."
+        return (0 until array.length().coerceAtMost(max)).mapNotNull { index ->
+            val json = array.optJSONObject(index) ?: return@mapNotNull null
+            runCatching { decode(json) }.onFailure { error ->
+                warnings += "Skipped malformed $what at $where, index $index: ${error.message ?: error.javaClass.simpleName}."
+            }.getOrNull()
+        }
+    }
+
+    /** The object at [name] decoded by [decode], or null with a warning when it's malformed. */
+    private fun <T> parseOptional(
+        json: JSONObject,
+        name: String,
+        where: String,
+        warnings: MutableList<String>,
+        decode: (JSONObject) -> T,
+    ): T? {
+        val value = json.optJSONObject(name) ?: return null
+        return runCatching { decode(value) }.onFailure { error ->
+            warnings += "Skipped malformed $name at $where: ${error.message ?: error.javaClass.simpleName}."
+        }.getOrNull()
     }
 
     private fun parseCaptions(
@@ -558,36 +636,9 @@ internal object EditDecisionJsonEngine {
         return (0 until array.length().coerceAtMost(MAX_TEXT_OVERLAYS)).mapNotNull { index ->
             val json = array.optJSONObject(index) ?: return@mapNotNull null
             runCatching {
-                TextOverlay(
-                    id = json.optString("id", UUID.randomUUID().toString()).ifBlank { UUID.randomUUID().toString() },
-                    text = json.optString("text", "").take(MAX_TEXT_CHARS),
-                    fontFamily = json.optString("fontFamily", "sans-serif").take(256),
-                    fontSize = json.safeFloat("fontSize", 48f).coerceAtLeast(1f),
-                    color = json.optLong("color", 0xFFFFFFFF),
-                    backgroundColor = json.optLong("backgroundColor", 0L),
-                    strokeColor = json.optLong("strokeColor", 0xFF000000),
-                    strokeWidth = json.safeFloat("strokeWidth", 0f).coerceAtLeast(0f),
-                    bold = json.optBoolean("bold", false),
-                    italic = json.optBoolean("italic", false),
-                    alignment = enumOrDefault(json.optString("alignment"), TextAlignment.CENTER),
-                    positionX = json.safeFloat("positionX", 0.5f),
-                    positionY = json.safeFloat("positionY", 0.5f),
-                    startTimeMs = json.optLong("startTimeMs", 0L).coerceAtLeast(0L),
-                    endTimeMs = json.optLong("endTimeMs", 3_000L).coerceAtLeast(0L),
-                    animationIn = enumOrDefault(json.optString("animationIn"), TextAnimation.NONE),
-                    animationOut = enumOrDefault(json.optString("animationOut"), TextAnimation.NONE),
-                    rotation = json.safeFloat("rotation", 0f),
-                    scaleX = json.safeFloat("scaleX", 1f),
-                    scaleY = json.safeFloat("scaleY", 1f),
-                    shadowColor = json.optLong("shadowColor", 0x80000000),
-                    shadowOffsetX = json.safeFloat("shadowOffsetX", 0f),
-                    shadowOffsetY = json.safeFloat("shadowOffsetY", 0f),
-                    shadowBlur = json.safeFloat("shadowBlur", 0f),
-                    letterSpacing = json.safeFloat("letterSpacing", 0f),
-                    lineHeight = json.safeFloat("lineHeight", 1.2f).coerceAtLeast(0.1f),
-                    templateId = json.optString("templateId", "").takeIf { it.isNotBlank() },
-                    wordStaggerMs = json.optLong("wordStaggerMs", 0L).coerceAtLeast(0L),
-                )
+                val overlay = AutoSaveState.deserializeTextOverlay(json)
+                if (overlay == null) warnings += "Skipped text overlay at index $index: it has no text."
+                overlay?.let { if (it.id.isBlank()) it.copy(id = UUID.randomUUID().toString()) else it }
             }.onFailure { error ->
                 warnings += "Skipped malformed text overlay at index $index: ${error.message ?: error.javaClass.simpleName}."
             }.getOrNull()
