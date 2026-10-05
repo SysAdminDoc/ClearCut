@@ -12,13 +12,7 @@ import kotlin.math.cos
 import kotlin.math.sqrt
 
 /**
- * Beat and onset detection engine.
- * Primary: aubio via NDK (when integrated)
- * Fallback: Pure-Kotlin spectral flux onset detection
- *
- * aubio NDK dependency (add when ready):
- *   Prebuilt: github.com/adamski/aubio-android
- *   Or compile from source: aubio.org with scripts/build_android
+ * Beat and onset detection engine. [BeatAnalyzer] does the analysis in pure Kotlin.
  *
  * Usage:
  *   val beats = beatDetectionEngine.detectBeats(uri)
@@ -41,153 +35,121 @@ class BeatDetectionEngine @Inject constructor(
         val timeSignature: Int = 4  // beats per bar (usually 4)
     )
 
-    /**
-     * Detect beats in audio from a media URI.
-     * Converts to mono 22050Hz for analysis (4x less computation than 44.1kHz stereo).
-     *
-     * Algorithm (spectral flux onset detection):
-     * 1. Compute STFT with hop size 512 (23ms at 22050Hz)
-     * 2. Calculate spectral flux (sum of positive magnitude differences)
-     * 3. Adaptive threshold: median filter + offset
-     * 4. Pick peaks above threshold as onsets
-     * 5. Estimate BPM from inter-onset intervals via histogram
-     */
+    /** Detects beats and tempo in the first audio track of [uri]. */
     suspend fun detectBeats(
         uri: Uri,
         onProgress: (Float) -> Unit = {}
     ): BeatAnalysis = withContext(Dispatchers.Default) {
         onProgress(0.1f)
-
-        // Decode actual PCM and convert to mono float for spectral analysis.
-        // Previous code called extractWaveform() which returns an RMS envelope,
-        // not PCM samples — rendering the FFT/spectral-flux pipeline meaningless.
-        val pcm = withContext(Dispatchers.IO) { audioEngine.decodeToPCM(uri) }
+        // The decoder's own rate and layout: the container's can differ (HE-AAC
+        // decodes at twice its stored rate), which would stretch every timestamp.
+        val decoded = withContext(Dispatchers.IO) { audioEngine.decodeToPcmWithFormat(uri) }
         onProgress(0.3f)
+        val analysis = BeatAnalyzer.analyze(decoded.samples, decoded.channelCount, decoded.sampleRate) {
+            ensureActive()
+        }
+        onProgress(1f)
+        analysis
+    }
+}
 
-        if (pcm.isEmpty()) return@withContext BeatAnalysis(emptyList(), 0f)
+/**
+ * Spectral-flux onset detection and tempo estimation on interleaved 16-bit PCM:
+ * 1. Downmix to mono and take a Hann-windowed 1024-point FFT every 512 samples
+ * 2. Spectral flux: the sum of positive magnitude differences between frames
+ * 3. Adaptive threshold: a moving median plus an offset
+ * 4. Local flux peaks above the threshold are onsets
+ * 5. Tempo from the most common inter-onset interval
+ */
+internal object BeatAnalyzer {
+    private const val HOP_SIZE = 512
+    private const val WINDOW_SIZE = HOP_SIZE * 2
+    private const val MEDIAN_WINDOW = 15
+    private const val THRESHOLD_OFFSET = 0.1f
 
-        // Downmix to mono float normalized to [-1, 1]. decodeToPCM returns the
-        // source-native rate/channel layout, so probe the real format instead of
-        // assuming 44100 Hz stereo — a 48 kHz mono voice memo would otherwise get
-        // ~8.8% slow timestamps and a matching BPM skew.
-        val format = audioEngine.probeAudioFormat(uri)
-        val sampleRate = (format?.sampleRate ?: 44100).coerceAtLeast(1)
-        val channels = (format?.channelCount ?: 2).coerceAtLeast(1)
+    fun analyze(
+        pcm: ShortArray,
+        channelCount: Int,
+        sampleRate: Int,
+        checkpoint: () -> Unit = {},
+    ): BeatDetectionEngine.BeatAnalysis {
+        if (pcm.isEmpty() || sampleRate <= 0) return BeatDetectionEngine.BeatAnalysis(emptyList(), 0f)
+        val channels = channelCount.coerceAtLeast(1)
         val frameCount = pcm.size / channels
         val waveform = FloatArray(frameCount) { i ->
             var sum = 0f
-            for (ch in 0 until channels) {
-                val idx = i * channels + ch
-                if (idx < pcm.size) sum += pcm[idx].toFloat() / 32768f
-            }
+            for (ch in 0 until channels) sum += pcm[i * channels + ch] / 32768f
             sum / channels
         }
-        val hopSize = 512
-        val windowSize = 1024
 
-        // Compute spectral flux
-        val flux = computeSpectralFlux(waveform, windowSize, hopSize)
-        onProgress(0.6f)
-
-        // Adaptive thresholding with median filter
-        val medianWindow = 15  // ~350ms at this hop size
-        val thresholdOffset = 0.1f
-        val onsets = mutableListOf<BeatInfo>()
-
+        val flux = computeSpectralFlux(waveform, checkpoint)
+        val onsets = mutableListOf<BeatDetectionEngine.BeatInfo>()
         for (i in flux.indices) {
-            ensureActive()
-            val start = maxOf(0, i - medianWindow / 2)
-            val end = minOf(flux.size, i + medianWindow / 2 + 1)
+            if (i % 256 == 0) checkpoint()
+            val start = maxOf(0, i - MEDIAN_WINDOW / 2)
+            val end = minOf(flux.size, i + MEDIAN_WINDOW / 2 + 1)
             val window = flux.slice(start until end).sorted()
-            val median = window[window.size / 2]
-            val threshold = median + thresholdOffset
+            val threshold = window[window.size / 2] + THRESHOLD_OFFSET
 
             if (flux[i] > threshold && flux[i] > 0.01f) {
-                // Check it's a local peak (not just above threshold)
+                // A local peak, not just a frame above the threshold.
                 val isPeak = (i == 0 || flux[i] >= flux[i - 1]) &&
-                             (i == flux.size - 1 || flux[i] >= flux[i + 1])
+                    (i == flux.size - 1 || flux[i] >= flux[i + 1])
                 if (isPeak) {
-                    val timestampMs = beatFrameTimestampMs(i, hopSize, sampleRate)
-                    onsets.add(BeatInfo(timestampMs, flux[i].coerceIn(0f, 1f)))
+                    // An onset peaks when it reaches the middle of the window, one hop
+                    // after the frame starts (the window is two hops), so the frame's
+                    // start time put every beat about 12 ms early.
+                    val timestampMs = beatFrameTimestampMs(i + 1, HOP_SIZE, sampleRate)
+                    onsets.add(BeatDetectionEngine.BeatInfo(timestampMs, flux[i].coerceIn(0f, 1f)))
                 }
             }
         }
-        onProgress(0.8f)
 
-        // Estimate BPM from inter-onset intervals
-        val bpm = estimateBpm(onsets, sampleRate)
-
-        // Mark downbeats (every timeSignature beats)
-        val beatsWithDownbeats = if (onsets.size >= 4) {
-            onsets.mapIndexed { idx, beat ->
-                beat.copy(isDownbeat = idx % 4 == 0)
-            }
-        } else onsets
-
-        onProgress(1f)
-        BeatAnalysis(beatsWithDownbeats, bpm)
+        val bpm = estimateBpm(onsets)
+        // Mark downbeats (every fourth beat)
+        val beats = if (onsets.size >= 4) {
+            onsets.mapIndexed { idx, beat -> beat.copy(isDownbeat = idx % 4 == 0) }
+        } else {
+            onsets
+        }
+        return BeatDetectionEngine.BeatAnalysis(beats, bpm)
     }
 
-    /**
-     * Compute spectral flux: sum of positive magnitude differences between consecutive frames.
-     * Uses radix-2 Cooley-Tukey FFT instead of brute-force DFT for O(N log N) per frame.
-     */
-    private fun computeSpectralFlux(
-        samples: FloatArray,
-        windowSize: Int,
-        hopSize: Int
-    ): FloatArray {
-        val numFrames = (samples.size - windowSize) / hopSize
+    /** Spectral flux per hop, normalized to the loudest frame, from a radix-2 FFT. */
+    private fun computeSpectralFlux(samples: FloatArray, checkpoint: () -> Unit): FloatArray {
+        val numFrames = (samples.size - WINDOW_SIZE) / HOP_SIZE
         if (numFrames <= 1) return floatArrayOf()
 
-        val numBins = windowSize / 2 + 1
+        val numBins = WINDOW_SIZE / 2 + 1
         val flux = FloatArray(numFrames)
         var prevMagnitudes = FloatArray(numBins)
+        val hann = FloatArray(WINDOW_SIZE) { n -> 0.5f * (1f - cos(2f * Math.PI.toFloat() * n / WINDOW_SIZE)) }
 
         for (frame in 0 until numFrames) {
-            val offset = frame * hopSize
-
-            // Apply Hann window and copy into real array; imag starts at zero
-            val real = FloatArray(windowSize)
-            val imag = FloatArray(windowSize)
-            for (n in 0 until windowSize) {
-                val hannWindow = 0.5f * (1f - cos(2f * Math.PI.toFloat() * n / windowSize))
-                real[n] = if (offset + n < samples.size) samples[offset + n] * hannWindow else 0f
-            }
-
-            // In-place FFT
+            if (frame % 256 == 0) checkpoint()
+            val offset = frame * HOP_SIZE
+            val real = FloatArray(WINDOW_SIZE) { n -> samples[offset + n] * hann[n] }
+            val imag = FloatArray(WINDOW_SIZE)
             fft(real, imag)
 
-            // Compute magnitudes for bins 0..N/2
-            val magnitudes = FloatArray(numBins)
-            for (k in 0 until numBins) {
-                magnitudes[k] = sqrt(real[k] * real[k] + imag[k] * imag[k])
-            }
-
-            // Spectral flux = sum of positive differences
+            val magnitudes = FloatArray(numBins) { k -> sqrt(real[k] * real[k] + imag[k] * imag[k]) }
             var sf = 0f
             for (k in 0 until numBins) {
                 val diff = magnitudes[k] - prevMagnitudes[k]
                 if (diff > 0) sf += diff
             }
             flux[frame] = sf
-
             prevMagnitudes = magnitudes
         }
 
-        // Normalize flux
         val maxFlux = flux.maxOrNull() ?: 1f
         if (maxFlux > 0) {
             for (i in flux.indices) flux[i] /= maxFlux
         }
-
         return flux
     }
 
-    /**
-     * Radix-2 Cooley-Tukey in-place FFT.
-     * Input arrays must have power-of-2 length.
-     */
+    /** Radix-2 Cooley-Tukey in-place FFT. Input arrays must have power-of-2 length. */
     private fun fft(real: FloatArray, imag: FloatArray) {
         val n = real.size
         require(n > 0 && (n and (n - 1)) == 0) { "FFT input must have power-of-2 length, got $n" }
@@ -228,36 +190,21 @@ class BeatDetectionEngine @Inject constructor(
     }
 
     /**
-     * Estimate BPM from beat intervals using histogram voting.
+     * Tempo from the most common inter-onset interval. Onset times are quantized to
+     * the hop, so one tempo spreads over neighboring 10 ms bins: the tempo comes from
+     * the mean of the intervals in and beside the winning bin, not the bin's floor,
+     * which read 120 BPM as 122.4.
      */
-    private fun estimateBpm(beats: List<BeatInfo>, sampleRate: Int): Float {
+    private fun estimateBpm(beats: List<BeatDetectionEngine.BeatInfo>): Float {
         if (beats.size < 3) return 0f
-
-        // Compute inter-onset intervals
-        val intervals = mutableListOf<Long>()
-        for (i in 1 until beats.size) {
-            val interval = beats[i].timestampMs - beats[i - 1].timestampMs
-            if (interval in 200..2000) { // 30-300 BPM range
-                intervals.add(interval)
-            }
-        }
+        val intervals = beats.zipWithNext { a, b -> b.timestampMs - a.timestampMs }
+            .filter { it in 200..2000 } // 30-300 BPM
         if (intervals.isEmpty()) return 0f
-
-        // Histogram voting for most common interval (10ms bins)
-        val histogram = mutableMapOf<Long, Int>()
-        for (interval in intervals) {
-            val binned = (interval / 10) * 10
-            histogram[binned] = (histogram[binned] ?: 0) + 1
-        }
-
-        val bestInterval = histogram.maxByOrNull { it.value }?.key ?: return 0f
-        // Defence-in-depth: histogram keys are quantised intervals that should
-        // always be > 0, but a pathological input (e.g. every beat landing at
-        // t=0) could collapse `bestInterval` to 0 and turn the division into
-        // Infinity. `coerceIn` doesn't clamp Infinity — it stays Infinity —
-        // so guard explicitly before the divide.
-        if (bestInterval <= 0) return 0f
-        return (60000f / bestInterval).coerceIn(30f, 300f)
+        val votes = intervals.groupingBy { it / 10 }.eachCount()
+        val best = votes.maxByOrNull { it.value }?.key ?: return 0f
+        val period = intervals.filter { it / 10 in best - 1..best + 1 }.average()
+        if (period <= 0.0) return 0f
+        return (60_000.0 / period).toFloat().coerceIn(30f, 300f)
     }
 }
 

@@ -396,7 +396,7 @@ Planning files are local-only in the development checkout:
 - Full audio mixer with per-track volume faders, **pan slider**, mute/solo, **smoothed VU meters** (ballistic attack/decay)
 - 15 DSP effects: parametric EQ, compressor (corrected attack/release), limiter, delay, chorus, de-esser, pitch shift, noise gate
 - Waveform visualization with fade envelope overlay
-- **Beat detection**: spectral flux onset detection with adaptive thresholding and BPM estimation (aubio NDK ready)
+- **Beat detection**: spectral flux onset detection with adaptive thresholding and tempo estimation, timed at the rate the audio decodes to
 - **Auto-duck**: speech-aware volume keyframing (analyzes voice track, creates keyframes on music track)
 - **EBU R128 loudness normalization**: ITU-R BS.1770-4 measurement with loudness range and 4x oversampled true peak, checked against the EBU Tech 3341 and 3342 reference signals, with 6 platform presets:
  : YouTube/Spotify (-14 LUFS), TikTok (-14 LUFS), Podcast/Apple (-16 LUFS), Broadcast EBU R128 (-23 LUFS), Cinema (-24 LUFS), Loud (-9 LUFS)
@@ -500,7 +500,7 @@ Planning files are local-only in the development checkout:
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
 | Speech-to-Text | ONNX Runtime 1.28.0 (Whisper) |
 | Noise Reduction | DeepFilterNet 3 (android-deepfilternet 0.0.8) + spectral-gate fallback |
-| Beat Detection | Spectral flux onset detection (aubio NDK ready) |
+| Beat Detection | Spectral flux onset detection |
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
 | Segmentation | MediaPipe Tasks Vision 1.0.0 |
 | Video Matting | Planned (RobustVideoMatting, ONNX Runtime) |
