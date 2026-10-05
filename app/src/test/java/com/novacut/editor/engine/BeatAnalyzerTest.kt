@@ -42,6 +42,25 @@ class BeatAnalyzerTest {
     }
 
     @Test
+    fun everyWholeTempoFrom60To200AtBothCommonRates() {
+        // A beat period falls between two hop counts, so its intervals come in two
+        // lengths a hop apart; tempos where those round into 10 ms bins two apart
+        // used to lose one length and read up to 2 BPM off (170 read as 171.96).
+        val misses = mutableListOf<String>()
+        for (sampleRate in listOf(44_100, 48_000)) {
+            for (bpm in 60..200) {
+                val analysis = BeatAnalyzer.analyze(
+                    clicks(bpm = bpm.toDouble(), seconds = 16.0, sampleRate = sampleRate, channels = 1),
+                    channelCount = 1,
+                    sampleRate = sampleRate,
+                )
+                if (abs(analysis.bpm - bpm) > 0.25f) misses += "$bpm BPM at $sampleRate Hz read ${analysis.bpm}"
+            }
+        }
+        assertTrue(misses.joinToString("\n"), misses.isEmpty())
+    }
+
+    @Test
     fun everyFourthBeatIsADownbeat() {
         val beats = BeatAnalyzer.analyze(clicks(bpm = 120.0, seconds = 6.0), channelCount = 2, sampleRate = 44_100).beats
 

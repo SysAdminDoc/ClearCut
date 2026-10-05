@@ -8,6 +8,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sqrt
 
@@ -105,7 +106,7 @@ internal object BeatAnalyzer {
             }
         }
 
-        val bpm = estimateBpm(onsets)
+        val bpm = estimateBpm(onsets, sampleRate)
         // Mark downbeats (every fourth beat)
         val beats = if (onsets.size >= 4) {
             onsets.mapIndexed { idx, beat -> beat.copy(isDownbeat = idx % 4 == 0) }
@@ -195,14 +196,19 @@ internal object BeatAnalyzer {
      * the mean of the intervals in and beside the winning bin, not the bin's floor,
      * which read 120 BPM as 122.4.
      */
-    private fun estimateBpm(beats: List<BeatDetectionEngine.BeatInfo>): Float {
+    private fun estimateBpm(beats: List<BeatDetectionEngine.BeatInfo>, sampleRate: Int): Float {
         if (beats.size < 3) return 0f
         val intervals = beats.zipWithNext { a, b -> b.timestampMs - a.timestampMs }
             .filter { it in 200..2000 } // 30-300 BPM
         if (intervals.isEmpty()) return 0f
         val votes = intervals.groupingBy { it / 10 }.eachCount()
         val best = votes.maxByOrNull { it.value }?.key ?: return 0f
-        val period = intervals.filter { it / 10 in best - 1..best + 1 }.average()
+        // Onsets land on analysis hops, so one beat period shows up as two interval
+        // lengths a hop apart, and those can round into 10 ms bins two apart. Every
+        // interval within a hop of the winning bin counts, so neither length drops out.
+        val center = intervals.filter { it / 10 == best }.average()
+        val reachMs = HOP_SIZE * 1_000.0 / sampleRate + 2.0
+        val period = intervals.filter { abs(it - center) <= reachMs }.average()
         if (period <= 0.0) return 0f
         return (60_000.0 / period).toFloat().coerceIn(30f, 300f)
     }
