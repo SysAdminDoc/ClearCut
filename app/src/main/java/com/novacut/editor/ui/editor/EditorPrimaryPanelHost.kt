@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
 import com.novacut.editor.R
 import com.novacut.editor.engine.ExportColorConfidenceEngine
-import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Resolution
@@ -223,7 +222,7 @@ fun BoxScope.EditorPrimaryPanelHost(
             timelineTimebase = state.project.timelineTimebase,
             smartRenderSummary = exportSmartRenderSummary,
             sourceHdrSummary = sourceHdrSummary,
-            projectColorPolicy = ProjectColorPolicy.DEFAULT,
+            tracks = state.tracks,
             hasTextOverlays = state.textOverlays.isNotEmpty(),
             hasImageOverlays = state.imageOverlays.isNotEmpty(),
             textOverlays = state.textOverlays,

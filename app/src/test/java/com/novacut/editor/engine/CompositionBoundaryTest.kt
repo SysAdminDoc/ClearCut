@@ -2,6 +2,7 @@ package com.novacut.editor.engine
 
 import android.net.FakeUri
 import androidx.media3.common.C
+import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItemSequence
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Track
@@ -49,6 +50,31 @@ class CompositionBoundaryTest {
         assertEquals(1, composition.sequences.size)
         assertFalse(composition.transmuxAudio)
         assertTrue(composition.sequences.single() === sequence)
+    }
+
+    @Test
+    fun colorPlanModeReachesMedia3() {
+        val expected = mapOf(
+            ColorHdrMode.KEEP_HDR to Composition.HDR_MODE_KEEP_HDR,
+            ColorHdrMode.TONE_MAP_TO_SDR to Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL,
+            ColorHdrMode.TONE_MAP_IN_DECODER to Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_MEDIACODEC,
+            ColorHdrMode.INTERPRET_HDR_AS_SDR to Composition.HDR_MODE_EXPERIMENTAL_FORCE_INTERPRET_HDR_AS_SDR,
+        )
+        assertEquals(ColorHdrMode.entries.toSet(), expected.keys)
+        for ((mode, media3Mode) in expected) {
+            val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO)).addGap(1_000L).build()
+            val composition = CompositionBuilder.build(
+                CompositionBuildRequest(
+                    sequences = listOf(sequence),
+                    hasAudioTracks = false,
+                    hasEmbeddedVisualAudio = false,
+                    targetWidth = 1280,
+                    targetHeight = 720,
+                    hdrMode = mode,
+                )
+            )
+            assertEquals(mode.name, media3Mode, composition.hdrMode)
+        }
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import android.content.Context
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ResolvedTimelineExportRange
+import com.novacut.editor.model.Track
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -52,12 +53,18 @@ data class ExportHistoryEntry(
     val errorMessage: String? = null,
     val diagnosticSummary: String? = null,
     val mediaWarningCount: Int = 0,
-    val mediaBlockingCount: Int = 0
+    val mediaBlockingCount: Int = 0,
+    /** What the color plan said the file would carry; null for outputs without a video track. */
+    val requestedColor: DeliveredColor? = null,
+    /** What the finished file's video track is tagged with, read back from the file. */
+    val observedColor: DeliveredColor? = null,
 )
 
 class ExportHistoryStore(
     private val historyFile: File,
-    private val retainCount: Int = DEFAULT_EXPORT_HISTORY_LIMIT
+    private val retainCount: Int = DEFAULT_EXPORT_HISTORY_LIMIT,
+    /** Reads a finished file's video color; production passes ExportOutputVerifier.observedColor. */
+    private val observeColor: (File) -> DeliveredColor? = { null },
 ) {
     fun read(): List<ExportHistoryEntry> {
         if (!historyFile.isFile || historyFile.length() <= 0L || historyFile.length() > MAX_EXPORT_HISTORY_BYTES) {
@@ -76,7 +83,7 @@ class ExportHistoryStore(
     }
 
     fun append(entry: ExportHistoryEntry): List<ExportHistoryEntry> {
-        val updated = (listOf(entry) + read().filterNot { it.id == entry.id })
+        val updated = (listOf(entry.withObservedColor()) + read().filterNot { it.id == entry.id })
             .take(retainCount.coerceAtLeast(1))
         write(updated)
         return updated
@@ -88,6 +95,13 @@ class ExportHistoryStore(
         return updated
     }
 
+    // Callers append on an IO thread, so this is where the output gets read back.
+    private fun ExportHistoryEntry.withObservedColor(): ExportHistoryEntry {
+        if (status != ExportHistoryStatus.COMPLETE || requestedColor == null || observedColor != null) return this
+        val output = outputPath?.let(::File)?.takeIf { it.isFile } ?: return this
+        return copy(observedColor = observeColor(output))
+    }
+
     private fun write(entries: List<ExportHistoryEntry>) {
         historyFile.parentFile?.mkdirs()
         writeUtf8TextAtomically(historyFile, exportHistoryToJson(entries).toString(2))
@@ -96,7 +110,8 @@ class ExportHistoryStore(
     companion object {
         fun forContext(context: Context): ExportHistoryStore {
             return ExportHistoryStore(
-                File(File(context.filesDir, EXPORT_HISTORY_DIR), EXPORT_HISTORY_FILE)
+                historyFile = File(File(context.filesDir, EXPORT_HISTORY_DIR), EXPORT_HISTORY_FILE),
+                observeColor = ExportOutputVerifier::observedColor,
             )
         }
     }
@@ -118,7 +133,9 @@ fun buildExportHistoryEntry(
     errorMessage: String? = null,
     diagnosticSummary: String? = null,
     mediaWarningCount: Int = 0,
-    mediaBlockingCount: Int = 0
+    mediaBlockingCount: Int = 0,
+    /** The timeline's tracks, so the record carries the color the plan asked for. */
+    tracks: List<Track> = emptyList(),
 ): ExportHistoryEntry {
     val existingOutput = outputFile?.takeIf { it.isFile && it.length() > 0L }
     return ExportHistoryEntry(
@@ -153,8 +170,20 @@ fun buildExportHistoryEntry(
         errorMessage = errorMessage?.takeIf { it.isNotBlank() },
         diagnosticSummary = diagnosticSummary?.takeIf { it.isNotBlank() },
         mediaWarningCount = mediaWarningCount.coerceAtLeast(0),
-        mediaBlockingCount = mediaBlockingCount.coerceAtLeast(0)
+        mediaBlockingCount = mediaBlockingCount.coerceAtLeast(0),
+        requestedColor = requestedExportColor(config, tracks),
     )
+}
+
+/** Null for exports that carry no tagged video track: audio, stems, GIFs, stills and contact sheets. */
+internal fun requestedExportColor(config: ExportConfig, tracks: List<Track>): DeliveredColor? {
+    if (tracks.isEmpty() || config.exportAudioOnly || config.exportStemsOnly || config.exportAsGif ||
+        config.captureFrameOnly || config.exportAsContactSheet
+    ) {
+        return null
+    }
+    val plan = CompositionPlanBuilder.build(tracks)
+    return ColorRenderPlanner.plan(config.colorPolicy, plan.visualTracks, plan.durationMs).expected
 }
 
 private fun exportHistoryToJson(entries: List<ExportHistoryEntry>): JSONArray {
@@ -186,6 +215,8 @@ private fun exportHistoryToJson(entries: List<ExportHistoryEntry>): JSONArray {
                 putNullable("diagnosticSummary", entry.diagnosticSummary)
                 put("mediaWarningCount", entry.mediaWarningCount)
                 put("mediaBlockingCount", entry.mediaBlockingCount)
+                putNullable("requestedColor", entry.requestedColor?.name)
+                putNullable("observedColor", entry.observedColor?.name)
             })
         }
     }
@@ -223,7 +254,9 @@ private fun exportHistoryEntryFromJson(json: JSONObject): ExportHistoryEntry? {
         errorMessage = json.optNullableString("errorMessage"),
         diagnosticSummary = json.optNullableString("diagnosticSummary"),
         mediaWarningCount = json.optInt("mediaWarningCount").coerceAtLeast(0),
-        mediaBlockingCount = json.optInt("mediaBlockingCount").coerceAtLeast(0)
+        mediaBlockingCount = json.optInt("mediaBlockingCount").coerceAtLeast(0),
+        requestedColor = json.optDeliveredColor("requestedColor"),
+        observedColor = json.optDeliveredColor("observedColor"),
     )
 }
 
@@ -231,6 +264,9 @@ private fun JSONObject.optNullableString(name: String): String? {
     if (!has(name) || isNull(name)) return null
     return optString(name).takeIf { it.isNotBlank() }
 }
+
+private fun JSONObject.optDeliveredColor(name: String): DeliveredColor? =
+    optNullableString(name)?.let { value -> DeliveredColor.entries.firstOrNull { it.name == value } }
 
 private fun JSONObject.optNullableLong(name: String): Long? {
     if (!has(name) || isNull(name)) return null

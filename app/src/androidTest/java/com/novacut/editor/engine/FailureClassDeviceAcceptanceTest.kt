@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.ProjectColorPolicy
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
@@ -157,6 +158,8 @@ class FailureClassDeviceAcceptanceTest {
                         timelineStartMs = 0L,
                         trimStartMs = 250L,
                         trimEndMs = 1_000L,
+                        // Import inspects color; copy eligibility depends on it.
+                        sourceColorMetadata = MediaImportEngine(context).inspectSourceColor(Uri.fromFile(source)),
                     )
                     val secondTrim = firstTrim.copy(
                         id = "same-source-second-trim",
@@ -173,6 +176,7 @@ class FailureClassDeviceAcceptanceTest {
                     val trimEligibility = streamCopy.analyze(
                         tracks = listOf(trimTrack),
                         hasEffectsOrOverlays = false,
+                        colorPolicy = ProjectColorPolicy.DEFAULT,
                     )
                     assertTrue(
                         "same-source trim fixture was not eligible: ${trimEligibility.reason}",

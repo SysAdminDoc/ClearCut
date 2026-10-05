@@ -89,12 +89,12 @@ object HdrOverlayPolicy {
         val disclosure = when {
             fallbackRequired -> {
                 val subjects = overlays.labels(apiLevel).joinToString(", ")
-                "HDR preservation is unavailable with $subjects. ClearCut will use the SDR " +
-                    "overlay path to avoid Media3 HDR overlay color errors."
+                "HDR can't be kept with $subjects. Remove them, or turn off Keep HDR, " +
+                    "before exporting."
             }
             samplerBudgetExceeded -> {
                 "HDR overlay sampler budget exceeded ($samplerCount/$MAX_HDR_OVERLAY_SAMPLERS). " +
-                    "Remove some simultaneous overlays or disable HDR before exporting."
+                    "Remove some simultaneous overlays or turn off Keep HDR before exporting."
             }
             else -> null
         }

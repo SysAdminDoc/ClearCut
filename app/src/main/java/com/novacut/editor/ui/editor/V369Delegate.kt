@@ -327,7 +327,7 @@ class V369Delegate(
     fun checkStreamCopyEligibility() {
         val state = stateFlow.value
         val hasOverlays = state.textOverlays.isNotEmpty() || state.imageOverlays.isNotEmpty()
-        val result = streamCopy.analyze(state.tracks, hasOverlays)
+        val result = streamCopy.analyze(state.tracks, hasOverlays, state.exportConfig.colorPolicy)
         stateFlow.update { it.copy(v369 = it.v369.copy(streamCopyEligibility = result)) }
         showToast(
             if (result.eligible) "Stream-copy eligible — 50× faster export"

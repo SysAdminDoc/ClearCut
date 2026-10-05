@@ -4,6 +4,7 @@ import android.net.Uri
 import com.novacut.editor.engine.AppLog
 import com.novacut.editor.model.BlendMode
 import com.novacut.editor.model.Clip
+import com.novacut.editor.model.ProjectColorPolicy
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import javax.inject.Inject
@@ -40,7 +41,11 @@ class StreamCopyExportEngine @Inject constructor(
         val endMs: Long get() = ranges.lastOrNull()?.endMs ?: 0L
     }
 
-    fun analyze(tracks: List<Track>, hasEffectsOrOverlays: Boolean): Eligibility {
+    fun analyze(
+        tracks: List<Track>,
+        hasEffectsOrOverlays: Boolean,
+        colorPolicy: ProjectColorPolicy,
+    ): Eligibility {
         if (hasEffectsOrOverlays) return Eligibility(false, "effects or overlays present")
         val videoTracks = tracks.filter { it.type == TrackType.VIDEO && it.isVisible }
         if (videoTracks.size != 1) return Eligibility(false, "multi-track video")
@@ -86,6 +91,10 @@ class StreamCopyExportEngine @Inject constructor(
         for (c in clips) {
             val reason = c.firstDisqualifier()
             if (reason != null) return Eligibility(false, reason)
+            // A copied bitstream skips the tone-mapper, so it has to already be what the project asks for.
+            if (!ColorRenderPlanner.copyHonorsPolicy(colorPolicy, c)) {
+                return Eligibility(false, "clip color needs a render")
+            }
         }
         val ranges = clips.map { StreamCopyMuxer.Range(it.trimStartMs, it.trimEndMs) }
         return Eligibility(true, "eligible", firstSource, ranges)

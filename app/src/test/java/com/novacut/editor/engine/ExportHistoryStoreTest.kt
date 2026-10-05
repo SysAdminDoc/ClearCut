@@ -1,9 +1,17 @@
 package com.novacut.editor.engine
 
+import android.net.FakeUri
+import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.ProjectColorPolicy
+import com.novacut.editor.model.SourceColorMetadata
 import com.novacut.editor.model.TimelineExportRange
 import com.novacut.editor.model.TimelineTimebase
+import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
+import com.novacut.editor.model.VideoCodec
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -174,6 +182,88 @@ class ExportHistoryStoreTest {
             dir.deleteRecursively()
         }
     }
+
+    @Test
+    fun completedExportRecordsRequestedColorAndWhatTheFileCarries() {
+        val dir = Files.createTempDirectory("export-history-color-").toFile()
+        try {
+            val output = File(dir, "hdr.mp4").apply { writeBytes(ByteArray(16)) }
+            val entry = buildExportHistoryEntry(
+                projectId = "project",
+                projectName = "Sunset",
+                status = ExportHistoryStatus.COMPLETE,
+                startedAtEpochMs = 100L,
+                finishedAtEpochMs = 200L,
+                outputFile = output,
+                config = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = ProjectColorPolicy.KEEP_HDR),
+                timelineDurationMs = 1_000L,
+                tracks = listOf(hlgTrack()),
+            )
+            assertEquals(DeliveredColor.HLG, entry.requestedColor)
+            assertNull(entry.observedColor)
+
+            val read = mutableListOf<File>()
+            ExportHistoryStore(File(dir, "history.json"), observeColor = { read += it; DeliveredColor.SDR })
+                .append(entry)
+
+            val restored = ExportHistoryStore(File(dir, "history.json")).read().single()
+            assertEquals(listOf(output), read)
+            assertEquals(DeliveredColor.HLG, restored.requestedColor)
+            assertEquals(DeliveredColor.SDR, restored.observedColor)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun colorIsOnlyRecordedForTaggedVideoAndOnlyReadBackFromFinishedFiles() {
+        val dir = Files.createTempDirectory("export-history-color-skip-").toFile()
+        try {
+            val tracks = listOf(hlgTrack())
+            assertEquals(DeliveredColor.SDR, requestedExportColor(ExportConfig(), tracks))
+            assertNull(requestedExportColor(ExportConfig(colorPolicy = ProjectColorPolicy.KEEP_HDR, exportAudioOnly = true), tracks))
+            assertNull(requestedExportColor(ExportConfig(colorPolicy = ProjectColorPolicy.KEEP_HDR, exportAsGif = true), tracks))
+            assertNull(requestedExportColor(ExportConfig(), emptyList()))
+
+            val output = File(dir, "failed.mp4").apply { writeBytes(ByteArray(16)) }
+            val failed = buildExportHistoryEntry(
+                projectId = "project",
+                projectName = "Sunset",
+                status = ExportHistoryStatus.FAILED,
+                startedAtEpochMs = 100L,
+                finishedAtEpochMs = 200L,
+                outputFile = output,
+                config = ExportConfig(colorPolicy = ProjectColorPolicy.KEEP_HDR),
+                timelineDurationMs = 1_000L,
+                tracks = tracks,
+            )
+            val store = ExportHistoryStore(File(dir, "history.json"), observeColor = { error("read a failed export") })
+            store.append(failed)
+            store.append(entry("older-build", 50L))
+
+            val restored = store.read().associateBy { it.projectId }
+            assertNull(restored.getValue("project").observedColor)
+            assertNull(restored.getValue("older-build").requestedColor)
+            assertNull(restored.getValue("older-build").observedColor)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    private fun hlgTrack() = Track(
+        type = TrackType.VIDEO,
+        index = 0,
+        clips = listOf(
+            Clip(
+                sourceUri = FakeUri,
+                sourceDurationMs = 1_000L,
+                timelineStartMs = 0L,
+                trimStartMs = 0L,
+                trimEndMs = 1_000L,
+                sourceColorMetadata = SourceColorMetadata(mimeType = "video/hevc", colorTransfer = "HLG", inspectedAtMs = 1L),
+            )
+        ),
+    )
 
     private fun entry(projectId: String, startedAt: Long): ExportHistoryEntry {
         return buildExportHistoryEntry(

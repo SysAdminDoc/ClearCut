@@ -85,10 +85,13 @@ import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.keepsResumablePartial
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportStoragePolicy
+import com.novacut.editor.engine.HdrDeviceSupport
 import com.novacut.editor.engine.HdrOverlayAssetInspector
 import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
 import com.novacut.editor.engine.CodecInstanceBudget
+import com.novacut.editor.engine.ColorRenderPlanner
+import com.novacut.editor.engine.messageRes
 import com.novacut.editor.engine.Media3TrimOptimizationPolicy
 import android.net.Uri
 import androidx.compose.foundation.clickable
@@ -98,7 +101,6 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.model.AspectRatio
 import com.novacut.editor.model.AudioCodec
@@ -112,6 +114,7 @@ import com.novacut.editor.model.TargetSizePreset
 import com.novacut.editor.model.TimelineExportRange
 import com.novacut.editor.model.TimelineTimebase
 import com.novacut.editor.model.TextOverlay
+import com.novacut.editor.model.Track
 import com.novacut.editor.model.VideoCodec
 import com.novacut.editor.model.Watermark
 import com.novacut.editor.model.WatermarkPosition
@@ -222,7 +225,7 @@ fun ExportSheet(
     timelineTimebase: TimelineTimebase = TimelineTimebase(30),
     smartRenderSummary: SmartRenderEngine.SmartRenderSummary? = null,
     sourceHdrSummary: ExportColorConfidenceEngine.SourceHdrSummary = ExportColorConfidenceEngine.SourceHdrSummary(),
-    projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
+    tracks: List<Track> = emptyList(),
     hasTextOverlays: Boolean = false,
     hasImageOverlays: Boolean = false,
     textOverlays: List<TextOverlay> = emptyList(),
@@ -351,17 +354,21 @@ fun ExportSheet(
             )
         }
     }
-    val hdrOverlayDecision = remember(
-        effectiveConfig.hdr10PlusMetadata,
-        effectiveConfig.codec,
-        hdrOverlaySummary,
-    ) {
-        HdrOverlayPolicy.evaluate(
-            hdrRequested = effectiveConfig.hdr10PlusMetadata,
-            codec = effectiveConfig.codec,
+    // Whether Keep HDR could work with these overlays, so the switch can explain why it's off.
+    val hdrOverlayDecision = remember(effectiveConfig.codec, hdrOverlaySummary) {
+        HdrOverlayPolicy.evaluate(hdrRequested = true, codec = effectiveConfig.codec, overlays = hdrOverlaySummary)
+    }
+    val colorPlan = remember(effectiveConfig, tracks, textOverlays, imageOverlays, hdrOverlaySummary) {
+        ColorRenderPlanner.planExport(
+            config = effectiveConfig,
+            tracks = tracks,
+            overlayEndsMs = listOf(textOverlays.maxOfOrNull { it.endTimeMs } ?: 0L, imageOverlays.maxOfOrNull { it.endTimeMs } ?: 0L),
             overlays = hdrOverlaySummary,
+            device = HdrDeviceSupport.current,
         )
     }
+    val colorPlanIssue = colorPlan.blockers.firstOrNull() ?: colorPlan.warnings.firstOrNull()
+    val deviceKeepsHdr = HdrDeviceSupport.current == HdrDeviceSupport.OPEN_GL
     val deviceTierHint = remember {
         EncoderCapabilityProbe.deviceTierHint()
     }
@@ -380,7 +387,6 @@ fun ExportSheet(
         height,
         hdrEncodeSupport,
         sourceHdrSummary,
-        projectColorPolicy,
         hdrOverlaySummary,
     ) {
         ExportColorConfidenceEngine.analyze(
@@ -389,7 +395,6 @@ fun ExportSheet(
             height = height,
             hdrSupport = hdrEncodeSupport,
             sourceSummary = sourceHdrSummary,
-            projectColorPolicy = projectColorPolicy,
             overlaySummary = hdrOverlaySummary,
         )
     }
@@ -1346,6 +1351,8 @@ fun ExportSheet(
                     title = stringResource(R.string.export_hdr_preserve),
                     description = stringResource(
                         when {
+                            colorPlanIssue != null -> colorPlanIssue.messageRes
+                            !deviceKeepsHdr -> R.string.color_plan_device_cannot_process_hdr
                             effectiveConfig.codec == VideoCodec.H264 -> R.string.export_hdr_preserve_disabled
                             !hdrProfileSupport.canPreserveHdr -> R.string.export_hdr_preserve_feature_disabled
                             hdrOverlayDecision.samplerBudgetExceeded -> R.string.export_hdr_preserve_sampler_budget
@@ -1353,14 +1360,13 @@ fun ExportSheet(
                             else -> R.string.export_hdr_preserve_description
                         }
                     ),
-                    checked = config.hdr10PlusMetadata && codecCanCarryHdr &&
+                    checked = config.colorPolicy.keepsHdr,
+                    // Stays enabled while on, so a project that can't keep HDR can always go back to SDR.
+                    enabled = config.colorPolicy.keepsHdr || (codecCanCarryHdr && deviceKeepsHdr &&
                         !hdrOverlayDecision.requiresSdrFallback &&
-                        !hdrOverlayDecision.samplerBudgetExceeded,
-                    enabled = codecCanCarryHdr &&
-                        !hdrOverlayDecision.requiresSdrFallback &&
-                        !hdrOverlayDecision.samplerBudgetExceeded,
-                    onCheckedChange = { enabled ->
-                        onConfigChanged(config.copy(hdr10PlusMetadata = enabled && codecCanCarryHdr))
+                        !hdrOverlayDecision.samplerBudgetExceeded),
+                    onCheckedChange = { keep ->
+                        onConfigChanged(config.copy(colorPolicy = config.colorPolicy.withKeepHdr(keep)))
                     },
                     accent = ClearCutAccents.Yellow
                 )
@@ -1913,6 +1919,18 @@ internal fun ExportHistoryRow(
                             formatEtaSeconds(((entry.rangeEndMs - entry.rangeStartMs) / 1000L).coerceAtLeast(0L)),
                         ),
                         color = ClearCutAccents.Teal,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                entry.requestedColor?.let { requested ->
+                    val observed = entry.observedColor
+                    Text(
+                        text = if (observed == null || observed == requested) {
+                            stringResource(R.string.export_history_color, requested.name)
+                        } else {
+                            stringResource(R.string.export_history_color_mismatch, requested.name, observed.name)
+                        },
+                        color = if (observed == null || observed == requested) semanticColors.subtext else ClearCutAccents.Yellow,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }

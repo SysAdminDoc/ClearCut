@@ -41,11 +41,10 @@ data class ExportConfig(
     // from the per-project AiUsageLedger.
     val discloseAiUse: Boolean = false,
     val writeAiUseSidecar: Boolean = true,
-    // Requests HDR preservation for compatible HEVC / AV1 / VP9 exports.
-    // VideoEngine maps this to Media3 Composition.HDR_MODE_KEEP_HDR, while
-    // EncoderCapabilityProbe and ExportSheet warn when the selected encoder
-    // does not advertise HDR10+, Dolby Vision Profile 10, or other HDR support.
-    val hdr10PlusMetadata: Boolean = false,
+    // The project's color intent, carried here because preview and export both
+    // render from this config. The project persists it through AutoSaveState;
+    // ColorRenderPlanner turns it into the Media3 HDR mode for both paths.
+    val colorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
     // Gate for the LosslessCut-style stream-copy export path. The exporter
     // attempts direct MediaExtractor/MediaMuxer copy for untouched single-source
     // trims, then safely falls back to Transformer when the timeline is not

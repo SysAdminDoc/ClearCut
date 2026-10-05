@@ -6,6 +6,7 @@ import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.SourceColorMetadata
 import com.novacut.editor.model.TimelineExportRange
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
@@ -161,6 +162,30 @@ class Media3TrimOptimizationPolicyTest {
     }
 
     @Test
+    fun rejectsClipsWhoseColorNeedsARender() {
+        val trimmed = clip(trimStartMs = 1_000L, trimEndMs = 9_000L)
+        val hdrInSdrProject = Media3TrimOptimizationPolicy.evaluate(
+            tracks = listOf(
+                videoTrack(
+                    trimmed.copy(
+                        sourceColorMetadata = SourceColorMetadata(colorTransfer = "HLG", inspectedAtMs = 1L),
+                    ),
+                ),
+            ),
+            config = ExportConfig(),
+            inputMimeType = "video/mp4",
+        )
+        val unchecked = Media3TrimOptimizationPolicy.evaluate(
+            tracks = listOf(videoTrack(trimmed.copy(sourceColorMetadata = SourceColorMetadata()))),
+            config = ExportConfig(),
+            inputMimeType = "video/mp4",
+        )
+
+        assertEquals(Media3TrimOptimizationPolicy.Reason.SPECIAL_EXPORT, hdrInSdrProject.reason)
+        assertEquals(Media3TrimOptimizationPolicy.Reason.SPECIAL_EXPORT, unchecked.reason)
+    }
+
+    @Test
     fun transformerFlagsAreGatedAndCompletionStillVerifiesOutput() {
         val source = locate("app/src/main/java/com/novacut/editor/engine/VideoEngine.kt").readText()
         assertTrue(source.contains("trimOptimizationEnabled = trimOptimizationDecision.eligible"))
@@ -201,6 +226,8 @@ class Media3TrimOptimizationPolicyTest {
         speed = speed,
         rotation = rotation,
         effects = effects,
+        // Imported clips carry their inspected color; the transmuxed middle depends on it.
+        sourceColorMetadata = SourceColorMetadata(mimeType = "video/avc", inspectedAtMs = 1L),
     )
 
     private fun locate(relative: String): File {

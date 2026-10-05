@@ -1,9 +1,9 @@
 package com.novacut.editor.engine
 
+import androidx.media3.common.util.ExperimentalApi
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItemSequence
-import com.novacut.editor.engine.AppLog
 
 @UnstableApi
 internal data class CompositionBuildRequest(
@@ -13,7 +13,8 @@ internal data class CompositionBuildRequest(
     val targetWidth: Int,
     val targetHeight: Int,
     val hasMultipleVideoSequences: Boolean = false,
-    val preserveHdr: Boolean = false,
+    /** From ColorRenderPlanner. Null leaves Media3's default, which only audio-only compositions do. */
+    val hdrMode: ColorHdrMode? = null,
     val compositorLayers: List<ClearCutCompositorLayer> = emptyList(),
     val allowAudioTransmux: Boolean = true,
 )
@@ -21,8 +22,6 @@ internal data class CompositionBuildRequest(
 /** The only owner of Media3 composition assembly shared by preview and export. */
 @UnstableApi
 internal object CompositionBuilder {
-    private const val TAG = "CompositionBuilder"
-
     fun build(request: CompositionBuildRequest): Composition {
         val builder = Composition.Builder(request.sequences)
             .setTransmuxAudio(
@@ -38,15 +37,18 @@ internal object CompositionBuilder {
                 )
             )
         }
-        if (request.preserveHdr) {
-            // Keep the same defensive fallback as the old VideoEngine facade:
-            // older Media3 builds may not expose HDR mode at runtime.
-            try {
-                builder.setHdrMode(Composition.HDR_MODE_KEEP_HDR)
-            } catch (e: Throwable) {
-                AppLog.w(TAG, "setHdrMode unavailable on this Media3 build", e)
-            }
-        }
+        // Media3 keeps HDR unless told otherwise, so an SDR plan has to ask for tone mapping.
+        request.hdrMode?.let { builder.setHdrMode(it.toMedia3()) }
         return builder.build()
     }
+}
+
+// Read-as-SDR is Media3's experimental mode; it's the only route on devices that can't tone-map.
+@UnstableApi
+@androidx.annotation.OptIn(ExperimentalApi::class)
+internal fun ColorHdrMode.toMedia3(): Int = when (this) {
+    ColorHdrMode.KEEP_HDR -> Composition.HDR_MODE_KEEP_HDR
+    ColorHdrMode.TONE_MAP_TO_SDR -> Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL
+    ColorHdrMode.TONE_MAP_IN_DECODER -> Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_MEDIACODEC
+    ColorHdrMode.INTERPRET_HDR_AS_SDR -> Composition.HDR_MODE_EXPERIMENTAL_FORCE_INTERPRET_HDR_AS_SDR
 }

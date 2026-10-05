@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.ProjectColorPolicy
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.VideoCodec
@@ -65,7 +66,6 @@ object ExportColorConfidenceEngine {
         height: Int,
         hdrSupport: HdrEncodeSupport,
         sourceSummary: SourceHdrSummary = SourceHdrSummary(),
-        projectColorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
         overlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
     ): Report {
         val chips = mutableListOf<Chip>()
@@ -73,10 +73,10 @@ object ExportColorConfidenceEngine {
 
         addSourceChips(sourceSummary, chips)
 
-        if (!config.hdr10PlusMetadata) {
+        if (!config.colorPolicy.keepsHdr) {
             chips += Chip(
                 label = "SDR delivery",
-                detail = "HDR metadata is off for broad playback compatibility.",
+                detail = "The project delivers SDR for broad playback compatibility.",
                 tone = Tone.GOOD
             )
             chips += Chip(
@@ -87,11 +87,11 @@ object ExportColorConfidenceEngine {
             if (sourceSummary.hasHdrSource) {
                 chips += Chip(
                     label = "HDR source",
-                    detail = "Detected ${sourceSummary.formatList()} source media; enable Preserve HDR Metadata for HDR delivery.",
+                    detail = "Detected ${sourceSummary.formatList()} source media; it's tone-mapped to SDR. Choose Keep HDR for HDR delivery.",
                     tone = Tone.INFO
                 )
             }
-            addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
+            addProjectColorPolicyChip(config.colorPolicy, chips)
             return Report(chips = chips, warnings = warnings)
         }
 
@@ -101,13 +101,13 @@ object ExportColorConfidenceEngine {
                 detail = "${config.codec.label} exports are treated as SDR.",
                 tone = Tone.WARNING
             )
-            warnings += "${config.codec.label} cannot carry HDR in ClearCut exports. Switch to HEVC, AV1, or VP9 before preserving HDR metadata."
-            addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
+            warnings += "${config.codec.label} cannot carry HDR in ClearCut exports. Switch to HEVC, AV1, or VP9 before keeping HDR."
+            addProjectColorPolicyChip(config.colorPolicy, chips)
             return Report(chips = chips, warnings = warnings)
         }
 
         val hdrOverlayDecision = HdrOverlayPolicy.evaluate(
-            hdrRequested = config.hdr10PlusMetadata,
+            hdrRequested = true,
             codec = config.codec,
             overlays = overlaySummary,
         )
@@ -116,7 +116,7 @@ object ExportColorConfidenceEngine {
                 label = if (hdrOverlayDecision.samplerBudgetExceeded) {
                     "HDR overlay budget"
                 } else {
-                    "HDR overlays → SDR"
+                    "HDR overlays"
                 },
                 detail = disclosure,
                 tone = Tone.WARNING,
@@ -211,7 +211,7 @@ object ExportColorConfidenceEngine {
             tone = Tone.INFO
         )
 
-        addProjectColorPolicyChips(projectColorPolicy, config, chips, warnings)
+        addProjectColorPolicyChip(config.colorPolicy, chips)
 
         return Report(chips = chips, warnings = warnings.distinct())
     }
@@ -280,48 +280,27 @@ object ExportColorConfidenceEngine {
     private fun SourceHdrSummary.formatList(): String =
         supportedFormats.sorted().joinToString(", ").ifBlank { "HDR" }
 
-    private fun addProjectColorPolicyChips(
+    private fun addProjectColorPolicyChip(
         policy: ProjectColorPolicy,
-        config: ExportConfig,
         chips: MutableList<Chip>,
-        warnings: MutableList<String>
     ) {
-        when (policy.coherence()) {
-            ProjectColorPolicy.Coherence.COHERENT -> {
-                chips += Chip(
-                    label = "Project color",
-                    detail = "${policy.workingColorSpace.displayName}; ${policy.displayTransform.displayName}.",
-                    tone = Tone.INFO
-                )
-            }
-            ProjectColorPolicy.Coherence.SDR_TONEMAP_NOOP -> {
-                chips += Chip(
-                    label = "Color policy warning",
-                    detail = "${policy.displayTransform.displayName} is selected for an SDR project.",
-                    tone = Tone.WARNING
-                )
-                warnings += "Project color policy applies tone mapping even though the working space is SDR."
-            }
-            ProjectColorPolicy.Coherence.HDR_PASSTHROUGH -> {
-                chips += Chip(
-                    label = "Project HDR intent",
-                    detail = "${policy.workingColorSpace.displayName} is set to pass through.",
-                    tone = if (config.hdr10PlusMetadata) Tone.GOOD else Tone.WARNING
-                )
-                if (!config.hdr10PlusMetadata) {
-                    warnings += "Project color policy is HDR pass-through, but Preserve HDR Metadata is off for this export."
-                }
-            }
-            ProjectColorPolicy.Coherence.HDR_TO_SDR_TONEMAP -> {
-                chips += Chip(
-                    label = "Project tone-map",
-                    detail = "${policy.workingColorSpace.displayName} uses ${policy.displayTransform.displayName}.",
-                    tone = if (config.hdr10PlusMetadata) Tone.WARNING else Tone.INFO
-                )
-                if (config.hdr10PlusMetadata) {
-                    warnings += "Project color policy tone-maps HDR to SDR, but Preserve HDR Metadata is on for this export."
-                }
-            }
+        val normalized = policy.normalized()
+        chips += when {
+            normalized.input == ProjectColorPolicy.InputColor.INTERPRET_HDR_AS_SDR -> Chip(
+                label = "Project color",
+                detail = "HDR clips are read as SDR, so they look washed out.",
+                tone = Tone.WARNING,
+            )
+            normalized.keepsHdr -> Chip(
+                label = "Project color",
+                detail = "Keeps HDR in Rec. 2020 for preview and export.",
+                tone = Tone.GOOD,
+            )
+            else -> Chip(
+                label = "Project color",
+                detail = "SDR Rec. 709 for preview and export; HDR clips are tone-mapped.",
+                tone = Tone.INFO,
+            )
         }
     }
 

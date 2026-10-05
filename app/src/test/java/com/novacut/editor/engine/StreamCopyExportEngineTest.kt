@@ -12,6 +12,8 @@ import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.Keyframe
 import com.novacut.editor.model.KeyframeProperty
+import com.novacut.editor.model.ProjectColorPolicy
+import com.novacut.editor.model.SourceColorMetadata
 import com.novacut.editor.model.SpeedCurve
 import com.novacut.editor.model.SpeedPoint
 import com.novacut.editor.model.Track
@@ -38,10 +40,34 @@ class StreamCopyExportEngineTest {
     )
 
     @Test
+    fun analyze_hdrClipInAnSdrProject_needsARender() {
+        val hlg = baseClip().copy(
+            sourceColorMetadata = SourceColorMetadata(mimeType = "video/hevc", colorTransfer = "HLG", inspectedAtMs = 1L),
+        )
+
+        val sdrProject = analyze(listOf(videoTrack(hlg)), false)
+        val hdrProject = analyze(listOf(videoTrack(hlg)), false, ProjectColorPolicy.KEEP_HDR)
+
+        assertFalse(sdrProject.eligible)
+        assertEquals("clip color needs a render", sdrProject.reason)
+        assertTrue(hdrProject.reason, hdrProject.eligible)
+    }
+
+    @Test
+    fun analyze_clipWithUncheckedColor_needsARender() {
+        val unchecked = baseClip().copy(sourceColorMetadata = SourceColorMetadata())
+
+        val result = analyze(listOf(videoTrack(unchecked)), false)
+
+        assertFalse(result.eligible)
+        assertEquals("clip color needs a render", result.reason)
+    }
+
+    @Test
     fun analyze_singleCleanClip_isEligible() {
         val clip = baseClip()
         val tracks = listOf(videoTrack(clip))
-        val result = engine.analyze(tracks, hasEffectsOrOverlays = false)
+        val result = analyze(tracks, hasEffectsOrOverlays = false)
         assertTrue("single unmodified clip should be eligible: ${result.reason}", result.eligible)
         assertEquals(1, result.ranges.size)
         assertEquals(0L, result.ranges[0].startMs)
@@ -50,7 +76,7 @@ class StreamCopyExportEngineTest {
 
     @Test
     fun analyze_hasOverlaysFlag_disqualifies() {
-        val result = engine.analyze(listOf(videoTrack(baseClip())), hasEffectsOrOverlays = true)
+        val result = analyze(listOf(videoTrack(baseClip())), hasEffectsOrOverlays = true)
         assertFalse(result.eligible)
         assertEquals("effects or overlays present", result.reason)
     }
@@ -60,14 +86,14 @@ class StreamCopyExportEngineTest {
         val clip = baseClip().copy(
             effects = listOf(Effect(type = EffectType.BRIGHTNESS, params = mapOf("amount" to 0.1f)))
         )
-        val result = engine.analyze(listOf(videoTrack(clip)), hasEffectsOrOverlays = false)
+        val result = analyze(listOf(videoTrack(clip)), hasEffectsOrOverlays = false)
         assertFalse(result.eligible)
         assertTrue(result.reason.contains("effects"))
     }
 
     @Test
     fun analyze_flipOnClip_disqualifies() {
-        val result = engine.analyze(
+        val result = analyze(
             listOf(videoTrack(baseClip().copy(flipHorizontal = true))),
             hasEffectsOrOverlays = false,
         )
@@ -78,7 +104,7 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_speedChange_disqualifies() {
         val clip = baseClip().copy(speed = 2f)
-        assertFalse(engine.analyze(listOf(videoTrack(clip)), false).eligible)
+        assertFalse(analyze(listOf(videoTrack(clip)), false).eligible)
     }
 
     @Test
@@ -86,13 +112,13 @@ class StreamCopyExportEngineTest {
         val clip = baseClip().copy(
             speedCurve = SpeedCurve(listOf(SpeedPoint(0f, 1f), SpeedPoint(1f, 2f)))
         )
-        assertFalse(engine.analyze(listOf(videoTrack(clip)), false).eligible)
+        assertFalse(analyze(listOf(videoTrack(clip)), false).eligible)
     }
 
     @Test
     fun analyze_audioFadeDisqualifies() {
         val clip = baseClip().copy(fadeInMs = 200L)
-        val result = engine.analyze(listOf(videoTrack(clip)), false)
+        val result = analyze(listOf(videoTrack(clip)), false)
         assertFalse(result.eligible)
         assertEquals("clip has audio fade-in", result.reason)
     }
@@ -100,7 +126,7 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_audioVolumeDisqualifies() {
         val clip = baseClip().copy(volume = 0.5f)
-        val result = engine.analyze(listOf(videoTrack(clip)), false)
+        val result = analyze(listOf(videoTrack(clip)), false)
         assertFalse(result.eligible)
         assertEquals("clip volume ≠ 1×", result.reason)
     }
@@ -110,7 +136,7 @@ class StreamCopyExportEngineTest {
         val clip = baseClip().copy(
             audioEffects = listOf(AudioEffect(type = AudioEffectType.COMPRESSOR))
         )
-        val result = engine.analyze(listOf(videoTrack(clip)), false)
+        val result = analyze(listOf(videoTrack(clip)), false)
         assertFalse(result.eligible)
         assertEquals("clip has audio effects", result.reason)
     }
@@ -122,7 +148,7 @@ class StreamCopyExportEngineTest {
                 Keyframe(timeOffsetMs = 0L, property = KeyframeProperty.OPACITY, value = 1f)
             )
         )
-        val result = engine.analyze(listOf(videoTrack(clip)), false)
+        val result = analyze(listOf(videoTrack(clip)), false)
         assertFalse(result.eligible)
         assertEquals("clip has keyframes", result.reason)
     }
@@ -130,7 +156,7 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_colorGradeDisqualifies() {
         val clip = baseClip().copy(colorGrade = ColorGrade(enabled = true))
-        val result = engine.analyze(listOf(videoTrack(clip)), false)
+        val result = analyze(listOf(videoTrack(clip)), false)
         assertFalse(result.eligible)
         assertEquals("clip has color grade", result.reason)
     }
@@ -138,13 +164,13 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_blendModeDisqualifies() {
         val clip = baseClip().copy(blendMode = BlendMode.MULTIPLY)
-        assertFalse(engine.analyze(listOf(videoTrack(clip)), false).eligible)
+        assertFalse(analyze(listOf(videoTrack(clip)), false).eligible)
     }
 
     @Test
     fun analyze_multiVideoTrack_disqualifies() {
         val tracks = listOf(videoTrack(baseClip()), videoTrack(baseClip(), index = 1))
-        val result = engine.analyze(tracks, false)
+        val result = analyze(tracks, false)
         assertFalse(result.eligible)
         assertEquals("multi-track video", result.reason)
     }
@@ -159,7 +185,7 @@ class StreamCopyExportEngineTest {
                 clips = listOf(baseClip())
             )
         )
-        val result = engine.analyze(tracks, false)
+        val result = analyze(tracks, false)
         assertFalse(result.eligible)
         assertEquals("additional audio tracks", result.reason)
     }
@@ -168,7 +194,7 @@ class StreamCopyExportEngineTest {
     fun analyze_multiClipSameSource_isEligible() {
         val c1 = baseClip().copy(trimStartMs = 0L, trimEndMs = 2_000L, timelineStartMs = 0L)
         val c2 = baseClip().copy(trimStartMs = 3_000L, trimEndMs = 5_000L, timelineStartMs = 2_000L)
-        val result = engine.analyze(
+        val result = analyze(
             listOf(videoTrack(c1, c2)),
             hasEffectsOrOverlays = false
         )
@@ -184,7 +210,7 @@ class StreamCopyExportEngineTest {
     fun analyze_multiClipDifferentSource_disqualifies() {
         val c1 = baseClip(uri = FakeUriA)
         val c2 = baseClip(uri = FakeUriB)
-        val result = engine.analyze(listOf(videoTrack(c1, c2)), false)
+        val result = analyze(listOf(videoTrack(c1, c2)), false)
         assertFalse(result.eligible)
         assertEquals("multiple source files", result.reason)
     }
@@ -192,7 +218,7 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_trackMutedDisqualifies() {
         val track = videoTrack(baseClip()).copy(isMuted = true)
-        val result = engine.analyze(listOf(track), false)
+        val result = analyze(listOf(track), false)
         assertFalse(result.eligible)
         assertEquals("video track has non-default mix", result.reason)
     }
@@ -200,7 +226,7 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_trackTimelineOffsetDisqualifies() {
         val track = videoTrack(baseClip()).copy(timelineOffsetMs = 250L)
-        val result = engine.analyze(listOf(track), false)
+        val result = analyze(listOf(track), false)
 
         assertFalse(result.eligible)
         assertEquals("video track has timeline offset", result.reason)
@@ -209,13 +235,13 @@ class StreamCopyExportEngineTest {
     @Test
     fun analyze_trackOpacityDisqualifies() {
         val track = videoTrack(baseClip()).copy(opacity = 0.5f)
-        assertFalse(engine.analyze(listOf(track), false).eligible)
+        assertFalse(analyze(listOf(track), false).eligible)
     }
 
     @Test
     fun analyze_noClips_disqualifies() {
         val track = videoTrack()
-        val result = engine.analyze(listOf(track), false)
+        val result = analyze(listOf(track), false)
         assertFalse(result.eligible)
         assertEquals("no clips", result.reason)
     }
@@ -227,7 +253,7 @@ class StreamCopyExportEngineTest {
         // (c2 ends at 1000 where c1 begins) so there is no gap to disqualify.
         val c1 = baseClip().copy(trimStartMs = 0L, trimEndMs = 1_000L, timelineStartMs = 1_000L)
         val c2 = baseClip().copy(trimStartMs = 2_000L, trimEndMs = 3_000L, timelineStartMs = 0L)
-        val result = engine.analyze(listOf(videoTrack(c1, c2)), false)
+        val result = analyze(listOf(videoTrack(c1, c2)), false)
         assertTrue("abutting reversed clips should be eligible: ${result.reason}", result.eligible)
         // c2 comes first because its timelineStartMs is earlier.
         assertEquals(2_000L, result.ranges[0].startMs)
@@ -240,7 +266,7 @@ class StreamCopyExportEngineTest {
         // and shift c2 earlier, so stream-copy must fall back to the renderer.
         val c1 = baseClip().copy(trimStartMs = 0L, trimEndMs = 2_000L, timelineStartMs = 0L)
         val c2 = baseClip().copy(trimStartMs = 3_000L, trimEndMs = 5_000L, timelineStartMs = 3_000L)
-        val result = engine.analyze(listOf(videoTrack(c1, c2)), false)
+        val result = analyze(listOf(videoTrack(c1, c2)), false)
         assertFalse(result.eligible)
         assertEquals("timeline gap between clips", result.reason)
     }
@@ -250,7 +276,7 @@ class StreamCopyExportEngineTest {
         // Single clip that starts at 1s (black lead-in) — concat/trim would
         // drop the lead-in and start the output at 0.
         val clip = baseClip().copy(trimStartMs = 0L, trimEndMs = 2_000L, timelineStartMs = 1_000L)
-        val result = engine.analyze(listOf(videoTrack(clip)), false)
+        val result = analyze(listOf(videoTrack(clip)), false)
         assertFalse(result.eligible)
         assertEquals("leading timeline gap", result.reason)
     }
@@ -265,8 +291,16 @@ class StreamCopyExportEngineTest {
         sourceDurationMs = 10_000L,
         timelineStartMs = 0L,
         trimStartMs = 0L,
-        trimEndMs = 5_000L
+        trimEndMs = 5_000L,
+        // Imported clips carry their inspected color; copy eligibility depends on it.
+        sourceColorMetadata = SourceColorMetadata(mimeType = "video/avc", inspectedAtMs = 1L),
     )
+
+    private fun analyze(
+        tracks: List<Track>,
+        hasEffectsOrOverlays: Boolean,
+        colorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
+    ) = engine.analyze(tracks, hasEffectsOrOverlays, colorPolicy)
 
     private fun videoTrack(vararg clips: Clip, index: Int = 0): Track = Track(
         type = TrackType.VIDEO,

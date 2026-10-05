@@ -383,7 +383,7 @@ fun V369FeaturesPanel(
             accent = ClearCutAccents.Rosewater,
             icon = Icons.Default.Hd
         ) {
-            val hdr = state.exportConfig.hdr10PlusMetadata
+            val hdr = state.exportConfig.colorPolicy.keepsHdr
             val codecCanCarryHdr = state.exportConfig.codec !=
                 com.novacut.editor.model.VideoCodec.H264
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -391,7 +391,9 @@ fun V369FeaturesPanel(
                     checked = hdr && codecCanCarryHdr,
                     enabled = codecCanCarryHdr,
                     onCheckedChange = { on ->
-                        viewModel.updateExportConfig(state.exportConfig.copy(hdr10PlusMetadata = on))
+                        viewModel.updateExportConfig(
+                            state.exportConfig.copy(colorPolicy = state.exportConfig.colorPolicy.withKeepHdr(on))
+                        )
                     }
                 )
                 Spacer(Modifier.width(8.dp))

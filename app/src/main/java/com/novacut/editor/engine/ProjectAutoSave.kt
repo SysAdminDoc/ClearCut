@@ -659,7 +659,9 @@ data class AutoSaveState(
     val mediaAssets: List<ProjectMediaAsset> = emptyList(),
     val storyboardCards: List<com.novacut.editor.model.StoryboardCard> = emptyList(),
     /** Project export watermark, persisted so backups and recovery never substitute the brand asset. */
-    val exportWatermark: Watermark? = null
+    val exportWatermark: Watermark? = null,
+    /** Color intent shared by preview and export. Files written before it existed load as the SDR default. */
+    val colorPolicy: ProjectColorPolicy = ProjectColorPolicy.DEFAULT,
 ) {
     fun serialize(): String {
         val json = JSONObject().apply {
@@ -705,6 +707,7 @@ data class AutoSaveState(
                     }
                 })
             }
+            put("colorPolicy", colorPolicy.normalized().toJson())
             exportWatermark?.let { watermark ->
                 put("exportWatermark", JSONObject().apply {
                     put("sourceUri", watermark.sourceUri.toString())
@@ -1266,7 +1269,9 @@ data class AutoSaveState(
                 aiUsageLedger = aiUsageLedger,
                 mediaAssets = mediaAssets,
                 storyboardCards = storyboardCards,
-                exportWatermark = exportWatermark
+                exportWatermark = exportWatermark,
+                colorPolicy = ProjectColorPolicy.fromJson(json.optJSONObject("colorPolicy"))
+                    ?: ProjectColorPolicy.legacy(),
             )
         }
 

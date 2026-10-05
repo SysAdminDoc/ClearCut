@@ -5,6 +5,7 @@ import android.net.SecondFakeUri
 import android.net.Uri
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
+import com.novacut.editor.model.ProjectColorPolicy
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SourceColorMetadata
 import com.novacut.editor.model.SourceHdrFormat
@@ -21,7 +22,7 @@ class ExportColorConfidenceEngineTest {
     @Test
     fun sdrExportReportsBroadCompatibility() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.H264, hdr10PlusMetadata = false),
+            config = ExportConfig(codec = VideoCodec.H264),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport()
@@ -34,7 +35,7 @@ class ExportColorConfidenceEngineTest {
     @Test
     fun sdrExportReportsUltraHdrSourceWithoutWarning() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+            config = ExportConfig(codec = VideoCodec.HEVC),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(setOf("HDR10+")),
@@ -47,13 +48,13 @@ class ExportColorConfidenceEngineTest {
 
         assertFalse(report.hasWarnings)
         assertTrue(report.chips.any { it.label == "Ultra HDR source" })
-        assertTrue(report.chips.any { it.detail.contains("Preserve HDR Metadata") })
+        assertTrue(report.chips.any { it.detail.contains("Keep HDR") })
     }
 
     @Test
     fun hdrBaseGainMapSourceStillReportsUltraHdrSource() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+            config = ExportConfig(codec = VideoCodec.HEVC),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(),
@@ -74,7 +75,7 @@ class ExportColorConfidenceEngineTest {
     @Test
     fun sdrExportReportsApvSourceChipWithoutWarningList() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+            config = ExportConfig(codec = VideoCodec.HEVC),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(),
@@ -119,7 +120,7 @@ class ExportColorConfidenceEngineTest {
     @Test
     fun h264HdrRequestWarnsAboutSdrCodec() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.H264, hdr10PlusMetadata = true),
+            config = ExportConfig(codec = VideoCodec.H264, colorPolicy = ProjectColorPolicy.KEEP_HDR),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(setOf("HDR10+"))
@@ -131,48 +132,25 @@ class ExportColorConfidenceEngineTest {
     }
 
     @Test
-    fun hdrProjectPolicyWarnsWhenExportHdrMetadataIsOff() {
-        val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = false),
+    fun projectColorChipNamesTheProjectDecision() {
+        fun projectChip(policy: ProjectColorPolicy) = ExportColorConfidenceEngine.analyze(
+            config = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = policy),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(setOf("HDR10+")),
-            projectColorPolicy = ProjectColorPolicy(
-                workingColorSpace = ProjectColorPolicy.WorkingColorSpace.HDR10_BT2020_PQ,
-                displayTransform = ProjectColorPolicy.DisplayTransform.NONE
-            )
-        )
+        ).chips.single { it.label == "Project color" }
 
-        assertTrue(report.hasWarnings)
-        assertTrue(report.warnings.any { it.contains("HDR pass-through") })
-        assertTrue(report.chips.any { chip ->
-            chip.label == "Project HDR intent" &&
-                chip.tone == ExportColorConfidenceEngine.Tone.WARNING
-        })
-    }
-
-    @Test
-    fun sdrProjectPolicyWarnsWhenToneMapIsSelected() {
-        val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.H264, hdr10PlusMetadata = false),
-            width = 1920,
-            height = 1080,
-            hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(),
-            projectColorPolicy = ProjectColorPolicy(
-                workingColorSpace = ProjectColorPolicy.WorkingColorSpace.SDR_BT709,
-                displayTransform = ProjectColorPolicy.DisplayTransform.BT2390_TONEMAP
-            )
-        )
-
-        assertTrue(report.hasWarnings)
-        assertTrue(report.warnings.any { it.contains("working space is SDR") })
-        assertTrue(report.chips.any { chip -> chip.label == "Color policy warning" })
+        assertEquals(ExportColorConfidenceEngine.Tone.INFO, projectChip(ProjectColorPolicy.DEFAULT).tone)
+        assertEquals(ExportColorConfidenceEngine.Tone.GOOD, projectChip(ProjectColorPolicy.KEEP_HDR).tone)
+        val interpret = projectChip(ProjectColorPolicy(input = ProjectColorPolicy.InputColor.INTERPRET_HDR_AS_SDR))
+        assertEquals(ExportColorConfidenceEngine.Tone.WARNING, interpret.tone)
+        assertTrue(interpret.detail.contains("washed out"))
     }
 
     @Test
     fun hevcHdr10PlusSupportReportsDynamicMetadata() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            config = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = ProjectColorPolicy.KEEP_HDR),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(
@@ -188,9 +166,9 @@ class ExportColorConfidenceEngineTest {
     }
 
     @Test
-    fun hdrExportWithBitmapOverlaysDisclosesSdrFallback() {
+    fun hdrExportWithBitmapOverlaysDisclosesTheBlock() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            config = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = ProjectColorPolicy.KEEP_HDR),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(setOf("HDR10+")),
@@ -202,14 +180,14 @@ class ExportColorConfidenceEngineTest {
         )
 
         assertTrue(report.hasWarnings)
-        assertTrue(report.warnings.any { it.contains("HDR preservation is unavailable") })
-        assertTrue(report.chips.any { it.label == "HDR overlays → SDR" })
+        assertTrue(report.warnings.any { it.contains("HDR can't be kept") })
+        assertTrue(report.chips.any { it.label == "HDR overlays" })
     }
 
     @Test
     fun av1DolbyVisionProfile10SupportReportsDynamicPath() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.AV1, hdr10PlusMetadata = true),
+            config = ExportConfig(codec = VideoCodec.AV1, colorPolicy = ProjectColorPolicy.KEEP_HDR),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(
@@ -227,7 +205,7 @@ class ExportColorConfidenceEngineTest {
     @Test
     fun hdrRequestWarnsWhenDeviceDoesNotAdvertiseSupport() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            config = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = ProjectColorPolicy.KEEP_HDR),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport()
@@ -240,7 +218,7 @@ class ExportColorConfidenceEngineTest {
     @Test
     fun profileNamesDoNotHideMissingHdrEditingFeature() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            config = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = ProjectColorPolicy.KEEP_HDR),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(
@@ -257,7 +235,7 @@ class ExportColorConfidenceEngineTest {
     @Test
     fun advertisedHdrEditingFeatureCanOpenGateWithoutProfileName() {
         val report = ExportColorConfidenceEngine.analyze(
-            config = ExportConfig(codec = VideoCodec.HEVC, hdr10PlusMetadata = true),
+            config = ExportConfig(codec = VideoCodec.HEVC, colorPolicy = ProjectColorPolicy.KEEP_HDR),
             width = 1920,
             height = 1080,
             hdrSupport = ExportColorConfidenceEngine.HdrEncodeSupport(
@@ -275,7 +253,7 @@ class ExportColorConfidenceEngineTest {
             config = ExportConfig(
                 resolution = Resolution.UHD_4K,
                 codec = VideoCodec.HEVC,
-                hdr10PlusMetadata = true
+                colorPolicy = ProjectColorPolicy.KEEP_HDR
             ),
             width = 3840,
             height = 2160,

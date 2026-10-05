@@ -112,6 +112,10 @@ object Media3TrimOptimizationPolicy {
         }
 
         val clip = clips.single()
+        // The transmuxed middle skips the tone-mapper, so the clip has to already match the policy.
+        if (!ColorRenderPlanner.copyHonorsPolicy(config.colorPolicy, clip)) {
+            return Decision(false, Reason.SPECIAL_EXPORT)
+        }
         val resolvedInputMimeType = inputMimeType
             ?: clip.sourceUri.lastPathSegment
                 ?.substringAfterLast('.', missingDelimiterValue = "")
@@ -126,7 +130,7 @@ object Media3TrimOptimizationPolicy {
             config.transparentBackground || config.timelineRange != null ||
             config.subtitleFormat != null || config.burnSubtitles ||
             config.watermark != null || config.chapters.isNotEmpty() ||
-            config.includeChapterMarkers || config.hdr10PlusMetadata ||
+            config.includeChapterMarkers || config.colorPolicy.keepsHdr ||
             config.forceConstantFrameRate
         ) {
             return Decision(false, Reason.SPECIAL_EXPORT)

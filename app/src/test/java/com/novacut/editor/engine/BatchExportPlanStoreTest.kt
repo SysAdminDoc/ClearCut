@@ -8,8 +8,10 @@ import com.novacut.editor.model.BatchExportStatus
 import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ExportQuality
+import com.novacut.editor.model.ProjectColorPolicy
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.TimelineExportRange
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -42,6 +44,7 @@ class BatchExportPlanStoreTest {
                 scrubMetadata = true,
                 preserveSourceLocationMetadata = true,
                 preserveSourceStreamMetadata = true,
+                colorPolicy = ProjectColorPolicy.KEEP_HDR,
             )
             val failed = BatchExportItem(
                 id = "failed-item",
@@ -80,6 +83,39 @@ class BatchExportPlanStoreTest {
             assertEquals(failed.outputPath, restored.single().outputPath)
             assertEquals(failed.resumePartialPath, restored.single().resumePartialPath)
             assertEquals(failed.sourceRange, restored.single().sourceRange)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun plansFromBeforeColorPolicyKeepTheirHdrChoice() {
+        val dir = Files.createTempDirectory("batch-plan-legacy-color-").toFile()
+        try {
+            val file = File(dir, "plan.json")
+            val store = BatchExportPlanStore.forFile(file)
+            val context = BatchExportPlanContext("project-a", "project-fingerprint")
+            val item = BatchExportItem(
+                id = "legacy",
+                config = ExportConfig(),
+                outputName = "Legacy",
+                projectId = context.projectId,
+                projectFingerprint = context.projectFingerprint,
+            )
+            store.saveFor(context, listOf(item, item.copy(id = "legacy-sdr", outputName = "Legacy SDR")))
+            // Rewrite the saved configs the way older builds wrote them: a bare HDR switch.
+            val root = JSONObject(file.readText())
+            val items = root.getJSONArray("items")
+            for (index in 0 until items.length()) {
+                val config = items.getJSONObject(index).getJSONObject("config")
+                config.remove("colorPolicy")
+                config.put("hdr10PlusMetadata", index == 0)
+            }
+            file.writeText(root.toString())
+
+            val restored = store.readFor(context).associateBy { it.id }
+            assertEquals(ProjectColorPolicy.KEEP_HDR, restored.getValue("legacy").config.colorPolicy)
+            assertEquals(ProjectColorPolicy.DEFAULT, restored.getValue("legacy-sdr").config.colorPolicy)
         } finally {
             dir.deleteRecursively()
         }

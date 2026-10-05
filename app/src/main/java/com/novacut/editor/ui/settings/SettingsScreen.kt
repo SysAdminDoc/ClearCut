@@ -58,7 +58,6 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.PrivacyDashboard
-import com.novacut.editor.engine.ProjectColorPolicy
 import com.novacut.editor.engine.ThumbnailCachePolicy
 import com.novacut.editor.engine.segmentation.SegmentationModelState
 import com.novacut.editor.engine.whisper.WhisperModelState
@@ -200,7 +199,6 @@ fun SettingsScreen(
         Spacer(Modifier.height(10.dp))
 
         // Export Defaults
-        val projectColorPolicy = ProjectColorPolicy.DEFAULT
         SettingsSection(
             title = stringResource(R.string.settings_export_defaults),
             description = stringResource(R.string.settings_export_defaults_description)
@@ -249,19 +247,10 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_project_color_policy),
                 description = stringResource(R.string.settings_project_color_policy_description)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(Spacing.xs)
-                ) {
-                    SettingsStatusBadge(
-                        text = projectColorPolicy.workingColorSpace.displayName,
-                        accent = ClearCutAccents.Teal
-                    )
-                    SettingsStatusBadge(
-                        text = projectColorPolicy.displayTransform.displayName,
-                        accent = ClearCutAccents.Sapphire
-                    )
-                }
+                SettingsStatusBadge(
+                    text = stringResource(R.string.settings_project_color_new_default),
+                    accent = ClearCutAccents.Teal
+                )
             }
         }
 

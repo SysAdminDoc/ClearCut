@@ -1367,7 +1367,10 @@ class EditorViewModel @Inject constructor(
                 storyboardCards = recovery.storyboardCards.ifEmpty { current.storyboardCards },
                 ai = current.ai.copy(usageLedger = recovery.aiUsageLedger),
                 export = current.export.copy(
-                    config = current.export.config.copy(watermark = recovery.exportWatermark)
+                    config = current.export.config.copy(
+                        watermark = recovery.exportWatermark,
+                        colorPolicy = recovery.colorPolicy,
+                    )
                 ),
                 media = current.media.copy(
                     healthReport = mediaHealthReport,
@@ -2792,7 +2795,10 @@ class EditorViewModel @Inject constructor(
                     storyboardCards = recovery.storyboardCards.ifEmpty { it.storyboardCards },
                     v369 = it.v369.copy(transcript = recovery.transcript ?: it.v369.transcript),
                     export = it.export.copy(
-                        config = it.export.config.copy(watermark = recovery.exportWatermark)
+                        config = it.export.config.copy(
+                            watermark = recovery.exportWatermark,
+                            colorPolicy = recovery.colorPolicy,
+                        )
                     ),
                     media = it.media.copy(mediaAssets = recovery.mediaAssets),
                 )
@@ -3002,7 +3008,10 @@ class EditorViewModel @Inject constructor(
                                     storyboardCards = state.storyboardCards,
                                     playheadMs = state.playheadMs,
                                     export = s.export.copy(
-                                        config = s.export.config.copy(watermark = state.exportWatermark)
+                                        config = s.export.config.copy(
+                                            watermark = state.exportWatermark,
+                                            colorPolicy = state.colorPolicy,
+                                        )
                                     ),
                                     media = s.media.copy(mediaAssets = state.mediaAssets),
                                 )
@@ -5942,7 +5951,10 @@ class EditorViewModel @Inject constructor(
 
     // Export
     fun updateExportConfig(config: ExportConfig) {
+        val colorPolicyChanged = config.colorPolicy != _state.value.exportConfig.colorPolicy
         _state.update { it.copyExport { export -> export.copy(config = config) } }
+        // The preview renders with the same Media3 HDR mode as the export.
+        if (colorPolicyChanged) rebuildPlayerTimeline()
     }
 
     fun startExport(outputDir: File) = exportDelegate.startExport(outputDir)
@@ -6192,7 +6204,8 @@ class EditorViewModel @Inject constructor(
                 mediaAssets = mediaAssets,
                 storyboardCards = state.storyboardCards,
                 globalTransitions = state.globalTransitions,
-                exportWatermark = state.exportConfig.watermark
+                exportWatermark = state.exportConfig.watermark,
+                colorPolicy = state.exportConfig.colorPolicy,
             )
         )
     }
@@ -6223,6 +6236,7 @@ class EditorViewModel @Inject constructor(
         storyboardCards = state.storyboardCards,
         globalTransitions = state.globalTransitions,
         exportWatermark = state.exportConfig.watermark,
+        colorPolicy = state.exportConfig.colorPolicy,
     )
 
     private fun currentProjectFingerprint(state: EditorState = _state.value): String =

@@ -1334,7 +1334,7 @@ class VideoEngine @Inject constructor(
             return false
         }
 
-        preflightMixedStreamCopyRuns(plan, tracks)?.let { reason ->
+        preflightMixedStreamCopyRuns(plan, tracks, config)?.let { reason ->
             AppLog.d(TAG, "Mixed export skipped: $reason")
             return false
         }
@@ -1411,7 +1411,7 @@ class VideoEngine @Inject constructor(
                             run = execution.run,
                             normaliseTimelineStart = false
                         )
-                        val eligibility = streamCopyEngine.analyze(runTracks, hasEffectsOrOverlays = false)
+                        val eligibility = streamCopyEngine.analyze(runTracks, hasEffectsOrOverlays = false, colorPolicy = config.colorPolicy)
                         if (!eligibility.eligible) {
                             throw IllegalStateException(
                                 "Mixed stream-copy run ${execution.index} is not eligible: ${eligibility.reason}"
@@ -1562,7 +1562,8 @@ class VideoEngine @Inject constructor(
 
     private fun preflightMixedStreamCopyRuns(
         plan: MixedRenderComposer.CompositionPlan,
-        tracks: List<Track>
+        tracks: List<Track>,
+        config: ExportConfig,
     ): String? {
         for (execution in plan.runs) {
             if (execution.engine != MixedRenderComposer.Engine.STREAM_COPY) continue
@@ -1571,7 +1572,7 @@ class VideoEngine @Inject constructor(
                 run = execution.run,
                 normaliseTimelineStart = false
             )
-            val eligibility = streamCopyEngine.analyze(runTracks, hasEffectsOrOverlays = false)
+            val eligibility = streamCopyEngine.analyze(runTracks, hasEffectsOrOverlays = false, colorPolicy = config.colorPolicy)
             if (!eligibility.eligible) {
                 return "stream-copy run ${execution.index} is not eligible: ${eligibility.reason}"
             }
@@ -1708,16 +1709,30 @@ class VideoEngine @Inject constructor(
             imageOverlays = imageOverlays,
             watermark = config.watermark,
         )
-        val hdrOverlayDecision = HdrOverlayPolicy.evaluate(
-            hdrRequested = config.hdr10PlusMetadata,
-            codec = config.codec,
+        val colorPlan = ColorRenderPlanner.plan(
+            policy = config.colorPolicy,
+            visualTracks = visibleVideoTracks,
+            totalDurationMs = totalTimelineDurationMs,
+            codec = if (config.transparentBackground) VideoCodec.VP9 else config.codec,
             overlays = hdrOverlaySummary,
+            device = HdrDeviceSupport.current,
+            isStill = { isImageUri(it.sourceUri) },
         )
-        HdrOverlayPolicy.throwIfSamplerBudgetExceeded(hdrOverlayDecision)
-        if (hdrOverlayDecision.requiresSdrFallback) {
-            AppLog.w(TAG, "Export: ${hdrOverlayDecision.disclosure}")
+        colorPlan.blockers.firstOrNull()?.let { issue ->
+            throw ExportStageException(
+                stage = "Color policy",
+                subjectId = null,
+                message = context.getString(issue.messageRes),
+            )
         }
-        val preserveHdr = hdrOverlayDecision.preserveHdr
+        val hdrOutput = colorPlan.hdrMode == ColorHdrMode.KEEP_HDR && colorPlan.expected.isHdr
+        HdrOverlayPolicy.throwIfSamplerBudgetExceeded(
+            HdrOverlayPolicy.evaluate(
+                hdrRequested = hdrOutput,
+                codec = config.codec,
+                overlays = hdrOverlaySummary,
+            )
+        )
         val visualTrackSequences = buildVideoSequences(
             visibleVideoTracks = visibleVideoTracks,
             soloTrackIds = soloTrackIds,
@@ -1731,7 +1746,7 @@ class VideoEngine @Inject constructor(
             imageOverlays = imageOverlays,
             lottieOverlays = lottieOverlays,
             trackedObjects = trackedObjects,
-            hdrOverlaySummary = hdrOverlaySummary,
+            hdrOutput = hdrOutput,
             degradationLedger = degradationLedger,
         )
         val unsupportedTrackBlendModes = visualTrackSequences
@@ -1759,7 +1774,7 @@ class VideoEngine @Inject constructor(
                 targetWidth = targetW,
                 targetHeight = targetH,
                 hasMultipleVideoSequences = visualTrackSequences.size > 1,
-                preserveHdr = preserveHdr,
+                hdrMode = colorPlan.hdrMode,
                 compositorLayers = visualTrackSequences.map { it.compositorLayer },
             )
         )
@@ -1860,7 +1875,7 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
-        hdrOverlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
+        hdrOutput: Boolean = false,
         previewMode: Boolean = false,
         degradationLedger: RenderDegradationLedger? = null,
     ): List<VisualTrackSequence> {
@@ -1889,7 +1904,7 @@ class VideoEngine @Inject constructor(
                     imageOverlays = imageOverlays,
                     lottieOverlays = lottieOverlays,
                     trackedObjects = trackedObjects,
-                    hdrOverlaySummary = hdrOverlaySummary,
+                    hdrOutput = hdrOutput,
                     globalTransitions = globalTransitions,
                     previewMode = previewMode,
                     degradationLedger = degradationLedger,
@@ -1921,7 +1936,7 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
-        hdrOverlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
+        hdrOutput: Boolean = false,
         globalTransitions: List<GlobalTransition> = emptyList(),
         previewMode: Boolean = false,
         degradationLedger: RenderDegradationLedger? = null,
@@ -1961,7 +1976,7 @@ class VideoEngine @Inject constructor(
                             imageOverlays = imageOverlays,
                             lottieOverlays = lottieOverlays,
                             trackedObjects = trackedObjects,
-                            hdrOverlaySummary = hdrOverlaySummary,
+                            hdrOutput = hdrOutput,
                             nextClipTransition = nextTransition,
                             globalTransitions = globalTransitions,
                             previewMode = previewMode,
@@ -1990,7 +2005,7 @@ class VideoEngine @Inject constructor(
         imageOverlays: List<ImageOverlay>,
         lottieOverlays: List<LottieOverlaySpec>,
         trackedObjects: List<TrackedObject>,
-        hdrOverlaySummary: HdrOverlaySummary = HdrOverlaySummary(),
+        hdrOutput: Boolean = false,
         nextClipTransition: Transition? = null,
         globalTransitions: List<GlobalTransition> = emptyList(),
         previewMode: Boolean = false,
@@ -2073,16 +2088,11 @@ class VideoEngine @Inject constructor(
             val overlappingLottie = lottieOverlays.filter { lo ->
                 lo.startTimeMs < clipEnd && lo.endTimeMs > clipStart
             }
-            val preserveLottieHdr = HdrOverlayPolicy.evaluate(
-                hdrRequested = config.hdr10PlusMetadata,
-                codec = config.codec,
-                overlays = hdrOverlaySummary,
-            ).preserveHdr
             val lottieBackendPlans = overlappingLottie.map { lo ->
                 val relStartUs = ((lo.startTimeMs - clipStart).coerceAtLeast(0L)) * 1000L
                 val durationUs = (lo.endTimeMs - lo.startTimeMs).coerceAtLeast(1L) * 1000L
                 val decision = chooseLottieOverlayBackend(
-                    preserveHdr = preserveLottieHdr,
+                    preserveHdr = hdrOutput,
                     overlayDurationUs = durationUs,
                     compositionDurationUs = lottieCompositionDurationUs(lo.composition)
                 )
@@ -2405,6 +2415,14 @@ class VideoEngine @Inject constructor(
         val resolvedById = resolvedTracks.associateBy(Track::id)
         val visualTracks = plan.visualTracks.mapNotNull { resolvedById[it.id] }
             .filter { it.clips.any { clip -> clip.durationMs > 0L } }
+        val colorPlan = ColorRenderPlanner.plan(
+            policy = config.colorPolicy,
+            visualTracks = visualTracks,
+            totalDurationMs = compositionDurationMs,
+            device = HdrDeviceSupport.current,
+            isStill = { isImageUri(it.sourceUri) },
+        )
+        val previewHdrMode = colorPlan.previewHdrMode
         val visualSequences = buildVideoSequences(
             visibleVideoTracks = visualTracks,
             soloTrackIds = plan.soloTrackIds,
@@ -2417,6 +2435,7 @@ class VideoEngine @Inject constructor(
             imageOverlays = emptyList(),
             lottieOverlays = emptyList(),
             trackedObjects = trackedObjects,
+            hdrOutput = previewHdrMode == ColorHdrMode.KEEP_HDR && colorPlan.expected.isHdr,
             previewMode = true,
         )
         val audioSequences = buildAudioSequences(
@@ -2444,6 +2463,7 @@ class VideoEngine @Inject constructor(
                 targetWidth = targetW,
                 targetHeight = targetH,
                 hasMultipleVideoSequences = visualSequences.size > 1,
+                hdrMode = previewHdrMode,
                 compositorLayers = visualSequences.map { it.compositorLayer },
                 allowAudioTransmux = false,
             )

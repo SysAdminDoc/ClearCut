@@ -48,6 +48,8 @@ class Media3TrimOptimizationInstrumentationTest {
                 timelineStartMs = 0L,
                 trimStartMs = 500L,
                 trimEndMs = 1_000L,
+                // Import inspects color; the transmuxed middle depends on it.
+                sourceColorMetadata = MediaImportEngine(context).inspectSourceColor(Uri.fromFile(source)),
             )
             val track = Track(type = TrackType.VIDEO, index = 0, clips = listOf(clip))
             var completed = false

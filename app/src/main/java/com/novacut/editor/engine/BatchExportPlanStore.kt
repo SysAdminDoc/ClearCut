@@ -10,6 +10,7 @@ import com.novacut.editor.model.ChapterMarker
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ExportQuality
 import com.novacut.editor.model.FrameCaptureFormat
+import com.novacut.editor.model.ProjectColorPolicy
 import com.novacut.editor.model.PlatformPreset
 import com.novacut.editor.model.Resolution
 import com.novacut.editor.model.SubtitleFormat
@@ -323,7 +324,7 @@ private fun exportConfigToJson(config: ExportConfig): JSONObject = JSONObject().
     }
     put("discloseAiUse", config.discloseAiUse)
     put("writeAiUseSidecar", config.writeAiUseSidecar)
-    put("hdr10PlusMetadata", config.hdr10PlusMetadata)
+    put("colorPolicy", config.colorPolicy.normalized().toJson())
     put("allowStreamCopy", config.allowStreamCopy)
     put("scrubMetadata", config.scrubMetadata)
     put("preserveSourceLocationMetadata", config.preserveSourceLocationMetadata)
@@ -396,7 +397,9 @@ private fun exportConfigFromJson(json: JSONObject?): ExportConfig? {
             watermark = watermark,
             discloseAiUse = json.optBoolean("discloseAiUse", false),
             writeAiUseSidecar = json.optBoolean("writeAiUseSidecar", true),
-            hdr10PlusMetadata = json.optBoolean("hdr10PlusMetadata", false),
+            // Plans written before color intent carried only the old per-export HDR switch.
+            colorPolicy = ProjectColorPolicy.fromJson(json.optJSONObject("colorPolicy"))
+                ?: ProjectColorPolicy.legacy(hdrRequested = json.optBoolean("hdr10PlusMetadata", false)),
             allowStreamCopy = json.optBoolean("allowStreamCopy", true),
             scrubMetadata = json.optBoolean("scrubMetadata", false),
             preserveSourceLocationMetadata = json.optBoolean("preserveSourceLocationMetadata", false),

@@ -11,6 +11,7 @@ import com.novacut.editor.model.EffectType
 import com.novacut.editor.model.Keyframe
 import com.novacut.editor.model.KeyframeInterpolation
 import com.novacut.editor.model.KeyframeProperty
+import com.novacut.editor.model.ProjectColorPolicy
 import com.novacut.editor.model.SpeedCurve
 import com.novacut.editor.model.SpeedPoint
 import com.novacut.editor.model.TextOverlay
@@ -101,6 +102,18 @@ class AutoSaveStateTest {
         assertEquals(WatermarkPosition.TOP_RIGHT, restored.exportWatermark?.position)
         assertEquals(0.55f, restored.exportWatermark?.opacity)
         assertEquals(27, restored.exportWatermark?.scalePercent)
+    }
+
+    @Test
+    fun projectColorPolicy_roundTripsAndOlderProjectsLoadAsSdr() {
+        val state = AutoSaveState(projectId = "color-project", colorPolicy = ProjectColorPolicy.KEEP_HDR)
+
+        val restored = AutoSaveState.deserialize(state.serialize()) { FakeUri }
+        assertEquals(ProjectColorPolicy.KEEP_HDR, restored.colorPolicy)
+
+        val oldJson = JSONObject(state.serialize()).apply { remove("colorPolicy") }
+        val restoredOld = AutoSaveState.deserialize(oldJson.toString()) { FakeUri }
+        assertEquals(ProjectColorPolicy.DEFAULT, restoredOld.colorPolicy)
     }
 
     @Test

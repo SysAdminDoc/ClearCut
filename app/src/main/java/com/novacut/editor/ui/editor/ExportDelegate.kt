@@ -34,11 +34,8 @@ import com.novacut.editor.engine.RenderDegradationException
 import com.novacut.editor.engine.ExportStorageException
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportResumePolicy
-import com.novacut.editor.engine.HdrOverlayPolicy
 import com.novacut.editor.engine.HdrOverlaySummary
-import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.GifStreamEncoder
-import com.novacut.editor.engine.HdrOverlayAssetInspector
 import com.novacut.editor.engine.MAX_REVERSE_CLIP_DURATION_MS
 import com.novacut.editor.engine.MediaHealthReport
 import com.novacut.editor.engine.Media3ExportRobustnessPolicy
@@ -340,7 +337,7 @@ class ExportDelegate(
                     } else config.resolution.label,
                     frameRate = config.frameRate,
                     exportAudioOnly = config.exportAudioOnly,
-                    hdrRequested = config.hdr10PlusMetadata,
+                    hdrRequested = config.colorPolicy.keepsHdr,
                     streamCopyAttempted = streamCopyAttempted,
                     timelineDurationMs = timelineDurationMs,
                     startedAtMs = startedAtMs,
@@ -410,7 +407,8 @@ class ExportDelegate(
             errorMessage = errorMessage,
             diagnosticSummary = summaryWithConsent,
             mediaWarningCount = healthReport?.warningCount ?: 0,
-            mediaBlockingCount = healthReport?.blockingCount ?: 0
+            mediaBlockingCount = healthReport?.blockingCount ?: 0,
+            tracks = sourceState.tracks,
         )
         scope.launch(Dispatchers.IO) {
             var history = exportHistoryStore.append(entry)
@@ -548,7 +546,7 @@ class ExportDelegate(
         if (config.exportAudioOnly || config.exportStemsOnly) return false
         if (config.watermark != null) return false
         val hasOverlays = textOverlays.isNotEmpty() || state.imageOverlays.isNotEmpty()
-        val eligibility = engine.analyze(tracks, hasOverlays)
+        val eligibility = engine.analyze(tracks, hasOverlays, config.colorPolicy)
         if (!eligibility.eligible) return false
         val storageCheck = ExportStoragePolicy.check(
             request = ExportStoragePolicy.request(
@@ -941,40 +939,12 @@ class ExportDelegate(
         runtimeExportNote = null
         val healthReport = mediaHealthPreflight(currentState)
         val audioConformance = buildAudioConformance(currentState)
-        val hdrProfileSupport = withContext(Dispatchers.IO) {
-            EncoderCapabilityProbe.queryHdrProfiles(currentState.exportConfig.codec)
-        }
-        val hdrFeatureBlockers = if (
-            currentState.exportConfig.hdr10PlusMetadata &&
-            !currentState.exportConfig.exportAudioOnly &&
-            !currentState.exportConfig.exportStemsOnly &&
-            !currentState.exportConfig.exportAsGif &&
-            !currentState.exportConfig.captureFrameOnly &&
-            !currentState.exportConfig.exportAsContactSheet &&
-            !hdrProfileSupport.canPreserveHdr
-        ) {
-            listOf(hdrProfileSupport.featureFailureReason())
-        } else {
-            emptyList()
-        }
-        val hdrOverlaySummary = withContext(Dispatchers.IO) {
-            HdrOverlayAssetInspector.inspect(
-                context = appContext,
-                textOverlays = currentState.textOverlays,
-                imageOverlays = currentState.imageOverlays,
-                watermark = currentState.exportConfig.watermark,
-            )
-        }
-        val hdrOverlayDisclosure = HdrOverlayPolicy.evaluate(
-            hdrRequested = currentState.exportConfig.hdr10PlusMetadata,
-            codec = currentState.exportConfig.codec,
-            overlays = hdrOverlaySummary,
-        ).disclosure
+        val colorPreflight = exportColorPreflight(appContext, currentState)
         val unsupportedTrackBlendCount = TrackBlendModeCapability
             .unsupportedTracks(currentState.tracks)
             .size
         val renderWarnings = buildList {
-            hdrOverlayDisclosure?.let(::add)
+            addAll(colorPreflight.warnings)
             if (unsupportedTrackBlendCount > 0) {
                 add(text(R.string.export_warning_track_blend_unsupported, unsupportedTrackBlendCount))
             }
@@ -985,7 +955,7 @@ class ExportDelegate(
             audioConformance = audioConformance,
             dependencies = projectDependencyManifest(currentState),
             additionalWarnings = renderWarnings,
-            additionalBlockers = hdrFeatureBlockers,
+            additionalBlockers = colorPreflight.blockers,
             intentFallbacks = reverseIntentFallbacks(currentState),
         )
         stateFlow.update { state ->

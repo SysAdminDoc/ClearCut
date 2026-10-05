@@ -292,6 +292,32 @@ object ExportOutputVerifier {
         }
     }
 
+    /**
+     * The color the file's first video track is tagged with. Untagged video plays as SDR.
+     * Null when the file has no video track or can't be read.
+     */
+    fun observedColor(outputFile: File): DeliveredColor? {
+        val extractor = MediaExtractor()
+        return try {
+            extractor.setDataSource(outputFile.absolutePath)
+            (0 until extractor.trackCount)
+                .map(extractor::getTrackFormat)
+                .firstOrNull { it.getString(MediaFormat.KEY_MIME)?.startsWith("video/") == true }
+                ?.let { format ->
+                    when (format.getIntSafe(MediaFormat.KEY_COLOR_TRANSFER)) {
+                        MediaFormat.COLOR_TRANSFER_HLG -> DeliveredColor.HLG
+                        MediaFormat.COLOR_TRANSFER_ST2084 -> DeliveredColor.PQ
+                        else -> DeliveredColor.SDR
+                    }
+                }
+        } catch (e: Exception) {
+            AppLog.w(TAG, "Could not read the output color of ${outputFile.redacted()}", e)
+            null
+        } finally {
+            runCatching { extractor.release() }
+        }
+    }
+
     private fun MediaFormat.getIntSafe(key: String): Int {
         return try { getInteger(key) } catch (_: Exception) { 0 }
     }
