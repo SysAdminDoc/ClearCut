@@ -34,16 +34,10 @@
 - Thermal export notices no longer claim the encoder paused or reduced work when it did not. Android 15 device thresholds and Android 16 headroom callbacks guide the advisory, forecast polling waits at least ten seconds, and shutdown cancellation is announced only after the engine stops.
 - Stabilization, dependency versions, model requirements, and native-license details now come from current runtime and lock data. The local signed-release gate is verified, and completed Media3 plus artifact-gate blockers are retired.
 
-### v3.80.0 A quieter workspace for every cut
+v3.81.0 was also the first published build of this earlier work:
 
 - Stabilization now supports local, versioned `.ncstabilization` profiles that carry lens, motion-search, crop, and sync assumptions without executable content. Import previews disclose fallback metadata and stable rejection codes, activation is atomic, and the next offline analysis plus its saved project data use the selected profile.
-
-### v3.79.0 A quieter workspace for every cut
-
-- The dashboard now opens with a focused project launcher, a compact recent-project row, and direct access to built-in templates.
 - The editor gives footage more room, keeps transport and timeline controls dense, and uses a flatter tool bar that stays readable at a glance.
-- Settings uses compact rows and clearer value hierarchy without hiding ClearCut's existing controls.
-- Export puts delivery facts, presets, editable output choices, and the export action in one visible path.
 - Dark and high-contrast screenshot coverage now renders at a 360 x 800 dp phone viewport with accessibility checks enabled.
 - Launcher shortcuts now open the new-project flow or the most recent project in every build variant, including streaming.
 - Dependency freshness now tracks Activity and records an explicit adopt, hold, or retained-beta decision for every catalog pin. Accepted upgrades carry a passing QA, lint, assemble, and strict verification probe.
@@ -55,17 +49,11 @@
 - Timeline toolbar rendering now has its own callback-driven owner and zoom policy, with focused behavior coverage and reviewed byte budgets for the largest editor coordination files.
 - Shareable effect and style packs now publish a schema-v3 compatibility manifest with minimum app version, required capabilities, payload hashes, provenance, and stable import reason codes. Unknown capabilities and incompatible app versions are rejected before any install, while legacy packs still migrate through the rollback-safe path.
 - Translation coverage now walks every `values-*` resource directory, checks strings, plurals, and arrays against English, parses locale registration, and requires the matching Play metadata files. Dependency freshness applies the fixed 30-day horizon to snapshot, dependency, and upstream fact evidence, while the timeline toolbar keeps one overflow owner and one shared zoom clamp across fit, pinch, and ViewModel updates.
-
-### v3.78.1 CFR delivery and source-cut batch exports
-
 - Distribution metadata now includes a translated Spanish listing and current changelog; Play screenshots are derived from checked-in API 37 device captures and the release helper scripts work from a clean checkout.
 - Project persistence now runs on Room 3.0.1 and SQLite driver APIs, with the full v1 to v10 migration chain validated on the API 37 device lane.
 - Pure single-source MP4 trims use Media3's GOP optimization when eligible, and the export sheet explains whether smart trim or a full render was chosen and why.
 - CFR export normalization now turns irregular VFR source cadence into the selected delivery rate before the final Media3 render.
 - Batch Export can queue independent source-file trim ranges with persisted URIs and per-item settings while retaining uniform project exports.
-
-### v3.78.0 Nothing reports work that did not happen
-
 - **The editor walkthrough is explicit.** New editor sessions no longer interrupt work with an automatic tutorial; Settings → Replay Editor Walkthrough opens it immediately in the latest project (or a blank editor when no project exists), and Back/Skip return cleanly without a persisted reset flag.
 - **Auto Captions stop inventing words.** Without a transcription model the fallback measured *when* speech happened and filled the gap with "[Speech segment N]": text that was saved to your project, drawn in the preview, burned into the exported video and written to the SRT, under a toast saying captions had been added. The timing is real, so it is now marked on the timeline; the missing transcript is stated outright.
 - **The copyright check stops clearing audio it never checked.** The content-ID pre-check does not contact AcoustID, and reported "No copyright match detected" anyway. It now distinguishes *looked up and found nothing* from *never looked up*, and says which.
