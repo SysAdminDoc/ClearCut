@@ -74,9 +74,15 @@ data class CrashReportDevice(
             model = Build.MODEL.orEmpty(),
             androidRelease = Build.VERSION.RELEASE.orEmpty(),
             sdkInt = Build.VERSION.SDK_INT,
-            abi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty(),
+            abi = processAbi(),
         )
     }
+}
+
+/** The ABI this process runs as: a 32-bit APK on a 64-bit phone runs armeabi-v7a, not the phone's first ABI. */
+private fun processAbi(): String {
+    val abis = if (android.os.Process.is64Bit()) Build.SUPPORTED_64_BIT_ABIS else Build.SUPPORTED_32_BIT_ABIS
+    return (abis.firstOrNull() ?: Build.SUPPORTED_ABIS.firstOrNull()).orEmpty()
 }
 
 object CrashReportNoticePolicy {
@@ -182,6 +188,7 @@ object CrashReportNoticePolicy {
 @Composable
 internal fun CrashReportBanner(
     notice: CrashReportNotice,
+    saving: Boolean,
     onSaveReport: () -> Unit,
     onCopySummary: () -> Unit,
     onDismiss: () -> Unit,
@@ -255,6 +262,7 @@ internal fun CrashReportBanner(
                     text = stringResource(R.string.crash_notice_save_report),
                     onClick = onSaveReport,
                     icon = Icons.Default.Download,
+                    enabled = !saving,
                     modifier = Modifier
                         .weight(1f)
                         .testTag(ClearCutTestTags.CRASH_REPORT_SAVE)

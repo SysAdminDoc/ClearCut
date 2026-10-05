@@ -104,6 +104,7 @@ fun ProjectListScreen(
     val operationState by viewModel.operationState.collectAsStateWithLifecycle()
     val documentImportPreview by viewModel.documentImportPreview.collectAsStateWithLifecycle()
     val crashReportNotice by viewModel.crashReportNotice.collectAsStateWithLifecycle()
+    val crashReportSaving by viewModel.crashReportSaving.collectAsStateWithLifecycle()
     val actionsEnabled = operationState == null
     val currentLocale = LocalConfiguration.current.locales[0]
     val hasAnyProjects = projectTotalCount > 0
@@ -188,6 +189,7 @@ fun ProjectListScreen(
                 crashReportNotice?.let { notice ->
                     CrashReportBanner(
                         notice = notice,
+                        saving = crashReportSaving,
                         onSaveReport = { crashReportLauncher.launch(CrashReportNoticePolicy.reportFileName(notice)) },
                         onCopySummary = viewModel::copyCrashReportSummary,
                         onDismiss = viewModel::dismissCrashReportNotice,

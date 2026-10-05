@@ -62,6 +62,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -124,6 +125,9 @@ class ProjectListViewModel @Inject constructor(
 
     private val _crashReportNotice = MutableStateFlow<CrashReportNotice?>(null)
     val crashReportNotice: StateFlow<CrashReportNotice?> = _crashReportNotice.asStateFlow()
+    private val _crashReportSaving = MutableStateFlow(false)
+    val crashReportSaving: StateFlow<Boolean> = _crashReportSaving.asStateFlow()
+    private var crashReportNoticeLoad: Job? = null
     private var crashReportSaveJob: Job? = null
 
     private val _operationState = MutableStateFlow<ProjectListOperationState?>(null)
@@ -1107,7 +1111,7 @@ class ProjectListViewModel @Inject constructor(
     }
 
     private fun loadCrashReportNotice() {
-        viewModelScope.launch {
+        crashReportNoticeLoad = viewModelScope.launch {
             _crashReportNotice.value = withContext(Dispatchers.IO) {
                 CrashReportNoticePolicy.latest(
                     crashes = crashRecordStore.recentCrashes(),
@@ -1121,9 +1125,22 @@ class ProjectListViewModel @Inject constructor(
 
     /** Builds the diagnostic ZIP with the issue body inside and writes it where the user picked. */
     fun saveCrashReport(target: Uri) {
-        val notice = _crashReportNotice.value ?: return
-        if (crashReportSaveJob?.isActive == true) return
+        if (crashReportSaveJob?.isActive == true) {
+            // The button is disabled while a save runs, so this is a picker result
+            // that outlived it. Leave nothing empty behind.
+            deleteDocumentQuietly(target)
+            return
+        }
         crashReportSaveJob = viewModelScope.launch {
+            // After a process death the picker can answer before the notice has loaded.
+            crashReportNoticeLoad?.join()
+            val notice = _crashReportNotice.value
+            if (notice == null) {
+                deleteDocumentQuietly(target)
+                showToast(appContext.getString(R.string.crash_notice_report_failed))
+                return@launch
+            }
+            _crashReportSaving.value = true
             try {
                 val bundle = diagnosticBundleBuilder.build(issueBody = crashReportIssueBody(notice))
                 withContext(Dispatchers.IO) {
@@ -1137,9 +1154,18 @@ class ProjectListViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 AppLog.w(TAG, "Crash report save failed", e)
+                deleteDocumentQuietly(target)
                 showToast(appContext.getString(R.string.crash_notice_report_failed))
+            } finally {
+                _crashReportSaving.value = false
             }
         }
+    }
+
+    /** Removes a file the picker created that never got a whole report. */
+    private fun deleteDocumentQuietly(target: Uri) {
+        runCatching { android.provider.DocumentsContract.deleteDocument(appContext.contentResolver, target) }
+            .onFailure { AppLog.w(TAG, "Couldn't remove the unfinished crash report", it) }
     }
 
     fun copyCrashReportSummary() {
@@ -1163,7 +1189,8 @@ class ProjectListViewModel @Inject constructor(
 
     private fun acknowledgeCrashReportNotice(notice: CrashReportNotice) {
         if (_crashReportNotice.value == notice) _crashReportNotice.value = null
-        viewModelScope.launch(Dispatchers.IO) {
+        // Leaving the screen right after the tap mustn't lose this, or the banner comes back.
+        viewModelScope.launch(Dispatchers.IO + NonCancellable) {
             crashRecordStore.acknowledgeNoticesThrough(notice.coversThroughEpochMs)
         }
     }
