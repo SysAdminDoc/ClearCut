@@ -2625,6 +2625,12 @@ class VideoEngine @Inject constructor(
             if (trimOptimizationEnabled) {
                 transformerBuilder.experimentalSetTrimOptimizationEnabled(true)
             }
+            transformerBuilder.setAssetLoaderFactory(
+                Media3DecoderFallback.assetLoaderFactory(context) { note ->
+                    AppLog.w(TAG, note)
+                    onFallbackApplied(note)
+                }
+            )
             transformerBuilder.setMuxerFactory(
                 MetadataPreservingMuxerFactory(
                     delegate = DefaultMuxer.Factory(),

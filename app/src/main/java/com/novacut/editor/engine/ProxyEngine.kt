@@ -166,6 +166,9 @@ class ProxyEngine @Inject constructor(
                     .build()
 
                 val transformer = Transformer.Builder(context)
+                    .setAssetLoaderFactory(
+                        Media3DecoderFallback.assetLoaderFactory(context) { note -> AppLog.w("ProxyEngine", note) }
+                    )
                     .addListener(object : Transformer.Listener {
                         override fun onCompleted(composition: Composition, exportResult: androidx.media3.transformer.ExportResult) {
                             if (!cont.isActive) {
