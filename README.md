@@ -398,7 +398,7 @@ Planning files are local-only in the development checkout:
 - Waveform visualization with fade envelope overlay
 - **Beat detection**: spectral flux onset detection with adaptive thresholding and BPM estimation (aubio NDK ready)
 - **Auto-duck**: speech-aware volume keyframing (analyzes voice track, creates keyframes on music track)
-- **EBU R128 loudness normalization**: K-weighted measurement with 6 platform presets:
+- **EBU R128 loudness normalization**: ITU-R BS.1770-4 measurement with loudness range and 4x oversampled true peak, checked against the EBU Tech 3341 and 3342 reference signals, with 6 platform presets:
  : YouTube/Spotify (-14 LUFS), TikTok (-14 LUFS), Podcast/Apple (-16 LUFS), Broadcast EBU R128 (-23 LUFS), Cinema (-24 LUFS), Loud (-9 LUFS)
 - True-peak limiting to prevent clipping
 - Voiceover recording with automatic timeline placement

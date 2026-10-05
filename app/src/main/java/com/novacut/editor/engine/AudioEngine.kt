@@ -306,7 +306,14 @@ class AudioEngine @Inject constructor(
      * Returns an empty `ShortArray` when no audio track is present or decoding
      * fails — callers should treat that as "no data" rather than an error.
      */
-    suspend fun decodeToPCM(uri: Uri): ShortArray = withContext(Dispatchers.IO) {
+    suspend fun decodeToPCM(uri: Uri): ShortArray = decodeToPcmWithFormat(uri).samples
+
+    /**
+     * [decodeToPCM] with the decoder's output sample rate and channel count,
+     * which can differ from the container's (HE-AAC decodes at twice the
+     * stored rate). Samples are interleaved by channel.
+     */
+    suspend fun decodeToPcmWithFormat(uri: Uri): DecodedPcm = withContext(Dispatchers.IO) {
         val extractor = MediaExtractor()
         try {
             extractor.setDataSource(context, uri, null)
@@ -322,11 +329,12 @@ class AudioEngine @Inject constructor(
                 }
             }
 
-            if (audioIndex < 0 || format == null) return@withContext ShortArray(0)
+            if (audioIndex < 0 || format == null) return@withContext DecodedPcm.EMPTY
 
             extractor.selectTrack(audioIndex)
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext ShortArray(0)
+            val mime = format.getString(MediaFormat.KEY_MIME) ?: return@withContext DecodedPcm.EMPTY
             var decoderLease: CodecLease<MediaCodec>? = null
+            var outputFormat: MediaFormat? = null
 
             // Collect chunks as ShortArrays to avoid boxing millions of Shorts
             val chunks = mutableListOf<ShortArray>()
@@ -361,12 +369,13 @@ class AudioEngine @Inject constructor(
                     while (outIdx >= 0) {
                         val outBuf = decoder.getOutputBuffer(outIdx)
                         if (outBuf != null && bufferInfo.size > 0) {
+                            if (outputFormat == null) outputFormat = decoder.outputFormat
                             val arr = readPcmSamples(outBuf, bufferInfo)
                             if (arr.isNotEmpty()) {
                                 if (AudioDecodeBudget.exceedsBudget(totalSamples, arr.size)) {
                                     AppLog.w(TAG, "Decoded PCM exceeds the in-memory budget; stopping decode")
                                     decoder.releaseOutputBuffer(outIdx, false)
-                                    return@withContext ShortArray(0)
+                                    return@withContext DecodedPcm.EMPTY
                                 }
                                 chunks.add(arr)
                                 totalSamples += arr.size
@@ -391,7 +400,15 @@ class AudioEngine @Inject constructor(
                 System.arraycopy(chunk, 0, result, offset, chunk.size)
                 offset += chunk.size
             }
-            result
+            fun MediaFormat?.int(key: String): Int? =
+                this?.takeIf { it.containsKey(key) }?.getInteger(key)?.takeIf { it > 0 }
+            DecodedPcm(
+                samples = result,
+                sampleRate = outputFormat.int(MediaFormat.KEY_SAMPLE_RATE)
+                    ?: format.int(MediaFormat.KEY_SAMPLE_RATE) ?: 48_000,
+                channelCount = outputFormat.int(MediaFormat.KEY_CHANNEL_COUNT)
+                    ?: format.int(MediaFormat.KEY_CHANNEL_COUNT) ?: 2,
+            )
         } finally {
             extractor.release()
         }
@@ -474,21 +491,29 @@ class AudioEngine @Inject constructor(
             needsResampling = needsResampling
         )
     }
+}
 
-    private fun readPcmSamples(outputBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo): ShortArray {
-        if (bufferInfo.size < 2) return ShortArray(0)
-        val buffer = outputBuffer.duplicate()
-        val start = bufferInfo.offset.coerceIn(0, buffer.capacity())
-        val unalignedEnd = (bufferInfo.offset + bufferInfo.size).coerceIn(start, buffer.capacity())
-        val end = unalignedEnd - ((unalignedEnd - start) % 2)
-        if (end <= start) return ShortArray(0)
+/** The 16-bit samples in one decoder output buffer, honoring its offset and size. */
+internal fun readPcmSamples(outputBuffer: ByteBuffer, bufferInfo: MediaCodec.BufferInfo): ShortArray {
+    if (bufferInfo.size < 2) return ShortArray(0)
+    val buffer = outputBuffer.duplicate()
+    val start = bufferInfo.offset.coerceIn(0, buffer.capacity())
+    val unalignedEnd = (bufferInfo.offset + bufferInfo.size).coerceIn(start, buffer.capacity())
+    val end = unalignedEnd - ((unalignedEnd - start) % 2)
+    if (end <= start) return ShortArray(0)
 
-        buffer.position(start)
-        buffer.limit(end)
-        val shortBuffer: ShortBuffer = buffer.slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-        val samples = ShortArray(shortBuffer.remaining())
-        shortBuffer.get(samples)
-        return samples
+    buffer.position(start)
+    buffer.limit(end)
+    val shortBuffer: ShortBuffer = buffer.slice().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
+    val samples = ShortArray(shortBuffer.remaining())
+    shortBuffer.get(samples)
+    return samples
+}
+
+/** Interleaved 16-bit PCM and the rate and channel count it was decoded at. */
+class DecodedPcm(val samples: ShortArray, val sampleRate: Int, val channelCount: Int) {
+    companion object {
+        val EMPTY = DecodedPcm(ShortArray(0), 48_000, 2)
     }
 }
 
