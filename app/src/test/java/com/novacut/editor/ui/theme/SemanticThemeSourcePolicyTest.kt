@@ -79,7 +79,7 @@ class SemanticThemeSourcePolicyTest {
         var directory: File? = File(userDir).absoluteFile
         repeat(6) {
             val current = directory ?: error("Could not locate repository root")
-            if (File(current, ".git").isDirectory) return current
+            if (File(current, ".git").exists()) return current
             directory = current.parentFile
         }
         error("Could not locate repository root from $userDir")

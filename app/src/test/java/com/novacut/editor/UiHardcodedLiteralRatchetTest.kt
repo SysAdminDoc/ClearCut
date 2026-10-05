@@ -56,7 +56,7 @@ class UiHardcodedLiteralRatchetTest {
     private fun locateRepoRoot(): File {
         var directory = File(System.getProperty("user.dir") ?: error("Could not read user.dir")).absoluteFile
         repeat(8) {
-            if (File(directory, ".git").isDirectory) return directory
+            if (File(directory, ".git").exists()) return directory
             directory = directory.parentFile ?: error("Could not locate the repository root")
         }
         error("Could not locate the repository root")
