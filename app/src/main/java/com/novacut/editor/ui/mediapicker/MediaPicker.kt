@@ -249,14 +249,37 @@ fun MediaPickerSheet(
                 completed = 0,
                 total = selections.size,
             )
-            val importResult = try {
-                // Rolls back every copy it made if the batch is cancelled or throws.
-                importMediaPickerBatch(context, selections) { completed ->
-                    withContext(Dispatchers.Main.immediate) {
-                        operationState = operationState?.copy(
-                            completed = completed,
-                            total = selections.size,
-                        )
+            try {
+                // The copies go to the editor inside the batch call, so a cancel that lands
+                // later (even while the grants below are released) can't strand them, and one
+                // that lands earlier rolls every copy back.
+                importMediaPickerBatch(
+                    context = context,
+                    selections = selections,
+                    onProgress = { completed ->
+                        withContext(Dispatchers.Main.immediate) {
+                            operationState = operationState?.copy(
+                                completed = completed,
+                                total = selections.size,
+                            )
+                        }
+                    },
+                ) { importResult ->
+                    importResult.insufficientSpace?.let { failure ->
+                        permissionMessage = insufficientSpaceMessage(failure)
+                    }
+                    if (importResult.imported.isNotEmpty()) {
+                        onMediaBatchSelected?.invoke(importResult.imported)
+                            ?: importResult.imported.forEach { selection ->
+                                onMediaSelected(selection.uri, selection.mediaType)
+                            }
+                        if (importResult.imported.size < selections.size &&
+                            importResult.insufficientSpace == null
+                        ) {
+                            permissionMessage = someImportsFailed
+                        }
+                    } else if (importResult.insufficientSpace == null) {
+                        permissionMessage = localCopyFailed
                     }
                 }
             } finally {
@@ -264,22 +287,6 @@ fun MediaPickerSheet(
                     releasePersistedReadPermissions(context, persistedUris)
                 }
                 dragPermissions?.release()
-            }
-            importResult.insufficientSpace?.let { failure ->
-                permissionMessage = insufficientSpaceMessage(failure)
-            }
-            if (importResult.imported.isNotEmpty()) {
-                onMediaBatchSelected?.invoke(importResult.imported)
-                    ?: importResult.imported.forEach { selection ->
-                        onMediaSelected(selection.uri, selection.mediaType)
-                    }
-                if (importResult.imported.size < selections.size &&
-                    importResult.insufficientSpace == null
-                ) {
-                    permissionMessage = someImportsFailed
-                }
-            } else if (importResult.insufficientSpace == null) {
-                permissionMessage = localCopyFailed
             }
         }
     }

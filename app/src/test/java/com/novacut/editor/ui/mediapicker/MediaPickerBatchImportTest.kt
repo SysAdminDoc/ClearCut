@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.coroutines.EmptyCoroutineContext
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,8 +42,17 @@ class MediaPickerBatchImportTest {
 
     @Test
     fun aFinishedBatchKeepsEveryCopy() = runBlocking {
-        val result = importMediaPickerBatch(context, freshSources(3))
+        var adopted: MediaPickerBatchImportResult? = null
+        val progress = mutableListOf<Int>()
+        val result = importMediaPickerBatch(
+            context = context,
+            selections = freshSources(3),
+            onProgress = { progress += it },
+            adoptContext = EmptyCoroutineContext,
+        ) { adopted = it }
 
+        assertEquals(listOf(0, 1, 1, 2, 2, 3), progress)
+        assertEquals(result, adopted)
         assertEquals(3, result.imported.size)
         assertTrue(result.imported.all { File(checkNotNull(it.uri.path)).isFile })
         assertEquals(3, managedMediaFiles().size)
@@ -60,9 +70,10 @@ class MediaPickerBatchImportTest {
                 freshSource("b$boundary"),
             )
 
-            val failure = runAbortingAt(selections, boundary) { job -> job.cancel() }
+            val (failure, adopted) = runAbortingAt(selections, boundary) { job -> job.cancel() }
 
             assertTrue("boundary $boundary: $failure", failure is CancellationException)
+            assertEquals("boundary $boundary", false, adopted)
             assertEquals("boundary $boundary", before, managedTree())
             assertTrue(alreadyManaged.isFile)
         }
@@ -72,30 +83,66 @@ class MediaPickerBatchImportTest {
     fun aBatchThatFailsPartWayDeletesTheCopiesItMade() {
         val before = managedTree()
 
-        val failure = runAbortingAt(freshSources(3), boundary = 4) { error("disk went away") }
+        val (failure, adopted) = runAbortingAt(freshSources(3), boundary = 4) { error("disk went away") }
 
         assertTrue("$failure", failure is IllegalStateException)
+        assertEquals(false, adopted)
         assertEquals(before, managedTree())
+    }
+
+    @Test
+    fun aCancelThatLandsJustAfterAdoptionKeepsTheCopies() {
+        // The picker releases its read grants after the batch returns; a cancel that lands
+        // then must not strand or delete copies the editor already took.
+        var adopted = emptyList<Uri>()
+        val failure = runBlocking {
+            var thrown: Throwable? = null
+            lateinit var job: Job
+            job = launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                try {
+                    importMediaPickerBatch(context, freshSources(3), adoptContext = EmptyCoroutineContext) { result ->
+                        adopted = result.imported.map { it.uri }
+                        job.cancel()
+                    }
+                } catch (error: Throwable) {
+                    thrown = error
+                }
+            }
+            job.start()
+            job.join()
+            thrown
+        }
+
+        assertTrue("$failure", failure is CancellationException)
+        assertEquals(3, adopted.size)
+        assertTrue(adopted.all { File(checkNotNull(it.path)).isFile })
+        assertEquals(3, managedMediaFiles().size)
     }
 
     private fun runAbortingAt(
         selections: List<MediaPickerSelection>,
         boundary: Int,
         abort: (Job) -> Unit,
-    ): Throwable? = runBlocking {
+    ): Pair<Throwable?, Boolean> = runBlocking {
         var calls = 0
         var failure: Throwable? = null
+        var adopted = false
         lateinit var job: Job
         job = launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
             try {
-                importMediaPickerBatch(context, selections) { if (++calls == boundary) abort(job) }
+                importMediaPickerBatch(
+                    context = context,
+                    selections = selections,
+                    onProgress = { if (++calls == boundary) abort(job) },
+                    adoptContext = EmptyCoroutineContext,
+                ) { adopted = true }
             } catch (thrown: Throwable) {
                 failure = thrown
             }
         }
         job.start()
         job.join()
-        failure
+        failure to adopted
     }
 
     private fun managedMediaFiles(): List<File> =

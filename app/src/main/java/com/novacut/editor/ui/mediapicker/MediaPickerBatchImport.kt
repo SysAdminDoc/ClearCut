@@ -11,9 +11,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 
 internal data class MediaPickerBatchImportResult(
     val imported: List<MediaPickerSelection>,
@@ -21,23 +21,30 @@ internal data class MediaPickerBatchImportResult(
 )
 
 /**
- * Copies a reviewed batch into managed media, one item at a time.
+ * Copies a reviewed batch into managed media, one item at a time, then hands the copies to
+ * [adopt].
  *
- * Nothing reaches the editor until the whole batch returns, so a batch that is cancelled or
- * throws part way would otherwise leave every copy it already made in app storage with no
- * project pointing at it. On any abort this deletes the copies the batch created, sidecars
- * included, before the exception continues. Files that were already managed before the batch
- * are reused rather than copied, and are never deleted here. A batch that runs out of space
- * part way still returns what it copied, for the caller to adopt.
+ * Until [adopt] is called, nothing points at the copies, so a batch that is cancelled or throws
+ * before then (while copying, or between the last copy and adoption) deletes every copy it
+ * created, sidecars included, before the exception continues. Once [adopt] starts, the copies
+ * belong to the editor and are never rolled back: not if [adopt] throws after adding a clip,
+ * and not if a cancel lands a moment later, which the caller then sees as a
+ * CancellationException. Files that were already managed before the batch are reused rather
+ * than copied, and are never deleted here. A batch that runs out of space part way still
+ * adopts what it copied.
  *
- * [onProgress] gets the number of finished items before and after each item.
+ * [onProgress] gets the number of finished items before and after each item. [adopt] runs on
+ * [adoptContext], the main thread by default.
  */
 internal suspend fun importMediaPickerBatch(
     context: Context,
     selections: List<MediaPickerSelection>,
     onProgress: suspend (completed: Int) -> Unit = {},
+    adoptContext: CoroutineContext = Dispatchers.Main.immediate,
+    adopt: (MediaPickerBatchImportResult) -> Unit = {},
 ): MediaPickerBatchImportResult {
     val createdCopies = mutableListOf<Uri>()
+    var adopted = false
     try {
         val result = withContext(Dispatchers.IO) {
             val totalSize = selections.sumOf { querySourceSize(context, it.uri).coerceAtLeast(0L) }
@@ -70,12 +77,18 @@ internal suspend fun importMediaPickerBatch(
             }
             MediaPickerBatchImportResult(imported = imported)
         }
-        // A cancel that lands as the last copy finishes still means the user backed out.
-        currentCoroutineContext().ensureActive()
+        // withContext refuses to start once the batch is cancelled, so a cancel that lands as
+        // the last copy finishes still rolls back instead of adopting.
+        withContext(adoptContext) {
+            adopted = true
+            adopt(result)
+        }
         return result
     } catch (abort: Throwable) {
-        withContext(NonCancellable + Dispatchers.IO) {
-            synchronized(createdCopies) { createdCopies.toList() }.forEach { deleteManagedMediaUri(context, it) }
+        if (!adopted) {
+            withContext(NonCancellable + Dispatchers.IO) {
+                synchronized(createdCopies) { createdCopies.toList() }.forEach { deleteManagedMediaUri(context, it) }
+            }
         }
         throw abort
     }

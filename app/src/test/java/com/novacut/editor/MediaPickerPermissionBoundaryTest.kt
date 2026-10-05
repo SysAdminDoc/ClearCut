@@ -21,7 +21,9 @@ class MediaPickerPermissionBoundaryTest {
         assertTrue(source.contains("uris.distinct().forEach { uri ->"))
         assertTrue(source.contains("activeOperationJob?.cancel()"))
         assertTrue(source.contains("isCancelled = { !operationContext.isActive }"))
-        assertTrue(source.contains("completed = index + 1"))
+        // Per-item counts come from importMediaPickerBatch; MediaPickerBatchImportTest checks them.
+        assertTrue(source.contains("onProgress = { completed ->"))
+        assertTrue(source.contains("completed = completed,"))
         assertTrue(source.contains("progress = { batchProgress }"))
         assertFalse(
             "Batch cleanup must not release every URI merely because it was selected",
