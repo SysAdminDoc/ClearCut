@@ -84,15 +84,6 @@ class WhisperEngine @Inject constructor(
         private const val MIN_DECODER_BYTES = 5L * 1024L * 1024L
         private const val MIN_VOCAB_BYTES = 4L * 1024L
 
-        // Special tokens
-        const val SOT = 50257          // <|startoftranscript|>
-        const val EOT = 50256          // <|endoftext|>
-        const val EN = 50258           // <|en|>
-        const val TRANSCRIBE = 50359   // <|transcribe|>
-        const val NO_TIMESTAMPS = 50363
-        const val TIMESTAMP_BEGIN = 50364 // each increment = 0.02s
-        const val NO_SPEECH = 50362
-
         private const val MAX_DECODE_TOKENS = 224
         private const val ENCODER_HIDDEN = 384 // whisper-tiny hidden size
         private const val ENCODER_SEQ = 1500   // encoder output sequence length
@@ -298,6 +289,7 @@ class WhisperEngine @Inject constructor(
                 if (copyLen > 0) System.arraycopy(audio16k, chunkStart, chunkAudio, 0, copyLen)
 
                 val chunkOffsetMs = (chunkStart.toLong() * 1000L) / WhisperMel.SAMPLE_RATE
+                val chunkDurationMs = (copyLen.coerceAtLeast(0).toLong() * 1000L) / WhisperMel.SAMPLE_RATE
 
                 // Compute mel spectrogram
                 val mel = WhisperMel.compute(chunkAudio)
@@ -310,7 +302,7 @@ class WhisperEngine @Inject constructor(
 
                 // Run decoder (greedy with timestamps). Always close encoderOutput, even on exception.
                 try {
-                    val segments = runDecoder(env, decoderSession, encoderOutput, v, chunkOffsetMs)
+                    val segments = runDecoder(env, decoderSession, encoderOutput, v, chunkOffsetMs, chunkDurationMs)
                     allSegments.addAll(segments)
                 } finally {
                     try { encoderOutput.close() } catch (e: Exception) { AppLog.w("WhisperEngine", "encoderOutput close failed", e) }
@@ -366,12 +358,13 @@ class WhisperEngine @Inject constructor(
         session: OrtSession,
         encoderOutput: OnnxTensor,
         vocab: Map<Int, String>,
-        chunkOffsetMs: Long
+        chunkOffsetMs: Long,
+        chunkDurationMs: Long,
     ): List<WhisperSegment> {
-        // Initial tokens: <|startoftranscript|>, <|en|>, <|transcribe|>
-        val tokens = mutableListOf(SOT.toLong(), EN.toLong(), TRANSCRIBE.toLong())
-        val segments = mutableListOf<WhisperSegment>()
-        var lastTimestampMs = 0L
+        // An English-only model takes no language or task token: the prompt is
+        // <|startoftranscript|> alone.
+        val tokens = mutableListOf(WhisperDecoding.SOT.toLong())
+        val generated = mutableListOf<Int>()
 
         for (step in 0 until MAX_DECODE_TOKENS) {
             currentCoroutineContext().ensureActive()
@@ -380,7 +373,7 @@ class WhisperEngine @Inject constructor(
             var idTensor: OnnxTensor? = OnnxTensor.createTensor(env, inputIds, inputShape)
             var results: OrtSession.Result? = null
 
-            val bestToken: Int
+            val nextToken: Int
             try {
                 results = session.run(mapOf(
                     "input_ids" to idTensor,
@@ -408,19 +401,12 @@ class WhisperEngine @Inject constructor(
                     break
                 }
 
-                // Get logits for last token position
+                // Logits for the last token position
                 val lastOffset = (seqLen - 1) * vocabSize
-                var best = 0
-                var bestLogit = -Float.MAX_VALUE
-                for (t in 0 until vocabSize) {
-                    val l = logitsData.get(lastOffset + t)
-                    if (l > bestLogit) {
-                        bestLogit = l
-                        best = t
-                    }
-                }
-                bestToken = best
+                val scores = FloatArray(vocabSize) { logitsData.get(lastOffset + it) }
+                nextToken = WhisperDecoding.nextToken(scores, generated)
             } catch (e: Exception) {
+                AppLog.w("WhisperEngine", "Decoder step $step failed; keeping the text decoded so far", e)
                 break
             } finally {
                 results?.close()
@@ -428,48 +414,12 @@ class WhisperEngine @Inject constructor(
                 idTensor = null
             }
 
-            // End of text
-            if (bestToken == EOT) break
-
-            // No speech detected
-            if (bestToken == NO_SPEECH && tokens.size <= 4) break
-
-            tokens.add(bestToken.toLong())
-
-            // Process timestamp tokens
-            if (bestToken >= TIMESTAMP_BEGIN) {
-                val timestampMs = ((bestToken - TIMESTAMP_BEGIN) * 20).toLong()
-
-                // Collect text between last two timestamps
-                val textTokens = mutableListOf<Int>()
-                var startTs = lastTimestampMs
-                for (i in tokens.indices.reversed()) {
-                    val t = tokens[i].toInt()
-                    if (t >= TIMESTAMP_BEGIN && tokens[i] != bestToken.toLong()) {
-                        startTs = ((t - TIMESTAMP_BEGIN) * 20).toLong()
-                        break
-                    }
-                    if (t < TIMESTAMP_BEGIN && t != SOT && t != EN &&
-                        t != TRANSCRIBE && t != NO_TIMESTAMPS && t != NO_SPEECH) {
-                        textTokens.add(0, t)
-                    }
-                }
-
-                if (textTokens.isNotEmpty()) {
-                    val text = decodeTokens(textTokens, vocab).trim()
-                    if (text.isNotBlank()) {
-                        segments.add(WhisperSegment(
-                            startMs = chunkOffsetMs + startTs,
-                            endMs = chunkOffsetMs + timestampMs,
-                            text = text
-                        ))
-                    }
-                }
-                lastTimestampMs = timestampMs
-            }
+            if (nextToken == WhisperDecoding.EOT) break
+            tokens.add(nextToken.toLong())
+            generated.add(nextToken)
         }
 
-        return segments
+        return WhisperDecoding.segments(generated, chunkOffsetMs, chunkDurationMs) { decodeTokens(it, vocab) }
     }
 
     private fun decodeTokens(tokenIds: List<Int>, vocab: Map<Int, String>): String {
