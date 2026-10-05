@@ -82,6 +82,7 @@ import com.novacut.editor.engine.EncoderCapabilityProbe
 import com.novacut.editor.engine.ExportColorConfidenceEngine
 import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.ExportHistoryStatus
+import com.novacut.editor.engine.keepsResumablePartial
 import com.novacut.editor.engine.ExportState
 import com.novacut.editor.engine.ExportStoragePolicy
 import com.novacut.editor.engine.HdrOverlayAssetInspector
@@ -629,7 +630,9 @@ fun ExportSheet(
             val copyableIncidentReport = incidentReport?.takeIf { it.isNotBlank() }
             var reportCopied by remember(copyableIncidentReport) { mutableStateOf(false) }
             val latestFailureDiagnostic = exportHistory.firstOrNull {
-                it.status == ExportHistoryStatus.FAILED || it.status == ExportHistoryStatus.BLOCKED
+                it.status == ExportHistoryStatus.FAILED ||
+                    it.status == ExportHistoryStatus.BLOCKED ||
+                    it.status == ExportHistoryStatus.INTERRUPTED
             }?.diagnosticSummary
             ExportStateCard(
                 icon = Icons.Default.Error,
@@ -1572,6 +1575,7 @@ fun ExportSheet(
             ExportHistorySection(
                 entries = exportHistory.take(3),
                 onResumeExport = onResumeExport,
+                onStartAgain = onStartExport,
             )
         }
 
@@ -1814,6 +1818,7 @@ private fun ExportSummarySettingRow(
 private fun ExportHistorySection(
     entries: List<ExportHistoryEntry>,
     onResumeExport: (ExportHistoryEntry) -> Unit,
+    onStartAgain: () -> Unit = {},
 ) {
     val semanticColors = LocalClearCutColors.current
     val dateFormat = remember {
@@ -1829,6 +1834,7 @@ private fun ExportHistorySection(
                 entry = entry,
                 dateFormat = dateFormat,
                 onResumeExport = onResumeExport,
+                onStartAgain = onStartAgain,
             )
             if (index < entries.lastIndex) {
                 HorizontalDivider(color = semanticColors.cardStroke.copy(alpha = 0.7f))
@@ -1838,10 +1844,11 @@ private fun ExportHistorySection(
 }
 
 @Composable
-private fun ExportHistoryRow(
+internal fun ExportHistoryRow(
     entry: ExportHistoryEntry,
     dateFormat: DateFormat,
     onResumeExport: (ExportHistoryEntry) -> Unit,
+    onStartAgain: () -> Unit = {},
 ) {
     val semanticColors = LocalClearCutColors.current
     val statusColor = when (entry.status) {
@@ -1849,12 +1856,14 @@ private fun ExportHistoryRow(
         ExportHistoryStatus.FAILED -> ClearCutAccents.Red
         ExportHistoryStatus.CANCELLED -> ClearCutAccents.Peach
         ExportHistoryStatus.BLOCKED -> ClearCutAccents.Yellow
+        ExportHistoryStatus.INTERRUPTED -> ClearCutAccents.Peach
     }
     val statusLabel = when (entry.status) {
         ExportHistoryStatus.COMPLETE -> stringResource(R.string.export_history_status_complete)
         ExportHistoryStatus.FAILED -> stringResource(R.string.export_history_status_failed)
         ExportHistoryStatus.CANCELLED -> stringResource(R.string.export_history_status_cancelled)
         ExportHistoryStatus.BLOCKED -> stringResource(R.string.export_history_status_blocked)
+        ExportHistoryStatus.INTERRUPTED -> stringResource(R.string.export_history_status_interrupted)
     }
     val detail = stringResource(
         R.string.export_history_detail_format,
@@ -1925,13 +1934,24 @@ private fun ExportHistoryRow(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                if (entry.status == ExportHistoryStatus.CANCELLED && entry.resumePartialPath != null) {
+                if (entry.status.keepsResumablePartial && entry.resumePartialPath != null) {
                     TextButton(
                         onClick = { onResumeExport(entry) },
                         contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.export_resume),
+                            color = ClearCutAccents.Teal,
+                        )
+                    }
+                } else if (entry.status == ExportHistoryStatus.INTERRUPTED) {
+                    // Nothing to resume from, so the honest way back is a new render.
+                    TextButton(
+                        onClick = onStartAgain,
+                        contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.export_start_again),
                             color = ClearCutAccents.Teal,
                         )
                     }

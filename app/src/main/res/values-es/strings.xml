@@ -58,6 +58,12 @@
     <string name="export_resume">Reanudar</string>
     <string name="export_resume_started">Reanudando exportación…</string>
     <string name="export_resume_unavailable">Esta exportación parcial no se puede reanudar. Reinicie la exportación para crear un archivo nuevo.</string>
+    <string name="export_history_status_interrupted">Interrumpida</string>
+    <string name="export_start_again">Empezar de nuevo</string>
+    <string name="export_interrupted_resumable_note">Android detuvo esta exportación al agotarse su tiempo de procesamiento en segundo plano. Se conservó el archivo parcial, así que Reanudar continúa donde se detuvo.</string>
+    <string name="export_interrupted_restart_note">Android detuvo esta exportación al agotarse su tiempo de procesamiento en segundo plano. No se puede reanudar, así que Empezar de nuevo la renderiza desde el principio.</string>
+    <string name="export_service_start_refused">Android no permitió iniciar la exportación, normalmente porque ClearCut estaba en segundo plano o había agotado su tiempo de procesamiento en segundo plano. No se renderizó nada. Iníciela de nuevo con ClearCut abierto.</string>
+    <string name="batch_export_interrupted_summary">Android detuvo el lote con %1$d terminadas. Reanude el resto con ClearCut abierto.</string>
     <string name="export_smart_render_title">Perspectiva de renderizado inteligente</string>
     <string name="export_smart_render_detail">%1$d%% de la línea de tiempo puede transmitirse. %2$d rangos se copian directamente; %3$d necesita volver a codificarse.</string>
     <string name="export_delivery_summary">Resumen de entrega</string>

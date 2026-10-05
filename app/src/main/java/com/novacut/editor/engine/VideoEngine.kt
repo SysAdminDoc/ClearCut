@@ -87,6 +87,17 @@ class ExportStageException(
     override val message: String,
 ) : Exception(message)
 
+/**
+ * Android stopped an export from outside: the foreground service ran out of
+ * media-processing time. Nothing about the timeline failed. [preservedPartial]
+ * is the unfinished MP4 kept for Transformer.resume when the export was started
+ * as resumable and had written something; otherwise the output was deleted.
+ */
+class ExportInterruptedException(
+    override val message: String,
+    val preservedPartial: File? = null,
+) : Exception(message)
+
 internal fun nextSampledSpeedChangeTimeUs(
     timeUs: Long,
     durationUs: Long,
@@ -309,6 +320,11 @@ class VideoEngine @Inject constructor(
     @Volatile private var activeExportOutputFile: File? = null
     @Volatile private var activeResumeSourceFile: File? = null
     private val preservedCancelledOutputPaths = ConcurrentHashMap.newKeySet<String>()
+    // The output of the running export when its caller can resume it; whether a
+    // service timeout stopped such a run, and the partial output it kept.
+    @Volatile private var resumableExportOutput: File? = null
+    @Volatile private var interruptedResumable = false
+    @Volatile private var interruptedPartial: File? = null
     private val healthScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun recordHealth(event: HealthEvent) {
@@ -730,6 +746,7 @@ class VideoEngine @Inject constructor(
         lottieOverlays: List<LottieOverlaySpec> = emptyList(),
         trackedObjects: List<TrackedObject> = emptyList(),
         globalTransitions: List<GlobalTransition> = emptyList(),
+        resumableOnInterruption: Boolean = false,
         onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
         onError: (Exception) -> Unit = {},
@@ -767,6 +784,9 @@ class VideoEngine @Inject constructor(
             _exportState.value = ExportState.EXPORTING
             activeExportOutputFile = outputFile
             activeResumeSourceFile = resumeFromFile
+            resumableExportOutput = outputFile.takeIf { resumableOnInterruption }
+            interruptedResumable = false
+            interruptedPartial = null
         }
         recordHealth(HealthEvent.EXPORT_ATTEMPT)
         _exportProgress.value = 0f
@@ -874,14 +894,22 @@ class VideoEngine @Inject constructor(
         } catch (e: Exception) {
             AppLog.e(TAG, "Export setup failed", e)
             preRenderTempFiles.forEach { it.delete() }
-            failExport(ExportFailureCause.SETUP_FAILED, e.message ?: "Export setup failed")
+            // A service timeout during pre-render already recorded its own cause.
+            if (e !is ExportInterruptedException) {
+                failExport(ExportFailureCause.SETUP_FAILED, e.message ?: "Export setup failed")
+            }
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
             activeTransformer = null
             activeExportOutputFile = null
             activeResumeSourceFile = null
+            // Nothing was encoded yet. A resumable run that Android stopped keeps
+            // the partial it was resuming from, so Resume still works.
+            val keepResumeSource = e is ExportInterruptedException && interruptedResumable
+            interruptedResumable = false
+            interruptedPartial = null
             outputFile.delete()
-            runCatching { resumeFromFile?.delete() }
+            if (!keepResumeSource) runCatching { resumeFromFile?.delete() }
             onError(e)
         }
     }
@@ -1064,6 +1092,7 @@ class VideoEngine @Inject constructor(
             _exportState.value = ExportState.EXPORTING
             activeExportOutputFile = outputFile
             activeResumeSourceFile = null
+            resumableExportOutput = null
         }
         recordHealth(HealthEvent.EXPORT_ATTEMPT)
         _exportProgress.value = 0f
@@ -1550,11 +1579,19 @@ class VideoEngine @Inject constructor(
         return null
     }
 
+    /** The typed failure for an export Android stopped from outside, or null. */
+    private fun interruptionOrNull(preservedPartial: File? = null): ExportInterruptedException? =
+        if (_exportFailureCause.value == ExportFailureCause.SERVICE_TIMEOUT) {
+            ExportInterruptedException(_exportErrorMessage.value ?: "Export interrupted", preservedPartial)
+        } else {
+            null
+        }
+
     private fun ensureExportActive(step: String) {
         when (_exportState.value) {
             ExportState.EXPORTING -> Unit
             ExportState.CANCELLED -> throw CancellationException("Export cancelled during $step")
-            ExportState.ERROR -> throw IllegalStateException(
+            ExportState.ERROR -> throw interruptionOrNull() ?: IllegalStateException(
                 _exportErrorMessage.value ?: "Export failed during $step"
             )
             else -> throw CancellationException("Export stopped during $step")
@@ -2594,6 +2631,7 @@ class VideoEngine @Inject constructor(
             // never fires — leaking scratch files and burning CPU/battery
             // until the encode finishes on its own.
             if (_exportState.value != ExportState.EXPORTING) {
+                if (_exportState.value == ExportState.ERROR) interruptionOrNull()?.let { throw it }
                 throw CancellationException("Export cancelled before encoding started")
             }
             requireStorageImmediatelyBeforeOutput(storageRequest, outputFile)
@@ -2825,11 +2863,17 @@ class VideoEngine @Inject constructor(
             }
             if (_exportState.value == ExportState.ERROR && !terminalReached) {
                 val message = _exportErrorMessage.value ?: "Export failed"
-                outputFile.delete()
-                runCatching { resumeFromFile?.delete() }
+                // A service timeout on a resumable run keeps its partials; the
+                // caller settles which one to keep, as it does after a cancel.
+                val keepPartials = interruptedResumable
+                val preserved = interruptedPartial
+                interruptedResumable = false
+                interruptedPartial = null
+                if (preserved?.absolutePath != outputFile.absolutePath) outputFile.delete()
+                if (!keepPartials) runCatching { resumeFromFile?.delete() }
                 activeExportOutputFile = null
                 terminalReached = true
-                onError(Exception(message))
+                onError(interruptionOrNull(preserved) ?: Exception(message))
             }
             if (_exportState.value == ExportState.CANCELLED && !terminalReached) {
                 // transformer.cancel() (already invoked by cancelExport()) fires
@@ -2920,9 +2964,22 @@ class VideoEngine @Inject constructor(
             _exportState.value = ExportState.ERROR
             activeTransformer?.let(::cancelTransformerAndAwaitTermination)
             activeTransformer = null
-            activeExportOutputFile?.delete()
+            val output = activeExportOutputFile
+            if (output != null && output == resumableExportOutput) {
+                // Transformer.cancel leaves a partial MP4 Media3 can resume, the same
+                // as a user cancel. Keep it when it has data, and keep any partial
+                // this run resumed from; the editor settles which one the history keeps.
+                interruptedResumable = true
+                interruptedPartial = output.takeIf { it.isFile && it.length() > 0L }
+                if (interruptedPartial == null) output.delete()
+            } else {
+                output?.delete()
+                activeResumeSourceFile?.delete()
+                interruptedResumable = false
+                interruptedPartial = null
+            }
+            resumableExportOutput = null
             activeExportOutputFile = null
-            activeResumeSourceFile?.delete()
             activeResumeSourceFile = null
         }
         _exportProgress.value = 0f

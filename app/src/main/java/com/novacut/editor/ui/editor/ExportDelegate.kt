@@ -17,6 +17,8 @@ import com.novacut.editor.engine.BatchExportPlanStore
 import com.novacut.editor.engine.C2paExportEngine
 import com.novacut.editor.engine.ContactSheetExporter
 import com.novacut.editor.engine.ExportHistoryEntry
+import com.novacut.editor.engine.ExportInterruptedException
+import com.novacut.editor.engine.keepsResumablePartial
 import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportHistoryStore
 import com.novacut.editor.engine.ExportIncidentBuilder
@@ -150,15 +152,6 @@ class ExportDelegate(
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
     @Volatile private var activeVideoExportJob: kotlinx.coroutines.Job? = null
     private val saveToGalleryGate = ExportSaveGate()
-    private data class ActiveResumeSession(
-        val outputFile: File,
-        val eligible: Boolean,
-        val config: ExportConfig,
-        val projectFingerprint: String,
-        val configFingerprint: String,
-        val sourcePartialFile: File? = null,
-        val supersededHistoryId: String? = null,
-    )
     @Volatile private var activeResumeSession: ActiveResumeSession? = null
     private val preservedResumeOutputPaths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     // Set for the lifetime of an export the user allowed through preflight
@@ -179,6 +172,8 @@ class ExportDelegate(
     @Volatile private var batchPauseRequested = false
     @Volatile private var batchCancelRequested = false
     @Volatile private var lastCancelledBatchResumePath: String? = null
+    // Set when Android stops or refuses the running batch item's service.
+    @Volatile private var lastBatchInterruption: InterruptedExport? = null
 
     private fun noteRuntimeExport(note: String) {
         if (note.isBlank()) return
@@ -710,29 +705,11 @@ class ExportDelegate(
         } else {
             videoEngine.cancelExport()
         }
-        val resumePartial = if (resumeSession?.eligible == true) {
-            preservedOutput?.takeIf { it.isFile && it.length() > 0L }
-                ?: resumeSession.sourcePartialFile
-                ?: preservedOutput
-                ?: resumeSession.outputFile
-        } else {
-            null
-        }
+        val resumePartial = settleResumePartial(resumeSession, preservedOutput, ::deleteOwnedResumeFile)
         lastCancelledBatchResumePath = if (activeBatchItemId != null) {
             resumePartial?.absolutePath
         } else {
             null
-        }
-        if (resumeSession?.sourcePartialFile != null &&
-            resumePartial != null &&
-            resumePartial.absolutePath != resumeSession.sourcePartialFile.absolutePath
-        ) {
-            deleteOwnedResumeFile(resumeSession.sourcePartialFile)
-        }
-        if (resumeSession?.sourcePartialFile != null &&
-            resumePartial?.absolutePath == resumeSession.sourcePartialFile.absolutePath
-        ) {
-            deleteOwnedResumeFile(resumeSession.outputFile)
         }
         activeResumeSession = null
         // Always push CANCELLED to the UI. The if-guard was only needed when we worried about
@@ -760,6 +737,35 @@ class ExportDelegate(
                 supersededHistoryId = resumeSession?.supersededHistoryId,
             )
         }
+    }
+
+    /** Shows and records an export Android stopped or refused to start. */
+    private fun recordInterruption(
+        interrupted: InterruptedExport,
+        sourceState: EditorState,
+        startedAtMs: Long,
+        timelineDurationMs: Long,
+        healthReport: MediaHealthReport?,
+    ) {
+        if (activeBatchItemId != null) lastBatchInterruption = interrupted
+        updateExport {
+            it.copy(state = ExportState.ERROR, progress = 0f, errorMessage = interrupted.message, lastExportedFilePath = null)
+        }
+        recordExportHistory(
+            sourceState = sourceState,
+            status = ExportHistoryStatus.INTERRUPTED,
+            startedAtMs = startedAtMs,
+            outputFile = interrupted.keptPartial,
+            config = interrupted.config,
+            timelineDurationMs = timelineDurationMs,
+            errorMessage = interrupted.message,
+            diagnosticSummary = interrupted.diagnostic,
+            healthReport = healthReport,
+            resumePartialFile = interrupted.keptPartial,
+            resumeProjectFingerprint = interrupted.projectFingerprint,
+            resumeConfigFingerprint = interrupted.configFingerprint,
+            supersededHistoryId = interrupted.supersededHistoryId,
+        )
     }
 
     fun startExport(
@@ -808,7 +814,7 @@ class ExportDelegate(
         val fingerprintsMatch = entry.projectId == currentState.project.id &&
             entry.resumeProjectFingerprint == projectFingerprint(currentState) &&
             entry.resumeConfigFingerprint == exportConfigFingerprint(currentState.exportConfig)
-        val canResume = entry.status == ExportHistoryStatus.CANCELLED &&
+        val canResume = entry.status.keepsResumablePartial &&
             partialFile != null &&
             decision?.eligible == true &&
             fingerprintsMatch &&
@@ -1549,7 +1555,11 @@ class ExportDelegate(
         // composition, and never falls back to a video file.
         if (configWithChapters.exportAudioOnly || configWithChapters.exportStemsOnly) {
             val startedAtMs = markExportStarted()
-            appContext.startForegroundService(Intent(appContext, ExportService::class.java))
+            startExportService(appContext, Intent(appContext, ExportService::class.java))?.let { refusal ->
+                val refused = serviceStartRefusal(appContext, refusal, configWithChapters, outputFile = null)
+                recordInterruption(refused, currentState, startedAtMs, totalDurationMs, healthReport)
+                return
+            }
             val baseName = preferredOutputName ?: currentState.project.name
             nonVideoExportJob = scope.launch {
                 try {
@@ -1829,6 +1839,22 @@ class ExportDelegate(
             }
 
             fun handleVideoExportError(e: Exception) {
+                if (e is ExportInterruptedException) {
+                    // Android stopped the service, not the timeline.
+                    val session = activeResumeSession
+                    activeResumeSession = null
+                    val stopped = serviceTimeout(
+                        context = appContext,
+                        message = exportFailureText(VideoEngine.ExportFailureCause.SERVICE_TIMEOUT),
+                        session = session,
+                        preservedPartial = e.preservedPartial,
+                        fallbackConfig = configWithChapters,
+                        outputFile = outputFile,
+                        deleteOwned = ::deleteOwnedResumeFile,
+                    )
+                    recordInterruption(stopped, currentState, startedAtMs, totalDurationMs, healthReport)
+                    return
+                }
                 val failedResumeId = activeResumeSession?.supersededHistoryId
                 activeResumeSession = null
                 outputFile.delete()
@@ -1915,7 +1941,13 @@ class ExportDelegate(
                 val serviceIntent = Intent(appContext, ExportService::class.java).apply {
                     putExtra(ExportService.EXTRA_OUTPUT_PATH, outputFile.absolutePath)
                 }
-                appContext.startForegroundService(serviceIntent)
+                startExportService(appContext, serviceIntent)?.let { refusal ->
+                    val refused = serviceStartRefusal(
+                        appContext, refusal, configWithChapters, outputFile, resumeCandidate, resumeSourceFile,
+                    )
+                    recordInterruption(refused, currentState, startedAtMs, totalDurationMs, healthReport)
+                    return@launch
+                }
                 setEncoderName(configWithChapters)
                 val mixedPlan = if (resumeSourceFile == null) buildMixedRenderPlan(
                     tracks = tracks,
@@ -1963,6 +1995,7 @@ class ExportDelegate(
                     imageOverlays = imageOverlays,
                     trackedObjects = trackedObjects,
                     globalTransitions = globalTransitions,
+                    resumableOnInterruption = resumeDecision.eligible,
                     onProgress = { progress ->
                         sampleProgress(progress)
                         updateExport { it.copy(progress = progress) }
@@ -2572,6 +2605,7 @@ class ExportDelegate(
                     if (batchCancelRequested || batchPauseRequested) break
                     activeBatchItemId = item.id
                     lastCancelledBatchResumePath = null
+                    lastBatchInterruption = null
                     val itemState = requireNotNull(itemStates[item])
                     val outputPlan = planBatchVideoOutput(
                         outputDir = outputDir,
@@ -2693,7 +2727,8 @@ class ExportDelegate(
                         continue
                     }
                     val result = outcome.first
-                    val newStatus = when (result) {
+                    val interruption = lastBatchInterruption.takeIf { result == ExportState.ERROR }
+                    val newStatus = if (interruption != null) BatchExportStatus.INTERRUPTED else when (result) {
                         ExportState.COMPLETE -> BatchExportStatus.COMPLETED
                         ExportState.CANCELLED -> if (batchPauseRequested) {
                             BatchExportStatus.PAUSED
@@ -2716,6 +2751,7 @@ class ExportDelegate(
                                     progress = finalProgress,
                                     errorMessage = when (newStatus) {
                                         BatchExportStatus.FAILED -> stateFlow.value.exportErrorMessage
+                                        BatchExportStatus.INTERRUPTED -> interruption?.message
                                         BatchExportStatus.PAUSED -> if (resumePartialPath != null) {
                                             "Paused because the encoder cannot pause mid-item. Resume to continue from the saved partial output."
                                         } else {
@@ -2736,6 +2772,9 @@ class ExportDelegate(
                                     resumePartialPath = when (newStatus) {
                                         BatchExportStatus.PAUSED,
                                         BatchExportStatus.CANCELLED -> resumePartialPath
+                                        // A refused start leaves the partial this item resumed from.
+                                        BatchExportStatus.INTERRUPTED -> interruption?.keptPartial?.absolutePath
+                                            ?: it.resumePartialPath?.takeIf { path -> File(path).isFile }
                                         else -> null
                                     },
                                 )
@@ -2750,6 +2789,9 @@ class ExportDelegate(
                     // break the batch (each item is independent and the user may want
                     // partial-success behaviour for a long queue).
                     if (result == ExportState.CANCELLED) break
+                    // Android won't start the service again until ClearCut is in front,
+                    // so the rest of the plan stays queued for the user to resume.
+                    if (interruption != null) break
                     activeBatchItemId = null
                 }
             } finally {
@@ -2762,7 +2804,9 @@ class ExportDelegate(
             val failedCount = finalQueue.count { it.status == BatchExportStatus.FAILED }
             val pausedCount = finalQueue.count { it.status == BatchExportStatus.PAUSED }
             val cancelledCount = finalQueue.count { it.status == BatchExportStatus.CANCELLED }
+            val interruptedCount = finalQueue.count { it.status == BatchExportStatus.INTERRUPTED }
             val summary = when {
+                interruptedCount > 0 -> text(R.string.batch_export_interrupted_summary, completedCount)
                 pausedCount > 0 -> "Batch paused ($completedCount items completed)"
                 cancelledCount > 0 && completedCount == 0 -> "Batch cancelled"
                 failedCount == 0 -> "Batch export complete ($completedCount items)"
@@ -2783,6 +2827,7 @@ class ExportDelegate(
     ) {
         val message = when (e) {
             is ExportStorageException -> appContext.exportStorageFailureMessage(e.failure)
+            is ExportInterruptedException -> exportFailureText(VideoEngine.ExportFailureCause.SERVICE_TIMEOUT)
             else -> exportFailureText(
                 videoEngine.exportFailureCause.value ?: VideoEngine.ExportFailureCause.AUDIO_ENCODE_FAILED
             )
@@ -2798,17 +2843,19 @@ class ExportDelegate(
         }
         recordExportHistory(
             sourceState = currentState,
-            status = ExportHistoryStatus.FAILED,
+            status = if (e is ExportInterruptedException) ExportHistoryStatus.INTERRUPTED else ExportHistoryStatus.FAILED,
             startedAtMs = startedAtMs,
             outputFile = null,
             config = config,
             timelineDurationMs = totalDurationMs,
             errorMessage = technicalMessage,
-            diagnosticSummary = if (e is ExportVerificationException) {
-                "Output contract rejected the audio artifact: " +
-                    (e.verification.reason ?: "invalid output") + "."
-            } else {
-                "Audio export failed in the encoder pipeline."
+            diagnosticSummary = when (e) {
+                is ExportVerificationException ->
+                    "Output contract rejected the audio artifact: " +
+                        (e.verification.reason ?: "invalid output") + "."
+                // Audio exports never resume, so the way back is a fresh start.
+                is ExportInterruptedException -> text(R.string.export_interrupted_restart_note)
+                else -> "Audio export failed in the encoder pipeline."
             },
             healthReport = healthReport,
         )

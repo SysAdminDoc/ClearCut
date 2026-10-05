@@ -61,6 +61,12 @@
     <string name="export_resume">Resume</string>
     <string name="export_resume_started">Resuming export…</string>
     <string name="export_resume_unavailable">This partial export cannot be resumed. Restart the export to create a fresh file.</string>
+    <string name="export_history_status_interrupted">Interrupted</string>
+    <string name="export_start_again">Start again</string>
+    <string name="export_interrupted_resumable_note">Android stopped this export when its background processing time ran out. The partial file was kept, so Resume picks up where it stopped.</string>
+    <string name="export_interrupted_restart_note">Android stopped this export when its background processing time ran out. It can\'t resume, so Start again renders it from the beginning.</string>
+    <string name="export_service_start_refused">Android didn\'t let the export start, usually because ClearCut was in the background or had used up its background processing time. Nothing was rendered. Start it again with ClearCut open.</string>
+    <string name="batch_export_interrupted_summary">Android stopped the batch with %1$d done. Resume the rest with ClearCut open.</string>
     <string name="export_smart_render_title">Smart render outlook</string>
     <string name="export_smart_render_detail">%1$d%% of the timeline can stream through. %2$d ranges copy directly; %3$d need re-encode.</string>
     <string name="export_delivery_summary">Delivery summary</string>

@@ -140,6 +140,41 @@ class ExportHistoryStoreTest {
         }
     }
 
+    @Test
+    fun interruptedEntriesRoundTripAndOnlyStoppedExportsOfferResume() {
+        val dir = Files.createTempDirectory("export-history-interrupted-").toFile()
+        try {
+            val partial = File(dir, "partial.mp4").apply { writeBytes(ByteArray(12) { 3 }) }
+            val store = ExportHistoryStore(File(dir, "history.json"))
+            store.append(
+                buildExportHistoryEntry(
+                    projectId = "project",
+                    projectName = "Long Render",
+                    status = ExportHistoryStatus.INTERRUPTED,
+                    startedAtEpochMs = 100L,
+                    finishedAtEpochMs = 200L,
+                    outputFile = partial,
+                    config = ExportConfig(),
+                    timelineDurationMs = 5_000L,
+                    resumePartialFile = partial,
+                    resumeProjectFingerprint = "project-fingerprint",
+                    resumeConfigFingerprint = "config-fingerprint",
+                )
+            )
+
+            val restored = ExportHistoryStore(File(dir, "history.json")).read().single()
+
+            assertEquals(ExportHistoryStatus.INTERRUPTED, restored.status)
+            assertEquals(partial.absolutePath, restored.resumePartialPath)
+            assertEquals(
+                setOf(ExportHistoryStatus.CANCELLED, ExportHistoryStatus.INTERRUPTED),
+                ExportHistoryStatus.entries.filter { it.keepsResumablePartial }.toSet(),
+            )
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     private fun entry(projectId: String, startedAt: Long): ExportHistoryEntry {
         return buildExportHistoryEntry(
             projectId = projectId,

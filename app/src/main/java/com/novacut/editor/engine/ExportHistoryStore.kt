@@ -17,8 +17,14 @@ enum class ExportHistoryStatus {
     COMPLETE,
     FAILED,
     CANCELLED,
-    BLOCKED
+    BLOCKED,
+    /** Android stopped or refused the export service; the timeline itself was fine. */
+    INTERRUPTED
 }
+
+/** Statuses whose kept partial file can be offered to Transformer.resume. */
+val ExportHistoryStatus.keepsResumablePartial: Boolean
+    get() = this == ExportHistoryStatus.CANCELLED || this == ExportHistoryStatus.INTERRUPTED
 
 data class ExportHistoryEntry(
     val id: String = UUID.randomUUID().toString(),
