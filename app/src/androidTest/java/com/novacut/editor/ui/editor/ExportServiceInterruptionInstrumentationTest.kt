@@ -43,6 +43,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -59,8 +61,8 @@ import java.io.File
  * media-processing timeout (ExportService.onTimeout hands it to
  * VideoEngine.failExportDueToForegroundServiceTimeout, as here) and a refused
  * startForegroundService. Both must leave a durable INTERRUPTED history entry and
- * no pending MediaStore row, and a timed-out resumable export must resume to a
- * complete file.
+ * no pending MediaStore row, a timed-out resumable export must resume to a
+ * complete file, and either one stops a batch with the rest of the plan queued.
  */
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 31)
@@ -181,6 +183,58 @@ class ExportServiceInterruptionInstrumentationTest {
                 .map { it.status },
         )
         assertEquals(0, pendingMediaStoreRows())
+    }
+
+    @Test
+    fun aServiceTimeoutStopsABatchAndKeepsThePartial() {
+        val (state, delegate, context) = buildDelegate(refuseServiceStart = false)
+        mirrorEngineState(state)
+        val config = state.value.exportConfig
+
+        instrumentation.runOnMainSync {
+            delegate.addBatchExportItem(config, "first")
+            delegate.addBatchExportItem(config, "second")
+            delegate.startBatchExport()
+        }
+        waitUntil(120_000L, "the first item to pass 25%") { engine.exportProgress.value >= 0.25f }
+        var failedActiveExport = false
+        instrumentation.runOnMainSync {
+            failedActiveExport = engine.failExportDueToForegroundServiceTimeout("Android stopped the export")
+        }
+        assertTrue("no export was running when the timeout landed", failedActiveExport)
+        val summary = target.getString(R.string.batch_export_interrupted_summary, 0)
+        waitUntil(60_000L, "the batch to stop", { "queue ${state.value.batchExportQueue.map { it.status }}" }) {
+            summary in toasts
+        }
+
+        val queue = state.value.batchExportQueue
+        assertEquals(listOf(BatchExportStatus.INTERRUPTED, BatchExportStatus.QUEUED), queue.map { it.status })
+        val partial = File(requireNotNull(queue.first().resumePartialPath) { "the batch item kept no partial" })
+        assertTrue("the kept partial is empty", partial.isFile && partial.length() > 0L)
+        assertEquals("the batch went on to start the next item", 1, context.serviceStarts)
+        assertTrue(
+            "no INTERRUPTED history entry",
+            state.value.export.history.any { it.projectId == project.id && it.status == ExportHistoryStatus.INTERRUPTED },
+        )
+        assertNotEquals(ExportState.EXPORTING, engine.exportState.value)
+        assertEquals(0, pendingMediaStoreRows())
+    }
+
+    /**
+     * The editor's mirror (EditorViewModel) publishes engine state into the editor
+     * state as it changes, so the batch loop sees ERROR before the render reports why.
+     */
+    private fun mirrorEngineState(state: MutableStateFlow<EditorState>) {
+        scope.launch {
+            engine.exportState.collect { exportState ->
+                state.update { it.copyExport { export -> export.copy(state = exportState) } }
+            }
+        }
+        scope.launch {
+            engine.exportProgress.collect { progress ->
+                state.update { it.copyExport { export -> export.copy(progress = progress) } }
+            }
+        }
     }
 
     /** Stands in for the system: counts foreground-service starts, and can refuse them. */

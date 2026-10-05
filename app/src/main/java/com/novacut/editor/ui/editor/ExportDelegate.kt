@@ -148,6 +148,7 @@ class ExportDelegate(
     // all need the same cancel/teardown plumbing.
     @Volatile private var nonVideoExportJob: kotlinx.coroutines.Job? = null
     @Volatile private var activeVideoExportJob: kotlinx.coroutines.Job? = null
+    @Volatile private var videoRenderJob: kotlinx.coroutines.Job? = null
     private val saveToGalleryGate = ExportSaveGate()
     @Volatile private var activeResumeSession: ActiveResumeSession? = null
     private val preservedResumeOutputPaths = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
@@ -735,6 +736,14 @@ class ExportDelegate(
                 supersededHistoryId = resumeSession?.supersededHistoryId,
             )
         }
+    }
+
+    /** Waits, up to 30 seconds, for the last export's coroutines to finish reporting. */
+    private suspend fun awaitExportSettled() {
+        val settled = kotlinx.coroutines.withTimeoutOrNull(30_000L) {
+            listOfNotNull(activeVideoExportJob, videoRenderJob, nonVideoExportJob).forEach { it.join() }
+        }
+        if (settled == null) AppLog.w("ExportDelegate", "Batch item's export was still unwinding after 30 s")
     }
 
     /** Shows and records an export Android stopped or refused to start. */
@@ -1633,7 +1642,7 @@ class ExportDelegate(
 
         val startedAtMs = markExportStarted()
 
-        scope.launch {
+        videoRenderJob = scope.launch {
             val ext = if (currentState.exportConfig.transparentBackground) "webm" else "mp4"
             withContext(Dispatchers.IO) { outputDir.mkdirs() }
             val outputFile = outputFileOverride ?: createOutputFile(
@@ -2697,8 +2706,13 @@ class ExportDelegate(
                         continue
                     }
                     val result = outcome.first
+                    // The engine's ERROR reaches this state before the render coroutine
+                    // records why, and the old run must unwind before the next item starts.
+                    awaitExportSettled()
                     val interruption = lastBatchInterruption.takeIf { result == ExportState.ERROR }
-                    val newStatus = if (interruption != null) BatchExportStatus.INTERRUPTED else when (result) {
+                    val interrupted = interruption != null || (result == ExportState.ERROR &&
+                        videoEngine.exportFailureCause.value == VideoEngine.ExportFailureCause.SERVICE_TIMEOUT)
+                    val newStatus = if (interrupted) BatchExportStatus.INTERRUPTED else when (result) {
                         ExportState.COMPLETE -> BatchExportStatus.COMPLETED
                         ExportState.CANCELLED -> if (batchPauseRequested) {
                             BatchExportStatus.PAUSED
@@ -2722,6 +2736,7 @@ class ExportDelegate(
                                     errorMessage = when (newStatus) {
                                         BatchExportStatus.FAILED -> stateFlow.value.exportErrorMessage
                                         BatchExportStatus.INTERRUPTED -> interruption?.message
+                                            ?: stateFlow.value.exportErrorMessage
                                         BatchExportStatus.PAUSED -> if (resumePartialPath != null) {
                                             "Paused because the encoder cannot pause mid-item. Resume to continue from the saved partial output."
                                         } else {
@@ -2761,7 +2776,7 @@ class ExportDelegate(
                     if (result == ExportState.CANCELLED) break
                     // Android won't start the service again until ClearCut is in front,
                     // so the rest of the plan stays queued for the user to resume.
-                    if (interruption != null) break
+                    if (interrupted) break
                     activeBatchItemId = null
                 }
             } finally {

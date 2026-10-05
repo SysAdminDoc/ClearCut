@@ -35,6 +35,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -97,6 +98,30 @@ class ExportInterruptedException(
     override val message: String,
     val preservedPartial: File? = null,
 ) : Exception(message)
+
+/**
+ * Runs [block] until it finishes or [exportState] leaves EXPORTING. When the
+ * export stops first, [block] is cancelled and [stopped] throws the reason.
+ */
+internal suspend fun <T> runWhileExporting(
+    exportState: StateFlow<ExportState>,
+    stopped: () -> Unit,
+    block: suspend () -> T,
+): T = coroutineScope {
+    val work = async { block() }
+    val watch = launch {
+        exportState.first { it != ExportState.EXPORTING }
+        work.cancel()
+    }
+    try {
+        work.await()
+    } catch (e: CancellationException) {
+        stopped()
+        throw e
+    } finally {
+        watch.cancel()
+    }
+}
 
 internal fun nextSampledSpeedChangeTimeUs(
     timeUs: Long,
@@ -1510,13 +1535,15 @@ class VideoEngine @Inject constructor(
                 outputFile = outputFile,
             )
             activeExportOutputFile = outputFile
-            val concatOk = ffmpegEngine.concat(
-                inputFiles = concatInputs,
-                outputFile = outputFile,
-                onProgress = { progress ->
-                    publishMixedProgress(completedWeight, concatWeight, progress)
-                }
-            )
+            val concatOk = runWhileExporting(_exportState, stopped = { ensureExportActive("mixed concat") }) {
+                ffmpegEngine.concat(
+                    inputFiles = concatInputs,
+                    outputFile = outputFile,
+                    onProgress = { progress ->
+                        publishMixedProgress(completedWeight, concatWeight, progress)
+                    }
+                )
+            }
             if (!concatOk) {
                 throw IllegalStateException("Mixed FFmpeg concat failed")
             }
@@ -1529,7 +1556,11 @@ class VideoEngine @Inject constructor(
                 config = config,
             )
 
-            _exportState.value = ExportState.COMPLETE
+            synchronized(this) {
+                // A cancel or service timeout during the concat outranks the finished file.
+                ensureExportActive("mixed finish")
+                _exportState.value = ExportState.COMPLETE
+            }
             _exportProgress.value = 1f
             activeExportOutputFile = null
             onProgress(1f)
@@ -1547,13 +1578,18 @@ class VideoEngine @Inject constructor(
             throw e
         } catch (e: Exception) {
             AppLog.e(TAG, "Mixed export failed", e)
-            failExport(ExportFailureCause.MIXED_RENDER_FAILED, e.message ?: "Mixed export failed")
+            // After a service timeout a run or the concat can fail on its own
+            // (its output was deleted); the timeout is still why the export stopped.
+            val interrupted = e as? ExportInterruptedException ?: interruptionOrNull()
+            if (interrupted == null) {
+                failExport(ExportFailureCause.MIXED_RENDER_FAILED, e.message ?: "Mixed export failed")
+            }
             _exportState.value = ExportState.ERROR
             _exportProgress.value = 0f
             activeTransformer = null
             activeExportOutputFile = null
             runCatching { outputFile.delete() }
-            onError(e)
+            onError(interrupted ?: e)
             true
         } finally {
             runCatching { tempDir.deleteRecursively() }
@@ -1587,6 +1623,19 @@ class VideoEngine @Inject constructor(
         } else {
             null
         }
+
+    /**
+     * Clears only the handles this run still owns. A batch can start its next
+     * export while an old polling loop unwinds, and that loop must not clear
+     * the new run's transformer or files.
+     */
+    private fun releaseRunHandles(transformer: Transformer, outputFile: File, resumeFromFile: File?) {
+        synchronized(this) {
+            if (activeTransformer === transformer) activeTransformer = null
+            if (activeExportOutputFile == outputFile) activeExportOutputFile = null
+            if (activeResumeSourceFile == resumeFromFile) activeResumeSourceFile = null
+        }
+    }
 
     private fun ensureExportActive(step: String) {
         when (_exportState.value) {
@@ -2851,7 +2900,10 @@ class VideoEngine @Inject constructor(
             val stallTimeoutPolls = 2400 // 10 minutes of NO progress at 250ms
             var stallPolls = 0
             var lastProgress = -1
-            while (_exportState.value == ExportState.EXPORTING && !terminalReached && stallPolls < stallTimeoutPolls) {
+            while (
+                _exportState.value == ExportState.EXPORTING && activeTransformer === transformer &&
+                !terminalReached && stallPolls < stallTimeoutPolls
+            ) {
                 val state = transformer.getProgress(holder)
                 if (state == Transformer.PROGRESS_STATE_AVAILABLE) {
                     if (holder.progress > lastProgress) {
@@ -2891,7 +2943,7 @@ class VideoEngine @Inject constructor(
                 interruptedPartial = null
                 if (preserved?.absolutePath != outputFile.absolutePath) outputFile.delete()
                 if (!keepPartials) runCatching { resumeFromFile?.delete() }
-                activeExportOutputFile = null
+                releaseRunHandles(transformer, outputFile, resumeFromFile)
                 terminalReached = true
                 onError(interruptionOrNull(preserved) ?: Exception(message))
             }
@@ -2900,10 +2952,9 @@ class VideoEngine @Inject constructor(
                 // no listener callback, so neither onComplete nor onError runs.
                 // Signal the caller so per-export scratch files (reversed-clip
                 // pre-renders, mixed-run segments) still get cleaned up.
-                activeTransformer = null
+                releaseRunHandles(transformer, outputFile, resumeFromFile)
                 throw CancellationException("Export cancelled")
             }
-            activeTransformer = null
             // Ensure the file-handle mirror is always nulled when the transformer
             // reference is cleared, regardless of which branch above set the
             // terminal state. Previously the only nulls lived inside the listener
@@ -2911,8 +2962,7 @@ class VideoEngine @Inject constructor(
             // fires late or not at all) would leave `activeExportOutputFile`
             // pointing at a deleted file — a subsequent `cancelExport()` would
             // then try to delete that stale path and log an IO error.
-            activeExportOutputFile = null
-            activeResumeSourceFile = null
+            releaseRunHandles(transformer, outputFile, resumeFromFile)
         }
     }
 
@@ -3087,6 +3137,7 @@ class VideoEngine @Inject constructor(
     fun resetExportState() {
         _exportState.value = ExportState.IDLE
         _exportProgress.value = 0f
+        _exportFailureCause.value = null
         _exportWarningMessage.value = null
         _exportDegradationOutcome.value = null
         _trimOptimizationDisclosure.value = null
