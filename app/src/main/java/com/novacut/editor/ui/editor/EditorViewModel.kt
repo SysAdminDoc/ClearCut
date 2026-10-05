@@ -39,6 +39,7 @@ import com.novacut.editor.engine.ProjectDependencyEditorInputs
 import com.novacut.editor.engine.ProjectDependencyManifest
 import com.novacut.editor.engine.SEGMENTATION_MODEL_DEPENDENCY
 import com.novacut.editor.engine.ProxyEngine
+import com.novacut.editor.engine.ProxyResolutionPolicy
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.SmartRenderEngine
 import com.novacut.editor.engine.SpeakerSwitchPlanner
@@ -2850,6 +2851,7 @@ class EditorViewModel @Inject constructor(
         lateinit var thisJob: Job
         thisJob = viewModelScope.launch {
             var generated = 0
+            var editedDirectly = 0
             try {
                 for (request in requests.values) {
                     kotlinx.coroutines.currentCoroutineContext().ensureActive()
@@ -2863,11 +2865,17 @@ class EditorViewModel @Inject constructor(
                         continue
                     }
                     if (!proxyEngine.hasProxy(request.sourceUri)) {
-                        val proxyUri = proxyEngine.generateProxy(
-                            request.sourceUri,
-                            request.resolution,
-                        )
-                        if (proxyUri != null) generated++
+                        val plan = proxyEngine.planProxy(request.sourceUri, request.resolution)
+                        if (plan is ProxyResolutionPolicy.Plan.UseSource) {
+                            editedDirectly++
+                        } else {
+                            val proxyUri = proxyEngine.generateProxy(
+                                request.sourceUri,
+                                request.resolution,
+                                plan,
+                            )
+                            if (proxyUri != null) generated++
+                        }
                     }
                 }
                 _state.update { state ->
@@ -2890,7 +2898,13 @@ class EditorViewModel @Inject constructor(
                 }
                 rebuildPlayerTimeline()
                 saveProject()
-                showToast(text(R.string.vm_proxy_enabled_toast, generated))
+                showToast(
+                    if (editedDirectly > 0) {
+                        text(R.string.vm_proxy_enabled_some_direct_toast, generated, editedDirectly)
+                    } else {
+                        text(R.string.vm_proxy_enabled_toast, generated)
+                    }
+                )
             } catch (e: CancellationException) {
                 throw e
             } finally {

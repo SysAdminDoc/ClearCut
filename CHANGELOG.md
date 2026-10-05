@@ -9,6 +9,7 @@
 - When a phone's first-choice video or audio decoder refuses to start, export and proxy generation now move on to the next decoder instead of failing. The export record notes which decoder took over, so a run that needed the fallback isn't reported as an exact one.
 - Cancelling a multi-file import, or one that fails part way, now deletes the copies it already made instead of leaving them in app storage with no project using them. Files that were already in ClearCut's media folder are reused and never deleted.
 - The caption translation panel no longer lists hundreds of target languages that tapping can't translate into. Until a translation model can be installed, it says once that translation isn't available in this version and shows no language picker.
+- Proxies are now a fraction of each clip's own height instead of a fixed 1080p, so 1/2 on a 720p clip makes a 360p proxy and a portrait phone clip keeps its portrait shape. A clip that's already at or below the chosen proxy size is edited as is, and the toast says how many were.
 
 ## v3.81.1
 

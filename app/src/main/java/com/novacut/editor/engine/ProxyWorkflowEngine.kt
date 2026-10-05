@@ -21,7 +21,7 @@ import javax.inject.Singleton
  *
  * Tiers:
  * 1. Thumbnail (JPEG strips for timeline scrubbing) — generated on import
- * 2. Proxy (540p H.264 CRF 28 for editing) — background-generated via WorkManager
+ * 2. Proxy (quarter-height H.264, 540p from 4K, for editing) — background-generated via WorkManager
  * 3. Original (full-res for export) — always used for final render
  *
  * Auto-switch: Use proxy during preview if original > 1080p. Always original for export.

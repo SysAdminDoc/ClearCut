@@ -13,7 +13,7 @@ import dagger.assisted.AssistedInject
 /**
  * WorkManager worker for background proxy generation.
  *
- * Generates low-res proxies (540p H.264) for all registered media
+ * Generates quarter-height H.264 proxies (540p from 4K) for all registered media
  * that exceeds 1080p. Reports progress via setProgress() so the UI
  * can display a progress indicator.
  *

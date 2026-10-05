@@ -485,7 +485,7 @@ Planning files are local-only in the development checkout:
 - **Auto-save** with configurable interval, format versioning, rotating backups
  : Full serialization: all clip fields, compound clips, 9 caption style properties, mask bezier handles, clip group IDs
 - **Command-based undo/redo** foundation: sealed class with AddClip, RemoveClip, TrimClip, MoveClip, SetClipSpeed, ApplyEffect, CompoundCommand
-- **3-tier proxy workflow**: thumbnail (scrubbing) / proxy (540p editing) / original (export) with auto-switch and storage management
+- **3-tier proxy workflow**: thumbnail (scrubbing) / proxy (a fraction of each source's own height, so 540p from 4K) / original (export) with auto-switch and storage management. A source already at or below the chosen proxy tier is edited directly
 - Archive Transfer for local project rollback and device moves; remote sync remains planned behind explicit backend gates
 - **Editor walkthrough**: replayable on demand from Settings; it never opens automatically when an editor session starts
 
@@ -536,7 +536,7 @@ Planning files are local-only in the development checkout:
 ```
 com.novacut.editor/
 ├── ai/                     # AI features (captions, scene detect, stabilize, auto-edit)
-├── engine/                 # Core engines (77 injectable singletons across 200 files)
+├── engine/                 # Core engines (77 injectable singletons across 201 files)
 │   ├── VideoEngine          # Media3 playback + export
 │   ├── AudioEngine          # Waveform extraction + PCM processing
 │   ├── AudioEffectsEngine   # DSP chain (EQ, compressor, chorus, etc.)

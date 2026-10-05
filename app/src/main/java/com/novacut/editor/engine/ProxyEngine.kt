@@ -1,6 +1,7 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
@@ -116,10 +117,43 @@ class ProxyEngine @Inject constructor(
         return file.isFile.also { if (it) proxyMap[key] = Uri.fromFile(file) }
     }
 
+    /**
+     * How tall [sourceUri]'s proxy would be at [resolution], or why it needs none, from the
+     * source's displayed height.
+     */
+    suspend fun planProxy(sourceUri: Uri, resolution: ProxyResolution): ProxyResolutionPolicy.Plan =
+        ProxyResolutionPolicy.plan(sourceDisplayHeight(sourceUri), resolution)
+
+    /** The height [uri] is shown at, rotation included, or 0 when it can't be read. */
+    private suspend fun sourceDisplayHeight(uri: Uri): Int = withContext(Dispatchers.IO) {
+        val retrieverLease = CodecInstanceBudget.acquireRetriever(context.contentResolver.getType(uri))
+        val retriever = retrieverLease.resource
+        try {
+            retriever.setDataSource(context, uri)
+            fun read(key: Int) = retriever.extractMetadata(key)?.toIntOrNull() ?: 0
+            ProxyResolutionPolicy.displayHeight(
+                codedWidth = read(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH),
+                codedHeight = read(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT),
+                rotationDegrees = read(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION),
+            )
+        } catch (e: Exception) {
+            AppLog.w("ProxyEngine", "Couldn't read source dimensions for a proxy: ${e.javaClass.simpleName}")
+            0
+        } finally {
+            retrieverLease.close()
+        }
+    }
+
+    /**
+     * Renders a proxy at [resolution] of the source's displayed height. Returns null when the
+     * render fails, and also when [plan] (worked out here when not passed) says the source is
+     * already small enough to edit directly; the reason is logged.
+     */
     @androidx.annotation.OptIn(UnstableApi::class)
     suspend fun generateProxy(
         sourceUri: Uri,
         resolution: ProxyResolution,
+        plan: ProxyResolutionPolicy.Plan? = null,
         onProgress: (Float) -> Unit = {}
     ): Uri? = withContext(Dispatchers.Main) {
         val key = keyFor(sourceUri)
@@ -144,6 +178,23 @@ class ProxyEngine @Inject constructor(
             throw t
         }
 
+        val targetHeight = try {
+            when (val resolved = plan ?: planProxy(sourceUri, resolution)) {
+                is ProxyResolutionPolicy.Plan.Generate -> resolved.targetHeight
+                is ProxyResolutionPolicy.Plan.UseSource -> {
+                    AppLog.i("ProxyEngine", "No proxy generated: ${resolved.reason}")
+                    null
+                }
+            }
+        } catch (t: Throwable) {
+            mutexFor(key).unlock()
+            throw t
+        }
+        if (targetHeight == null) {
+            mutexFor(key).unlock()
+            return@withContext null
+        }
+
         activeProxyKeys.add(key)
         var pipelineLease: CodecLease<Unit>? = null
         try {
@@ -155,9 +206,8 @@ class ProxyEngine @Inject constructor(
             suspendCancellableCoroutine { cont ->
                 val mediaItem = MediaItem.fromUri(sourceUri)
 
-                // Downscale to proxy resolution using scale factor
-                // HALF = 540p, QUARTER = 270p, EIGHTH = 135p (based on 1080p source)
-                val targetHeight = (1080 * resolution.scale).toInt().coerceAtLeast(120)
+                // Presentation sizes the displayed (rotated) frame, so the proxy keeps the
+                // source's orientation at the planned height.
                 val presentation = Presentation.createForHeight(targetHeight)
                     .copyWithUnsetSideRoundedTo(Media3ExportRobustnessPolicy.ENCODER_DIMENSION_DIVISOR)
 

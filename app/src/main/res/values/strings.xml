@@ -3325,6 +3325,7 @@
     <string name="vm_no_clips_for_proxy_toast">No clips to generate proxies for</string>
     <string name="vm_generating_proxies_toast">Generating proxies for %1$d clips…</string>
     <string name="vm_proxy_enabled_toast">Proxy editing enabled (%1$d proxies generated)</string>
+    <string name="vm_proxy_enabled_some_direct_toast">Proxy editing enabled (%1$d proxies generated, %2$d clips already small enough to edit directly)</string>
     <string name="vm_backup_in_progress_toast">Archive action already in progress</string>
     <string name="vm_backup_saved_toast">Archive saved: %1$s</string>
     <string name="vm_backup_export_failed_toast">Archive export failed</string>
