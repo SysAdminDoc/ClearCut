@@ -1208,6 +1208,8 @@ class VideoEngine @Inject constructor(
             }
 
             val tempFile = File(context.cacheDir, "reverse_${clip.id}_${System.nanoTime()}.mp4")
+            // Registered before the encode so a cancelled export cleans up the partial file too.
+            tempFiles.add(tempFile)
             val success = ffmpegEngine.reverseClipToFile(
                 inputUri = clip.sourceUri,
                 outputFile = tempFile,
@@ -1224,7 +1226,6 @@ class VideoEngine @Inject constructor(
             )
 
             if (success && tempFile.exists() && tempFile.length() > 0) {
-                tempFiles.add(tempFile)
                 val reversedDurationMs = getVideoDuration(android.net.Uri.fromFile(tempFile))
                     .takeIf { it > 0 } ?: clipDurationMs
                 clipReplacements[clip.id] = clip.copy(

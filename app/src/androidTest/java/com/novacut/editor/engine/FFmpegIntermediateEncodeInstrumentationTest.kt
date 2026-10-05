@@ -75,11 +75,25 @@ class FFmpegIntermediateEncodeInstrumentationTest {
         assertPlayable(output, expectedDurationMs = 5_000L)
     }
 
-    private fun assertPlayable(output: File, expectedDurationMs: Long) {
+    @Test
+    fun reversingPastTheEndOfTheSoundKeepsTheVideo() = runBlocking {
+        // Six seconds of video whose sound stops at two: the reversed range has none,
+        // and no encoder can add it, so a retry must not throw the video away.
+        val shortAudio = File(workDir, "audio-ends-early.mp4")
+        instrumentation.context.assets.open("audio-ends-early.mp4").use { input ->
+            shortAudio.outputStream().use(input::copyTo)
+        }
+        val output = File(workDir, "reversed-silent-range.mp4")
+
+        assertTrue(ffmpeg.reverseClipToFile(Uri.fromFile(shortAudio), output, trimStartMs = 3_000L, trimEndMs = 6_000L, hasAudio = true))
+        assertPlayable(output, expectedDurationMs = 3_000L, expectAudio = false)
+    }
+
+    private fun assertPlayable(output: File, expectedDurationMs: Long, expectAudio: Boolean = true) {
         val verification = ExportOutputVerifier.verify(
             outputFile = output,
             expectVideo = true,
-            expectAudio = true,
+            expectAudio = expectAudio,
             expectedDurationMs = expectedDurationMs,
         )
         assertTrue("${output.name} failed verification: ${verification.reason}", verification.valid)

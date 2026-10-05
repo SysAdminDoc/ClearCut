@@ -1753,6 +1753,12 @@ class ExportDelegate(
                             check(outputFile.delete() && burnedFile.renameTo(outputFile)) {
                                 "Could not replace the uncaptioned export"
                             }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            // cancelExport() already reported CANCELLED; a cancelled
+                            // export leaves no file, captioned or not.
+                            burnedFile?.delete()
+                            outputFile.delete()
+                            throw e
                         } catch (e: Exception) {
                             com.novacut.editor.engine.AppLog.e("ExportDelegate", "Requested subtitle burn-in failed", e)
                             assFile?.delete()

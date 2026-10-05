@@ -180,6 +180,11 @@ class FFmpegEngine @Inject constructor(
      * even when the encoder emitted zero video samples, which leaves an
      * audio-only file behind. The artifact, not the return code, is the
      * contract, and FFmpeg's licence-neutral software encoder is the floor.
+     *
+     * Only missing video sends an encode to the next encoder. Every attempt
+     * handles audio the same way, so a file without the expected audio (a trim
+     * range past the end of the source's sound, say) won't change on a retry
+     * and is kept, with a log line.
      */
     private suspend fun encodeUntilUsable(
         label: String,
@@ -192,15 +197,14 @@ class FFmpegEngine @Inject constructor(
         for (encoder in encoderAttempts(preferredIntermediateEncoder())) {
             outputFile.delete()
             val exitCode = executeArguments(arguments(encoder), progressDurationMs, onProgress)
-            val hasVideo = exitCode == 0 && hasUsableTrack(outputFile, "video/")
-            val hasAudio = !expectAudio || hasUsableTrack(outputFile, "audio/")
-            if (hasVideo && hasAudio) return true
+            if (exitCode == 0 && hasUsableTrack(outputFile, "video/")) {
+                if (expectAudio && !hasUsableTrack(outputFile, "audio/")) {
+                    AppLog.w(TAG, "The $label encode from ${encoder.ffmpegName} has no audio track although its source has one")
+                }
+                return true
+            }
 
-            AppLog.w(
-                TAG,
-                "Discarding unusable $label encode from ${encoder.ffmpegName}: " +
-                    "exit=$exitCode video=$hasVideo audio=$hasAudio",
-            )
+            AppLog.w(TAG, "Discarding $label encode from ${encoder.ffmpegName} with no usable video: exit=$exitCode")
         }
         outputFile.delete()
         return false
