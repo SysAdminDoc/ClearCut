@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The export sheet now has an EDL button next to OTIO and FCPXML. A 29.97 or 59.94 project writes drop-frame timecode (`FCM: DROP FRAME`, with `;` before the frame field), so cuts no longer drift about 3.6 seconds an hour in Resolve or Premiere. Other rates write non-drop timecode counted in frames. The EDL carries the first video track and the first audio track, and every source gets its own reel of 8 characters or fewer, so phone clips that share a `VID_2026...` prefix stop collapsing onto one reel.
+- OTIO and FCPXML exports use the project's own frame rate instead of the render setting, so a 29.97 timeline goes out as 30000/1001 rather than a rounded 30 (or whatever the export sheet was set to).
 - EDL import reads drop-frame timecode written with `;`, Sony's `,` or `.`, or plain colons under an `FCM: DROP FRAME` line, and recognizes 59.94 drop-frame on its own.
 
 ## v3.81.1

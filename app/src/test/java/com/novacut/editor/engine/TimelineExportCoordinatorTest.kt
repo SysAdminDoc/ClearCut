@@ -103,6 +103,36 @@ class TimelineExportCoordinatorTest {
     }
 
     @Test
+    fun otioAndFcpxmlUseTheProjectTimebaseNotTheRenderFrameRate() = runBlocking {
+        val outputDirectory = Files.createTempDirectory("clearcut-timebase-export-").toFile()
+        try {
+            fun export(format: TimelineExportCoordinator.Format): String {
+                val result = runBlocking {
+                    coordinator.export(
+                        TimelineExportCoordinator.Request(
+                            format = format,
+                            tracks = listOf(videoTrack()),
+                            textOverlays = emptyList(),
+                            projectName = "NTSC",
+                            frameRate = 24,
+                            outputDirectory = outputDirectory,
+                            timebase = TimelineTimebase.NTSC_29_97,
+                        )
+                    )
+                }
+                return checkNotNull(result.outputFile) { "$format export did not write a file" }.readText()
+            }
+
+            val otio = export(TimelineExportCoordinator.Format.OTIO)
+            assertTrue(otio.contains("\"rate\": 29.97002997002997"))
+            assertFalse(otio.contains("\"rate\": 24"))
+            assertTrue(export(TimelineExportCoordinator.Format.FCPXML).contains("frameDuration=\"1001/30000s\""))
+        } finally {
+            outputDirectory.deleteRecursively()
+        }
+    }
+
+    @Test
     fun edlExportWritesDropFrameTimecodeForAnNtscProject() = runBlocking {
         val outputDirectory = Files.createTempDirectory("clearcut-edl-export-").toFile()
         try {

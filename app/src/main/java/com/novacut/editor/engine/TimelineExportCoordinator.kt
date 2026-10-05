@@ -78,12 +78,12 @@ class TimelineExportCoordinator @Inject constructor(
                 tracks = request.tracks,
                 textOverlays = request.textOverlays,
                 projectName = request.projectName,
-                frameRate = request.frameRate,
+                timebase = request.timebase,
             )
             Format.FCPXML -> timelineExchangeEngine.exportToFcpxml(
                 tracks = request.tracks,
                 projectName = request.projectName,
-                frameRate = request.frameRate,
+                timebase = request.timebase,
             )
             Format.EDL -> timelineExchangeEngine.exportToEdl(
                 tracks = request.tracks,
