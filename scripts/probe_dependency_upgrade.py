@@ -85,6 +85,9 @@ def preflight(dependency: str, candidate: str, catalog: dict[str, str]) -> None:
             )
 
 
+PROBE_ENV = "CLEARCUT_DEPENDENCY_PROBE"
+
+
 def write_snapshot(snapshot: dict) -> None:
     temporary = SNAPSHOT.with_suffix(".tmp")
     temporary.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
@@ -95,16 +98,19 @@ def provisional_snapshot(snapshot: dict, dependency: str, candidate: str) -> dic
     """The snapshot as it must read while the probe runs.
 
     The probe's own unit tests require the snapshot pin to match the staged catalog, so the
-    run sees the candidate pin marked as an unfinished probe. main() puts the original back
-    if the run does not pass.
+    run sees the candidate pin marked as an unfinished probe. A pre-release entry keeps its
+    state, which those tests pin for the beta they track. main() puts the original back if
+    the run does not pass, and the tests and check_dependency_freshness.py refuse a running
+    probe that PROBE_ENV does not name.
     """
     provisional = json.loads(json.dumps(snapshot))
     entry = provisional["dependencies"][dependency]
     command = f"python scripts/probe_dependency_upgrade.py --dependency {dependency} --version {candidate}"
     entry["pinnedVersion"] = candidate
-    entry["state"] = "probing"
-    entry["reason"] = f"A local compatibility probe for {candidate} is running and has not passed yet."
-    entry["unblockCondition"] = f"Let `{command}` finish; it records the result or restores the previous entry."
+    if entry.get("state") != "pre-release":
+        entry["state"] = "probing"
+        entry["reason"] = f"A local compatibility probe for {candidate} is running and has not passed yet."
+        entry["unblockCondition"] = f"Let `{command}` finish; it records the result or restores the previous entry."
     entry["compatibilityProbe"] = {"status": "running", "version": candidate, "command": command}
     return provisional
 
@@ -171,7 +177,12 @@ def main() -> int:
     write_snapshot(provisional_snapshot(snapshot, args.dependency, args.version))
     passed = False
     try:
-        result = subprocess.run(process_command, cwd=ROOT, check=False)
+        result = subprocess.run(
+            process_command,
+            cwd=ROOT,
+            check=False,
+            env={**os.environ, PROBE_ENV: args.dependency},
+        )
         passed = result.returncode == 0
     finally:
         # Anything short of a pass, an interrupt included, leaves the snapshot as the probe found it.

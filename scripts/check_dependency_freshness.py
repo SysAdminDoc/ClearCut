@@ -68,6 +68,10 @@ def main() -> int:
         if age < 0 or age > horizon:
             stale.append(f"{key} reviewed {entry_reviewed.isoformat()} ({age} days old)")
         state = entry.get("state")
+        if state == "probing" or entry.get("compatibilityProbe", {}).get("status") == "running":
+            # Only probe_dependency_upgrade.py writes these, and it restores the entry when it stops.
+            print(f"unfinished compatibility probe left in the snapshot: {key}", file=sys.stderr)
+            return 1
         if state == "held":
             decision = entry.get("candidateDecision", {})
             reason = str(entry.get("reason", "")).strip()

@@ -120,6 +120,15 @@ class DependencyFreshnessTest {
             )
 
             val probe = entry.getJSONObject("compatibilityProbe")
+            if (entry.getString("state") == "probing" || probe.getString("status") == "running") {
+                // probe_dependency_upgrade.py names the dependency it is probing; any other
+                // unfinished probe is a leftover from a run that never restored the snapshot.
+                assertEquals(
+                    "$key holds an unfinished compatibility probe.",
+                    key,
+                    System.getenv("CLEARCUT_DEPENDENCY_PROBE"),
+                )
+            }
             assertTrue(
                 "$key must name the executable compatibility probe.",
                 probe.getString("command").contains("scripts/probe_dependency_upgrade.py"),
