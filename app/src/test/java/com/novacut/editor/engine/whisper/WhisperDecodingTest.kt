@@ -3,10 +3,16 @@ package com.novacut.editor.engine.whisper
 import com.novacut.editor.engine.whisper.WhisperDecoding.EOT
 import com.novacut.editor.engine.whisper.WhisperDecoding.NO_SPEECH
 import com.novacut.editor.engine.whisper.WhisperDecoding.NO_TIMESTAMPS
+import com.novacut.editor.engine.whisper.WhisperDecoding.SOT
 import com.novacut.editor.engine.whisper.WhisperDecoding.TIMESTAMP_BEGIN
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.exp
+import kotlin.math.ln
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 class WhisperDecodingTest {
 
@@ -29,10 +35,71 @@ class WhisperDecodingTest {
     }
 
     @Test
-    fun noCaptionsAsTheTopFirstChoiceStopsDecoding() {
+    fun noCaptionsIsNeverGeneratedSoDecodingStillOpensWithATimestamp() {
         val scores = logits(NO_SPEECH to 10f, ts(0.0) to 9f)
 
-        assertEquals(EOT, WhisperDecoding.nextToken(scores, emptyList()))
+        assertEquals(ts(0.0), WhisperDecoding.nextToken(scores, emptyList()))
+    }
+
+    @Test
+    fun specialTokensAreSuppressedMidSequence() {
+        val englishLanguageToken = SOT + 1
+        val scores = logits(SOT to 20f, englishLanguageToken to 19f, NO_SPEECH to 18f, quick to 3f)
+
+        assertEquals(quick, WhisperDecoding.nextToken(scores, listOf(ts(0.0), the)))
+    }
+
+    @Test
+    fun bracketsAndOtherNonSpeechSymbolsAreNeverWritten() {
+        val openBracket = 58
+        val spaceOpenBracket = 685
+        val scores = logits(openBracket to 20f, spaceOpenBracket to 19f, the to 3f)
+
+        assertEquals(the, WhisperDecoding.nextToken(scores, listOf(ts(0.0))))
+    }
+
+    @Test
+    fun noSpeechProbabilityComesFromTheUntouchedFirstStep() {
+        // e^10 / (e^10 + e^9), with everything else far below.
+        val probability = WhisperDecoding.noSpeechProbability(logits(NO_SPEECH to 10f, ts(0.0) to 9f))
+
+        assertEquals(1.0 / (1.0 + exp(-1.0)), probability, 1e-6)
+    }
+
+    @Test
+    fun aChunkIsSilentOnlyWhenNoSpeechIsLikelyAndTheDecodeIsUnsure() {
+        // Three tokens plus EOT averaging -0.5: confident quiet speech keeps its captions.
+        assertFalse(WhisperDecoding.isSilence(noSpeechProbability = 0.7, sumLogProbability = -2.0, generatedCount = 3))
+        // No-speech on top at 30% used to drop the chunk; the reference keeps it.
+        assertFalse(WhisperDecoding.isSilence(noSpeechProbability = 0.3, sumLogProbability = -8.0, generatedCount = 3))
+        assertTrue(WhisperDecoding.isSilence(noSpeechProbability = 0.7, sumLogProbability = -8.0, generatedCount = 3))
+        // Exactly -1 per token still counts as unsure, as in the reference.
+        assertTrue(WhisperDecoding.isSilence(noSpeechProbability = 0.61, sumLogProbability = -4.0, generatedCount = 3))
+    }
+
+    @Test
+    fun onlyAudioBelowTheSpeechFloorCountsAsTooQuiet() {
+        val silence = FloatArray(16_000)
+        val roomTone = FloatArray(16_000) { if (it % 2 == 0) 0.0005f else -0.0005f }
+        val whisper = FloatArray(16_000) { (0.01 * sin(it * 0.1)).toFloat() }
+        val speechThenPadding = FloatArray(32_000).also { whisper.copyInto(it) }
+
+        assertTrue(WhisperDecoding.isTooQuietForSpeech(silence))
+        assertTrue(WhisperDecoding.isTooQuietForSpeech(roomTone))
+        assertFalse(WhisperDecoding.isTooQuietForSpeech(whisper))
+        // Only the samples that came from the clip count, not the zero padding after them.
+        assertFalse(WhisperDecoding.isTooQuietForSpeech(speechThenPadding, length = 16_000))
+        // Half a second of quiet speech in a silent 30 second chunk still counts as speech.
+        val shortPhrase = FloatArray(480_000).also { whisper.copyInto(it, destinationOffset = 200_000, endIndex = 8_000) }
+        assertFalse(WhisperDecoding.isTooQuietForSpeech(shortPhrase))
+        assertTrue(WhisperDecoding.isTooQuietForSpeech(whisper, length = 0))
+    }
+
+    @Test
+    fun logProbabilityIsTakenOverTheFilteredLogits() {
+        val scores = logits(the to 1f, quick to 1f)
+
+        assertEquals(ln(0.5), WhisperDecoding.logProbability(scores, the), 1e-3)
     }
 
     @Test

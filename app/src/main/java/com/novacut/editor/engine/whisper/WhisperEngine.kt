@@ -291,6 +291,13 @@ class WhisperEngine @Inject constructor(
                 val chunkOffsetMs = (chunkStart.toLong() * 1000L) / WhisperMel.SAMPLE_RATE
                 val chunkDurationMs = (copyLen.coerceAtLeast(0).toLong() * 1000L) / WhisperMel.SAMPLE_RATE
 
+                // Whisper answers silence with "you" or "Thank you." while its no-speech
+                // check lets the guess through, so audio too quiet to hold speech is skipped.
+                if (WhisperDecoding.isTooQuietForSpeech(chunkAudio, copyLen)) {
+                    onProgress(0.20f + 0.3f * (chunk + 1f) / numChunks)
+                    continue
+                }
+
                 // Compute mel spectrogram
                 val mel = WhisperMel.compute(chunkAudio)
                 onProgress(0.20f + 0.3f * (chunk + 0.3f) / numChunks)
@@ -365,6 +372,8 @@ class WhisperEngine @Inject constructor(
         // <|startoftranscript|> alone.
         val tokens = mutableListOf(WhisperDecoding.SOT.toLong())
         val generated = mutableListOf<Int>()
+        var noSpeechProbability = 0.0
+        var sumLogProbability = 0.0
 
         for (step in 0 until MAX_DECODE_TOKENS) {
             currentCoroutineContext().ensureActive()
@@ -404,7 +413,9 @@ class WhisperEngine @Inject constructor(
                 // Logits for the last token position
                 val lastOffset = (seqLen - 1) * vocabSize
                 val scores = FloatArray(vocabSize) { logitsData.get(lastOffset + it) }
+                if (generated.isEmpty()) noSpeechProbability = WhisperDecoding.noSpeechProbability(scores)
                 nextToken = WhisperDecoding.nextToken(scores, generated)
+                sumLogProbability += WhisperDecoding.logProbability(scores, nextToken)
             } catch (e: Exception) {
                 AppLog.w("WhisperEngine", "Decoder step $step failed; keeping the text decoded so far", e)
                 break
@@ -419,6 +430,7 @@ class WhisperEngine @Inject constructor(
             generated.add(nextToken)
         }
 
+        if (WhisperDecoding.isSilence(noSpeechProbability, sumLogProbability, generated.size)) return emptyList()
         return WhisperDecoding.segments(generated, chunkOffsetMs, chunkDurationMs) { decodeTokens(it, vocab) }
     }
 
