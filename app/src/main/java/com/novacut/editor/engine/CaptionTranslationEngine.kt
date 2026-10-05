@@ -133,7 +133,14 @@ class CaptionTranslationEngine @Inject constructor(
      */
     fun canInstallModel(): Boolean = false
 
-    /** True when translation is ready now or can become ready by installing a model. */
+    /**
+     * True when translation is ready now or can become ready by installing a model.
+     *
+     * The caption editor reads this when it composes rather than observing it, which holds
+     * while both checks are constants. A build that can install or load a model mid-session
+     * must publish readiness as observable state and route the editor through it, or the
+     * picker stays hidden until something else recomposes the panel.
+     */
     fun isTranslationPossible(): Boolean = isModelReady() || canInstallModel()
 
     fun getSupportedLanguages(variant: ModelVariant = ModelVariant.NLLB_600M): List<String> =

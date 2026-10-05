@@ -51,7 +51,9 @@ class CaptionTranslationPanelTest {
         assertEquals(0, compose.onAllNodesWithText("FR").fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodes(hasClickAction()).fetchSemanticsNodes().size)
 
-        // An engine that reports a ready model brings the picker back.
+        // The panel follows the flag, so the picker comes back as soon as the host passes true.
+        // The host reads it from the engine on each composition, which is enough while both
+        // engine checks are fixed; CaptionTranslationEngine notes what a real model must add.
         translationPossible = true
         compose.waitForIdle()
 
