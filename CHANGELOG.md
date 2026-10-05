@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased
+## v3.81.1
 
+Current version: **v3.81.1** (`versionCode` 300).
+
+- Deleting your only project no longer crashes ClearCut on every launch (#54, #53). With nothing left but the trash, the dashboard placed its scrolling "ready to start" panel inside the project list, and Compose refuses to measure a scrolling panel there. Since the trash survives restarts, the app kept crashing until the trash was purged. The panel now scrolls with the list and Restore is reachable.
+- Projects with photos export again (#54). Media3 1.11 expects every still image to carry a frame rate, and ours didn't, so an export with a photo on the timeline failed the moment it started. Stills now use the export frame rate.
+- Preview keeps working after it reaches the end (#54). Media3 1.11 never reopens its video compositor once a timeline has played to the end, so replay, loop, scrubbing back and any project opened afterwards showed "can't decode" until the app restarted. ClearCut now notices when that happens and swaps in a fresh preview player at the requested spot. Loop restarts from the top on its own rather than wrapping into the stalled player.
+- Dependency freshness evidence was refreshed for the current 30-day review window. The version catalog is unchanged.
 - The release fingerprint script reads the signer lines that Android Build Tools 37 prints. Lines like `V3.0 Signer:` and `V3.1 Signer: (minSdkVersion=33, ...)` used to be skipped, so an APK signed only with v3, or with a rotated key, reported no signer at all.
 - The dashboard no longer spins forever when the project database fails to answer. A failed query now shows what happened and offers Retry, which really re-subscribes, instead of leaving a spinner that could never resolve.
 - Clearing the proxy cache reports what it actually did. It used to announce "Proxy cache cleared" whatever happened, including when files could not be deleted and when proxies were deliberately kept for an open project. A failure now says so and the control can be used again, where before an error left the button stuck busy.

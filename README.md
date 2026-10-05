@@ -4,7 +4,7 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.81.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.81.1-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
 
@@ -17,6 +17,13 @@
 <p align="center">
   <sub><em>If ClearCut makes editing easier, a coffee helps fund the testing and maintenance behind each release.</em></sub>
 </p>
+
+### v3.81.1 Crash and preview fixes
+
+- Deleting your only project no longer leaves ClearCut crashing on every launch. Restore is right there on the dashboard again.
+- Projects with photos export again.
+- Preview keeps working after it reaches the end. Replay, loop, scrubbing back and opening another project don't show a decode error anymore.
+- If the project list can't load, the dashboard says so and offers Retry instead of spinning forever. Clearing the proxy cache now reports what it really did.
 
 ### v3.81.0 Sharper screens, fewer dead ends
 

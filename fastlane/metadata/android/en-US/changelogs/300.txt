@@ -1,0 +1,1 @@
+Deleting your only project no longer leaves ClearCut crashing on every launch. Photo projects export again, since still images now carry the frame rate the exporter needs. Preview keeps working after it reaches the end, so replay, loop, scrubbing back and opening another project no longer show a decode error. If projects can't load, the dashboard offers Retry instead of spinning.
