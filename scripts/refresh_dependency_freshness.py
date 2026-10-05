@@ -245,8 +245,9 @@ def default_hold(key: str, pinned: str, latest: str) -> tuple[str, str]:
         unblock = f"Complete the Room 3 coordinate/API migration, then run `{command}` before updating the catalog."
     elif key == "onnxruntime":
         reason = (
-            f"ONNX Runtime {latest} is newer than the pinned {pinned}; the prior 1.28 evaluation increased the "
-            "native payload and still lacked on-device Whisper, upscale, and inpaint comparison fixtures."
+            f"ONNX Runtime {latest} is newer than the pinned {pinned}; every ONNX Runtime release changes the "
+            "native payload in all four ABIs, so it needs the per-ABI size review and the on-device Whisper and "
+            "inpaint fixtures before adoption."
         )
         unblock = (
             f"Complete the per-ABI size and model-output review, then run `{command}` and retain the candidate "
