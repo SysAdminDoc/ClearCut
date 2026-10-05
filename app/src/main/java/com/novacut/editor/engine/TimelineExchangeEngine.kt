@@ -1239,12 +1239,18 @@ class TimelineExchangeEngine @Inject constructor(
             val recordInMs = timelineStartMs.coerceAtLeast(0L)
             val recordOutMs = track.effectiveTimelineEndMs(clip).coerceAtLeast(recordInMs)
             // A sync offset can pull a clip before zero. Its record in is clamped to the start,
-            // so the source in skips the same stretch of media to keep the event in sync.
-            val sourceInMs = (clip.trimStartMs + ((recordInMs - timelineStartMs) * safeSpeed).roundToLong())
-                .coerceAtMost(clip.trimEndMs)
+            // so the event drops the media that would have played before it, measured along the
+            // clip's speed curve: the head of the source, or the tail when the clip is reversed.
+            val clippedMs = recordInMs - timelineStartMs
+            val (sourceInMs, sourceOutMs) = if (clippedMs <= 0L) {
+                clip.trimStartMs to clip.trimEndMs
+            } else {
+                val playedThroughMs = clip.timelineOffsetToSourceMs(clippedMs)
+                if (clip.isReversed) clip.trimStartMs to playedThroughMs else playedThroughMs to clip.trimEndMs
+            }
             val sourceIn = timecode(sourceInMs)
             val sourceOut = EdlTimecode.format(
-                maxOf(msToFrames(clip.trimEndMs, timebase), msToFrames(sourceInMs, timebase) + 1L),
+                maxOf(msToFrames(sourceOutMs, timebase), msToFrames(sourceInMs, timebase) + 1L),
                 fps,
                 dropFrame,
             )

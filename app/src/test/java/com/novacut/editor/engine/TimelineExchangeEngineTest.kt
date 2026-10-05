@@ -8,6 +8,8 @@ import com.novacut.editor.model.CaptionStyleType
 import com.novacut.editor.model.Clip
 import com.novacut.editor.model.Effect
 import com.novacut.editor.model.EffectType
+import com.novacut.editor.model.SpeedCurve
+import com.novacut.editor.model.SpeedPoint
 import com.novacut.editor.model.TextOverlay
 import com.novacut.editor.model.TimelineMarker
 import com.novacut.editor.model.TimelineTimebase
@@ -654,6 +656,37 @@ class TimelineExchangeEngineTest {
         // Half a second of source sits before the timeline start, so the event begins 15 frames into it.
         val events = edl.lines().filter { it.matches(Regex("^\\d{3}  .*")) }
         assertEquals(listOf("001  SCORE    A     C        00:00:00:15 00:00:02:00 00:00:00:00 00:00:01:15"), events)
+    }
+
+    @Test
+    fun aReversedClipPulledBeforeZeroDropsTheTailOfItsSource() {
+        // Reversed, the last half second of source is what would have played before zero.
+        val score = clip("score", "file:///score.m4a", 2_000L, timelineStartMs = 400L, isReversed = true)
+            .copy(audioSyncOffsetMs = -900L)
+        val tracks = listOf(Track(type = TrackType.AUDIO, index = 0, clips = listOf(score)))
+
+        val edl = engine.exportToEdl(tracks, "Sync", TimelineTimebase(30))
+
+        val events = edl.lines().filter { it.matches(Regex("^\\d{3}  .*")) }
+        assertEquals(listOf("001  SCORE    A     C        00:00:00:00 00:00:01:15 00:00:00:00 00:00:01:15"), events)
+    }
+
+    @Test
+    fun aSpeedRampPulledBeforeZeroSkipsTheSourceItsRampActuallyPlayed() {
+        // Starts at normal speed and ramps to 4x, so its average is far above the speed it
+        // plays the first half second at.
+        val ramp = clip("ramp", "file:///ramp.m4a", 4_000L, timelineStartMs = 400L).copy(
+            audioSyncOffsetMs = -900L,
+            speedCurve = SpeedCurve(listOf(SpeedPoint(0f, 1f), SpeedPoint(1f, 4f))),
+        )
+        val tracks = listOf(Track(type = TrackType.AUDIO, index = 0, clips = listOf(ramp)))
+
+        val edl = engine.exportToEdl(tracks, "Ramp", TimelineTimebase(30))
+
+        val sourceInFrames = Math.round(ramp.timelineOffsetToSourceMs(500L) * 30 / 1000.0)
+        assertTrue("the ramp plays about 1x at first: $sourceInFrames frames", sourceInFrames in 15L..18L)
+        val event = edl.lines().single { it.matches(Regex("^\\d{3}  .*")) }
+        assertEquals(EdlTimecode.format(sourceInFrames, 30, false), event.split(Regex(" +"))[4])
     }
 
     @Test
