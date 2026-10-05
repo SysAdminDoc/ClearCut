@@ -77,6 +77,7 @@ fun CaptionEditorPanel(
     translationTargets: List<String> = emptyList(),
     translationUnavailable: Boolean = false,
     translationOffline: Boolean = false,
+    translationPossible: Boolean = true,
     onTranslationTargetSelected: (String) -> Unit = {},
     onTranslationUserEdit: (rowIndex: Int, newTargetText: String) -> Unit = { _, _ -> },
     onTranslationRegenerate: (rowIndex: Int) -> Unit = {},
@@ -260,6 +261,7 @@ fun CaptionEditorPanel(
                 onRegenerate = onTranslationRegenerate,
                 unavailable = translationUnavailable,
                 offline = translationOffline,
+                translationPossible = translationPossible,
             )
         }
 

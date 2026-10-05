@@ -30,6 +30,15 @@ class CaptionTranslationEngineTest {
     // --- pairQuality ---
 
     @Test
+    fun withNoModelIntegratedTranslationIsReportedImpossible() {
+        // downloadModel() is a stub, so the panel must hide its target picker; flipping either
+        // of these without a real model would bring back a picker that can never translate.
+        assertFalse(engine.isModelReady())
+        assertFalse(engine.canInstallModel())
+        assertFalse(engine.isTranslationPossible())
+    }
+
+    @Test
     fun pairQuality_identity_isExcellent() {
         assertEquals(LanguagePairQuality.EXCELLENT, pq(ModelVariant.NLLB_600M, "en", "en"))
     }

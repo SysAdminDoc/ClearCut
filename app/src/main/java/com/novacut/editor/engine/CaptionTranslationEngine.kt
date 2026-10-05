@@ -127,6 +127,15 @@ class CaptionTranslationEngine @Inject constructor(
 
     fun isModelReady(): Boolean = false
 
+    /**
+     * Whether a translation model could be installed on this build. False until a model is
+     * integrated: [downloadModel] is a stub, so the UI must not offer targets it can't reach.
+     */
+    fun canInstallModel(): Boolean = false
+
+    /** True when translation is ready now or can become ready by installing a model. */
+    fun isTranslationPossible(): Boolean = isModelReady() || canInstallModel()
+
     fun getSupportedLanguages(variant: ModelVariant = ModelVariant.NLLB_600M): List<String> =
         when (variant) {
             ModelVariant.NLLB_300M, ModelVariant.NLLB_600M -> NLLB_LANGUAGES

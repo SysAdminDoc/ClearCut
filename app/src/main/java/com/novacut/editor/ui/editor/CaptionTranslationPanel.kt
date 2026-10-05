@@ -2,6 +2,7 @@ package com.novacut.editor.ui.editor
 
 import com.novacut.editor.ui.theme.ClearCutAccents
 import com.novacut.editor.ui.theme.LocalClearCutColors
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,6 +62,10 @@ import com.novacut.editor.ui.theme.Radius
  *
  * Empty [rows] renders the "Pick a target language to begin" empty state
  * so the panel can be opened before any translation has run.
+ *
+ * When [translationPossible] is false no model is ready or installable, so the
+ * panel says so once and offers no target picker, chips or regenerate control:
+ * a language tap there could never produce a translation.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -76,21 +81,26 @@ fun CaptionTranslationPanel(
     modifier: Modifier = Modifier,
     unavailable: Boolean = false,
     offline: Boolean = false,
+    translationPossible: Boolean = true,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Header()
-        TargetPicker(
-            sourceLang = sourceLang,
-            targetLang = targetLang,
-            availableTargets = availableTargets,
-            currentQuality = currentQuality,
-            onTargetSelected = onTargetSelected,
-            enabled = !offline,
-        )
-        if (offline) {
+        Header(showSubtitle = translationPossible)
+        if (translationPossible) {
+            TargetPicker(
+                sourceLang = sourceLang,
+                targetLang = targetLang,
+                availableTargets = availableTargets,
+                currentQuality = currentQuality,
+                onTargetSelected = onTargetSelected,
+                enabled = !offline,
+            )
+        }
+        if (!translationPossible) {
+            StatusNote(R.string.caption_translation_not_installable)
+        } else if (offline) {
             OfflineState()
         } else if (unavailable) {
             UnavailableState()
@@ -115,7 +125,7 @@ fun CaptionTranslationPanel(
 }
 
 @Composable
-private fun Header() {
+private fun Header(showSubtitle: Boolean = true) {
     val semanticColors = LocalClearCutColors.current
     Column(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -126,12 +136,14 @@ private fun Header() {
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.caption_translation_subtitle),
-            color = semanticColors.subtext,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        if (showSubtitle) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.caption_translation_subtitle),
+                color = semanticColors.subtext,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 
@@ -245,6 +257,11 @@ private fun EmptyState() {
 
 @Composable
 private fun UnavailableState() {
+    StatusNote(R.string.caption_translation_unavailable)
+}
+
+@Composable
+private fun StatusNote(@StringRes message: Int) {
     val semanticColors = LocalClearCutColors.current
     Box(
         modifier = Modifier
@@ -256,7 +273,7 @@ private fun UnavailableState() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(R.string.caption_translation_unavailable),
+            text = stringResource(message),
             color = semanticColors.subtext,
             style = MaterialTheme.typography.bodySmall,
         )

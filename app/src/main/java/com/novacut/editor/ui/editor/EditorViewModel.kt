@@ -6603,6 +6603,8 @@ class EditorViewModel @Inject constructor(
     fun captionTranslationTargets(): List<String> =
         captionTranslationEngine.getSupportedLanguages(_state.value.captionTranslationVariant)
 
+    fun captionTranslationPossible(): Boolean = captionTranslationEngine.isTranslationPossible()
+
     fun runCaptionTranslation(targetLang: String) {
         setCaptionTranslationTarget(targetLang)
         if (!networkAvailable.value) {

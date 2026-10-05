@@ -381,6 +381,7 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
             translationTargets = viewModel.captionTranslationTargets(),
             translationUnavailable = state.captionTranslationUnavailable,
             translationOffline = !networkAvailable || state.caption.translationOffline,
+            translationPossible = viewModel.captionTranslationPossible(),
             onTranslationTargetSelected = viewModel::runCaptionTranslation,
             onTranslationUserEdit = viewModel::applyCaptionTranslationEdit,
             onTranslationRegenerate = viewModel::regenerateCaptionTranslation,

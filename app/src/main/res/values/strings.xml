@@ -177,6 +177,7 @@
     <string name="caption_translation_subtitle">Translate captions to a target language. Edit any row inline.</string>
     <string name="caption_translation_no_target">Pick a target language to begin.</string>
     <string name="caption_translation_unavailable">Translation model required. Install a translation model to translate captions; captions are never shown as translated until one is active.</string>
+    <string name="caption_translation_not_installable">Caption translation isn\'t available in this version. No translation model can be installed yet, so there are no target languages to pick.</string>
     <string name="caption_translation_offline">Caption translation is unavailable offline. Reconnect to download or use its translation model.</string>
     <string name="caption_translation_quality_chip_format">Quality · %1$s</string>
     <string name="caption_translation_regenerate">Regenerate</string>
