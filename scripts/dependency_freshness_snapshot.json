@@ -141,23 +141,23 @@
     },
     "media3": {
       "coordinate": "androidx.media3:media3-exoplayer",
-      "pinnedVersion": "1.11.0",
+      "pinnedVersion": "1.11.1",
       "latestStable": "1.11.1",
       "source": "https://developer.android.com/jetpack/androidx/releases/media3",
       "metadataSource": "https://dl.google.com/dl/android/maven2/androidx/media3/media3-exoplayer/maven-metadata.xml",
       "reviewedOn": "2026-10-05",
-      "state": "held",
-      "reason": "The catalog pin 1.11.0 is below the 1.11.1 stable version reported by authoritative metadata; no compatibility probe has approved the change.",
-      "unblockCondition": "Run `python scripts/probe_dependency_upgrade.py --dependency media3 --version 1.11.1` and retain the new pin only after the local compatibility probe passes.",
+      "state": "current",
+      "reason": "The catalog pin matches the latest stable version after a passing local compatibility probe.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
       "compatibilityProbe": {
         "status": "passed",
-        "version": "1.11.0",
-        "verifiedOn": "2026-08-08",
-        "command": "python scripts/probe_dependency_upgrade.py --dependency media3 --version 1.11.0",
-        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 -Dorg.gradle.jvmargs=-Xmx1024m -Dorg.gradle.workers.max=1"
+        "version": "1.11.1",
+        "verifiedOn": "2026-10-05",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency media3 --version 1.11.1",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 --dependency-verification strict -Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"
       },
       "candidateDecision": {
-        "action": "hold",
+        "action": "adopt",
         "candidateVersion": "1.11.1",
         "releaseChannel": "stable",
         "probe": "python scripts/probe_dependency_upgrade.py --dependency media3 --version 1.11.1"
