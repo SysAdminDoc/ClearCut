@@ -7,14 +7,11 @@ import com.novacut.editor.R
 import com.novacut.editor.engine.AppSettings
 import com.novacut.editor.engine.AppearanceMode
 import com.novacut.editor.engine.ConnectivityObserver
-import com.novacut.editor.engine.DiagnosticExportEngine
 import com.novacut.editor.engine.ModelDownloadManager
-import com.novacut.editor.engine.ProjectAutoSave
 import com.novacut.editor.engine.ProxyEngine
 import com.novacut.editor.engine.managedMediaDir
 import com.novacut.editor.engine.SettingsRepository
 import com.novacut.editor.engine.UpdateChecker
-import com.novacut.editor.engine.db.ProjectDao
 import com.novacut.editor.engine.segmentation.SegmentationEngine
 import com.novacut.editor.engine.whisper.WhisperEngine
 import com.novacut.editor.model.*
@@ -88,9 +85,7 @@ class SettingsViewModel @Inject constructor(
     private val whisperEngine: WhisperEngine,
     private val segmentationEngine: SegmentationEngine,
     private val mediaPipeGate: com.novacut.editor.engine.MediaPipeUsageGate,
-    private val diagnosticExportEngine: DiagnosticExportEngine,
-    private val projectDao: ProjectDao,
-    private val autoSave: ProjectAutoSave,
+    private val diagnosticBundleBuilder: DiagnosticBundleBuilder,
     private val updateChecker: UpdateChecker,
     private val proxyEngine: ProxyEngine,
     private val connectivityObserver: ConnectivityObserver,
@@ -304,45 +299,18 @@ class SettingsViewModel @Inject constructor(
                 it.copy(isExporting = true, message = null, errorMessage = null)
             }
             try {
-                val modelRegistry = withContext(Dispatchers.IO) {
-                    val whisperBytes = whisperEngine.getModelSizeBytes()
-                    val segmentationBytes = segmentationEngine.getModelSizeBytes()
-                    listOf(
-                        DiagnosticExportEngine.ModelSnapshot(
-                            id = "whisper-onnx",
-                            installed = whisperBytes > 0L,
-                            sizeBytes = whisperBytes
-                        ),
-                        DiagnosticExportEngine.ModelSnapshot(
-                            id = "segmentation-mediapipe",
-                            installed = segmentationBytes > 0L,
-                            sizeBytes = segmentationBytes
-                        )
-                    )
-                }
-                val settingsSnapshot = repo.settings.first()
-                val timelineShape = if (settingsSnapshot.includeDiagnosticTimelineShape) {
-                    withContext(Dispatchers.IO) { latestTimelineShape() }
-                } else {
-                    null
-                }
-                val bundle = diagnosticExportEngine.exportDiagnosticBundle(
-                    modelRegistry = modelRegistry,
-                    timelineShape = timelineShape,
-                    permissionSnapshots = DiagnosticExportEngine.collectRuntimePermissionSnapshots(appContext),
-                    includeRawExportErrorText = settingsSnapshot.includeDiagnosticRawErrorText
-                )
+                val bundle = diagnosticBundleBuilder.build()
                 _diagnosticExport.update {
                     it.copy(
                         isExporting = false,
                         bundle = DiagnosticExportBundleUi(
-                            path = bundle.absolutePath,
-                            fileName = bundle.name,
-                            sizeBytes = bundle.length()
+                            path = bundle.file.absolutePath,
+                            fileName = bundle.file.name,
+                            sizeBytes = bundle.file.length()
                         ),
                         message = diagnosticExportMessage(
-                            timelineShapeRequested = settingsSnapshot.includeDiagnosticTimelineShape,
-                            timelineShapeIncluded = timelineShape != null
+                            timelineShapeRequested = bundle.timelineShapeRequested,
+                            timelineShapeIncluded = bundle.timelineShapeIncluded
                         ),
                         errorMessage = null
                     )
@@ -396,13 +364,6 @@ class SettingsViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    private suspend fun latestTimelineShape(): DiagnosticExportEngine.TimelineShape? {
-        val latestProject = projectDao.getAllProjectsSnapshot().firstOrNull() ?: return null
-        val outcome = autoSave.loadRecoveryDataWithOutcome(latestProject.id)
-        val state = (outcome as? ProjectAutoSave.LoadOutcome.Loaded)?.state ?: return null
-        return DiagnosticExportEngine.summarizeTimelineShape(state.tracks)
     }
 
     private fun diagnosticExportMessage(

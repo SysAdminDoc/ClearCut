@@ -13,6 +13,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.system.exitProcess
 
+/** What the next launch needs from one crash record to tell the user about it. */
+data class CrashRecordSummary(
+    val recordedAtEpochMs: Long,
+    val rootClassName: String,
+    val appVersion: String,
+)
+
 /**
  * Local-only fatal-crash breadcrumb store.
  *
@@ -79,6 +86,34 @@ class CrashRecordStore private constructor(
             .put("records", records)
             .toString(2)
     }
+
+    /** Every readable record, newest first. */
+    fun recentCrashes(): List<CrashRecordSummary> = recordFiles().mapNotNull { file ->
+        runCatching {
+            val json = JSONObject(file.readText(Charsets.UTF_8))
+            CrashRecordSummary(
+                recordedAtEpochMs = json.getLong("recordedAtEpochMs"),
+                rootClassName = json.getJSONObject("throwable").getString("rootClassName"),
+                appVersion = json.optString("appVersion"),
+            )
+        }.getOrNull()
+    }
+
+    /**
+     * Crashes and abnormal exits up to this time were already put in front of the
+     * user, who saved a report, copied the summary or dismissed it.
+     */
+    fun noticeAcknowledgedThroughEpochMs(): Long =
+        runCatching { noticeAckFile().readText(Charsets.UTF_8).trim().toLong() }.getOrDefault(0L)
+
+    fun acknowledgeNoticesThrough(epochMs: Long) {
+        if (epochMs <= noticeAcknowledgedThroughEpochMs()) return
+        recordsDir.mkdirs()
+        writeUtf8TextAtomically(noticeAckFile(), epochMs.toString())
+    }
+
+    // Not a .json file, so it's never listed, pruned or bundled as a crash record.
+    private fun noticeAckFile(): File = File(recordsDir, NOTICE_ACK_FILE)
 
     fun pruneOldRecords(retainCount: Int = DEFAULT_RETAIN_COUNT) {
         recordFiles()
@@ -191,6 +226,7 @@ class CrashRecordStore private constructor(
         const val RECORD_SCHEMA = "com.clearcut.crash-record.v1"
         const val BUNDLE_SCHEMA = "com.clearcut.crash-records.v1"
         const val DEFAULT_RETAIN_COUNT = 8
+        private const val NOTICE_ACK_FILE = "notice-acknowledged.txt"
         private const val MAX_CAUSE_DEPTH = 4
         private const val MAX_STACK_FRAMES = 32
         private const val MAX_SHORT_TEXT_CHARS = 160

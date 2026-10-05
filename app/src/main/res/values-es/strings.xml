@@ -3388,4 +3388,17 @@
     <string name="ai_requirement_unmet_generic">%1$s aún no está listo, así que esta herramienta no puede ejecutarse.</string>
     <string name="ai_requirement_unknown_tool_title">Esta herramienta necesita algo que no está registrado</string>
     <string name="ai_requirement_unknown_tool_body">ClearCut no tiene una entrada de requisitos para esta herramienta, así que no puede indicar qué falta. Abre Herramientas de IA para ver qué modelos están instalados.</string>
+    <string name="crash_notice_crash">ClearCut se cerró inesperadamente el %1$s.</string>
+    <string name="crash_notice_not_responding">ClearCut dejó de responder el %1$s y Android lo cerró.</string>
+    <string name="crash_notice_low_memory">Android cerró ClearCut el %1$s porque el teléfono se quedó sin memoria.</string>
+    <string name="crash_notice_memory_limit">Android cerró ClearCut el %1$s porque superó el límite de memoria que Android fija para cada app.</string>
+    <string name="crash_notice_resource_limit">Android cerró ClearCut el %1$s por usar demasiados recursos del teléfono.</string>
+    <string name="crash_notice_body">Un informe ayuda a encontrar la causa. Se queda en tu teléfono a menos que lo compartas.</string>
+    <string name="crash_notice_save_report">Guardar informe</string>
+    <string name="crash_notice_copy_summary">Copiar resumen</string>
+    <string name="crash_notice_dismiss">Descartar aviso de cierre</string>
+    <string name="crash_notice_report_saved">Informe guardado. Adjúntalo a un issue de GitHub si quieres enviarlo.</string>
+    <string name="crash_notice_report_failed">No se pudo guardar el informe. Inténtalo de nuevo.</string>
+    <string name="crash_notice_summary_copied">Resumen copiado. Pégalo en un issue nuevo de GitHub.</string>
+    <string name="crash_notice_clip_label">Resumen del cierre de ClearCut</string>
 </resources>

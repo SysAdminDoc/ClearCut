@@ -1,5 +1,7 @@
 package com.novacut.editor.ui.projects
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -9,12 +11,15 @@ import androidx.core.content.FileProvider
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import com.novacut.editor.ClearCutApp
 import com.novacut.editor.MainActivity
 import com.novacut.editor.engine.ProjectShortcutPlanner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.novacut.editor.R
 import com.novacut.editor.engine.AutoSaveState
+import com.novacut.editor.engine.CrashRecordStore
+import com.novacut.editor.engine.ProcessExitRecorder
 import com.novacut.editor.engine.IncomingDocumentImportPreview
 import com.novacut.editor.engine.IncomingDocumentImportRouter
 import com.novacut.editor.engine.IncomingDocumentItem
@@ -50,8 +55,10 @@ import com.novacut.editor.model.SortMode
 import com.novacut.editor.model.SourceColorMetadata
 import com.novacut.editor.model.Track
 import com.novacut.editor.model.TrackType
+import com.novacut.editor.ui.settings.DiagnosticBundleBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -91,6 +98,9 @@ class ProjectListViewModel @Inject constructor(
     private val incomingDocumentImportRouter: IncomingDocumentImportRouter,
     @ApplicationContext private val appContext: Context,
     private val productHealthLedger: ProductHealthLedger,
+    private val crashRecordStore: CrashRecordStore,
+    private val processExitRecorder: ProcessExitRecorder,
+    private val diagnosticBundleBuilder: DiagnosticBundleBuilder,
 ) : ViewModel() {
     private companion object {
         private const val MAX_PROJECT_NAME_CHARS = 80
@@ -111,6 +121,10 @@ class ProjectListViewModel @Inject constructor(
 
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
+
+    private val _crashReportNotice = MutableStateFlow<CrashReportNotice?>(null)
+    val crashReportNotice: StateFlow<CrashReportNotice?> = _crashReportNotice.asStateFlow()
+    private var crashReportSaveJob: Job? = null
 
     private val _operationState = MutableStateFlow<ProjectListOperationState?>(null)
     val operationState: StateFlow<ProjectListOperationState?> = _operationState.asStateFlow()
@@ -211,6 +225,7 @@ class ProjectListViewModel @Inject constructor(
 
     init {
         refreshUserTemplates()
+        loadCrashReportNotice()
         viewModelScope.launch(Dispatchers.IO) {
             val cutoffMs = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
             val purged = purgeTrashedProjects(cutoffMs)
@@ -1089,5 +1104,67 @@ class ProjectListViewModel @Inject constructor(
         toastDismissJob?.cancel()
         _toastMessage.value = null
         _restorableTemplate.value = null
+    }
+
+    private fun loadCrashReportNotice() {
+        viewModelScope.launch {
+            _crashReportNotice.value = withContext(Dispatchers.IO) {
+                CrashReportNoticePolicy.latest(
+                    crashes = crashRecordStore.recentCrashes(),
+                    exits = processExitRecorder.readHistoryRecords(),
+                    acknowledgedThroughEpochMs = crashRecordStore.noticeAcknowledgedThroughEpochMs(),
+                    nowEpochMs = System.currentTimeMillis(),
+                )
+            }
+        }
+    }
+
+    /** Builds the diagnostic ZIP with the issue body inside and writes it where the user picked. */
+    fun saveCrashReport(target: Uri) {
+        val notice = _crashReportNotice.value ?: return
+        if (crashReportSaveJob?.isActive == true) return
+        crashReportSaveJob = viewModelScope.launch {
+            try {
+                val bundle = diagnosticBundleBuilder.build(issueBody = crashReportIssueBody(notice))
+                withContext(Dispatchers.IO) {
+                    val output = appContext.contentResolver.openOutputStream(target)
+                        ?: throw java.io.IOException("No output stream for the crash report")
+                    output.use { stream -> bundle.file.inputStream().use { it.copyTo(stream) } }
+                }
+                acknowledgeCrashReportNotice(notice)
+                showToast(appContext.getString(R.string.crash_notice_report_saved))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                AppLog.w(TAG, "Crash report save failed", e)
+                showToast(appContext.getString(R.string.crash_notice_report_failed))
+            }
+        }
+    }
+
+    fun copyCrashReportSummary() {
+        val notice = _crashReportNotice.value ?: return
+        appContext.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(
+            ClipData.newPlainText(
+                appContext.getString(R.string.crash_notice_clip_label),
+                crashReportIssueBody(notice)
+            )
+        )
+        acknowledgeCrashReportNotice(notice)
+        showToast(appContext.getString(R.string.crash_notice_summary_copied))
+    }
+
+    fun dismissCrashReportNotice() {
+        _crashReportNotice.value?.let(::acknowledgeCrashReportNotice)
+    }
+
+    private fun crashReportIssueBody(notice: CrashReportNotice): String =
+        CrashReportNoticePolicy.issueBody(notice, CrashReportDevice.current(ClearCutApp.VERSION))
+
+    private fun acknowledgeCrashReportNotice(notice: CrashReportNotice) {
+        if (_crashReportNotice.value == notice) _crashReportNotice.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            crashRecordStore.acknowledgeNoticesThrough(notice.coversThroughEpochMs)
+        }
     }
 }

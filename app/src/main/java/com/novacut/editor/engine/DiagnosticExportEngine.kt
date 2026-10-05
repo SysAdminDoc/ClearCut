@@ -204,13 +204,14 @@ class DiagnosticExportEngine @Inject constructor(
         now: Long = System.currentTimeMillis(),
         retainCount: Int = 3,
         includeRawExportErrorText: Boolean = false,
+        issueBody: String? = null,
     ): File {
         val zipFile = withContext(Dispatchers.IO) {
             val outDir = File(context.filesDir, DIAGNOSTIC_SHARE_DIR).apply { mkdirs() }
             val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
                 .format(Date(now))
             val output = File(outDir, "diagnostic-$stamp.zip")
-            writeBundle(output, modelRegistry, timelineShape, permissionSnapshots, now, includeRawExportErrorText)
+            writeBundle(output, modelRegistry, timelineShape, permissionSnapshots, now, includeRawExportErrorText, issueBody)
             pruneOldBundles(outDir, retainCount)
             output
         }
@@ -230,9 +231,13 @@ class DiagnosticExportEngine @Inject constructor(
         permissionSnapshots: List<PermissionSnapshot> = emptyList(),
         now: Long = System.currentTimeMillis(),
         includeRawExportErrorText: Boolean = false,
+        issueBody: String? = null,
     ): Long {
         target.parentFile?.mkdirs()
         val entries = linkedMapOf<String, ByteArray>()
+        if (issueBody != null) {
+            entries[ISSUE_BODY_ENTRY] = redactSensitive(issueBody).toByteArray(Charsets.UTF_8)
+        }
         entries["app-info.txt"] = buildAppInfo(now).toByteArray(Charsets.UTF_8)
         entries["device-info.txt"] = buildDeviceInfo().toByteArray(Charsets.UTF_8)
         entries["media-codecs.txt"] = buildMediaCodecSummary().toByteArray(Charsets.UTF_8)
@@ -396,6 +401,7 @@ class DiagnosticExportEngine @Inject constructor(
     companion object {
         const val DIAG_DIR = "diagnostics"
         const val DIAGNOSTIC_SHARE_DIR = "diagnostic-shares"
+        const val ISSUE_BODY_ENTRY = "issue-body.txt"
         private const val LOGCAT_LINES = 200
 
         fun buildPermissionState(snapshots: List<PermissionSnapshot>): String = buildString {

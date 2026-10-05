@@ -6,6 +6,10 @@ object ClearCutTestTags {
     const val PROJECTS_TEMPLATES = "projects.templates"
     const val PROJECT_CARD_PREFIX = "projects.card."
     const val PROJECTS_SETTINGS = "projects.settings"
+    const val CRASH_REPORT_BANNER = "projects.crashReport"
+    const val CRASH_REPORT_SAVE = "projects.crashReport.save"
+    const val CRASH_REPORT_COPY = "projects.crashReport.copy"
+    const val CRASH_REPORT_DISMISS = "projects.crashReport.dismiss"
 
     const val TEMPLATE_SHEET = "templates.sheet"
     const val TEMPLATE_GRID = "templates.grid"

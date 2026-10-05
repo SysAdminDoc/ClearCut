@@ -476,6 +476,7 @@ Planning files are local-only in the development checkout:
 - **3-tier proxy workflow**: thumbnail (scrubbing) / proxy (a fraction of each source's own height, so 540p from 4K) / original (export) with auto-switch and storage management. A source already at or below the chosen proxy tier is edited directly
 - Archive Transfer for local project rollback and device moves; remote sync remains planned behind explicit backend gates
 - **Editor walkthrough**: replayable on demand from Settings; it never opens automatically when an editor session starts
+- **Crash reports you control**: after a crash, or when Android closes ClearCut for not responding or running low on memory while it's in use, the projects screen offers to save the redacted diagnostic ZIP with a prefilled GitHub issue inside, or to copy the issue text. Nothing is sent anywhere unless you share it
 
 ### Settings
 - Default resolution, frame rate, aspect ratio, export codec

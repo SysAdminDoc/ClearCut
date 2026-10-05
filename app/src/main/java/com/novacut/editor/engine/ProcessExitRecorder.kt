@@ -137,7 +137,8 @@ class ProcessExitRecorder private constructor(
             .put("traceExcerpt", traceExcerpt?.let(::sanitizeTraceExcerpt) ?: JSONObject.NULL)
     }
 
-    private fun readHistoryRecords(): List<ProcessExitSnapshot> {
+    /** The saved exit history, newest first. */
+    fun readHistoryRecords(): List<ProcessExitSnapshot> {
         if (!historyFile.exists()) return emptyList()
         return runCatching {
             val arr = JSONObject(historyFile.readText(Charsets.UTF_8)).optJSONArray("records") ?: return@runCatching emptyList()
@@ -218,17 +219,17 @@ class ProcessExitRecorder private constructor(
         internal const val REASON_UNKNOWN = 0
         private const val REASON_EXIT_SELF = 1
         private const val REASON_SIGNALED = 2
-        private const val REASON_LOW_MEMORY = 3
-        private const val REASON_CRASH = 4
-        private const val REASON_CRASH_NATIVE = 5
-        private const val REASON_ANR = 6
-        private const val REASON_INITIALIZATION_FAILURE = 7
+        internal const val REASON_LOW_MEMORY = 3
+        internal const val REASON_CRASH = 4
+        internal const val REASON_CRASH_NATIVE = 5
+        internal const val REASON_ANR = 6
+        internal const val REASON_INITIALIZATION_FAILURE = 7
         private const val REASON_PERMISSION_CHANGE = 8
-        private const val REASON_EXCESSIVE_RESOURCE_USAGE = 9
+        internal const val REASON_EXCESSIVE_RESOURCE_USAGE = 9
         private const val REASON_USER_REQUESTED = 10
         private const val REASON_USER_STOPPED = 11
         private const val REASON_DEPENDENCY_DIED = 12
-        private const val REASON_OTHER = 13
+        internal const val REASON_OTHER = 13
         private const val REASON_FREEZER = 14
         private const val REASON_PACKAGE_STATE_CHANGE = 15
         private const val REASON_PACKAGE_UPDATED = 16
@@ -267,6 +268,8 @@ class ProcessExitRecorder private constructor(
             REASON_PACKAGE_UPDATED -> "PACKAGE_UPDATED"
             else -> "UNKNOWN"
         }
+
+        internal const val IMPORTANCE_PERCEPTIBLE = 230
 
         internal fun importanceName(importance: Int): String = when (importance) {
             100 -> "FOREGROUND"

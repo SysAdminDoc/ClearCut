@@ -103,6 +103,7 @@ fun ProjectListScreen(
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val operationState by viewModel.operationState.collectAsStateWithLifecycle()
     val documentImportPreview by viewModel.documentImportPreview.collectAsStateWithLifecycle()
+    val crashReportNotice by viewModel.crashReportNotice.collectAsStateWithLifecycle()
     val actionsEnabled = operationState == null
     val currentLocale = LocalConfiguration.current.locales[0]
     val hasAnyProjects = projectTotalCount > 0
@@ -112,6 +113,13 @@ fun ProjectListScreen(
     ) { uri ->
         if (uri != null) {
             viewModel.importTemplate(uri)
+        }
+    }
+    val crashReportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.saveCrashReport(uri)
         }
     }
 
@@ -171,6 +179,24 @@ fun ProjectListScreen(
                 showSortControls = showCollectionControls && projects.isNotEmpty(),
                 actionsEnabled = actionsEnabled
             )
+
+            AnimatedVisibility(
+                visible = crashReportNotice != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                crashReportNotice?.let { notice ->
+                    CrashReportBanner(
+                        notice = notice,
+                        onSaveReport = { crashReportLauncher.launch(CrashReportNoticePolicy.reportFileName(notice)) },
+                        onCopySummary = viewModel::copyCrashReportSummary,
+                        onDismiss = viewModel::dismissCrashReportNotice,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
+                    )
+                }
+            }
 
             if (showCollectionControls) {
                 ProjectFilterChipsRow(

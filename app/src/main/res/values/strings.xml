@@ -3661,4 +3661,17 @@
     <string name="ai_requirement_unmet_generic">%1$s is not ready yet, so this tool cannot run.</string>
     <string name="ai_requirement_unknown_tool_title">This tool needs something that is not listed</string>
     <string name="ai_requirement_unknown_tool_body">ClearCut has no requirement entry for this tool, so it cannot say what is missing. Open AI Tools to see which models are installed.</string>
+    <string name="crash_notice_crash">ClearCut closed unexpectedly on %1$s.</string>
+    <string name="crash_notice_not_responding">ClearCut stopped responding on %1$s, and Android closed it.</string>
+    <string name="crash_notice_low_memory">Android closed ClearCut on %1$s because the phone ran low on memory.</string>
+    <string name="crash_notice_memory_limit">Android closed ClearCut on %1$s because it went over the memory limit Android sets for each app.</string>
+    <string name="crash_notice_resource_limit">Android closed ClearCut on %1$s for using too much of the phone\'s resources.</string>
+    <string name="crash_notice_body">A report helps track it down. It stays on your phone unless you share it.</string>
+    <string name="crash_notice_save_report">Save report</string>
+    <string name="crash_notice_copy_summary">Copy summary</string>
+    <string name="crash_notice_dismiss">Dismiss crash notice</string>
+    <string name="crash_notice_report_saved">Report saved. Attach it to a GitHub issue if you\'d like to send it.</string>
+    <string name="crash_notice_report_failed">Couldn\'t save the report. Try again.</string>
+    <string name="crash_notice_summary_copied">Summary copied. Paste it into a new GitHub issue.</string>
+    <string name="crash_notice_clip_label">ClearCut crash summary</string>
 </resources>
