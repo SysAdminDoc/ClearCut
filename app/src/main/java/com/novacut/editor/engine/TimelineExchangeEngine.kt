@@ -1044,9 +1044,7 @@ class TimelineExchangeEngine @Inject constructor(
         var currentTimebase = timebase
         var fcmDropFrame = false
         val dropFrameTimebase = edlDropFrameTimebase(edl, timebase)
-        val eventPattern = Regex(
-            "^\\s*\\d+\\s+(\\S+)\\s+([VA])\\s+([A-Z](?:\\s+\\d+)?)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$"
-        )
+        val eventPattern = EDL_EVENT_LINE
         val speedPattern = Regex("^\\s*M2\\s+\\S+\\s+([0-9]+(?:\\.[0-9]+)?)")
         val fcmPattern = Regex("^\\s*FCM:\\s*(NON[- ]?DROP|DROP)(?:\\s+FRAME)?\\s*$", RegexOption.IGNORE_CASE)
         for (line in edl.lineSequence()) {
@@ -1187,8 +1185,10 @@ class TimelineExchangeEngine @Inject constructor(
      */
     private fun edlDropFrameTimebase(edl: String, timebase: TimelineTimebase): TimelineTimebase {
         if (timebase.nominalFramesPerSecond == 60) return TimelineTimebase.NTSC_59_94
-        val highestFrameField = EDL_TIMECODE_FRAME_FIELD.findAll(edl)
-            .mapNotNull { it.groupValues[1].toIntOrNull() }
+        // Only event timecode counts: a TITLE or comment like `12.31.20.45` is not a frame field.
+        val highestFrameField = edl.lineSequence()
+            .mapNotNull { EDL_EVENT_LINE.matchEntire(it) }
+            .flatMap { event -> (4..7).asSequence().mapNotNull { EdlTimecode.parse(event.groupValues[it])?.frames } }
             .maxOrNull() ?: 0
         return if (highestFrameField >= 30) TimelineTimebase.NTSC_59_94 else TimelineTimebase.NTSC_29_97
     }
@@ -1220,7 +1220,7 @@ class TimelineExchangeEngine @Inject constructor(
         val events = buildList {
             videoTrack?.clips?.forEach { add(Triple(videoTrack, it, "V")) }
             audioTrack?.clips?.forEach { add(Triple(audioTrack, it, "A")) }
-        }.sortedWith(
+        }.filter { (track, clip) -> track.effectiveTimelineEndMs(clip) > 0L }.sortedWith(
             compareBy<Triple<Track, Clip, String>>({ (track, clip) -> track.effectiveTimelineStartMs(clip) })
                 .thenBy { it.third != "V" }
         )
@@ -1232,11 +1232,19 @@ class TimelineExchangeEngine @Inject constructor(
         sb.appendLine()
         events.forEachIndexed { index, (track, clip, channel) ->
             val reel = reels.getValue(clip.sourceUri.toString())
-            val recordInMs = track.effectiveTimelineStartMs(clip).coerceAtLeast(0L)
+            val speed = clip.speedCurve?.averageSpeed((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L))
+                ?: clip.speed
+            val safeSpeed = if (speed.isFinite() && speed > 0f) speed.coerceIn(0.01f, 100f) else 1f
+            val timelineStartMs = track.effectiveTimelineStartMs(clip)
+            val recordInMs = timelineStartMs.coerceAtLeast(0L)
             val recordOutMs = track.effectiveTimelineEndMs(clip).coerceAtLeast(recordInMs)
-            val sourceIn = timecode(clip.trimStartMs)
+            // A sync offset can pull a clip before zero. Its record in is clamped to the start,
+            // so the source in skips the same stretch of media to keep the event in sync.
+            val sourceInMs = (clip.trimStartMs + ((recordInMs - timelineStartMs) * safeSpeed).roundToLong())
+                .coerceAtMost(clip.trimEndMs)
+            val sourceIn = timecode(sourceInMs)
             val sourceOut = EdlTimecode.format(
-                maxOf(msToFrames(clip.trimEndMs, timebase), msToFrames(clip.trimStartMs, timebase) + 1L),
+                maxOf(msToFrames(clip.trimEndMs, timebase), msToFrames(sourceInMs, timebase) + 1L),
                 fps,
                 dropFrame,
             )
@@ -1255,9 +1263,6 @@ class TimelineExchangeEngine @Inject constructor(
                     index + 1, reel, channel, transition, sourceIn, sourceOut, timecode(recordInMs), recordOut,
                 )
             )
-            val speed = clip.speedCurve?.averageSpeed((clip.trimEndMs - clip.trimStartMs).coerceAtLeast(1L))
-                ?: clip.speed
-            val safeSpeed = if (speed.isFinite() && speed > 0f) speed.coerceIn(0.01f, 100f) else 1f
             if (kotlin.math.abs(safeSpeed - 1f) > 0.001f) {
                 sb.appendLine(
                     String.format(Locale.US, "M2   %-8s       %05.1f                %s", reel, fps * safeSpeed, sourceIn)
@@ -1276,7 +1281,8 @@ class TimelineExchangeEngine @Inject constructor(
     /**
      * CMX 3600 reels are at most 8 characters. Phone footage shares long prefixes
      * (VID_20260105_...), so sources whose first 8 characters collide get a numbered
-     * reel instead of silently sharing one. Unnamed sources use the aux reel `AX`.
+     * reel instead of silently sharing one. Sources with no usable name share the aux
+     * reel `AX`, which conform tools match by the `FROM CLIP NAME` comment instead.
      */
     private fun edlReelNames(clips: List<Clip>): Map<String, String> {
         val sources = clips.map { it.sourceUri }.distinctBy { it.toString() }
@@ -1287,16 +1293,19 @@ class TimelineExchangeEngine @Inject constructor(
                 .filter { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' }
                 .uppercase(Locale.ROOT)
         }
-        val counts = bases.values.groupingBy { it.take(8) }.eachCount()
+        val counts = bases.values.groupingBy { it.take(EDL_REEL_LENGTH) }.eachCount()
         fun keepsOwnName(base: String) =
-            base.isNotEmpty() && counts[base.take(8)] == 1 && base.take(8) !in EDL_RESERVED_REELS
-        val used = bases.values.filter(::keepsOwnName).map { it.take(8) }.toMutableSet()
+            base.isNotEmpty() && counts[base.take(EDL_REEL_LENGTH)] == 1 && base.take(EDL_REEL_LENGTH) !in EDL_RESERVED_REELS
+        val used = bases.values.filter(::keepsOwnName).map { it.take(EDL_REEL_LENGTH) }.toMutableSet()
         return bases.mapValues { (_, base) ->
             when {
                 base.isEmpty() -> "AX"
                 keepsOwnName(base) -> base.take(8)
                 else -> generateSequence(1) { it + 1 }
-                    .map { base.take(5) + String.format(Locale.US, "%03d", it) }
+                    .map { n ->
+                        val number = String.format(Locale.US, "%03d", n)
+                        base.take(EDL_REEL_LENGTH - number.length) + number
+                    }
                     .first { it !in used }
                     .also { used += it }
             }
@@ -1615,10 +1624,13 @@ class TimelineExchangeEngine @Inject constructor(
         const val OTIO_MAX_SUPPORTED_SCHEMA_CODE = 16
         val SUPPORTED_OTIO_SCHEMA_VERSIONS = setOf("0.15", "0.16")
         val PROBEABLE_URI_SCHEMES = setOf("content", "file", "asset", "http", "https")
-        val EDL_TIMECODE_FRAME_FIELD = Regex("\\b\\d{1,2}[:;.,]\\d{2}[:;.,]\\d{2}[:;.,](\\d{2})\\b")
+        val EDL_EVENT_LINE = Regex(
+            "^\\s*\\d+\\s+(\\S+)\\s+([VA])\\s+([A-Z](?:\\s+\\d+)?)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s*$"
+        )
 
         /** `BL` is black and `AX` is the aux source in CMX 3600, so a file can't claim either. */
         val EDL_RESERVED_REELS = setOf("BL", "AX")
+        const val EDL_REEL_LENGTH = 8
     }
 }
 

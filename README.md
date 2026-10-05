@@ -466,7 +466,7 @@ Planning files are local-only in the development checkout:
 - Background export with progress notification, ETA display, and cancel
 - **Timeline interchange**: OTIO (OpenTimelineIO) exports declare schema 0.15 with official adapter coverage for 0.15 and 0.16. FCPXML exports use v1.11, EDL exports use CMX 3600, and incoming files show a guarded fidelity and media-relink preview before one atomic editor commit. The documented official-adapter gate is `python scripts/verify_otio_exports.py`.
 - **Portable edit-decision JSON**: `.clearcut-edl.json` uses schema `com.clearcut.edit-decision` v1 with millisecond `tracks[].clips[]` source/range decisions, `markers[]`, caption timing under each clip, optional text overlays, and project timebase metadata. `source` values are URI strings (`content://`, `file://`, `asset://`, `http://`, or `https://`). Newer schema versions are rejected before parsing; missing media and mapped clips/markers/captions are shown in the non-mutating preview.
-- EDL export (CMX 3600) with drop-frame timecode for 29.97 and 59.94 projects and a unique reel of 8 characters or fewer per source
+- EDL export (CMX 3600) with drop-frame timecode for 29.97 and 59.94 projects and a unique reel of 8 characters or fewer for every named source (files with no usable name share the `AX` aux reel)
 - Chapter markers and subtitle export (SRT, VTT with word-level cues, ASS/SSA with full styling)
 - **Burned-in subtitle rendering**: Canvas-based with ASS/SSA file generation for FFmpeg integration
 - Audio-only and stems export modes

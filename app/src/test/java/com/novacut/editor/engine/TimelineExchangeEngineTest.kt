@@ -622,6 +622,52 @@ class TimelineExchangeEngineTest {
         assertTrue(reels.all { it.length <= 8 })
     }
 
+    @Test
+    fun numberedReelsKeepEightCharactersPastTheThousandthCollision() {
+        val track = Track(
+            type = TrackType.VIDEO,
+            index = 0,
+            clips = (1..1_001).map { i ->
+                clip("c$i", "file:///dcim/VID_20260105_1${"%04d".format(i)}.mp4", 1_000L, timelineStartMs = i * 1_000L)
+            },
+        )
+
+        val edl = engine.exportToEdl(listOf(track), "Reels", TimelineTimebase(30))
+
+        val reels = edl.lines().filter { it.matches(Regex("^\\d{3,}  .*")) }.map { it.split(Regex("\\s+"))[1] }
+        assertEquals(1_001, reels.size)
+        assertEquals(1_001, reels.toSet().size)
+        assertTrue(reels.filter { it.length > 8 }.toString(), reels.all { it.length <= 8 })
+        assertEquals(listOf("VID20999", "VID21000", "VID21001"), reels.takeLast(3))
+    }
+
+    @Test
+    fun anAudioClipPulledBeforeZeroStartsItsSourceLaterToStayInSync() {
+        // Pulled wholly before zero, so it has no event at all.
+        val gone = clip("gone", "file:///gone.m4a", 400L).copy(audioSyncOffsetMs = -500L)
+        // Sits at 400 ms but plays 900 ms early: -500 ms to 1,500 ms on the timeline.
+        val score = clip("score", "file:///score.m4a", 2_000L, timelineStartMs = 400L).copy(audioSyncOffsetMs = -900L)
+        val tracks = listOf(Track(type = TrackType.AUDIO, index = 0, clips = listOf(gone, score)))
+
+        val edl = engine.exportToEdl(tracks, "Sync", TimelineTimebase(30))
+
+        // Half a second of source sits before the timeline start, so the event begins 15 frames into it.
+        val events = edl.lines().filter { it.matches(Regex("^\\d{3}  .*")) }
+        assertEquals(listOf("001  SCORE    A     C        00:00:00:15 00:00:02:00 00:00:00:00 00:00:01:15"), events)
+    }
+
+    @Test
+    fun timecodeShapedTextOutsideTheEventsNeverSetsTheFrameRate() {
+        val edl = "TITLE: Party 12.31.20.45\nFCM: DROP FRAME\n* NOTE 01:02:03:59\n\n" +
+            "001  REEL     V     C        00:01:00;02 00:01:10;00 00:01:00;02 00:01:10;00\n" +
+            "* FROM CLIP NAME: 00.00.00.45.mp4\n"
+
+        val imported = engine.importFromEdl(edl, TimelineTimebase(30), ::testUri)
+
+        // Read at 29.97: frame 1800 is 60.06 s. Read at 59.94 it would be frame 3,598, about 60.03 s.
+        assertEquals(60_060L, imported.tracks.single().clips.single().timelineStartMs)
+    }
+
     private fun conformTracks(): List<Track> {
         val fast = Clip(
             id = "fast",
