@@ -155,41 +155,55 @@ class FFmpegEngine @Inject constructor(
         if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
         if (framePattern.isBlank()) return@withContext false
         outputFile.parentFile?.mkdirs()
-        val sourceHasAudio = hasUsableTrack(inputUri, "audio/")
-        val preferred = preferredIntermediateEncoder()
+        encodeUntilUsable(
+            label = "inpainting",
+            outputFile = outputFile,
+            expectAudio = hasUsableTrack(inputUri, "audio/"),
+            onProgress = onProgress,
+        ) { encoder ->
+            buildList {
+                addAll(listOf("-y", "-framerate", fps.coerceIn(1, 120).toString()))
+                addAll(listOf("-i", framePattern))
+                addAll(listOf("-i", ffmpegInput(inputUri)))
+                addAll(listOf("-map", "0:v:0", "-map", "1:a:0?"))
+                addAll(listOf("-c:v", encoder.ffmpegName))
+                addAll(intermediateQualityArgs(encoder))
+                addAll(listOf("-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"))
+                addAll(listOf("-shortest", outputFile.absolutePath))
+            }
+        }
+    }
 
-        // Some Android MediaCodec implementations report a successful FFmpeg
-        // session even when the hardware encoder emitted zero video samples.
-        // Treat the artifact, rather than the process return code, as the
-        // contract and retry with FFmpeg's licence-neutral software floor.
-        for (encoder in encoderAttempts(preferred)) {
+    /**
+     * Runs an encode with each encoder in turn until one writes a usable file.
+     * Some Android MediaCodec implementations report a successful FFmpeg session
+     * even when the encoder emitted zero video samples, which leaves an
+     * audio-only file behind. The artifact, not the return code, is the
+     * contract, and FFmpeg's licence-neutral software encoder is the floor.
+     */
+    private suspend fun encodeUntilUsable(
+        label: String,
+        outputFile: File,
+        expectAudio: Boolean,
+        progressDurationMs: Long? = null,
+        onProgress: (Float) -> Unit,
+        arguments: (H264Encoder) -> List<String>,
+    ): Boolean {
+        for (encoder in encoderAttempts(preferredIntermediateEncoder())) {
             outputFile.delete()
-            val exitCode = executeArguments(
-                buildList {
-                    addAll(listOf("-y", "-framerate", fps.coerceIn(1, 120).toString()))
-                    addAll(listOf("-i", framePattern))
-                    addAll(listOf("-i", ffmpegInput(inputUri)))
-                    addAll(listOf("-map", "0:v:0", "-map", "1:a:0?"))
-                    addAll(listOf("-c:v", encoder.ffmpegName))
-                    addAll(intermediateQualityArgs(encoder))
-                    addAll(listOf("-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"))
-                    addAll(listOf("-shortest", outputFile.absolutePath))
-                },
-                onProgress = onProgress
-            )
+            val exitCode = executeArguments(arguments(encoder), progressDurationMs, onProgress)
             val hasVideo = exitCode == 0 && hasUsableTrack(outputFile, "video/")
-            val hasAudio = !sourceHasAudio || hasUsableTrack(outputFile, "audio/")
-            if (hasVideo && hasAudio) return@withContext true
+            val hasAudio = !expectAudio || hasUsableTrack(outputFile, "audio/")
+            if (hasVideo && hasAudio) return true
 
             AppLog.w(
                 TAG,
-                "Discarding unusable inpainting encode from ${encoder.ffmpegName}: " +
+                "Discarding unusable $label encode from ${encoder.ffmpegName}: " +
                     "exit=$exitCode video=$hasVideo audio=$hasAudio",
             )
         }
-
         outputFile.delete()
-        false
+        return false
     }
 
     /**
@@ -254,36 +268,41 @@ class FFmpegEngine @Inject constructor(
     ): Boolean = withContext(Dispatchers.IO) {
         val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "reverseClipToFile")
         if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
-        val args = buildList {
-            add("-y")
-            if (trimStartMs > 0L) {
-                add("-ss"); add(String.format(java.util.Locale.US, "%.3f", trimStartMs / 1000.0))
+        encodeUntilUsable(
+            label = "reverse",
+            outputFile = outputFile,
+            expectAudio = hasAudio,
+            onProgress = onProgress,
+        ) { encoder ->
+            buildList {
+                add("-y")
+                if (trimStartMs > 0L) {
+                    add("-ss"); add(String.format(java.util.Locale.US, "%.3f", trimStartMs / 1000.0))
+                }
+                if (trimEndMs < Long.MAX_VALUE) {
+                    add("-to"); add(String.format(java.util.Locale.US, "%.3f", trimEndMs / 1000.0))
+                }
+                add("-i"); add(ffmpegInput(inputUri))
+                if (hasAudio) {
+                    add("-filter_complex"); add("[0:v]reverse[v];[0:a]areverse[a]")
+                    add("-map"); add("[v]")
+                    add("-map"); add("[a]")
+                } else {
+                    add("-filter_complex"); add("[0:v]reverse[v]")
+                    add("-map"); add("[v]")
+                }
+                // Explicit, probed encoder. This intermediate is consumed by the
+                // Media3 composition and re-encoded there, so it only has to be
+                // high-quality and MediaCodec-decodable — not any particular codec.
+                add("-c:v"); add(encoder.ffmpegName)
+                addAll(intermediateQualityArgs(encoder))
+                if (hasAudio) {
+                    add("-c:a"); add("aac")
+                    add("-b:a"); add("192k")
+                }
+                add(outputFile.absolutePath)
             }
-            if (trimEndMs < Long.MAX_VALUE) {
-                add("-to"); add(String.format(java.util.Locale.US, "%.3f", trimEndMs / 1000.0))
-            }
-            add("-i"); add(ffmpegInput(inputUri))
-            if (hasAudio) {
-                add("-filter_complex"); add("[0:v]reverse[v];[0:a]areverse[a]")
-                add("-map"); add("[v]")
-                add("-map"); add("[a]")
-            } else {
-                add("-filter_complex"); add("[0:v]reverse[v]")
-                add("-map"); add("[v]")
-            }
-            // Explicit, probed encoder. This intermediate is consumed by the
-            // Media3 composition and re-encoded there, so it only has to be
-            // high-quality and MediaCodec-decodable — not any particular codec.
-            val encoder = preferredIntermediateEncoder()
-            add("-c:v"); add(encoder.ffmpegName)
-            addAll(intermediateQualityArgs(encoder))
-            if (hasAudio) {
-                add("-c:a"); add("aac")
-                add("-b:a"); add("192k")
-            }
-            add(outputFile.absolutePath)
         }
-        executeArguments(args, onProgress = onProgress) == 0
     }
 
     /**
@@ -303,10 +322,14 @@ class FFmpegEngine @Inject constructor(
     ): Boolean = withContext(Dispatchers.IO) {
         val v = NativeProcessingPolicy.validateVideoUri(context, inputUri, "normalizeVideoFrameRate")
         if (v != null) return@withContext NativeProcessingPolicy.logAndReject(v)
-        val encoder = preferredIntermediateEncoder()
         val safeFrameRate = frameRate.coerceIn(1, 240)
         outputFile.parentFile?.mkdirs()
-        executeArguments(
+        encodeUntilUsable(
+            label = "constant frame rate",
+            outputFile = outputFile,
+            expectAudio = hasUsableTrack(inputUri, "audio/"),
+            onProgress = onProgress,
+        ) { encoder ->
             listOf(
                 "-y",
                 "-i", ffmpegInput(inputUri),
@@ -322,9 +345,8 @@ class FFmpegEngine @Inject constructor(
                 "-map_metadata", "-1",
                 "-shortest",
                 outputFile.absolutePath,
-            ),
-            onProgress = onProgress,
-        ) == 0 && outputFile.isFile && outputFile.length() > 0L
+            )
+        }
     }
 
     /**
@@ -399,17 +421,20 @@ class FFmpegEngine @Inject constructor(
         // No -c:v here previously meant FFmpeg picked the container default,
         // which could resolve to a build-dependent encoder. This pass writes
         // the file the user receives, so the encoder is named explicitly.
-        val encoder = preferredIntermediateEncoder()
-        executeArguments(
+        encodeUntilUsable(
+            label = "subtitle burn-in",
+            outputFile = outputFile,
+            expectAudio = hasUsableTrack(inputFile, "audio/"),
+            progressDurationMs = mediaDurationMs(inputFile),
+            onProgress = onProgress,
+        ) { encoder ->
             buildList {
                 addAll(listOf("-y", "-i", inputFile.absolutePath, "-vf", filter))
                 add("-c:v"); add(encoder.ffmpegName)
                 addAll(intermediateQualityArgs(encoder))
                 addAll(listOf("-c:a", "copy", outputFile.absolutePath))
-            },
-            progressDurationMs = mediaDurationMs(inputFile),
-            onProgress = onProgress
-        ) == 0
+            }
+        }
     }
 
     /**
