@@ -2103,6 +2103,13 @@ class VideoEngine @Inject constructor(
             // Media3 applies clipping to this declared input duration. Supplying
             // the retained duration makes any non-zero trim start invalid.
             .setDurationUs(durationMsToUs(clip.sourceDurationMs.coerceAtLeast(1L)))
+        if (mediaItem.localConfiguration?.imageDurationMs != C.TIME_UNSET) {
+            // A still has no frame rate of its own, and Media3's ImageAssetLoader
+            // checkState()s one before any encoder opens. Without it every export
+            // containing a photo failed at once with a bare IllegalStateException
+            // (issue #54). A speed change below still applies its own cap.
+            itemBuilder.setFrameRate(config.frameRate.coerceAtLeast(1))
+        }
 
         applyClipSpeed(
             itemBuilder = itemBuilder,
