@@ -4,7 +4,7 @@
     {
       "id": "onnxruntime",
       "label": "ONNX Runtime",
-      "version": "1.26.0",
+      "version": "1.28.0",
       "coordinate": "com.microsoft.onnxruntime:onnxruntime-android",
       "catalogKeys": ["onnxruntime"],
       "purpose": "Whisper ASR and LaMa inpainting",

@@ -22,7 +22,7 @@ Every native AAR shipped with ClearCut must pass the repository's 16 KB page-siz
 
 | AAR | Status | Source | 16 KB aligned? | License | Notes |
 |---|---|---|---|---|---|
-| `onnxruntime-android:1.26.0` | Bundled today | Microsoft / Maven Central | ✅ Verified 2026-05-17 with `scripts/check_16kb_alignment.py` and `zipalign -P 16` on the debug APK. | MIT | Bumped in R7.3 to move past the 1.17.x pre-Play-gate native package. Re-verify on every ORT bump. |
+| `onnxruntime-android:1.28.0` | Bundled today | Microsoft / Maven Central | ✅ Verified 2026-10-05 with `scripts/check_16kb_alignment.py` and `zipalign -P 16` on the arm64-v8a and x86_64 APKs. | MIT | 1.28.0 fixes a silent encoder miscompute on Snapdragon 8 Elite Gen 5 and adds 0.9 to 1.5 MB per ABI. 1.29.0 and 1.30.0 add 3.8 to 6.2 MB per ABI, over the 2 MiB per-ABI budget, so they stay held. Re-verify on every ORT bump. |
 | `mediapipe-tasks-vision:1.0.0` | Bundled today | Google / Maven Central | ✅ The current QA package passes `scripts/check_16kb_alignment.py` and `zipalign -P 16`. | Apache-2.0 | Provides `libmediapipe_tasks_jni.so`; re-run the native package gate on every MediaPipe update. |
 | `lottie-compose:6.7.1` | Bundled today | Airbnb / Maven Central | n/a (pure Kotlin) | Apache-2.0 | Version-pinned in the catalog and covered by the dependency freshness probe. |
 | `media3-effect-lottie:1.11.1` | Bundled today | `androidx.media3:media3-effect-lottie:1.11.1` from Google Maven | n/a (pure Kotlin; no native libraries) | Apache-2.0 | Used by `Media3LottieTextureOverlay` for non-HDR finite-window title overlays, with the legacy shader retained for HDR and over-long windows. |

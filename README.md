@@ -498,7 +498,7 @@ Planning files are local-only in the development checkout:
 | Video | Media3 1.11.1 (Transformer + ExoPlayer) |
 | Effects | OpenGL ES 3.0 (37 GLSL transitions, 40+ effect shaders) |
 | Audio DSP | Custom engine (EQ, compressor, chorus, delay, pitch shift) |
-| Speech-to-Text | ONNX Runtime 1.26.0 (Whisper) |
+| Speech-to-Text | ONNX Runtime 1.28.0 (Whisper) |
 | Noise Reduction | DeepFilterNet 3 (android-deepfilternet 0.0.8) + spectral-gate fallback |
 | Beat Detection | Spectral flux onset detection (aubio NDK ready) |
 | Loudness | EBU R128 / ITU-R BS.1770 measurement |
@@ -756,7 +756,7 @@ Key external dependencies currently in `build.gradle.kts`:
 <!-- capability-registry:dependencies:begin -->
 | Dependency | Version | Purpose |
 |-----------|---------|---------|
-| ONNX Runtime | 1.26.0 | Whisper ASR and LaMa inpainting |
+| ONNX Runtime | 1.28.0 | Whisper ASR and LaMa inpainting |
 | MediaPipe | 1.0.0 | Selfie segmentation and smart reframe |
 | Lottie Compose | 6.7.1 | Animated title templates |
 | OkHttp | 5.5.0 | Model downloads and future opt-in provider calls |

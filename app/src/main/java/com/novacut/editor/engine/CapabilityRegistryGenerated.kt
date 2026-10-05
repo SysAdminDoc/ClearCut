@@ -129,7 +129,7 @@ internal object CapabilityRegistryGenerated {
         PublicDependencyRecord(
             id = "onnxruntime",
             label = "ONNX Runtime",
-            version = "1.26.0",
+            version = "1.28.0",
             coordinate = "com.microsoft.onnxruntime:onnxruntime-android",
             catalogKeys = listOf("onnxruntime"),
             purpose = "Whisper ASR and LaMa inpainting",
@@ -239,7 +239,7 @@ internal object CapabilityRegistryGenerated {
     val notices: List<OpenSourceLicenseNotice> = listOf(
         OpenSourceLicenseNotice(
             name = "ONNX Runtime Android",
-            version = "1.26.0",
+            version = "1.28.0",
             artifact = "com.microsoft.onnxruntime:onnxruntime-android",
             licenseName = "MIT License",
             licenseText = "MIT License. Redistribution must keep the copyright notice and permission notice, and the software is provided without warranties.",

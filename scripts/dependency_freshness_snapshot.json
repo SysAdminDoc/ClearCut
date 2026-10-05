@@ -420,18 +420,20 @@
     },
     "onnxruntime": {
       "coordinate": "com.microsoft.onnxruntime:onnxruntime-android",
-      "pinnedVersion": "1.26.0",
+      "pinnedVersion": "1.28.0",
       "latestStable": "1.30.0",
       "source": "https://github.com/microsoft/onnxruntime/releases",
       "metadataSource": "https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime-android/maven-metadata.xml",
       "reviewedOn": "2026-10-05",
       "state": "held",
-      "reason": "ONNX Runtime 1.28.0 was evaluated on 2026-07-29: it resolves, compiles, and passes the 16 KB alignment check, but its native payload grows about 5 MB uncompressed across the four shipped ABIs and pushes the release APK past the size budget; on-device Whisper/upscale/inpaint output comparisons are still missing.",
-      "unblockCondition": "Ship per-ABI splits so the payload growth is device-scoped, then run `python scripts/probe_dependency_upgrade.py --dependency onnxruntime --version 1.28.0` and the on-device model fixtures before changing this pin.",
+      "reason": "Adopted 1.28.0 on 2026-10-05: the strict-verification probe passed, all four per-ABI APKs stay inside their size budgets (compressed growth 0.9 to 1.5 MB per ABI), 16 KB alignment holds on arm64-v8a and x86_64, and on an API 35 x86_64 emulator LaMa inpainting runs through XNNPACK and Whisper transcribes the spoken acceptance clip. 1.29.0 and 1.30.0 are held on size: 1.30.0 grows the compressed native payload by 3.8 to 6.2 MB per ABI, past the 2 MB per-ABI growth budget.",
+      "unblockCondition": "Ship a reduced-operator ONNX Runtime build covering only the operators of the pinned Whisper, LaMa and upscale models, or raise the per-ABI growth budget deliberately, then run `python scripts/probe_dependency_upgrade.py --dependency onnxruntime --version 1.30.0`, the APK size check, and the on-device Whisper and inpainting fixtures before moving the pin.",
       "compatibilityProbe": {
-        "status": "not-run",
-        "version": null,
-        "command": "python scripts/probe_dependency_upgrade.py --dependency onnxruntime --version 1.30.0"
+        "status": "passed",
+        "version": "1.28.0",
+        "verifiedOn": "2026-10-05",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency onnxruntime --version 1.28.0",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 --dependency-verification strict -Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"
       },
       "candidateDecision": {
         "action": "hold",
