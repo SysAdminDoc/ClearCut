@@ -72,6 +72,7 @@ def preflight(dependency: str, candidate: str, catalog: dict[str, str]) -> None:
         required_gradle = {
             (9, 2): (9, 4, 1),
             (9, 3): (9, 5, 0),
+            (9, 4): (9, 6, 0),
         }.get(numeric_version(candidate)[:2])
         if required_gradle and wrapper_gradle_version() < required_gradle:
             required = ".".join(str(part) for part in required_gradle)
@@ -90,7 +91,8 @@ PROBE_ENV = "CLEARCUT_DEPENDENCY_PROBE"
 
 def write_snapshot(snapshot: dict) -> None:
     temporary = SNAPSHOT.with_suffix(".tmp")
-    temporary.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+    # newline="\n": text mode on Windows would otherwise write CRLF into an LF file.
+    temporary.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8", newline="\n")
     temporary.replace(SNAPSHOT)
 
 

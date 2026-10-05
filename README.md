@@ -664,8 +664,8 @@ adb logcat | grep AudioHardening
 With the editor activity visible, run TTS preview, start and stop a voiceover recording, then start an export. TTS preview and voiceover should continue to require visible editor interaction, and export should stay in the `mediaProcessing` foreground service without starting TextToSpeech, MediaRecorder, audio playback, or audio-focus APIs from `ExportService`.
 
 ### Requirements
-- Android Studio Panda 3+ (2025.3.3+)
-- AGP 9.1.1, Gradle 9.3.1, JDK 21
+- Android Studio Quail 4+ (2026.1.4+)
+- AGP 9.4.1, Gradle 9.8.0, JDK 21
 - Android SDK 37
 
 ### Dependency freshness

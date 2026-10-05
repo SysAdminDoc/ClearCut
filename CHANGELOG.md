@@ -14,6 +14,7 @@
 - Resuming a cancelled export now finishes the file. ClearCut handed Media3 the old partial and the new output in the wrong order, so the resumed render was written over the partial and the export was reported as an empty file.
 - Auto captions now produce text. Ever since they were added, the English speech model came back empty for every clip. ClearCut prompted it with token numbers that belong to Whisper's multilingual models, and then dropped the untimed text the model answered with. It now uses the English model's own tokens and asks for timed segments, and a device test transcribes a spoken sentence to prove it. The sound features handed to the model now match the ones Whisper was trained on, too. They used to put every frequency about 28% too high on a different pitch scale, which costs accuracy on real-world recordings.
 - Auto captions and object removal now run on ONNX Runtime 1.28.0 instead of 1.26.0. That release fixes model output that could come out silently wrong on Snapdragon 8 Elite Gen 5 phones. Each phone's download grows by about 1 to 1.5 MB.
+- ClearCut now builds with Android Gradle plugin 9.4.1 and Gradle 9.8.0, up from 9.1.1 and 9.3.1. Building from source needs Android Studio Quail 4 (2026.1.4) or newer. Nothing changes in the app itself.
 - The changelog and README no longer list three versions that were never published as releases of their own. Their notes now sit under v3.81.0, the first release that carried that work, and the release check refuses any changelog version without a tag.
 
 ## v3.81.1

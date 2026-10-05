@@ -45,21 +45,23 @@
   "dependencies": {
     "agp": {
       "coordinate": "com.android.tools.build:gradle",
-      "pinnedVersion": "9.1.1",
+      "pinnedVersion": "9.4.1",
       "latestStable": "9.4.1",
-      "source": "https://developer.android.com/build/releases/agp-9-3-0-release-notes",
+      "source": "https://developer.android.com/build/releases/agp-9-4-0-release-notes",
       "metadataSource": "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml",
       "reviewedOn": "2026-10-05",
-      "state": "held",
-      "reason": "The catalog remains on AGP 9.1.1; authoritative metadata reports 9.3.1, and the wrapper/toolchain lane has not passed the candidate probe.",
-      "unblockCondition": "Update the wrapper and toolchain for 9.3.1, then run `python scripts/probe_dependency_upgrade.py --dependency agp --version 9.3.1`; keep the catalog change only if the full local probe passes.",
+      "state": "current",
+      "reason": "Adopted 9.4.1 with Gradle 9.8.0 (wrapper checksum pinned from the published distribution hash) after a passing strict probe on 2026-10-05. Lint detector audit: the source detectors stay enabled, and lintQa, lintDebug and lintVitalRelease ran with no LintError (no detector crash), no errors, and 470 warnings plus 7 hints on lintDebug; :app:assembleRelease passed under strict verification.",
+      "unblockCondition": "Run `python scripts/refresh_dependency_freshness.py` before changing this pin.",
       "compatibilityProbe": {
-        "status": "not-run",
-        "version": null,
-        "command": "python scripts/probe_dependency_upgrade.py --dependency agp --version 9.4.1"
+        "status": "passed",
+        "version": "9.4.1",
+        "verifiedOn": "2026-10-05",
+        "command": "python scripts/probe_dependency_upgrade.py --dependency agp --version 9.4.1",
+        "gradleCommand": "gradlew.bat :app:testQaUnitTest :app:lintQa :app:assembleQa --no-daemon --max-workers=1 --dependency-verification strict -Dorg.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8 -Dorg.gradle.workers.max=1"
       },
       "candidateDecision": {
-        "action": "hold",
+        "action": "adopt",
         "candidateVersion": "9.4.1",
         "releaseChannel": "stable",
         "probe": "python scripts/probe_dependency_upgrade.py --dependency agp --version 9.4.1"
