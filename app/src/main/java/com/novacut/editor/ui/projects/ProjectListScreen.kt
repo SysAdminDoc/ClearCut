@@ -344,7 +344,8 @@ fun ProjectListScreen(
                                     viewModel.setSearchQuery("")
                                     viewModel.setFilterMode(ProjectFilterMode.ALL)
                                 },
-                                actionsEnabled = actionsEnabled
+                                actionsEnabled = actionsEnabled,
+                                scrollable = false
                             )
                         }
                     }
@@ -1005,7 +1006,11 @@ private fun ProjectEmptyState(
     filterMode: ProjectFilterMode,
     onCreateProject: () -> Unit,
     onShowAllProjects: () -> Unit,
-    actionsEnabled: Boolean
+    actionsEnabled: Boolean,
+    // A LazyColumn item is measured with an unbounded height, and a vertical
+    // scroll inside one throws on the first frame. Inline callers pass false and
+    // let the list scroll (issue #54: a trash-only dashboard crashed every launch).
+    scrollable: Boolean = true
 ) {
     val hasAnyProjects = projectTotalCount > 0
     val hasActiveSearch = searchQuery.isNotBlank()
@@ -1033,7 +1038,7 @@ private fun ProjectEmptyState(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                 .padding(bottom = Spacing.lg),
             verticalArrangement = Arrangement.spacedBy(Spacing.md)
         ) {
