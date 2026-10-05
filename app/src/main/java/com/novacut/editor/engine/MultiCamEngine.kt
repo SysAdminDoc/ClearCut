@@ -10,12 +10,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 private const val TAG = "MultiCamEngine"
@@ -64,11 +66,14 @@ class MultiCamEngine @Inject constructor(
     ): SyncResult = withContext(Dispatchers.Default) {
         onProgress(0.1f)
 
-        // Extract audio fingerprints (downsampled mono PCM)
+        // Extract audio fingerprints (downsampled mono PCM). Within the search range
+        // the clips overlap for at least the last OVERLAP_SECONDS of each fingerprint,
+        // so nothing past that is read or correlated.
         val targetSampleRate = 8000 // Low rate for faster correlation
-        val pcmA = extractMonoPcm(clipAUri, targetSampleRate)
+        val fingerprintSeconds = (maxOffsetMs / 1000L + OVERLAP_SECONDS).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        val pcmA = extractMonoPcm(clipAUri, targetSampleRate, fingerprintSeconds)
         onProgress(0.3f)
-        val pcmB = extractMonoPcm(clipBUri, targetSampleRate)
+        val pcmB = extractMonoPcm(clipBUri, targetSampleRate, fingerprintSeconds)
         onProgress(0.5f)
 
         if (pcmA.samples.isEmpty() || pcmB.samples.isEmpty()) {
@@ -85,39 +90,16 @@ class MultiCamEngine @Inject constructor(
         val samplesB = resampleLinear(pcmB.samples, pcmB.effectiveSampleRate, commonRate)
 
         // Cross-correlate to find best offset (all sample math at the common rate)
-        val maxOffsetSamples = (maxOffsetMs * commonRate / 1000).toInt()
-        val searchRange = min(maxOffsetSamples, min(samplesA.size, samplesB.size) / 2)
-
-        var bestOffset = 0
-        var bestCorrelation = -1f
-        var totalChecked = 0
-        val totalToCheck = searchRange * 2 + 1
-
-        // Normalize signals
-        val normA = normalize(samplesA)
-        val normB = normalize(samplesB)
-
-        for (offset in -searchRange..searchRange) {
+        val maxOffsetSamples = (maxOffsetMs * commonRate / 1000).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        val match = AudioSyncCorrelator.bestLag(normalize(samplesA), normalize(samplesB), maxOffsetSamples) {
             ensureActive()
-
-            val correlation = crossCorrelation(normA, normB, offset)
-            if (correlation > bestCorrelation) {
-                bestCorrelation = correlation
-                bestOffset = offset
-            }
-
-            totalChecked++
-            if (totalChecked % 100 == 0) {
-                onProgress(0.5f + 0.4f * totalChecked / totalToCheck)
-            }
         }
-
         onProgress(1f)
 
-        val offsetMs = syncOffsetMs(bestOffset, commonRate)
-        AppLog.d(TAG, "Sync result: offset=${offsetMs}ms, confidence=$bestCorrelation")
+        val offsetMs = syncOffsetMs(match.lagSamples, commonRate)
+        AppLog.d(TAG, "Sync result: offset=${offsetMs}ms, confidence=${match.score}")
 
-        SyncResult(offsetMs, bestCorrelation, clipAUri, clipBUri)
+        SyncResult(offsetMs, match.score, clipAUri, clipBUri)
     }
 
     /**
@@ -138,23 +120,6 @@ class MultiCamEngine @Inject constructor(
         results
     }
 
-    private fun crossCorrelation(a: FloatArray, b: FloatArray, offset: Int): Float {
-        var sum = 0f
-        var count = 0
-        val startA = max(0, offset)
-        val startB = max(0, -offset)
-        val length = min(a.size - startA, b.size - startB)
-
-        if (length <= 0) return 0f
-
-        for (i in 0 until length) {
-            sum += a[startA + i] * b[startB + i]
-            count++
-        }
-
-        return if (count > 0) sum / count else 0f
-    }
-
     private fun normalize(samples: FloatArray): FloatArray {
         if (samples.isEmpty()) return samples
         val mean = samples.average().toFloat()
@@ -165,9 +130,12 @@ class MultiCamEngine @Inject constructor(
         return if (rms > 1e-6f) FloatArray(centered.size) { centered[it] / rms } else centered
     }
 
-    private suspend fun extractMonoPcm(uri: Uri, targetSampleRate: Int): MonoPcm =
+    private suspend fun extractMonoPcm(uri: Uri, targetSampleRate: Int, maxSeconds: Int): MonoPcm =
         withContext(Dispatchers.IO) {
-            val empty = MonoPcm(FloatArray(0), targetSampleRate.coerceAtLeast(1))
+            // Guard against a caller passing 0 as targetSampleRate (would produce
+            // ArithmeticException on integer division).
+            val safeTargetRate = targetSampleRate.coerceAtLeast(1)
+            val empty = MonoPcm(FloatArray(0), safeTargetRate)
             val extractor = MediaExtractor()
             try {
                 extractor.setDataSource(context, uri, null)
@@ -188,38 +156,26 @@ class MultiCamEngine @Inject constructor(
                 extractor.selectTrack(audioIndex)
                 val mime = format.getString(MediaFormat.KEY_MIME)
                     ?: return@withContext empty
-                val sourceSampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-                // Malformed or synthetic MediaFormats can report 0 channels; coerce
-                // so the mono-mix divide below never produces Float.Inf / NaN.
-                val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT).coerceAtLeast(1)
-
-                // Guard against a caller passing 0 as targetSampleRate (would produce
-                // ArithmeticException on integer division before max() runs).
-                val safeTargetRate = targetSampleRate.coerceAtLeast(1)
-                val decimation = max(1, sourceSampleRate / safeTargetRate)
-                // Integer decimation lands on source/decimation, not the requested
-                // target (44100/5 = 8820 Hz) — report it so callers convert
-                // sample offsets to ms with the rate the samples are actually at.
-                val effectiveRate = effectiveDecimatedRate(sourceSampleRate, safeTargetRate)
 
                 val decoderLease = CodecInstanceBudget.acquireDecoder(mime)
                 val decoder = decoderLease.resource
-                val samples = mutableListOf<Float>()
+                // Sized from the decoder's output format, which can differ from the
+                // container's (HE-AAC decodes at twice its stored rate).
+                var mixer: MonoDecimator? = null
 
                 try {
                     decoder.configure(format, null, null, 0)
                     decoder.start()
 
                     val bufferInfo = MediaCodec.BufferInfo()
+                    var inputDone = false
                     var eos = false
 
-                    while (!eos) {
+                    // Runs until the decoder's own end of stream, so the tail it still
+                    // holds when the input runs out isn't lost.
+                    while (!eos && mixer?.isFull != true) {
                         ensureActive()
-                        if (AudioDecodeBudget.exceedsBudget(samples.size, 1)) {
-                            com.novacut.editor.engine.AppLog.w("MultiCamEngine", "Mono PCM exceeds the in-memory budget; stopping decode")
-                            break
-                        }
-                        val inIdx = decoder.dequeueInputBuffer(10000)
+                        val inIdx = if (inputDone) -1 else decoder.dequeueInputBuffer(10000)
                         if (inIdx >= 0) {
                             val buf = decoder.getInputBuffer(inIdx) ?: continue
                             val size = extractor.readSampleData(buf, 0)
@@ -228,7 +184,7 @@ class MultiCamEngine @Inject constructor(
                                     inIdx, 0, 0, 0,
                                     MediaCodec.BUFFER_FLAG_END_OF_STREAM
                                 )
-                                eos = true
+                                inputDone = true
                             } else {
                                 decoder.queueInputBuffer(
                                     inIdx, 0, size, extractor.sampleTime, 0
@@ -241,22 +197,13 @@ class MultiCamEngine @Inject constructor(
                         while (outIdx >= 0) {
                             val outBuf = decoder.getOutputBuffer(outIdx)
                             if (outBuf != null && bufferInfo.size > 0) {
-                                val shortBuf =
-                                    outBuf.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-                                val arr = ShortArray(shortBuf.remaining())
-                                shortBuf.get(arr)
-
-                                // Downsample + mono mix
-                                var i = 0
-                                while (i < arr.size) {
-                                    var mono = 0f
-                                    for (ch in 0 until min(channels, arr.size - i)) {
-                                        mono += arr[i + ch].toFloat() / 32768f
-                                    }
-                                    mono /= channels
-                                    samples.add(mono)
-                                    i += channels * decimation
-                                }
+                                val active = mixer ?: MonoDecimator.forFormats(
+                                    output = decoder.outputFormat,
+                                    input = format,
+                                    targetSampleRate = safeTargetRate,
+                                    maxSeconds = maxSeconds,
+                                ).also { mixer = it }
+                                active.add(readPcmSamples(outBuf, bufferInfo))
                             }
                             decoder.releaseOutputBuffer(outIdx, false)
                             if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
@@ -270,7 +217,7 @@ class MultiCamEngine @Inject constructor(
                     decoderLease.close()
                 }
 
-                MonoPcm(samples.toFloatArray(), effectiveRate)
+                mixer?.result() ?: empty
             } catch (e: Exception) {
                 AppLog.e(TAG, "PCM extraction failed for ${uri.redacted()}", e)
                 empty
@@ -278,6 +225,157 @@ class MultiCamEngine @Inject constructor(
                 extractor.release()
             }
         }
+
+    private companion object {
+        /** Seconds of audio the clips are sure to share inside the search range. */
+        const val OVERLAP_SECONDS = 90L
+    }
+}
+
+/**
+ * Mixes interleaved 16-bit PCM to mono and averages every [decimation] frames into one
+ * sample, a box low-pass so the lower rate doesn't fold high frequencies back in. Keeps
+ * at most [maxSamples], and frames split across buffers carry over.
+ */
+internal class MonoDecimator(
+    private val channels: Int,
+    private val decimation: Int,
+    private val effectiveSampleRate: Int,
+    private val maxSamples: Int,
+) {
+    private var samples = FloatArray(min(maxSamples, 1 shl 16).coerceAtLeast(1))
+    private var size = 0
+    private var channel = 0
+    private var frameSum = 0.0
+    private var blockSum = 0.0
+    private var blockFrames = 0
+
+    val isFull: Boolean get() = size >= maxSamples
+
+    fun add(pcm: ShortArray) {
+        for (value in pcm) {
+            if (isFull) return
+            frameSum += value / 32768.0
+            if (++channel < channels) continue
+            channel = 0
+            blockSum += frameSum / channels
+            frameSum = 0.0
+            if (++blockFrames < decimation) continue
+            if (size == samples.size) samples = samples.copyOf(min(maxSamples, samples.size * 2))
+            samples[size++] = (blockSum / decimation).toFloat()
+            blockSum = 0.0
+            blockFrames = 0
+        }
+    }
+
+    fun result(): MultiCamEngine.MonoPcm = MultiCamEngine.MonoPcm(samples.copyOf(size), effectiveSampleRate)
+
+    companion object {
+        fun forFormats(output: MediaFormat?, input: MediaFormat, targetSampleRate: Int, maxSeconds: Int): MonoDecimator {
+            fun MediaFormat?.int(key: String): Int? =
+                this?.takeIf { it.containsKey(key) }?.getInteger(key)?.takeIf { it > 0 }
+            val sourceRate = output.int(MediaFormat.KEY_SAMPLE_RATE) ?: input.int(MediaFormat.KEY_SAMPLE_RATE) ?: 48_000
+            // Malformed or synthetic MediaFormats can report 0 channels.
+            val channels = output.int(MediaFormat.KEY_CHANNEL_COUNT) ?: input.int(MediaFormat.KEY_CHANNEL_COUNT) ?: 1
+            return create(sourceRate, channels, targetSampleRate, maxSeconds)
+        }
+
+        fun create(sourceRate: Int, channels: Int, targetSampleRate: Int, maxSeconds: Int): MonoDecimator {
+            val effectiveRate = effectiveDecimatedRate(sourceRate, targetSampleRate)
+            return MonoDecimator(
+                channels = channels.coerceAtLeast(1),
+                decimation = max(1, sourceRate.coerceAtLeast(1) / targetSampleRate.coerceAtLeast(1)),
+                effectiveSampleRate = effectiveRate,
+                maxSamples = (effectiveRate.toLong() * maxSeconds.coerceAtLeast(1))
+                    .coerceAtMost(AudioDecodeBudget.MAX_PCM_SAMPLES.toLong()).toInt(),
+            )
+        }
+    }
+}
+
+/**
+ * The lag that best lines [b] up with [a], by cross-correlation through the FFT. The
+ * score at each lag is the mean product over the overlap, so for zero-mean, unit-RMS
+ * signals it reads like a correlation coefficient. A positive lag means [b]'s first
+ * sample matches [a] at that lag: b started recording later. Lags are searched up to
+ * [maxLagSamples] and never past half the shorter signal.
+ */
+internal object AudioSyncCorrelator {
+    data class Match(val lagSamples: Int, val score: Float)
+
+    fun bestLag(a: FloatArray, b: FloatArray, maxLagSamples: Int, checkpoint: () -> Unit = {}): Match {
+        if (a.isEmpty() || b.isEmpty()) return Match(0, 0f)
+        val range = min(maxLagSamples, min(a.size, b.size) / 2).coerceAtLeast(0)
+        var n = 1
+        while (n < a.size + b.size) n = n shl 1
+        val aRe = a.copyOf(n)
+        val aIm = FloatArray(n)
+        val bRe = b.copyOf(n)
+        val bIm = FloatArray(n)
+        fft(aRe, aIm, inverse = false, checkpoint)
+        fft(bRe, bIm, inverse = false, checkpoint)
+        // A times conj(B): its inverse transform at m is the sum of a[i + m] * b[i].
+        for (k in 0 until n) {
+            val re = aRe[k] * bRe[k] + aIm[k] * bIm[k]
+            val im = aIm[k] * bRe[k] - aRe[k] * bIm[k]
+            aRe[k] = re
+            aIm[k] = im
+        }
+        fft(aRe, aIm, inverse = true, checkpoint)
+
+        var best = Match(0, -1f)
+        for (lag in -range..range) {
+            val overlap = min(a.size - max(0, lag), b.size - max(0, -lag))
+            if (overlap <= 0) continue
+            val score = aRe[if (lag >= 0) lag else n + lag] / n / overlap
+            if (score > best.score) best = Match(lag, score)
+        }
+        return best
+    }
+
+    /** In-place radix-2 FFT; the inverse is left unscaled. */
+    private fun fft(re: FloatArray, im: FloatArray, inverse: Boolean, checkpoint: () -> Unit) {
+        val n = re.size
+        var j = 0
+        for (i in 1 until n) {
+            var bit = n shr 1
+            while (j and bit != 0) {
+                j = j xor bit
+                bit = bit shr 1
+            }
+            j = j xor bit
+            if (i < j) {
+                re[i] = re[j].also { re[j] = re[i] }
+                im[i] = im[j].also { im[j] = im[i] }
+            }
+        }
+        val sign = if (inverse) 1.0 else -1.0
+        var len = 2
+        while (len <= n) {
+            checkpoint()
+            val half = len / 2
+            val stepRe = cos(sign * 2 * PI / len)
+            val stepIm = sin(sign * 2 * PI / len)
+            for (start in 0 until n step len) {
+                var wRe = 1.0
+                var wIm = 0.0
+                for (k in 0 until half) {
+                    val upper = start + k
+                    val lower = upper + half
+                    val tRe = (re[lower] * wRe - im[lower] * wIm).toFloat()
+                    val tIm = (re[lower] * wIm + im[lower] * wRe).toFloat()
+                    re[lower] = re[upper] - tRe
+                    im[lower] = im[upper] - tIm
+                    re[upper] += tRe
+                    im[upper] += tIm
+                    val nextRe = wRe * stepRe - wIm * stepIm
+                    wIm = wRe * stepIm + wIm * stepRe
+                    wRe = nextRe
+                }
+            }
+            len = len shl 1
+        }
+    }
 }
 
 /**

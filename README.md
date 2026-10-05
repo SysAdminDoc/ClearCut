@@ -362,7 +362,7 @@ Planning files are local-only in the development checkout:
 - **Colored timeline markers**: 6 colors (red/orange/yellow/green/blue/purple) with labels, notes, and jump navigation
 - **Sticker/GIF/image overlays**: position, scale, rotate, opacity with timeline placement
 - **Favorites & recent effects**: mark effects as favorites, track recently used for quick access
-- **Multi-cam sync**: audio-based clip synchronization across tracks
+- **Multi-cam sync**: audio-based clip synchronization across tracks, by FFT cross-correlation
 - **Clip reorder & move**: reorder clips within a track or move between tracks
 - **Haptic feedback**: tactile response on trim handle grab and magnetic snap
 - **Waveform caching**: LRU cache avoids redundant audio decoding on timeline recomposition
