@@ -96,6 +96,34 @@ class WhisperDecodingTest {
     }
 
     @Test
+    fun noSpeechMustBeAboveSixtyPercentNotAtIt() {
+        assertFalse(WhisperDecoding.isSilence(noSpeechProbability = 0.6, sumLogProbability = -8.0, generatedCount = 3))
+    }
+
+    @Test
+    fun aChunkScoresItsTokensAfterFilteringSoSuppressedTokensDontCount() {
+        // No-speech is 79% of the raw first step. Filtered, the two allowed opening
+        // timestamps share the step at ln(0.5); scored on the raw logits the chosen one
+        // would be -2.24 and the chunk would read as silence.
+        val decode = WhisperDecoding.ChunkDecode()
+        val first = decode.next(logits(NO_SPEECH to 12f, ts(0.0) to 10f, ts(0.02) to 10f), emptyList())
+
+        assertTrue(first == ts(0.0) || first == ts(0.02))
+        assertFalse(decode.isSilence(generatedCount = 1))
+    }
+
+    @Test
+    fun aChunkTakesNoSpeechFromTheFirstStepBeforeFiltering() {
+        // Ten opening timestamps tie, so the decode averages ln(0.1) / 2 = -1.15, and
+        // no-speech is 85% of the raw step. Read after filtering it would be zero.
+        val decode = WhisperDecoding.ChunkDecode()
+        val tied = (0 until 10).map { ts(it * 0.02) to 10f }.toTypedArray()
+        decode.next(logits(NO_SPEECH to 14f, *tied), emptyList())
+
+        assertTrue(decode.isSilence(generatedCount = 1))
+    }
+
+    @Test
     fun logProbabilityIsTakenOverTheFilteredLogits() {
         val scores = logits(the to 1f, quick to 1f)
 

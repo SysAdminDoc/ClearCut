@@ -372,8 +372,7 @@ class WhisperEngine @Inject constructor(
         // <|startoftranscript|> alone.
         val tokens = mutableListOf(WhisperDecoding.SOT.toLong())
         val generated = mutableListOf<Int>()
-        var noSpeechProbability = 0.0
-        var sumLogProbability = 0.0
+        val decode = WhisperDecoding.ChunkDecode()
 
         for (step in 0 until MAX_DECODE_TOKENS) {
             currentCoroutineContext().ensureActive()
@@ -413,9 +412,7 @@ class WhisperEngine @Inject constructor(
                 // Logits for the last token position
                 val lastOffset = (seqLen - 1) * vocabSize
                 val scores = FloatArray(vocabSize) { logitsData.get(lastOffset + it) }
-                if (generated.isEmpty()) noSpeechProbability = WhisperDecoding.noSpeechProbability(scores)
-                nextToken = WhisperDecoding.nextToken(scores, generated)
-                sumLogProbability += WhisperDecoding.logProbability(scores, nextToken)
+                nextToken = decode.next(scores, generated)
             } catch (e: Exception) {
                 AppLog.w("WhisperEngine", "Decoder step $step failed; keeping the text decoded so far", e)
                 break
@@ -430,7 +427,7 @@ class WhisperEngine @Inject constructor(
             generated.add(nextToken)
         }
 
-        if (WhisperDecoding.isSilence(noSpeechProbability, sumLogProbability, generated.size)) return emptyList()
+        if (decode.isSilence(generated.size)) return emptyList()
         return WhisperDecoding.segments(generated, chunkOffsetMs, chunkDurationMs) { decodeTokens(it, vocab) }
     }
 

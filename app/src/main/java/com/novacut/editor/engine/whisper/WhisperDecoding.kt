@@ -109,6 +109,26 @@ internal object WhisperDecoding {
             sumLogProbability / (generatedCount + 1) <= LOG_PROBABILITY_THRESHOLD
 
     /**
+     * One chunk's decode steps, in the reference order: the no-speech probability
+     * from the first step's untouched logits, then the token, then its log
+     * probability under the logits [nextToken] filtered.
+     */
+    class ChunkDecode {
+        private var noSpeechProbability = 0.0
+        private var sumLogProbability = 0.0
+
+        fun next(logits: FloatArray, generated: List<Int>): Int {
+            if (generated.isEmpty()) noSpeechProbability = noSpeechProbability(logits)
+            val token = nextToken(logits, generated)
+            sumLogProbability += logProbability(logits, token)
+            return token
+        }
+
+        fun isSilence(generatedCount: Int): Boolean =
+            isSilence(noSpeechProbability, sumLogProbability, generatedCount)
+    }
+
+    /**
      * Whether the first [length] samples of [audio] are too quiet to contain speech: no
      * 100 ms window reaches the speech floor, so a short quiet phrase in an otherwise
      * silent chunk still counts.
