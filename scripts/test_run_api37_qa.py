@@ -27,8 +27,15 @@ class Api37QaClassifierTest(unittest.TestCase):
             if ".QaTimelineGestureTest." in test_id or ".MaskHandleDragInstrumentationTest." in test_id
         }
 
-        self.assertEqual(len(run_api37_qa.EXPECTED_TESTS), 35)
+        fcpxml_tests = {
+            test_id
+            for test_id in run_api37_qa.EXPECTED_TESTS
+            if ".FcpxmlDeviceParserInstrumentationTest." in test_id
+        }
+
+        self.assertEqual(len(run_api37_qa.EXPECTED_TESTS), 38)
         self.assertEqual(len(gesture_tests), 7)
+        self.assertEqual(len(fcpxml_tests), 3)
         self.assertIn(
             "com.novacut.editor.QaTimelineInstrumentationTest.importEditUndoRedoAndRelaunchStayInsideQaStorage",
             run_api37_qa.EXPECTED_TESTS,

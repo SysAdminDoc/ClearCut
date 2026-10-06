@@ -630,7 +630,7 @@ python scripts\run_api37_qa.py
 
 This command provisions a headless managed Pixel 6, runs every expected
 instrumentation case, and writes named JSON and text reports under
-`app/build/reports/connected-qa/`. It exits successfully only when all 35
+`app/build/reports/connected-qa/`. It exits successfully only when all 38
 expected cases are present and every non-passing result matches an explicit
 emulator assumption or optional-model skip. The accepted status is
 `PASS-WITH-ASSUMPTIONS`, not a generic green connected-test claim.

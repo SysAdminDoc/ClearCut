@@ -1144,18 +1144,76 @@ class TimelineExchangeEngine @Inject constructor(
     private data class FcpxmlAsset(val sourceUri: String, val sourceDurationMs: Long)
 
     private fun secureXmlDocument(xml: String): org.w3c.dom.Document {
+        // Refuse entity declarations and external DTDs before any parser sees them, so
+        // the guarantee doesn't depend on which XML stack the phone ships. A bare
+        // <!DOCTYPE fcpxml>, as Final Cut and ClearCut write it, is fine.
+        fcpxmlDoctypeIssue(xml)?.let { issue ->
+            throw java.io.IOException("the file declares $issue, which ClearCut doesn't load")
+        }
         val factory = DocumentBuilderFactory.newInstance()
         factory.isNamespaceAware = false
-        factory.setFeature("http://xml.org/sax/features/external-general-entities", false)
-        factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-        factory.isXIncludeAware = false
+        // The JDK parser takes these switches. Android's rejects every feature but
+        // namespaces and validation (a rejected switch used to fail every FCPXML import
+        // on a phone), and it never fetches external entities anyway.
+        listOf(
+            "http://xml.org/sax/features/external-general-entities",
+            "http://xml.org/sax/features/external-parameter-entities",
+            "http://apache.org/xml/features/nonvalidating/load-external-dtd",
+        ).forEach { feature -> runCatching { factory.setFeature(feature, false) } }
+        runCatching { factory.setFeature(javax.xml.XMLConstants.FEATURE_SECURE_PROCESSING, true) }
+        runCatching { factory.isXIncludeAware = false }
         factory.setExpandEntityReferences(false)
         val builder = factory.newDocumentBuilder()
         builder.setEntityResolver(org.xml.sax.EntityResolver { _, _ ->
             InputSource(StringReader(""))
         })
-        return builder.parse(InputSource(StringReader(xml)))
+        // A file saved with a byte-order mark keeps it as the string's first character,
+        // and a parser reading characters rather than bytes refuses it as prolog content.
+        return builder.parse(InputSource(StringReader(xml.removePrefix("\uFEFF"))))
+    }
+
+    /**
+     * What a document's DOCTYPE asks the parser to load, or null when it asks for nothing:
+     * an internal subset (where entities, including nested expansion bombs, are declared)
+     * or an external DTD by SYSTEM or PUBLIC id. Only the prolog is read.
+     */
+    internal fun fcpxmlDoctypeIssue(xml: String): String? {
+        val length = xml.length
+        var index = if (xml.startsWith('\uFEFF')) 1 else 0
+        while (index < length) {
+            while (index < length && xml[index].isWhitespace()) index++
+            when {
+                xml.startsWith("<?", index) -> {
+                    index = xml.indexOf("?>", index + 2).takeIf { it >= 0 }?.plus(2) ?: return null
+                }
+                xml.startsWith("<!--", index) -> {
+                    index = xml.indexOf("-->", index + 4).takeIf { it >= 0 }?.plus(3) ?: return null
+                }
+                xml.startsWith("<!DOCTYPE", index) -> {
+                    val declaration = StringBuilder()
+                    var quote: Char? = null
+                    var cursor = index + "<!DOCTYPE".length
+                    while (cursor < length) {
+                        val char = xml[cursor]
+                        if (quote != null) {
+                            if (char == quote) quote = null
+                        } else {
+                            when (char) {
+                                '"', '\'' -> quote = char
+                                '[' -> return "an internal DTD"
+                                '>' -> break
+                                else -> declaration.append(char)
+                            }
+                        }
+                        cursor++
+                    }
+                    val words = declaration.split(Regex("\\s+"))
+                    return if ("SYSTEM" in words || "PUBLIC" in words) "an external DTD" else null
+                }
+                else -> return null
+            }
+        }
+        return null
     }
 
     private fun parseFcpxmlSeconds(raw: String?): Double? {

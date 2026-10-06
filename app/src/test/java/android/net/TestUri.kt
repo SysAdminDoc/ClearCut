@@ -4,7 +4,7 @@ import android.os.Parcel
 
 class TestUri(
     private val raw: String,
-    private val schemeValue: String,
+    private val schemeValue: String?,
     private val segment: String,
 ) : Uri() {
     override fun buildUpon(): Builder = throw UnsupportedOperationException()

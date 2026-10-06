@@ -167,7 +167,7 @@ class LutRegistry @Inject constructor(
 
     private companion object {
         const val TAG = "LutRegistry"
-        const val MAX_LUT_BYTES = 32L * 1024L * 1024L
+        const val MAX_LUT_BYTES = LutEngine.MAX_LUT_FILE_BYTES
         val ALLOWED_EXTENSIONS = setOf("cube", "3dl")
     }
 }

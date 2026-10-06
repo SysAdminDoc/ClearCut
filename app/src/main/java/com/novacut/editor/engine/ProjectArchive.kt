@@ -31,9 +31,16 @@ object ProjectArchive {
     internal const val MAX_ARCHIVE_TEXT_ENTRY_BYTES = 5_000_000L
     internal const val MAX_ARCHIVE_TOTAL_BYTES = 4L * 1024L * 1024L * 1024L
     internal const val MAX_ARCHIVE_COMPRESSION_RATIO = 200L
+    /** Both metadata files at their cap, plus room for headers and up to the entry-count cap of directories. */
+    internal const val MAX_ARCHIVE_PREVIEW_INPUT_BYTES = 2L * MAX_ARCHIVE_TEXT_ENTRY_BYTES + 4L * 1024L * 1024L
     private const val MAX_ARCHIVE_ENTRY_NAME_CHARS = 512
     private const val ARCHIVE_STORAGE_RESERVE_BYTES = 128L * 1024L * 1024L
     private const val STORAGE_RECHECK_INTERVAL_BYTES = 8L * 1024L * 1024L
+    private const val PAYLOAD_SIGNATURE_BYTES = 4
+    private val APP_OR_CODE_EXTENSIONS = setOf(
+        "apk", "apks", "apkm", "xapk", "aab", "dex", "odex", "vdex", "oat", "art",
+        "jar", "so", "sh", "bash"
+    )
 
     /**
      * How to handle the situation where the archive's project ID already exists
@@ -259,7 +266,11 @@ object ProjectArchive {
             var entryCount = 0
 
             input.use { stream ->
-                ZipInputStream(BufferedInputStream(stream)).use { zip ->
+                // A preview reads two small metadata files, so it never needs more of the
+                // provider's stream than they can take up. Without this cap a deflate stream
+                // of empty blocks keeps the reader pulling input while producing nothing.
+                val bounded = PreviewInputCap(stream, MAX_ARCHIVE_PREVIEW_INPUT_BYTES)
+                ZipInputStream(BufferedInputStream(bounded)).use { zip ->
                     metadata@ while (true) {
                         val entry = zip.nextEntry ?: break
                         entryCount++
@@ -271,7 +282,11 @@ object ProjectArchive {
                             throw IOException("Archive contains duplicate entry: ${entry.name}")
                         }
                         when {
-                            entry.isDirectory -> Unit
+                            entry.isDirectory -> {
+                                if (zip.read() != -1) {
+                                    throw IOException("Archive directory entry carries data: ${entry.name}")
+                                }
+                            }
                             entry.name == PROJECT_JSON_ENTRY -> {
                                 rejectKnownOversizedEntry(entry, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
                                 projectJson = readCurrentEntryText(zip, MAX_ARCHIVE_TEXT_ENTRY_BYTES)
@@ -743,6 +758,10 @@ object ProjectArchive {
                     }
                     extractedEntryCount++
                 }
+                isAppOrCodeEntryName(entry.name) -> {
+                    AppLog.w("ProjectArchive", "Skipping app or code archive entry: ${entry.name}")
+                    warnings += "Skipped an app or code file: ${entry.name}"
+                }
                 isSupportedMediaEntry(entry.name) -> {
                     val outputFile = File(stagingDir, entry.name).canonicalFile
                     if (!outputFile.toPath().startsWith(stagingDir.toPath())) {
@@ -752,7 +771,8 @@ object ProjectArchive {
                     if (parent != null && !parent.exists() && !parent.mkdirs() && !parent.exists()) {
                         throw IOException("Could not create archive output directory")
                     }
-                    zip.getInputStream(entry).use { input ->
+                    BufferedInputStream(zip.getInputStream(entry)).use { input ->
+                        rejectAppOrCodePayload(entry.name, input)
                         BufferedOutputStream(FileOutputStream(outputFile)).use { output ->
                             val copied = copyEntryWithStorageChecks(
                                 input = input,
@@ -778,6 +798,22 @@ object ProjectArchive {
             throw IOException("Archive entry plan changed during extraction")
         }
         return ExtractedArchive(projectJson, mediaManifestJson, files)
+    }
+
+    /** Reads a payload's first bytes and puts them back, refusing the archive when they're code. */
+    private fun rejectAppOrCodePayload(entryName: String, input: BufferedInputStream) {
+        val head = ByteArray(PAYLOAD_SIGNATURE_BYTES)
+        input.mark(PAYLOAD_SIGNATURE_BYTES)
+        var length = 0
+        while (length < head.size) {
+            val read = input.read(head, length, head.size - length)
+            if (read < 0) break
+            length += read
+        }
+        input.reset()
+        appOrCodeSignature(entryName, head, length)?.let { kind ->
+            throw IOException("Archive entry $entryName is $kind, not media")
+        }
     }
 
     private fun copyEntryWithStorageChecks(
@@ -1181,7 +1217,28 @@ object ProjectArchive {
         if (listOf("media/", "luts/", "fonts/", "watermarks/").none(entryName::startsWith)) return false
         if ('\\' in entryName) return false
         if (entryName.endsWith('/')) return false
+        if (isAppOrCodeEntryName(entryName)) return false
         return entryName.substringAfter('/').isNotBlank()
+    }
+
+    /** Android packages, Java and native code, and shell scripts never come out of an archive. */
+    internal fun isAppOrCodeEntryName(entryName: String): Boolean =
+        entryName.substringAfterLast('/').substringAfterLast('.', "").lowercase() in APP_OR_CODE_EXTENSIONS
+
+    /**
+     * What the first bytes of a payload say it is, when that's an app or code file:
+     * a native library (ELF), Dalvik bytecode (DEX), or a ZIP (an APK, a JAR) anywhere
+     * but a .lottie, which is a ZIP container that only the Lottie parser reads.
+     */
+    internal fun appOrCodeSignature(entryName: String, head: ByteArray, headLength: Int): String? {
+        fun startsWith(vararg magic: Int) =
+            headLength >= magic.size && magic.indices.all { head[it] == magic[it].toByte() }
+        return when {
+            startsWith(0x7F, 0x45, 0x4C, 0x46) -> "a native library"
+            startsWith(0x64, 0x65, 0x78, 0x0A) -> "Dalvik bytecode"
+            startsWith(0x50, 0x4B, 0x03, 0x04) && !entryName.lowercase().endsWith(".lottie") -> "a ZIP package"
+            else -> null
+        }
     }
 
     private fun validateManifestMetadata(
@@ -1364,6 +1421,36 @@ object ProjectArchive {
             copied += read
         }
         return copied to digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    /** Fails the read once more than [limit] bytes have come from the provider. */
+    private class PreviewInputCap(input: InputStream, private val limit: Long) : FilterInputStream(input) {
+        private var consumed = 0L
+
+        override fun read(): Int {
+            val value = super.read()
+            if (value >= 0) count(1)
+            return value
+        }
+
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            val read = super.read(buffer, offset, length)
+            if (read > 0) count(read.toLong())
+            return read
+        }
+
+        override fun skip(byteCount: Long): Long {
+            val skipped = super.skip(byteCount)
+            if (skipped > 0L) count(skipped)
+            return skipped
+        }
+
+        override fun markSupported(): Boolean = false
+
+        private fun count(bytes: Long) {
+            consumed += bytes
+            if (consumed > limit) throw IOException("Archive metadata runs past $limit bytes")
+        }
     }
 
     private fun readCurrentEntryText(zipInput: ZipInputStream, maxBytes: Long): String {

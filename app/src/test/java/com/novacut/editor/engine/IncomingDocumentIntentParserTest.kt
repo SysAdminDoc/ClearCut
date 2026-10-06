@@ -200,6 +200,32 @@ class IncomingDocumentIntentParserTest {
     }
 
     @Test
+    fun sendWithNoSchemeAnAppPackageMimeOrAMediaMimeIsDropped() {
+        val noScheme = testUri(raw = "sender/project.clearcut", scheme = null, lastPathSegment = "project.clearcut")
+        val apk = contentUri("project.clearcut")
+        val video = contentUri("cut.otio")
+        val fcpxml = contentUri("handoff.fcpxml")
+
+        fun send(uri: Uri, name: String, mimeType: String?) = IncomingDocumentIntentParser.parse(
+            action = Intent.ACTION_SEND,
+            dataUri = null,
+            streamUris = listOf(uri),
+            clipDataUris = emptyList(),
+            intentMimeType = mimeType,
+            hasReadGrant = true,
+            resolveMetadata = { metadata(name, mimeType, 2_000L) }
+        )
+
+        assertTrue(send(noScheme, "project.clearcut", "application/zip").isEmpty())
+        assertTrue(send(apk, "project.clearcut", "application/vnd.android.package-archive").isEmpty())
+        assertTrue(send(video, "cut.otio", "video/mp4").isEmpty())
+        assertTrue(send(fcpxml, "handoff.fcpxml", "application/x-fcpxml").isEmpty())
+        // A MIME type the provider leaves out is classified by name, then checked by the
+        // kind's own reader before anything is imported.
+        assertParsed(send(fcpxml, "handoff.fcpxml", null), fcpxml.toString() to IncomingDocumentKind.TIMELINE_FCPXML)
+    }
+
+    @Test
     fun classifiesXmlJsonTextZipAndOctetInterchangePayloads() {
         assertEquals(
             IncomingDocumentKind.TIMELINE_FCPXML,
@@ -255,7 +281,7 @@ class IncomingDocumentIntentParserTest {
         )
     }
 
-    private fun testUri(raw: String, scheme: String, lastPathSegment: String): Uri {
+    private fun testUri(raw: String, scheme: String?, lastPathSegment: String): Uri {
         return TestUri(raw = raw, schemeValue = scheme, segment = lastPathSegment)
     }
 

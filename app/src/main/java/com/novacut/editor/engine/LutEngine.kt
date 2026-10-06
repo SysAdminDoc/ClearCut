@@ -8,9 +8,7 @@ import androidx.media3.effect.BaseGlShaderProgram
 import androidx.media3.effect.GlEffect
 import androidx.media3.effect.GlShaderProgram
 import com.novacut.editor.engine.AppLog
-import java.io.BufferedReader
 import java.io.File
-import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -26,57 +24,71 @@ object LutEngine {
     )
 
     /**
+     * Largest LUT file ClearCut reads. A 65-point .cube is about 8 MB, so this leaves
+     * room for 129-point grids while keeping a file that arrived inside a project
+     * archive or a share (which have no LUT-sized cap of their own) from being read
+     * into memory whole.
+     */
+    const val MAX_LUT_FILE_BYTES = 32L * 1024L * 1024L
+
+    private const val MAX_LUT_SIZE = 256
+    private const val MAX_SKIPPED_LINE_LOGS = 5
+
+    /**
      * Parse a .cube LUT file.
      */
     fun parseCube(file: File): Lut3D? {
         return try {
-            val lines = file.readLines()
+            if (!withinFileLimit(file)) return null
             var size = 0
-            val data = mutableListOf<Float>()
+            val values = LutValues()
+            val skipped = SkippedLines(".cube")
 
-            for (line in lines) {
-                val trimmed = line.trim()
-                if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("TITLE")) continue
+            file.bufferedReader().useLines { lines ->
+                for (line in lines) {
+                    val trimmed = line.trim()
+                    if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("TITLE")) continue
 
-                if (trimmed.startsWith("LUT_3D_SIZE")) {
-                    val parsedSize = trimmed.substringAfter("LUT_3D_SIZE").trim().toInt()
-                    // Bound LUT size to a sane range. A malicious .cube file declaring
-                    // "LUT_3D_SIZE 1000" would otherwise need a 1000^3 * 3 = 3 billion
-                    // float allocation (12 GB) which OOMs before the size mismatch check
-                    // could reject it. Common LUT sizes are 17, 32, 33, 64.
-                    if (parsedSize !in 2..256) {
-                        AppLog.w("LutEngine", "LUT size $parsedSize outside supported range [2..256]")
-                        throw IllegalArgumentException("LUT size out of range")
+                    if (trimmed.startsWith("LUT_3D_SIZE")) {
+                        val parsedSize = trimmed.substringAfter("LUT_3D_SIZE").trim().toInt()
+                        // Bound LUT size to a sane range. A malicious .cube file declaring
+                        // "LUT_3D_SIZE 1000" would otherwise need a 1000^3 * 3 = 3 billion
+                        // float allocation (12 GB) which OOMs before the size mismatch check
+                        // could reject it. Common LUT sizes are 17, 32, 33, 64.
+                        if (parsedSize !in 2..MAX_LUT_SIZE) {
+                            AppLog.w("LutEngine", "LUT size $parsedSize outside supported range [2..$MAX_LUT_SIZE]")
+                            throw IllegalArgumentException("LUT size out of range")
+                        }
+                        size = parsedSize
+                        values.limitTo(parsedSize)
+                        continue
                     }
-                    size = parsedSize
-                    continue
-                }
-                if (trimmed.startsWith("DOMAIN_MIN") || trimmed.startsWith("DOMAIN_MAX")) continue
+                    if (trimmed.startsWith("DOMAIN_MIN") || trimmed.startsWith("DOMAIN_MAX")) continue
 
-                val parts = trimmed.split("\\s+".toRegex())
-                if (parts.size >= 3) {
-                    // Tolerate malformed lines (commented artefacts from some
-                    // LUT authoring tools, stray diagnostic text) by skipping
-                    // rather than rejecting the whole LUT. `toFloatOrNull` is
-                    // cheaper than try/catch per line and signals the same
-                    // intent. Clamp to [0, 1] — out-of-range LUT entries
-                    // produce wild GPU colours (negative → wrap, >1 → blow out
-                    // highlights); the standard .cube spec is 0..1 normalised.
-                    val r = parts[0].toFloatOrNull()
-                    val g = parts[1].toFloatOrNull()
-                    val b = parts[2].toFloatOrNull()
-                    if (r != null && g != null && b != null) {
-                        data.add(r.coerceIn(0f, 1f))
-                        data.add(g.coerceIn(0f, 1f))
-                        data.add(b.coerceIn(0f, 1f))
-                    } else {
-                        AppLog.w("LutEngine", "Skipping unparseable .cube line: '$trimmed'")
+                    val parts = trimmed.split("\\s+".toRegex())
+                    if (parts.size >= 3) {
+                        // Tolerate malformed lines (commented artefacts from some
+                        // LUT authoring tools, stray diagnostic text) by skipping
+                        // rather than rejecting the whole LUT. `toFloatOrNull` is
+                        // cheaper than try/catch per line and signals the same
+                        // intent. Clamp to [0, 1] — out-of-range LUT entries
+                        // produce wild GPU colours (negative → wrap, >1 → blow out
+                        // highlights); the standard .cube spec is 0..1 normalised.
+                        val r = parts[0].toFloatOrNull()
+                        val g = parts[1].toFloatOrNull()
+                        val b = parts[2].toFloatOrNull()
+                        if (r != null && g != null && b != null) {
+                            values.add(r.coerceIn(0f, 1f), g.coerceIn(0f, 1f), b.coerceIn(0f, 1f))
+                        } else {
+                            skipped.note(trimmed)
+                        }
                     }
                 }
             }
+            skipped.finish()
 
-            if (size > 0 && data.size == size * size * size * 3) {
-                Lut3D(size, data.toFloatArray())
+            if (size > 0 && values.count == size * size * size * 3) {
+                Lut3D(size, values.toArray())
             } else null
         } catch (e: Exception) {
             AppLog.w("LutEngine", "LUT parse failed", e)
@@ -89,9 +101,7 @@ object LutEngine {
      */
     fun parse3dl(file: File): Lut3D? {
         return try {
-            val lines = file.readLines().filter { it.isNotBlank() && !it.startsWith("#") }
-            if (lines.isEmpty()) return null
-
+            if (!withinFileLimit(file)) return null
             // A standard Autodesk/Lustre .3dl opens with a mesh header: N
             // monotonically increasing integers (N = LUT size, commonly 17 or
             // 33), e.g. "0 64 128 ... 1023". Data rows are then exactly three
@@ -99,49 +109,58 @@ object LutEngine {
             // has exactly 3) rather than the old heuristic, which misread both
             // shapes: a real header (>3 tokens) was parsed as data, and a
             // headerless first data row ("0 0 0") was skipped as a header.
-            val firstParts = lines[0].trim().split("\\s+".toRegex())
-            val headerSize: Int? = if (firstParts.size > 3 && firstParts.all { it.toIntOrNull() != null }) {
-                firstParts.size
-            } else {
-                null
-            }
-            val startIdx = if (headerSize != null) 1 else 0
-
+            var headerSize: Int? = null
+            var sawFirstLine = false
             // Determine scale from global max across all data lines
             var globalMax = 0f
-            val rawLines = mutableListOf<List<Float>>()
-            for (i in startIdx until lines.size) {
-                val parts = lines[i].trim().split("\\s+".toRegex())
-                if (parts.size >= 3) {
-                    val r = parts[0].toFloatOrNull()
-                    val g = parts[1].toFloatOrNull()
-                    val b = parts[2].toFloatOrNull()
-                    if (r == null || g == null || b == null) {
-                        AppLog.w("LutEngine", "Skipping unparseable .3dl line: '${lines[i]}'")
-                        continue
+            val values = LutValues()
+            val skipped = SkippedLines(".3dl")
+
+            file.bufferedReader().useLines { lines ->
+                for (line in lines) {
+                    if (line.isBlank() || line.startsWith("#")) continue
+                    val parts = line.trim().split("\\s+".toRegex())
+                    if (!sawFirstLine) {
+                        sawFirstLine = true
+                        if (parts.size > 3 && parts.all { it.toIntOrNull() != null }) {
+                            if (parts.size > MAX_LUT_SIZE) {
+                                AppLog.w("LutEngine", "3DL header size ${parts.size} outside supported range [2..$MAX_LUT_SIZE]")
+                                return null
+                            }
+                            headerSize = parts.size
+                            values.limitTo(parts.size)
+                            continue
+                        }
                     }
-                    val vals = listOf(r, g, b)
-                    globalMax = maxOf(globalMax, vals.max())
-                    rawLines.add(vals)
+                    if (parts.size >= 3) {
+                        val r = parts[0].toFloatOrNull()
+                        val g = parts[1].toFloatOrNull()
+                        val b = parts[2].toFloatOrNull()
+                        if (r == null || g == null || b == null) {
+                            skipped.note(line)
+                            continue
+                        }
+                        globalMax = maxOf(globalMax, r, g, b)
+                        values.add(r, g, b)
+                    }
                 }
             }
+            skipped.finish()
+            if (!sawFirstLine) return null
+
             val scale = if (globalMax > 1f) (if (globalMax > 1023f) 4095f else 1023f) else 1f
-            val data = mutableListOf<Float>()
-            for (vals in rawLines) {
-                data.add((vals[0] / scale).coerceIn(0f, 1f))
-                data.add((vals[1] / scale).coerceIn(0f, 1f))
-                data.add((vals[2] / scale).coerceIn(0f, 1f))
-            }
+            val data = values.toArray()
+            for (index in data.indices) data[index] = (data[index] / scale).coerceIn(0f, 1f)
 
             val entryCount = data.size / 3
             // Trust the header size when present; otherwise infer from the
             // row count. Both must satisfy size^3 == entryCount.
             val size = headerSize ?: Math.round(Math.cbrt(entryCount.toDouble())).toInt()
-            if (size !in 2..256) {
-                AppLog.w("LutEngine", "3DL inferred size $size outside supported range [2..256]")
+            if (size !in 2..MAX_LUT_SIZE) {
+                AppLog.w("LutEngine", "3DL inferred size $size outside supported range [2..$MAX_LUT_SIZE]")
                 null
             } else if (size * size * size == entryCount) {
-                Lut3D(size, data.toFloatArray())
+                Lut3D(size, data)
             } else {
                 AppLog.w("LutEngine", "3DL size $size does not match $entryCount entries")
                 null
@@ -149,6 +168,59 @@ object LutEngine {
         } catch (e: Exception) {
             AppLog.w("LutEngine", "LUT parse failed", e)
             null
+        }
+    }
+
+    private fun withinFileLimit(file: File): Boolean {
+        val length = file.length()
+        if (length <= MAX_LUT_FILE_BYTES) return true
+        AppLog.w("LutEngine", "LUT file is $length bytes, over the $MAX_LUT_FILE_BYTES byte limit")
+        return false
+    }
+
+    /**
+     * RGB values in a primitive array that stops growing at the declared grid, so a file
+     * with far more rows than its size line allows is refused while it's being read.
+     */
+    private class LutValues {
+        private var values = FloatArray(3 * 1024)
+        private var limit = MAX_LUT_SIZE * MAX_LUT_SIZE * MAX_LUT_SIZE * 3
+        var count = 0
+            private set
+
+        fun limitTo(size: Int) {
+            limit = size * size * size * 3
+            if (count > limit) throw IllegalArgumentException("more LUT entries than a $size-point grid holds")
+        }
+
+        fun add(r: Float, g: Float, b: Float) {
+            if (count + 3 > limit) throw IllegalArgumentException("more LUT entries than the grid holds")
+            if (count + 3 > values.size) {
+                values = values.copyOf(minOf(limit, maxOf(values.size * 2, count + 3)))
+            }
+            values[count++] = r
+            values[count++] = g
+            values[count++] = b
+        }
+
+        fun toArray(): FloatArray = if (count == values.size) values else values.copyOf(count)
+    }
+
+    /** Logs the first few unreadable rows and a count of the rest, so a junk file can't flood the log. */
+    private class SkippedLines(private val format: String) {
+        private var count = 0
+
+        fun note(line: String) {
+            if (count < MAX_SKIPPED_LINE_LOGS) {
+                AppLog.w("LutEngine", "Skipping unparseable $format line: '${line.take(120)}'")
+            }
+            count++
+        }
+
+        fun finish() {
+            if (count > MAX_SKIPPED_LINE_LOGS) {
+                AppLog.w("LutEngine", "Skipped ${count - MAX_SKIPPED_LINE_LOGS} more unparseable $format lines")
+            }
         }
     }
 
