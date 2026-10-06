@@ -4,7 +4,7 @@
 
 <h1 align="center">ClearCut</h1>
 
-[![Version](https://img.shields.io/badge/version-3.81.1-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
+[![Version](https://img.shields.io/badge/version-3.82.0-89dceb)](https://github.com/SysAdminDoc/ClearCut/releases)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-Android-cba6f7)
 
@@ -17,6 +17,16 @@
 <p align="center">
   <sub><em>If ClearCut makes editing easier, a coffee helps fund the testing and maintenance behind each release.</em></sub>
 </p>
+
+### v3.82.0 Working auto captions and checked exports
+
+- Auto captions finally produce text, and quiet speech isn't thrown away anymore.
+- Each project keeps its own SDR or HDR setting, and preview and export follow the same plan for it.
+- Export history says whether each finished file matches what you asked for, and names anything that came out different.
+- After a crash, the projects screen offers a redacted report you can save or copy straight into a GitHub issue.
+- Loudness normalization follows EBU R128, beat detection reads the right tempo, and multicam sync no longer stalls on long clips.
+- There's an EDL export with proper drop-frame timecode. FCPXML imports on phones again, and shared project archives and LUTs are checked much more carefully before anything is saved.
+- Timeline, keyframe and mask handles grab what's under your finger.
 
 ### v3.81.1 Crash and preview fixes
 

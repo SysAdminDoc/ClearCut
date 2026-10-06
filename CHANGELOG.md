@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.82.0
 
 - Importing an FCPXML file works on phones again. Android's XML parser rejects one of the safety switches ClearCut set on it, so every FCPXML import on a phone failed with an error naming that switch. ClearCut now refuses a file that declares its own entities or points to an outside DTD before any parser reads it, which works the same on every phone, and a plain `<!DOCTYPE fcpxml>` as Final Cut writes it is fine. A file saved with a byte-order mark imports now too.
 - A project archive can't bring app or code files onto your phone. Files named like an Android package, a Java or native library, or a shell script are skipped with a warning, and an archive that hides one under a media, LUT, font or watermark name is refused whole, leaving nothing behind. A `.lottie` animation, which is a ZIP inside, still comes through.
