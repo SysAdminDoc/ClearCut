@@ -751,50 +751,58 @@ fun MaskPreviewOverlay(
                         }
                     )
                 } else {
-                    detectDragGestures(
-                        orientationLock = null,
-                        onDragStart = { down, _, _ ->
-                            val startOffset = down.position
-                            val mask = currentMasks.find { it.id == selectedMaskId }
-                                ?: return@detectDragGestures
-                            val hitRadius = 30f
-                            var bestIdx = -1
-                            var bestDist = Float.MAX_VALUE
-                            mask.points.forEachIndexed { idx, point ->
-                                val px = point.x * size.width
-                                val py = point.y * size.height
-                                val dist =
-                                    (startOffset.x - px) * (startOffset.x - px) +
-                                        (startOffset.y - py) * (startOffset.y - py)
-                                if (dist < hitRadius * hitRadius && dist < bestDist) {
-                                    bestDist = dist
-                                    bestIdx = idx
+                    // Selecting another mask mid-drag restarts this coroutine, which
+                    // never calls onDragCancel (removing the overlay does), so the
+                    // finally closes the gesture the drag opened.
+                    try {
+                        detectDragGestures(
+                            orientationLock = null,
+                            onDragStart = { down, _, _ ->
+                                val startOffset = down.position
+                                val mask = currentMasks.find { it.id == selectedMaskId }
+                                    ?: return@detectDragGestures
+                                val hitRadius = 30f
+                                var bestIdx = -1
+                                var bestDist = Float.MAX_VALUE
+                                mask.points.forEachIndexed { idx, point ->
+                                    val px = point.x * size.width
+                                    val py = point.y * size.height
+                                    val dist =
+                                        (startOffset.x - px) * (startOffset.x - px) +
+                                            (startOffset.y - py) * (startOffset.y - py)
+                                    if (dist < hitRadius * hitRadius && dist < bestDist) {
+                                        bestDist = dist
+                                        bestIdx = idx
+                                    }
                                 }
+                                draggedPointIndex = bestIdx
+                                // One undo entry per handle drag: the owner opens it
+                                // here and closes it on release or cancel.
+                                if (bestIdx >= 0) currentOnMaskDragStarted()
+                            },
+                            onDragEnd = { _ ->
+                                if (draggedPointIndex >= 0) currentOnMaskDragEnded()
+                                draggedPointIndex = -1
+                            },
+                            onDragCancel = {
+                                if (draggedPointIndex >= 0) currentOnMaskDragEnded()
+                                draggedPointIndex = -1
                             }
-                            draggedPointIndex = bestIdx
-                            // One undo entry per handle drag: the owner opens it
-                            // here and closes it on release or cancel.
-                            if (bestIdx >= 0) currentOnMaskDragStarted()
-                        },
-                        onDragEnd = { _ ->
-                            if (draggedPointIndex >= 0) currentOnMaskDragEnded()
-                            draggedPointIndex = -1
-                        },
-                        onDragCancel = {
-                            if (draggedPointIndex >= 0) currentOnMaskDragEnded()
-                            draggedPointIndex = -1
+                        ) { change, _ ->
+                            val idx = draggedPointIndex
+                            val mask = currentMasks.find { it.id == selectedMaskId }
+                            if (mask != null && idx >= 0 && idx < mask.points.size) {
+                                currentOnMaskPointMoved(
+                                    selectedMaskId,
+                                    idx,
+                                    (change.position.x / size.width).coerceIn(0f, 1f),
+                                    (change.position.y / size.height).coerceIn(0f, 1f)
+                                )
+                            }
                         }
-                    ) { change, _ ->
-                        val idx = draggedPointIndex
-                        val mask = currentMasks.find { it.id == selectedMaskId }
-                        if (mask != null && idx >= 0 && idx < mask.points.size) {
-                            currentOnMaskPointMoved(
-                                selectedMaskId,
-                                idx,
-                                (change.position.x / size.width).coerceIn(0f, 1f),
-                                (change.position.y / size.height).coerceIn(0f, 1f)
-                            )
-                        }
+                    } finally {
+                        if (draggedPointIndex >= 0) currentOnMaskDragEnded()
+                        draggedPointIndex = -1
                     }
                 }
             }

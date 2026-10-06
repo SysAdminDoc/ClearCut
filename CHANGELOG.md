@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Export history no longer calls a file a match when its sound or frame rate went missing. A video exported from a timeline you could hear now reads "differs" if the file came out silent, with the audio line showing "no audio". A frame rate the check can't read counts as a difference too. And a file made with a fallback encoder that also came out different now says it differs, with a second line noting the fallback, instead of passing as a plain fallback.
+- Picking a different mask while dragging a mask handle now closes that drag as its own undo step and saves it. The drag used to stay open, so mask edits after it recorded no undo step and weren't saved until the next handle drag.
 
 ## v3.82.0
 
