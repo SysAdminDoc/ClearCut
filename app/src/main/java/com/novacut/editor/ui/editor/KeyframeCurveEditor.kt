@@ -38,6 +38,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import com.novacut.editor.ui.ClearCutTestTags
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -696,6 +698,7 @@ internal fun CurveCanvas(
 
     androidx.compose.foundation.Canvas(
         modifier = modifier
+            .testTag(ClearCutTestTags.KEYFRAME_CURVE_CANVAS)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { offset ->
@@ -712,29 +715,39 @@ internal fun CurveCanvas(
             }
             .pointerInput(Unit) {
                 var dragging = false
+                var grabbedIndex = -1
                 detectDragGestures(
-                    onDragStart = { offset ->
+                    orientationLock = null,
+                    onDragStart = { down, _, _ ->
+                        val offset = down.position
                         // Allow grabbing a handle directly without a prior tap.
-                        hitTestKeyframe(offset)?.let { currentOnKeyframeSelected(it) }
-                        dragging = hitTestKeyframe(offset) != null || currentSelectedKeyframe != null
+                        val hit = hitTestKeyframe(offset)
+                        hit?.let { currentOnKeyframeSelected(it) }
+                        // Follow the grabbed keyframe by its place in the list. The
+                        // selection only catches up on the next recomposition, and
+                        // move events can arrive before it does.
+                        grabbedIndex = (hit ?: currentSelectedKeyframe)?.let(currentKeyframes::indexOf) ?: -1
+                        dragging = grabbedIndex >= 0
                         if (dragging) currentOnDragStarted()
                     },
                     onDrag = { change, _ ->
-                        val keyframe = currentSelectedKeyframe ?: return@detectDragGestures
+                        val keyframe = currentKeyframes.getOrNull(grabbedIndex) ?: return@detectDragGestures
                         val time = (change.position.x / size.width * clipDurationMs).toLong()
                         val range = getPropertyRange(keyframe.property)
                         val value = range.first + (1f - change.position.y / size.height) * (range.second - range.first)
                         currentOnKeyframeMoved(keyframe, time, value.coerceIn(range.first, range.second))
                     },
-                    onDragEnd = {
+                    onDragEnd = { _ ->
                         if (dragging) currentOnDragEnded()
                         dragging = false
+                        grabbedIndex = -1
                     },
                     onDragCancel = {
                         // Commit what was applied — state already reflects the
                         // partial drag and the undo entry restores pre-drag.
                         if (dragging) currentOnDragEnded()
                         dragging = false
+                        grabbedIndex = -1
                     }
                 )
             }

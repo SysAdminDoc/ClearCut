@@ -22,6 +22,12 @@ EXPECTED_TESTS = frozenset(
         "com.novacut.editor.ClearCutSmokeTest.highContrastPhoneAndDesktopEditorSurfacesRender",
         "com.novacut.editor.ClearCutSmokeTest.projectEditorExportAndSettingsSurfacesOpen",
         "com.novacut.editor.ClearCutSmokeTest.pseudoLocalesRenderExpandedAndRtlExportSurfaces",
+        "com.novacut.editor.QaTimelineGestureTest.draggingAClipAlongItsTrackSlidesItAndRecordsOneUndoEntry",
+        "com.novacut.editor.QaTimelineGestureTest.draggingAKeyframeHandleMovesItAndRecordsOneUndoEntry",
+        "com.novacut.editor.QaTimelineGestureTest.draggingATrimEdgeTrimsTheClipAndRecordsOneUndoEntry",
+        "com.novacut.editor.QaTimelineGestureTest.pinchingTheTimelineZoomsInWithoutAnUndoEntry",
+        "com.novacut.editor.QaTimelineGestureTest.swipingTheTimelineScrollsItWithoutAnUndoEntry",
+        "com.novacut.editor.QaTimelineInstrumentationTest.importEditUndoRedoAndRelaunchStayInsideQaStorage",
         "com.novacut.editor.LargeTextLayoutTest.fontScale200_desktopSurfacesRemainUsable",
         "com.novacut.editor.LargeTextLayoutTest.fontScale200_largeScreenSurfacesRemainUsable",
         "com.novacut.editor.LargeTextLayoutTest.fontScale200_phoneSurfacesRemainUsable",
@@ -45,6 +51,8 @@ EXPECTED_TESTS = frozenset(
         "com.novacut.editor.engine.StabilizationDeviceAcceptanceTest.analysisCancellationStopsWithoutProducingAResult",
         "com.novacut.editor.engine.StabilizationDeviceAcceptanceTest.analysisProducesReversibleMotionDataAndSharedKeyframes",
         "com.novacut.editor.engine.db.ProjectDatabaseMigrationTest.committedSchemaVersionsMigrateToCurrentWithoutProjectLoss",
+        "com.novacut.editor.ui.editor.MaskHandleDragInstrumentationTest.aDragThatMissesEveryHandleLeavesTheMaskAndTheUndoStackAlone",
+        "com.novacut.editor.ui.editor.MaskHandleDragInstrumentationTest.draggingAHandleMovesThatPointAndOpensAndClosesOneGesture",
         "com.novacut.editor.ui.editor.MediaStoreExportClassificationInstrumentationTest.publishedMp4IsVideoWithDurationAndTimeMetadata",
     }
 )

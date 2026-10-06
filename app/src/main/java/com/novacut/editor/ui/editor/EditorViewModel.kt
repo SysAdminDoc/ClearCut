@@ -2375,21 +2375,42 @@ class EditorViewModel @Inject constructor(
         saveProject()
     }
 
-    // Gesture-scoped keyframe editing: one undo entry per drag, one save at
-    // release. Per-pointer-frame undo pushes were evicting the entire
-    // 50-entry undo stack in a single handle drag.
+    // Gesture-scoped keyframe editing: one undo entry per drag that changed
+    // something, one save at release. Per-pointer-frame undo pushes were
+    // evicting the entire 50-entry undo stack in a single handle drag.
     fun beginKeyframeAdjust() {
         if (_state.value.selectedClipId == null) return
-        saveUndoState("Move keyframe")
+        clipAdjustGestureUndo.begin("Move keyframe")
     }
 
     fun updateClipKeyframesDuringGesture(keyframes: List<Keyframe>) {
         if (_state.value.selectedClipId == null) return
+        captureClipAdjustBeforeMutation("Move keyframe")
         updateSelectedClip { it.copy(keyframes = keyframes) }
     }
 
-    fun endKeyframeAdjust() {
-        saveProject()
+    fun endKeyframeAdjust() = finishClipAdjust("Move keyframe")
+
+    // Handle drags in the keyframe and mask editors change a clip's own
+    // settings rather than its timing, so they compare the whole track list.
+    private val clipAdjustGestureUndo = GestureUndoTransaction<UndoAction> { initial, current ->
+        initial.tracks == current.tracks
+    }
+
+    private fun captureClipAdjustBeforeMutation(description: String) {
+        if (!clipAdjustGestureUndo.isActive(description)) return
+        clipAdjustGestureUndo.captureBeforeMutation(description) { captureUndoAction(description) }
+    }
+
+    private fun finishClipAdjust(description: String) {
+        val result = clipAdjustGestureUndo.finish(
+            description = description,
+            commit = true,
+            current = { captureUndoAction(description) },
+            onCommit = ::pushUndoAction,
+            onCancel = ::restoreUndoAction,
+        )
+        if (result.committedChange) saveProject()
     }
 
     fun addKeyframe(property: KeyframeProperty, timeOffsetMs: Long, value: Float) {
@@ -2447,9 +2468,8 @@ class EditorViewModel @Inject constructor(
     fun hideMaskEditor() {
         hidePanel(PanelId.MASK_EDITOR)
         _state.update { it.copy(selectedMaskId = null) }
-        // Mask geometry edits (updateMaskPoint / setFreehandMaskPoints / updateMask) are
-        // applied per drag-tick without persisting, to avoid disk thrash. Persist once
-        // here on panel close so freehand draws and handle drags survive a restart.
+        // Handle drags and freehand draws save when they finish; updateMask's
+        // property edits are saved again here so the panel always closes clean.
         saveProject()
     }
 
@@ -2488,7 +2508,15 @@ class EditorViewModel @Inject constructor(
         saveProject()
     }
 
+    fun beginMaskAdjust() {
+        if (_state.value.selectedClipId == null) return
+        clipAdjustGestureUndo.begin("Move mask point")
+    }
+
+    fun endMaskAdjust() = finishClipAdjust("Move mask point")
+
     fun updateMaskPoint(maskId: String, pointIndex: Int, x: Float, y: Float) {
+        captureClipAdjustBeforeMutation("Move mask point")
         updateSelectedClip { clip ->
             clip.copy(masks = clip.masks.map { mask ->
                 if (mask.id == maskId && pointIndex in mask.points.indices) {
@@ -2498,15 +2526,17 @@ class EditorViewModel @Inject constructor(
                 } else mask
             })
         }
-        saveProject()
     }
 
     fun setFreehandMaskPoints(maskId: String, points: List<MaskPoint>) {
+        if (_state.value.selectedClipId == null) return
+        saveUndoState("Draw mask")
         updateSelectedClip { clip ->
             clip.copy(masks = clip.masks.map { mask ->
                 if (mask.id == maskId) mask.copy(points = points) else mask
             })
         }
+        saveProject()
     }
 
     // --- Blend Mode ---

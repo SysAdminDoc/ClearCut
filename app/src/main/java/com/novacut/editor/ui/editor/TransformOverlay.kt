@@ -210,7 +210,9 @@ fun TransformOverlay(
             }
             .pointerInput(positionX, positionY, scaleX, scaleY, rotation, previewWidth, previewHeight) {
                 detectDragGestures(
-                    onDragStart = { offset ->
+                    orientationLock = null,
+                    onDragStart = { down, _, _ ->
+                        val offset = down.position
                         onTransformStarted()
                         isDragging = true
                         dragStartOffset = offset
@@ -304,7 +306,7 @@ fun TransformOverlay(
                             HandleType.TRANSFORM -> {}
                         }
                     },
-                    onDragEnd = {
+                    onDragEnd = { _ ->
                         isDragging = false
                         activeHandle = HandleType.NONE
                         onTransformEnded()

@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import com.novacut.editor.ui.ClearCutTestTags
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -299,7 +301,8 @@ private fun UndoHistoryRow(
                         text = entry.description,
                         style = MaterialTheme.typography.titleSmall,
                         color = if (isFuture) semanticColors.subtext else semanticColors.text,
-                        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium
+                        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Medium,
+                        modifier = Modifier.testTag(ClearCutTestTags.UNDO_HISTORY_ENTRY_DESCRIPTION)
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(

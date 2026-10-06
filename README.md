@@ -630,12 +630,21 @@ python scripts\run_api37_qa.py
 
 This command provisions a headless managed Pixel 6, runs every expected
 instrumentation case, and writes named JSON and text reports under
-`app/build/reports/connected-qa/`. It exits successfully only when all 27
+`app/build/reports/connected-qa/`. It exits successfully only when all 35
 expected cases are present and every non-passing result matches an explicit
 emulator assumption or optional-model skip. The accepted status is
 `PASS-WITH-ASSUMPTIONS`, not a generic green connected-test claim.
-The current clean-image baseline is 20 passes, six goldfish codec/player
-assumptions, one optional-model skip, and zero regressions.
+The clean-image baseline before the gesture cases was 20 passes, six goldfish
+codec/player assumptions, one optional-model skip, and zero regressions. The
+eight cases added since (clip slide, trim edge, timeline pinch and swipe,
+keyframe and mask handle drags, and the QA import, edit, undo and relaunch
+flow) pass on an API 37 emulator.
+
+The QA-only tests live in `app/src/androidTestQa`, the source set Android
+Gradle builds for the `qa` test build type. They import a three-second 30 fps
+fixture through the share path, drive the editor with real touch input, and
+read each result back from the project's autosave and from the Version history
+panel.
 
 `python scripts\ensure_api37_avd.py --launch` remains available when a reusable
 16 KB-page-size AVD is useful for manual diagnosis. It starts headlessly, so it

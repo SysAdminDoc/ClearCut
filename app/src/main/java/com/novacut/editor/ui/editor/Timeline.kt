@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +36,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.onVisibilityChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.focus.onFocusChanged
@@ -137,6 +142,26 @@ private fun TrimNumericInputRow(
     var endEditActive by remember(clipId) { mutableStateOf(false) }
     val trimStartDescription = stringResource(R.string.timeline_trim_start_seconds_cd)
     val trimEndDescription = stringResource(R.string.timeline_trim_end_seconds_cd)
+    // A typed trim is one undo entry that commits when its field loses focus. Done
+    // on the keyboard hands focus back to the editor, which keeps its keyboard
+    // shortcuts working, and a row that leaves the screen mid-edit (another clip
+    // selected, the tool closed) commits what was typed rather than leaving the edit
+    // open with no undo entry and nothing saved.
+    val focusManager = LocalFocusManager.current
+    val doneKeyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+    val doneKeyboardActions = KeyboardActions(onDone = {
+        if (!focusManager.moveFocus(FocusDirection.Exit)) focusManager.clearFocus()
+    })
+    val currentOnTrimDragEnded by rememberUpdatedState(onTrimDragEnded)
+    DisposableEffect(clipId) {
+        onDispose {
+            if (startEditActive || endEditActive) {
+                startEditActive = false
+                endEditActive = false
+                currentOnTrimDragEnded()
+            }
+        }
+    }
 
     LaunchedEffect(clipId, trimStartMs, startEditActive) {
         if (!startEditActive) startText = formatTrimTime(trimStartMs)
@@ -169,6 +194,8 @@ private fun TrimNumericInputRow(
                 onTrimChanged(clipId, clamped, null)
             },
             singleLine = true,
+            keyboardOptions = doneKeyboardOptions,
+            keyboardActions = doneKeyboardActions,
             textStyle = MaterialTheme.typography.bodySmall.copy(color = semanticColors.text),
             modifier = Modifier
                 .weight(1f)
@@ -206,6 +233,8 @@ private fun TrimNumericInputRow(
                 onTrimChanged(clipId, null, clamped)
             },
             singleLine = true,
+            keyboardOptions = doneKeyboardOptions,
+            keyboardActions = doneKeyboardActions,
             textStyle = MaterialTheme.typography.bodySmall.copy(color = semanticColors.text),
             modifier = Modifier
                 .weight(1f)
@@ -2069,7 +2098,11 @@ fun Timeline(
                                                     var gestureStartTracks: List<Track> = emptyList()
                                                     var totalDeltaXPx = 0f
                                                     detectDragGestures(
-                                                        onDragStart = { offset ->
+                                                        orientationLock = null,
+                                                        // The zone comes from where the finger landed, not
+                                                        // where it crossed the touch slop a few pixels on.
+                                                        onDragStart = { down, _, _ ->
+                                                            val offset = down.position
                                                             val ppm = currentZoomLevel * BASE_SCALE
                                                             val currentClip = findClipInTracks(currentTracks, clip.id)
                                                             gestureStartClip = currentClip
@@ -2093,7 +2126,7 @@ fun Timeline(
                                                             }
                                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                         },
-                                                        onDragEnd = {
+                                                        onDragEnd = { _ ->
                                                             when (zone) {
                                                                 TimelineClipGestureZone.TRIM_LEFT,
                                                                 TimelineClipGestureZone.TRIM_RIGHT -> onTrimDragEnded()

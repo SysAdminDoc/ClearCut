@@ -254,7 +254,9 @@ fun BoxScope.EditorClipAdjustmentPanelHost(
                 previewHeight = 1f,
                 onMaskPointMoved = viewModel::updateMaskPoint,
                 onFreehandDraw = viewModel::setFreehandMaskPoints,
-                modifier = Modifier.align(Alignment.Center)
+                modifier = Modifier.align(Alignment.Center),
+                onMaskDragStarted = viewModel::beginMaskAdjust,
+                onMaskDragEnded = viewModel::endMaskAdjust
             )
         }
     }

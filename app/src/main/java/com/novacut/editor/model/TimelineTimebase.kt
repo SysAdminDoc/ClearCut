@@ -21,20 +21,24 @@ data class TimelineTimebase(
             return String.format(Locale.US, "%.3f", rate).trimEnd('0').trimEnd('.') + " fps"
         }
 
-    fun frameIndexAt(timeMs: Long): Long {
-        val safeMs = timeMs.coerceAtLeast(0L)
-        return divideRounded(safeMs * numerator.toLong(), 1_000L * denominator)
-    }
+    fun frameIndexAt(timeMs: Long): Long = framesAt(timeMs, roundingOffset = 500L * denominator)
 
-    fun frameIndexAtOrBefore(timeMs: Long): Long {
-        val safeMs = timeMs.coerceAtLeast(0L)
-        return (safeMs * numerator.toLong()) / (1_000L * denominator)
-    }
+    fun frameIndexAtOrBefore(timeMs: Long): Long = framesAt(timeMs, roundingOffset = 0L)
 
-    fun frameIndexAtOrAfter(timeMs: Long): Long {
+    fun frameIndexAtOrAfter(timeMs: Long): Long = framesAt(timeMs, roundingOffset = 1_000L * denominator - 1L)
+
+    /**
+     * (timeMs × numerator + roundingOffset) / (1000 × denominator), without forming the
+     * product: callers pass Long.MAX_VALUE as "no limit", and the product wrapped negative.
+     * The whole-divisor part scales exactly on its own; past Long's range it saturates.
+     */
+    private fun framesAt(timeMs: Long, roundingOffset: Long): Long {
         val safeMs = timeMs.coerceAtLeast(0L)
         val divisor = 1_000L * denominator
-        return (safeMs * numerator.toLong() + divisor - 1L) / divisor
+        val whole = safeMs / divisor
+        val rest = safeMs % divisor
+        if (whole > (Long.MAX_VALUE - numerator) / numerator) return Long.MAX_VALUE
+        return whole * numerator + (rest * numerator + roundingOffset) / divisor
     }
 
     fun timeMsAt(frameIndex: Long): Long {

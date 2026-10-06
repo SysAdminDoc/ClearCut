@@ -12,6 +12,8 @@ internal class GestureUndoTransaction<T>(
     private var description: String? = null
     private var snapshot: T? = null
 
+    fun isActive(description: String): Boolean = this.description == description
+
     fun begin(description: String): Boolean {
         if (this.description != null) return false
         this.description = description

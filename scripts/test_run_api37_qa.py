@@ -21,7 +21,18 @@ class Api37QaClassifierTest(unittest.TestCase):
             if ".LargeTextLayoutTest." in test_id
         }
 
-        self.assertEqual(len(run_api37_qa.EXPECTED_TESTS), 27)
+        gesture_tests = {
+            test_id
+            for test_id in run_api37_qa.EXPECTED_TESTS
+            if ".QaTimelineGestureTest." in test_id or ".MaskHandleDragInstrumentationTest." in test_id
+        }
+
+        self.assertEqual(len(run_api37_qa.EXPECTED_TESTS), 35)
+        self.assertEqual(len(gesture_tests), 7)
+        self.assertIn(
+            "com.novacut.editor.QaTimelineInstrumentationTest.importEditUndoRedoAndRelaunchStayInsideQaStorage",
+            run_api37_qa.EXPECTED_TESTS,
+        )
         self.assertEqual(len(large_text_tests), 6)
 
     def test_known_failure_is_reported_without_becoming_a_regression(self) -> None:

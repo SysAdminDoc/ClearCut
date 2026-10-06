@@ -1727,7 +1727,9 @@ private fun EditorTopBar(
                     ) {
                         IconButton(
                             onClick = { showOverflow = true },
-                            modifier = Modifier.size(toolbarTouchTarget)
+                            modifier = Modifier
+                                .size(toolbarTouchTarget)
+                                .testTag(ClearCutTestTags.EDITOR_OVERFLOW)
                         ) {
                             Icon(
                                 Icons.Default.MoreVert,
@@ -1759,6 +1761,7 @@ private fun EditorTopBar(
                                     showOverflow = false
                                     onUndo()
                                 },
+                                modifier = Modifier.testTag(ClearCutTestTags.EDITOR_OVERFLOW_UNDO),
                                 enabled = canUndo,
                                 leadingIcon = {
                                     Icon(
@@ -1773,6 +1776,7 @@ private fun EditorTopBar(
                                     showOverflow = false
                                     onRedo()
                                 },
+                                modifier = Modifier.testTag(ClearCutTestTags.EDITOR_OVERFLOW_REDO),
                                 enabled = canRedo,
                                 leadingIcon = {
                                     Icon(
@@ -1914,6 +1918,7 @@ private fun EditorTopBar(
                                     showOverflow = false
                                     onOpenHistory()
                                 },
+                                modifier = Modifier.testTag(ClearCutTestTags.EDITOR_VERSION_HISTORY),
                                 leadingIcon = {
                                     Icon(Icons.Default.History, contentDescription = null, tint = ClearCutAccents.Mauve)
                                 },

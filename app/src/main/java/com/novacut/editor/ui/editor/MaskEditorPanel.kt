@@ -55,6 +55,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import com.novacut.editor.ui.ClearCutTestTags
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -706,7 +708,9 @@ fun MaskPreviewOverlay(
     previewHeight: Float,
     onMaskPointMoved: (String, Int, Float, Float) -> Unit,
     onFreehandDraw: (String, List<MaskPoint>) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMaskDragStarted: () -> Unit = {},
+    onMaskDragEnded: () -> Unit = {}
 ) {
     val drawingPoints = remember { mutableStateListOf<Offset>() }
     var draggedPointIndex by remember { mutableIntStateOf(-1) }
@@ -715,10 +719,14 @@ fun MaskPreviewOverlay(
     // later onDragStart hit-tested against the point's ORIGINAL position, so
     // grabbing a handle where it is drawn silently failed.
     val currentMasks by rememberUpdatedState(masks)
+    val currentOnMaskPointMoved by rememberUpdatedState(onMaskPointMoved)
+    val currentOnMaskDragStarted by rememberUpdatedState(onMaskDragStarted)
+    val currentOnMaskDragEnded by rememberUpdatedState(onMaskDragEnded)
 
     Canvas(
         modifier = modifier
             .fillMaxSize()
+            .testTag(ClearCutTestTags.MASK_PREVIEW_OVERLAY)
             .pointerInput(selectedMaskId) {
                 if (selectedMaskId == null) return@pointerInput
                 val maskType = currentMasks.find { it.id == selectedMaskId }?.type
@@ -726,11 +734,15 @@ fun MaskPreviewOverlay(
 
                 if (maskType == MaskType.FREEHAND) {
                     detectDragGestures(
-                        onDragStart = { drawingPoints.clear() },
+                        orientationLock = null,
+                        onDragStart = { down, _, _ ->
+                            drawingPoints.clear()
+                            drawingPoints.add(down.position)
+                        },
                         onDrag = { change, _ ->
                             drawingPoints.add(change.position)
                         },
-                        onDragEnd = {
+                        onDragEnd = { _ ->
                             val points = drawingPoints.map {
                                 MaskPoint(it.x / size.width, it.y / size.height)
                             }
@@ -740,7 +752,9 @@ fun MaskPreviewOverlay(
                     )
                 } else {
                     detectDragGestures(
-                        onDragStart = { startOffset ->
+                        orientationLock = null,
+                        onDragStart = { down, _, _ ->
+                            val startOffset = down.position
                             val mask = currentMasks.find { it.id == selectedMaskId }
                                 ?: return@detectDragGestures
                             val hitRadius = 30f
@@ -758,12 +772,23 @@ fun MaskPreviewOverlay(
                                 }
                             }
                             draggedPointIndex = bestIdx
+                            // One undo entry per handle drag: the owner opens it
+                            // here and closes it on release or cancel.
+                            if (bestIdx >= 0) currentOnMaskDragStarted()
+                        },
+                        onDragEnd = { _ ->
+                            if (draggedPointIndex >= 0) currentOnMaskDragEnded()
+                            draggedPointIndex = -1
+                        },
+                        onDragCancel = {
+                            if (draggedPointIndex >= 0) currentOnMaskDragEnded()
+                            draggedPointIndex = -1
                         }
                     ) { change, _ ->
                         val idx = draggedPointIndex
                         val mask = currentMasks.find { it.id == selectedMaskId }
                         if (mask != null && idx >= 0 && idx < mask.points.size) {
-                            onMaskPointMoved(
+                            currentOnMaskPointMoved(
                                 selectedMaskId,
                                 idx,
                                 (change.position.x / size.width).coerceIn(0f, 1f),

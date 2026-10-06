@@ -3,12 +3,13 @@ package com.novacut.editor
 import android.content.Intent
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.fetchSemanticsNodes
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.input.key.Key
 import androidx.core.content.FileProvider
@@ -105,25 +106,29 @@ class QaTimelineInstrumentationTest {
             .performClick()
         waitForTag(ClearCutTestTags.TIMELINE_TRIM_START)
         compose.onNodeWithTag(ClearCutTestTags.TIMELINE_TRIM_START)
-            .performTextReplacement("0.25")
+            .performTextReplacement("0.20")
         compose.onNodeWithTag(ClearCutTestTags.TIMELINE_TRIM_END)
             .performTextReplacement("2.50")
-        // Tapping the active tab moves focus away from the numeric field and
-        // commits the gesture-style undo/save boundary.
-        compose.onNodeWithTag(ClearCutTestTags.EDITOR_TOOL_TAB_PREFIX + "edit")
-            .performClick()
+        // Trims land on project frames, and the fixture is 30 fps: 0.20 s and 2.50 s
+        // are frame 6 and frame 75 exactly, where 0.25 s would round to 267 ms.
+        // Done on the keyboard hands focus back to the editor, which commits the
+        // typed trim's undo entry, saves it, and lets the arrow key below reach the
+        // editor's shortcuts.
+        compose.onNodeWithTag(ClearCutTestTags.TIMELINE_TRIM_END)
+            .performImeAction()
         val trimmedState = awaitState {
             videoClips(it).singleOrNull()?.let { clip ->
-                clip.trimStartMs == 250L && clip.trimEndMs == 2_500L
+                clip.trimStartMs == 200L && clip.trimEndMs == 2_500L
             } == true
         }
-        assertEquals(250L, videoClips(trimmedState).single().trimStartMs)
+        assertEquals(200L, videoClips(trimmedState).single().trimStartMs)
         assertEquals(2_500L, videoClips(trimmedState).single().trimEndMs)
 
-        // Keyboard seeking is pointer-free and deterministic: the editor's
-        // right-arrow contract advances the playhead by one second.
+        // Keyboard seeking is pointer-free and deterministic. Committing the trim
+        // leaves the playhead on its out point at the end of the clip, and the
+        // editor's left-arrow contract moves it back one second, inside the clip.
         compose.onNodeWithTag(ClearCutTestTags.EDITOR_SCREEN)
-            .performKeyInput { pressKey(Key.DirectionRight) }
+            .performKeyInput { pressKey(Key.DirectionLeft) }
         waitForTag(ClearCutTestTags.TIMELINE_SPLIT)
         compose.onNodeWithTag(ClearCutTestTags.TIMELINE_SPLIT)
             .assertIsEnabled()
@@ -136,25 +141,32 @@ class QaTimelineInstrumentationTest {
             .performClick()
         awaitState { videoClips(it).size == 1 }
 
-        compose.onNodeWithTag(ClearCutTestTags.EDITOR_UNDO)
-            .assertIsEnabled()
-            .performClick()
+        clickBarOrOverflowAction(ClearCutTestTags.EDITOR_UNDO, ClearCutTestTags.EDITOR_OVERFLOW_UNDO)
         awaitState { videoClips(it).size == 2 }
 
-        compose.onNodeWithTag(ClearCutTestTags.EDITOR_REDO)
-            .assertIsEnabled()
-            .performClick()
+        clickBarOrOverflowAction(ClearCutTestTags.EDITOR_REDO, ClearCutTestTags.EDITOR_OVERFLOW_REDO)
         val redoneState = awaitState { videoClips(it).size == 1 }
-        assertEquals(250L, videoClips(redoneState).single().trimStartMs)
+        assertEquals(200L, videoClips(redoneState).single().trimStartMs)
 
         // Recreate the activity, not the process: this exercises the same
         // SavedStateHandle/navigation path used by a relaunch from Recents.
-        compose.activity.recreate()
+        compose.activityRule.scenario.recreate()
         waitForTag(ClearCutTestTags.EDITOR_SCREEN)
         val restoredState = awaitState { videoClips(it).size == 1 }
-        assertEquals(250L, videoClips(restoredState).single().trimStartMs)
-        assertTrue(restoredState.project.id == project.id)
+        assertEquals(200L, videoClips(restoredState).single().trimStartMs)
+        assertTrue(restoredState.projectId == project.id)
         compose.onNodeWithTag(ClearCutTestTags.EDITOR_SCREEN).assertIsDisplayed()
+    }
+
+    /** Compact top bars move Undo and Redo into the overflow menu. */
+    private fun clickBarOrOverflowAction(barTag: String, overflowTag: String) {
+        if (compose.onAllNodesWithTag(barTag).fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithTag(barTag).assertIsEnabled().performClick()
+            return
+        }
+        compose.onNodeWithTag(ClearCutTestTags.EDITOR_OVERFLOW).performClick()
+        waitForTag(overflowTag)
+        compose.onNodeWithTag(overflowTag).assertIsEnabled().performClick()
     }
 
     private fun stageFixture(): File {
@@ -181,8 +193,13 @@ class QaTimelineInstrumentationTest {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             setClass(targetContext, MainActivity::class.java)
         }
+        val launchIntent = compose.activity.intent
         compose.activity.runOnUiThread {
-            compose.activity.onNewIntent(intent)
+            InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(compose.activity, intent)
+            // ActivityScenario follows the activity by the intent it launched with. The
+            // app keeps the shared intent through setIntent, so hand the launch intent
+            // back once the import has been taken in, or the scenario never sees it end.
+            compose.activity.intent = launchIntent
         }
         compose.waitForIdle()
     }

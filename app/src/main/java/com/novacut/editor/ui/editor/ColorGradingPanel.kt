@@ -590,7 +590,9 @@ internal fun CurveEditor(
         modifier = modifier
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragStart = { offset ->
+                    orientationLock = null,
+                    onDragStart = { down, _, _ ->
+                        val offset = down.position
                         currentOnDragStarted()
                         val x = offset.x / size.width
                         val y = 1f - offset.y / size.height
@@ -623,7 +625,7 @@ internal fun CurveEditor(
                             currentOnPointsChanged(newPoints)
                         }
                     },
-                    onDragEnd = {
+                    onDragEnd = { _ ->
                         dragIndex = -1
                         currentOnDragEnded()
                     },

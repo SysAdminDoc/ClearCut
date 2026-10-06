@@ -93,4 +93,17 @@ class GestureUndoTransactionTest {
         assertEquals(listOf(10), restored)
         assertTrue(transaction.begin("Trim clip"))
     }
+
+    @Test
+    fun `only the gesture that began is active until it finishes`() {
+        val transaction = GestureUndoTransaction<Int>(Int::equals)
+        assertFalse(transaction.isActive("Move keyframe"))
+        assertTrue(transaction.begin("Move keyframe"))
+        assertTrue(transaction.isActive("Move keyframe"))
+        assertFalse(transaction.isActive("Move mask point"))
+        assertFalse("a second gesture can't start over the first", transaction.begin("Move mask point"))
+
+        transaction.finish("Move keyframe", commit = true, current = { 0 }, onCommit = {}, onCancel = {})
+        assertFalse(transaction.isActive("Move keyframe"))
+    }
 }

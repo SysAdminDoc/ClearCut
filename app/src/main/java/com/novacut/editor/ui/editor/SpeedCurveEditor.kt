@@ -611,7 +611,9 @@ private fun SpeedCurveCanvas(
             }
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragStart = { offset ->
+                    orientationLock = null,
+                    onDragStart = { down, _, _ ->
+                        val offset = down.position
                         val hitRadius = 30f
                         var bestIdx = -1
                         var bestDist = hitRadius * hitRadius
@@ -640,7 +642,7 @@ private fun SpeedCurveCanvas(
                             currentOnDragChanged(SpeedCurve(newPoints))
                         }
                     },
-                    onDragEnd = {
+                    onDragEnd = { _ ->
                         if (dragPointIndex >= 0) currentOnDragEnded()
                         dragPointIndex = -1
                     },
