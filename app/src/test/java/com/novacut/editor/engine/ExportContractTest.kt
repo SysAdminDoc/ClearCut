@@ -1,7 +1,12 @@
 package com.novacut.editor.engine
 
+import android.net.FakeUri
+import android.net.Uri
+import com.novacut.editor.model.Clip
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.PlatformPreset
+import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.VideoCodec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -92,9 +97,11 @@ class ExportContractTest {
         val silentSwap = hevc.evaluate(exactVideo)
         assertEquals(ExportContractDisposition.DEGRADED, silentSwap.disposition)
         assertEquals(listOf(ExportContractField.VIDEO_CODEC), silentSwap.mismatches)
+        // A noted fallback explains the swap but doesn't make the file what was asked for.
         val explained = hevc.copy(fallbackSummary = "HEVC unsupported; encoded H.264.").evaluate(exactVideo)
-        assertEquals(ExportContractDisposition.ACCEPTED_FALLBACK, explained.disposition)
+        assertEquals(ExportContractDisposition.DEGRADED, explained.disposition)
         assertEquals(listOf(ExportContractField.VIDEO_CODEC), explained.mismatches)
+        assertEquals("HEVC unsupported; encoded H.264.", explained.fallbackSummary)
 
         val broken = request.evaluate(ExportObservation(valid = false, failure = "No video track"))
         assertEquals(ExportContractDisposition.REJECTED, broken.disposition)
@@ -151,6 +158,95 @@ class ExportContractTest {
     }
 
     @Test
+    fun aLostAudioTrackOrUnreadableFrameRateIsNeverExact() {
+        val withSound = requestedExportContract(ExportConfig(), "mp4", 10_000L, timelineHasAudio = true)
+        val silent = withSound.evaluate(exactVideo.copy(audioMimeType = null))
+        assertEquals(ExportContractDisposition.DEGRADED, silent.disposition)
+        assertEquals(listOf(ExportContractField.AUDIO_CODEC), silent.mismatches)
+        // A silent timeline that exports silent is what was asked for.
+        val quiet = requestedExportContract(ExportConfig(), "mp4", 10_000L)
+        assertEquals(ExportContractDisposition.EXACT, quiet.evaluate(exactVideo.copy(audioMimeType = null)).disposition)
+
+        val noRate = quiet.evaluate(exactVideo.copy(frameRate = null))
+        assertEquals(ExportContractDisposition.DEGRADED, noRate.disposition)
+        assertEquals(listOf(ExportContractField.FRAME_RATE), noRate.mismatches)
+        assertEquals(listOf(ExportContractField.FRAME_RATE), quiet.evaluate(exactVideo.copy(frameRate = 0f)).mismatches)
+
+        val fellBack = withSound.copy(fallbackSummary = "Hardware encoder failed; used software encoder.")
+            .evaluate(exactVideo.copy(audioMimeType = null))
+        assertEquals(ExportContractDisposition.DEGRADED, fellBack.disposition)
+        assertEquals(listOf(ExportContractField.AUDIO_CODEC), fellBack.mismatches)
+        assertEquals("Hardware encoder failed; used software encoder.", fellBack.fallbackSummary)
+
+        val historyFile = temp.root.resolve("history.json")
+        val entry = buildExportHistoryEntry(
+            projectId = "project",
+            projectName = "Road Trip",
+            status = ExportHistoryStatus.COMPLETE,
+            startedAtEpochMs = 100L,
+            finishedAtEpochMs = 200L,
+            outputFile = temp.newFile("silent.mp4").apply { writeBytes(ByteArray(64)) },
+            config = ExportConfig(),
+            timelineDurationMs = 10_000L,
+            timelineHasAudio = true,
+        )
+        ExportHistoryStore(historyFile, inspectOutput = { _, _ -> exactVideo.copy(audioMimeType = null) }).append(entry)
+        val restored = ExportHistoryStore(historyFile).read().single().contract!!
+        assertTrue(restored.requestedAudioTrack)
+        assertEquals(ExportContractDisposition.DEGRADED, restored.disposition)
+        assertEquals(listOf(ExportContractField.AUDIO_CODEC), restored.mismatches)
+    }
+
+    @Test
+    fun onlyClipsTheMixPlaysInTheExportedRangeCountAsSound() {
+        fun track(
+            id: String,
+            type: TrackType = TrackType.VIDEO,
+            startMs: Long = 0L,
+            visible: Boolean = true,
+            muted: Boolean = false,
+            solo: Boolean = false,
+            volume: Float = 1f,
+            clipVolume: Float = 1f,
+        ) = Track(
+            id = id,
+            type = type,
+            index = 0,
+            isVisible = visible,
+            isMuted = muted,
+            isSolo = solo,
+            volume = volume,
+            clips = listOf(
+                Clip(
+                    id = "$id-clip",
+                    sourceUri = FakeUri,
+                    sourceDurationMs = 5_000L,
+                    timelineStartMs = startMs,
+                    trimEndMs = 5_000L,
+                    volume = clipVolume,
+                )
+            ),
+        )
+        fun audible(vararg tracks: Track, endMs: Long = 10_000L, sourceHasAudio: (Uri) -> Boolean = { true }) =
+            timelineHasAudibleAudio(tracks.toList(), 0L, endMs, sourceHasAudio)
+
+        assertTrue(audible(track("a")))
+        assertFalse(audible(track("a")) { false })
+        assertFalse(audible(track("a", muted = true)))
+        assertFalse(audible(track("a", visible = false)))
+        assertFalse(audible(track("a", volume = 0f)))
+        assertFalse(audible(track("a", clipVolume = 0f)))
+        assertFalse(audible(track("a", type = TrackType.TEXT)))
+        assertTrue(audible(track("a", type = TrackType.AUDIO)))
+        // A clip that starts after the exported range ends isn't in the file.
+        assertFalse(audible(track("a", startMs = 6_000L), endMs = 5_000L))
+        assertTrue(audible(track("a", startMs = 6_000L), endMs = Long.MAX_VALUE))
+        // A soloed silent track silences the rest of the mix.
+        assertFalse(audible(track("a"), track("b", solo = true, clipVolume = 0f)))
+        assertTrue(audible(track("a", muted = true), track("b", solo = true)))
+    }
+
+    @Test
     fun theStoreReadsFinishedFilesBackAndKeepsTheResult() {
         val output = temp.newFile("final.mp4").apply { writeBytes(ByteArray(64)) }
         val entry = buildExportHistoryEntry(
@@ -179,8 +275,9 @@ class ExportContractTest {
 
         val restored = ExportHistoryStore(historyFile).read().single().contract!!
         assertEquals(listOf(output), inspected)
-        assertEquals(ExportContractDisposition.ACCEPTED_FALLBACK, restored.disposition)
+        assertEquals(ExportContractDisposition.DEGRADED, restored.disposition)
         assertEquals(listOf(ExportContractField.VIDEO_CODEC), restored.mismatches)
+        assertEquals("HEVC unsupported; encoded H.264.", restored.fallbackSummary)
         assertEquals(exactVideo, restored.observed)
         assertEquals("video/hevc", restored.requestedVideoMimeType)
         assertEquals(1920, restored.requestedWidth)

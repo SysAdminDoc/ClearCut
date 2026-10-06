@@ -206,6 +206,36 @@ class ExportHistoryRowTest {
     }
 
     @Test
+    fun aFallbackThatLostTheSoundSaysBoth() {
+        val entry = buildExportHistoryEntry(
+            projectId = "project",
+            projectName = "Long Render",
+            status = ExportHistoryStatus.COMPLETE,
+            startedAtEpochMs = 100L,
+            finishedAtEpochMs = 200L,
+            outputFile = temp.newFile().apply { writeBytes(ByteArray(16) { 1 }) },
+            config = ExportConfig(),
+            timelineDurationMs = 5_000L,
+            fallbackSummary = "Software encoder used.",
+            timelineHasAudio = true,
+        )
+        val silent = ExportObservation(valid = true, container = "MP4", videoMimeType = "video/avc", width = 1920, height = 1080, frameRate = 30f)
+        compose.setContent {
+            ExportHistoryRow(entry = entry.copy(contract = entry.contract!!.evaluate(silent)), dateFormat = dateFormat, onResumeExport = {})
+        }
+        compose.onNodeWithTag(ClearCutTestTags.EXPORT_HISTORY_CONTRACT).assertTextEquals(string(R.string.export_contract_degraded))
+        compose.onNodeWithText(
+            context().getString(
+                R.string.export_contract_mismatch,
+                string(R.string.export_contract_field_audio_codec),
+                "AAC",
+                string(R.string.export_contract_no_audio),
+            )
+        ).assertExists()
+        compose.onNodeWithText(string(R.string.export_contract_fallback_also)).assertExists()
+    }
+
+    @Test
     fun runsThatMadeNoFileShowNoVerdict() {
         show(entry(ExportHistoryStatus.FAILED), mutableListOf(), IntArray(1))
         assertEquals(0, compose.onAllNodesWithTag(ClearCutTestTags.EXPORT_HISTORY_CONTRACT).fetchSemanticsNodes().size)

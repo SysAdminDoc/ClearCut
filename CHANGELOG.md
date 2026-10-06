@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Export history no longer calls a file a match when its sound or frame rate went missing. A video exported from a timeline you could hear now reads "differs" if the file came out silent, with the audio line showing "no audio". A frame rate the check can't read counts as a difference too. And a file made with a fallback encoder that also came out different now says it differs, with a second line noting the fallback, instead of passing as a plain fallback.
+
 ## v3.82.0
 
 - Importing an FCPXML file works on phones again. Android's XML parser rejects one of the safety switches ClearCut set on it, so every FCPXML import on a phone failed with an error naming that switch. ClearCut now refuses a file that declares its own entities or points to an outside DTD before any parser reads it, which works the same on every phone, and a plain `<!DOCTYPE fcpxml>` as Final Cut writes it is fine. A file saved with a byte-order mark imports now too.

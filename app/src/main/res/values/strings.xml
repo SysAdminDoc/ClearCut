@@ -3694,4 +3694,6 @@
     <string name="export_contract_on">on</string>
     <string name="export_contract_off">off</string>
     <string name="export_contract_unknown">unknown</string>
+    <string name="export_contract_no_audio">no audio</string>
+    <string name="export_contract_fallback_also">Also made with a fallback encoder or path</string>
 </resources>

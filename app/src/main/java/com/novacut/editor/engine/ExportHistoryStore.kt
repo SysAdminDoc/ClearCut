@@ -1,10 +1,14 @@
 package com.novacut.editor.engine
 
 import android.content.Context
+import android.net.Uri
 import com.novacut.editor.model.ExportConfig
 import com.novacut.editor.model.ResolvedTimelineExportRange
 import com.novacut.editor.model.Track
+import com.novacut.editor.model.TrackType
 import com.novacut.editor.model.VideoCodec
+import com.novacut.editor.model.effectiveTimelineEndMs
+import com.novacut.editor.model.effectiveTimelineStartMs
 import com.novacut.editor.model.requiresStreamSafeOutput
 import org.json.JSONArray
 import org.json.JSONObject
@@ -78,6 +82,8 @@ data class ExportContractReport(
     val requestedMaxWidth: Int? = null,
     val requestedFrameRate: Int? = null,
     val requestedFastStart: Boolean = false,
+    /** The timeline had audible audio, so the file must carry an audio track. */
+    val requestedAudioTrack: Boolean = false,
     val expectedDurationMs: Long? = null,
     /** Encoder or pipeline fallbacks taken while the file was made. */
     val fallbackSummary: String? = null,
@@ -95,8 +101,9 @@ data class ExportContractReport(
             disposition = when {
                 !observation.valid -> ExportContractDisposition.REJECTED
                 degradationSummary != null -> ExportContractDisposition.DEGRADED
-                fallbackSummary != null -> ExportContractDisposition.ACCEPTED_FALLBACK
+                // A noted fallback explains how the file was made, not a property it got wrong.
                 differences.isNotEmpty() -> ExportContractDisposition.DEGRADED
+                fallbackSummary != null -> ExportContractDisposition.ACCEPTED_FALLBACK
                 else -> ExportContractDisposition.EXACT
             },
         )
@@ -109,12 +116,14 @@ data class ExportContractReport(
         if (requestedVideoMimeType != null && !requestedVideoMimeType.equals(observed.videoMimeType, ignoreCase = true)) {
             add(ExportContractField.VIDEO_CODEC)
         }
-        // A silent timeline makes a video with no audio track, which isn't a mismatch;
-        // an audio export without its audio fails verification instead.
-        if (requestedAudioMimeType != null && observed.audioMimeType != null &&
-            !requestedAudioMimeType.equals(observed.audioMimeType, ignoreCase = true)
-        ) {
-            add(ExportContractField.AUDIO_CODEC)
+        // A silent timeline makes a video with no audio track, which isn't a mismatch,
+        // but a timeline with audible audio must come out with it. An audio export
+        // without its audio fails verification instead.
+        if (requestedAudioMimeType != null) {
+            val audio = observed.audioMimeType
+            if (if (audio == null) requestedAudioTrack else !requestedAudioMimeType.equals(audio, ignoreCase = true)) {
+                add(ExportContractField.AUDIO_CODEC)
+            }
         }
         val sizeOff = when {
             requestedWidth != null && requestedHeight != null ->
@@ -123,9 +132,10 @@ data class ExportContractReport(
             else -> false
         }
         if (sizeOff) add(ExportContractField.SIZE)
+        // A frame rate that couldn't be read is never a match.
         val frameRate = observed.frameRate
-        if (requestedFrameRate != null && frameRate != null && frameRate > 0f &&
-            kotlin.math.abs(frameRate - requestedFrameRate) > CONTRACT_FRAME_RATE_TOLERANCE
+        if (requestedFrameRate != null && (frameRate == null || frameRate <= 0f ||
+                kotlin.math.abs(frameRate - requestedFrameRate) > CONTRACT_FRAME_RATE_TOLERANCE)
         ) {
             add(ExportContractField.FRAME_RATE)
         }
@@ -263,6 +273,8 @@ fun buildExportHistoryEntry(
     fallbackSummary: String? = null,
     /** Timeline differences the user accepted before this run. */
     degradationSummary: String? = null,
+    /** The exported range had audible audio, so a video output must carry it. */
+    timelineHasAudio: Boolean = false,
 ): ExportHistoryEntry {
     val existingOutput = outputFile?.takeIf { it.isFile && it.length() > 0L }
     return ExportHistoryEntry(
@@ -306,9 +318,32 @@ fun buildExportHistoryEntry(
                 expectedDurationMs = resolvedRange?.let { it.endMs - it.startMs } ?: timelineDurationMs,
                 fallbackSummary = fallbackSummary,
                 degradationSummary = degradationSummary,
+                timelineHasAudio = timelineHasAudio,
             )
         },
     )
+}
+
+/**
+ * Whether the mix this range exports holds sound: a clip with an audio track at a
+ * non-zero volume, on a track the mix plays (the visible, unmuted and solo rules the
+ * export applies).
+ */
+internal fun timelineHasAudibleAudio(
+    tracks: List<Track>,
+    startMs: Long,
+    endMs: Long,
+    sourceHasAudio: (Uri) -> Boolean,
+): Boolean {
+    val soloIds = tracks.filter { it.isSolo }.map { it.id }.toSet()
+    return tracks.any { track ->
+        track.type != TrackType.TEXT && track.isVisible && !track.isMuted && track.volume > 0f &&
+            (soloIds.isEmpty() || track.id in soloIds) &&
+            track.clips.any { clip ->
+                clip.volume > 0f && track.effectiveTimelineStartMs(clip) < endMs &&
+                    track.effectiveTimelineEndMs(clip) > startMs && sourceHasAudio(clip.sourceUri)
+            }
+    }
 }
 
 /** What a finished file of this kind should hold, before anything has been read back. */
@@ -318,6 +353,7 @@ internal fun requestedExportContract(
     expectedDurationMs: Long,
     fallbackSummary: String? = null,
     degradationSummary: String? = null,
+    timelineHasAudio: Boolean = false,
 ): ExportContractReport {
     val extension = outputExtension.lowercase()
     val kind = when {
@@ -344,6 +380,7 @@ internal fun requestedExportContract(
                 requestedHeight = safe.height,
                 requestedFrameRate = config.frameRate,
                 requestedFastStart = config.requiresStreamSafeOutput(extension),
+                requestedAudioTrack = timelineHasAudio,
                 expectedDurationMs = duration,
             )
         }
@@ -541,6 +578,7 @@ private fun ExportContractReport.toJson(): JSONObject = JSONObject().apply {
     putNullable("requestedMaxWidth", requestedMaxWidth)
     putNullable("requestedFrameRate", requestedFrameRate)
     put("requestedFastStart", requestedFastStart)
+    put("requestedAudioTrack", requestedAudioTrack)
     putNullable("expectedDurationMs", expectedDurationMs)
     putNullable("fallbackSummary", fallbackSummary)
     putNullable("degradationSummary", degradationSummary)
@@ -597,6 +635,7 @@ private fun exportContractFromJson(json: JSONObject): ExportContractReport? {
         requestedMaxWidth = json.optNullableInt("requestedMaxWidth"),
         requestedFrameRate = json.optNullableInt("requestedFrameRate"),
         requestedFastStart = json.optBoolean("requestedFastStart"),
+        requestedAudioTrack = json.optBoolean("requestedAudioTrack"),
         expectedDurationMs = json.optNullableLong("expectedDurationMs"),
         fallbackSummary = json.optNullableString("fallbackSummary"),
         degradationSummary = json.optNullableString("degradationSummary"),

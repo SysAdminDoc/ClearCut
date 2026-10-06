@@ -74,6 +74,13 @@ internal fun ExportContractLines(entry: ExportHistoryEntry) {
             style = MaterialTheme.typography.bodySmall,
         )
     }
+    if (disposition == ExportContractDisposition.DEGRADED && contract.fallbackSummary != null) {
+        Text(
+            text = stringResource(R.string.export_contract_fallback_also),
+            color = ClearCutAccents.Teal,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
 
 @Composable
@@ -116,7 +123,9 @@ private fun requestedValue(contract: ExportContractReport, field: ExportContract
 private fun observedValue(observed: ExportObservation, field: ExportContractField): String = when (field) {
     ExportContractField.CONTAINER -> observed.container
     ExportContractField.VIDEO_CODEC -> observed.videoMimeType?.let(::codecLabel)
+    // The only way a missing audio track lands here is a mix that had sound.
     ExportContractField.AUDIO_CODEC -> observed.audioMimeType?.let(::codecLabel)
+        ?: stringResource(R.string.export_contract_no_audio)
     ExportContractField.SIZE -> sizeText(observed.width, observed.height)
     ExportContractField.FRAME_RATE -> observed.frameRate?.let {
         stringResource(R.string.export_contract_fps, frameRateText(it))

@@ -58,6 +58,7 @@ import com.novacut.editor.engine.finalizeFilenameSize
 import com.novacut.editor.engine.querySourceSize
 import com.novacut.editor.engine.reorderBatchExportItems
 import com.novacut.editor.engine.sanitizeFileName
+import com.novacut.editor.engine.timelineHasAudibleAudio
 import com.novacut.editor.engine.writeFileAtomically
 import com.novacut.editor.engine.writeUtf8TextAtomically
 import com.novacut.editor.model.BatchExportItem
@@ -412,6 +413,11 @@ class ExportDelegate(
             tracks = sourceState.tracks,
             fallbackSummary = runtimeExportNote,
             degradationSummary = acceptedFallbackNote,
+            // The export just probed these sources, so the lookups hit its cache.
+            timelineHasAudio = status == ExportHistoryStatus.COMPLETE && timelineHasAudibleAudio(
+                sourceState.tracks, resolvedRange?.startMs ?: 0L, resolvedRange?.endMs ?: Long.MAX_VALUE,
+                videoEngine::hasAudioTrack,
+            ),
         )
         scope.launch(Dispatchers.IO) {
             var history = exportHistoryStore.append(entry)

@@ -3421,4 +3421,6 @@
     <string name="export_contract_on">activado</string>
     <string name="export_contract_off">desactivado</string>
     <string name="export_contract_unknown">desconocido</string>
+    <string name="export_contract_no_audio">sin audio</string>
+    <string name="export_contract_fallback_also">También se hizo con un codificador o una ruta alternativa</string>
 </resources>
