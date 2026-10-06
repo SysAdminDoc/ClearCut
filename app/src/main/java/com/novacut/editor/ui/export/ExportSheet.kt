@@ -1922,6 +1922,7 @@ internal fun ExportHistoryRow(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                ExportContractLines(entry)
                 entry.requestedColor?.let { requested ->
                     val observed = entry.observedColor
                     Text(

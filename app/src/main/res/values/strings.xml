@@ -3676,4 +3676,22 @@
     <string name="crash_notice_clip_label">ClearCut crash summary</string>
     <string name="settings_diagnostic_heap_dump">Include the last memory dump</string>
     <string name="settings_diagnostic_heap_dump_description">On Android 17 and later, Android saves a snapshot of ClearCut\'s memory when it runs out or goes over its memory limit. This adds the newest one to a diagnostic ZIP. Off by default: it holds whatever was open at the time, project names, captions and file paths included, and it can\'t be redacted. It can also be hundreds of megabytes.</string>
+    <string name="export_contract_exact">Checked: matches what you asked for</string>
+    <string name="export_contract_fallback">Checked: made with a fallback encoder or path</string>
+    <string name="export_contract_degraded">Checked: differs from what you asked for</string>
+    <string name="export_contract_degraded_accepted">Checked: has the differences you accepted before exporting</string>
+    <string name="export_contract_rejected">Checked: the file didn\'t pass (%1$s)</string>
+    <string name="export_contract_unverified">Not checked against what you asked for</string>
+    <string name="export_contract_mismatch">%1$s: asked for %2$s, got %3$s</string>
+    <string name="export_contract_field_container">Format</string>
+    <string name="export_contract_field_video_codec">Video codec</string>
+    <string name="export_contract_field_audio_codec">Audio codec</string>
+    <string name="export_contract_field_size">Size</string>
+    <string name="export_contract_field_frame_rate">Frame rate</string>
+    <string name="export_contract_field_fast_start">Fast start for web playback</string>
+    <string name="export_contract_fps">%1$s fps</string>
+    <string name="export_contract_max_width">width up to %1$d</string>
+    <string name="export_contract_on">on</string>
+    <string name="export_contract_off">off</string>
+    <string name="export_contract_unknown">unknown</string>
 </resources>

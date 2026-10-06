@@ -15,6 +15,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.novacut.editor.R
 import com.novacut.editor.engine.BatchExportPlanContext
 import com.novacut.editor.engine.BatchExportPlanStore
+import com.novacut.editor.engine.ExportContractDisposition
+import com.novacut.editor.engine.ExportContractField
 import com.novacut.editor.engine.ExportHistoryEntry
 import com.novacut.editor.engine.ExportHistoryStatus
 import com.novacut.editor.engine.ExportHistoryStore
@@ -137,6 +139,35 @@ class ExportServiceInterruptionInstrumentationTest {
             state.value.export.history.any { it.id == interrupted.id },
         )
         assertEquals(0, pendingMediaStoreRows())
+    }
+
+    @Test
+    fun aFinishedExportIsReadBackAgainstWhatItAskedFor() {
+        val (state, delegate, _) = buildDelegate(refuseServiceStart = false)
+        val outputDir = File(workDir, "contract").apply { mkdirs() }
+
+        instrumentation.runOnMainSync {
+            delegate.startExport(outputDir = outputDir, preferredOutputName = "contract-export")
+        }
+        val completed = waitForHistory(state, timeoutMs = 240_000L) { it.status == ExportHistoryStatus.COMPLETE }
+
+        val contract = requireNotNull(completed.contract) { "a finished export has no contract" }
+        val observed = requireNotNull(contract.observed) { "the finished file was never read back" }
+        assertTrue("the file failed its check: ${observed.failure}", observed.valid)
+        assertEquals("video/avc", contract.requestedVideoMimeType)
+        assertEquals("video/avc", observed.videoMimeType)
+        assertEquals("audio/mp4a-latm", observed.audioMimeType)
+        assertEquals("MP4", observed.container)
+        assertEquals(contract.requestedWidth, observed.width)
+        assertEquals(contract.requestedHeight, observed.height)
+        assertEquals(emptyList<ExportContractField>(), contract.mismatches)
+        val expected = if (contract.fallbackSummary == null) {
+            ExportContractDisposition.EXACT
+        } else {
+            ExportContractDisposition.ACCEPTED_FALLBACK
+        }
+        assertEquals("fallback: ${contract.fallbackSummary}", expected, contract.disposition)
+        assertEquals(contract, ExportHistoryStore.forContext(target).read().first { it.id == completed.id }.contract)
     }
 
     @Test

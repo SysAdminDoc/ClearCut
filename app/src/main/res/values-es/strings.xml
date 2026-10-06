@@ -3403,4 +3403,22 @@
     <string name="crash_notice_clip_label">Resumen del cierre de ClearCut</string>
     <string name="settings_diagnostic_heap_dump">Incluir el último volcado de memoria</string>
     <string name="settings_diagnostic_heap_dump_description">En Android 17 y versiones posteriores, Android guarda una instantánea de la memoria de ClearCut cuando se queda sin memoria o supera su límite. Esto añade la más reciente a un ZIP de diagnóstico. Desactivado por defecto: contiene todo lo que estaba abierto en ese momento, incluidos nombres de proyectos, subtítulos y rutas de archivos, y no se puede redactar. También puede ocupar cientos de megabytes.</string>
+    <string name="export_contract_exact">Comprobado: coincide con lo que pediste</string>
+    <string name="export_contract_fallback">Comprobado: se hizo con un codificador o una ruta alternativa</string>
+    <string name="export_contract_degraded">Comprobado: no coincide con lo que pediste</string>
+    <string name="export_contract_degraded_accepted">Comprobado: incluye las diferencias que aceptaste antes de exportar</string>
+    <string name="export_contract_rejected">Comprobado: el archivo no pasó la comprobación (%1$s)</string>
+    <string name="export_contract_unverified">Sin comprobar frente a lo que pediste</string>
+    <string name="export_contract_mismatch">%1$s: pediste %2$s, salió %3$s</string>
+    <string name="export_contract_field_container">Formato</string>
+    <string name="export_contract_field_video_codec">Códec de video</string>
+    <string name="export_contract_field_audio_codec">Códec de audio</string>
+    <string name="export_contract_field_size">Tamaño</string>
+    <string name="export_contract_field_frame_rate">Velocidad de fotogramas</string>
+    <string name="export_contract_field_fast_start">Inicio rápido para reproducción web</string>
+    <string name="export_contract_fps">%1$s fps</string>
+    <string name="export_contract_max_width">ancho máximo de %1$d</string>
+    <string name="export_contract_on">activado</string>
+    <string name="export_contract_off">desactivado</string>
+    <string name="export_contract_unknown">desconocido</string>
 </resources>

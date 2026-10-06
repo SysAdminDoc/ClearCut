@@ -10,6 +10,7 @@ object ClearCutTestTags {
     const val CRASH_REPORT_SAVE = "projects.crashReport.save"
     const val CRASH_REPORT_COPY = "projects.crashReport.copy"
     const val CRASH_REPORT_DISMISS = "projects.crashReport.dismiss"
+    const val EXPORT_HISTORY_CONTRACT = "export.history.contract"
 
     const val TEMPLATE_SHEET = "templates.sheet"
     const val TEMPLATE_GRID = "templates.grid"

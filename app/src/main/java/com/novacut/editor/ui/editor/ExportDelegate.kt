@@ -410,6 +410,8 @@ class ExportDelegate(
             mediaWarningCount = healthReport?.warningCount ?: 0,
             mediaBlockingCount = healthReport?.blockingCount ?: 0,
             tracks = sourceState.tracks,
+            fallbackSummary = runtimeExportNote,
+            degradationSummary = acceptedFallbackNote,
         )
         scope.launch(Dispatchers.IO) {
             var history = exportHistoryStore.append(entry)
