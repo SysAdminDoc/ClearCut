@@ -65,6 +65,7 @@ class DiagnosticBundleBuilder @Inject constructor(
             permissionSnapshots = DiagnosticExportEngine.collectRuntimePermissionSnapshots(appContext),
             includeRawExportErrorText = settings.includeDiagnosticRawErrorText,
             issueBody = issueBody,
+            includeHeapDump = settings.includeDiagnosticHeapDump,
         )
         return Bundle(
             file = file,

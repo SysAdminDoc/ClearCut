@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import com.novacut.editor.engine.MediaPipeUsageGate
+import com.novacut.editor.engine.MemoryBudgetLedger
 import com.novacut.editor.engine.CodecInstanceBudget
 import com.novacut.editor.engine.ModelDownloadManager
 import com.google.mediapipe.framework.image.BitmapImageBuilder
@@ -54,10 +55,8 @@ class SegmentationEngine @Inject constructor(
         mediaPipeGate.registerRevocationHandler(::closeSegmenterOnRevoke)
     }
 
-    @Synchronized
     private fun closeSegmenterOnRevoke() {
-        segmenter?.close()
-        segmenter = null
+        closeSegmenter()
     }
 
     private val _modelState = MutableStateFlow(
@@ -80,6 +79,8 @@ class SegmentationEngine @Inject constructor(
         private const val MODEL_ESTIMATED_BYTES = 249_537L
 
         fun estimateModelSizeMB(): Int = 1 // ~256KB
+
+        private const val LEDGER_NAME = "mediapipe:selfie_segmenter.tflite"
     }
 
     private fun hasDownloadedModelFile(): Boolean {
@@ -312,6 +313,7 @@ class SegmentationEngine @Inject constructor(
 
             ImageSegmenter.createFromOptions(context, options).also {
                 segmenter = it
+                MemoryBudgetLedger.modelLoaded(LEDGER_NAME, modelBytes.size.toLong())
             }
         } catch (e: Exception) {
             null
@@ -319,8 +321,7 @@ class SegmentationEngine @Inject constructor(
     }
 
     fun deleteModel() {
-        segmenter?.close()
-        segmenter = null
+        closeSegmenter()
         // Delete only this engine's model file: the "mediapipe" dir is shared with
         // SmartReframeEngine's blaze_face_short_range.tflite, which a recursive
         // delete of modelDir would silently take down too.
@@ -335,7 +336,14 @@ class SegmentationEngine @Inject constructor(
     }
 
     fun release() {
-        segmenter?.close()
+        closeSegmenter()
+    }
+
+    @Synchronized
+    private fun closeSegmenter() {
+        val open = segmenter ?: return
         segmenter = null
+        open.close()
+        MemoryBudgetLedger.modelReleased(LEDGER_NAME)
     }
 }

@@ -3401,4 +3401,6 @@
     <string name="crash_notice_report_failed">No se pudo guardar el informe. Inténtalo de nuevo.</string>
     <string name="crash_notice_summary_copied">Resumen copiado. Pégalo en un issue nuevo de GitHub.</string>
     <string name="crash_notice_clip_label">Resumen del cierre de ClearCut</string>
+    <string name="settings_diagnostic_heap_dump">Incluir el último volcado de memoria</string>
+    <string name="settings_diagnostic_heap_dump_description">En Android 17 y versiones posteriores, Android guarda una instantánea de la memoria de ClearCut cuando se queda sin memoria o supera su límite. Esto añade la más reciente a un ZIP de diagnóstico. Desactivado por defecto: contiene todo lo que estaba abierto en ese momento, incluidos nombres de proyectos, subtítulos y rutas de archivos, y no se puede redactar. También puede ocupar cientos de megabytes.</string>
 </resources>

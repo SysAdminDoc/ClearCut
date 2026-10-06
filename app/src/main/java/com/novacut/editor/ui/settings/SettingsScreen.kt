@@ -626,6 +626,14 @@ fun SettingsScreen(
                 checked = settings.includeDiagnosticRawErrorText,
                 onChanged = viewModel::setIncludeDiagnosticRawErrorText
             )
+            SettingsSwitch(
+                icon = Icons.Default.Memory,
+                accent = ClearCutAccents.Peach,
+                label = stringResource(R.string.settings_diagnostic_heap_dump),
+                description = stringResource(R.string.settings_diagnostic_heap_dump_description),
+                checked = settings.includeDiagnosticHeapDump,
+                onChanged = viewModel::setIncludeDiagnosticHeapDump
+            )
             SettingsDiagnosticExportRow(
                 state = diagnosticExport,
                 onExport = viewModel::exportDiagnosticBundle,

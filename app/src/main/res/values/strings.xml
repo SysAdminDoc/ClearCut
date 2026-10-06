@@ -3674,4 +3674,6 @@
     <string name="crash_notice_report_failed">Couldn\'t save the report. Try again.</string>
     <string name="crash_notice_summary_copied">Summary copied. Paste it into a new GitHub issue.</string>
     <string name="crash_notice_clip_label">ClearCut crash summary</string>
+    <string name="settings_diagnostic_heap_dump">Include the last memory dump</string>
+    <string name="settings_diagnostic_heap_dump_description">On Android 17 and later, Android saves a snapshot of ClearCut\'s memory when it runs out or goes over its memory limit. This adds the newest one to a diagnostic ZIP. Off by default: it holds whatever was open at the time, project names, captions and file paths included, and it can\'t be redacted. It can also be hundreds of megabytes.</string>
 </resources>

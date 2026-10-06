@@ -205,13 +205,14 @@ class DiagnosticExportEngine @Inject constructor(
         retainCount: Int = 3,
         includeRawExportErrorText: Boolean = false,
         issueBody: String? = null,
+        includeHeapDump: Boolean = false,
     ): File {
         val zipFile = withContext(Dispatchers.IO) {
             val outDir = File(context.filesDir, DIAGNOSTIC_SHARE_DIR).apply { mkdirs() }
             val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
                 .format(Date(now))
             val output = File(outDir, "diagnostic-$stamp.zip")
-            writeBundle(output, modelRegistry, timelineShape, permissionSnapshots, now, includeRawExportErrorText, issueBody)
+            writeBundle(output, modelRegistry, timelineShape, permissionSnapshots, now, includeRawExportErrorText, issueBody, includeHeapDump)
             pruneOldBundles(outDir, retainCount)
             output
         }
@@ -232,6 +233,7 @@ class DiagnosticExportEngine @Inject constructor(
         now: Long = System.currentTimeMillis(),
         includeRawExportErrorText: Boolean = false,
         issueBody: String? = null,
+        includeHeapDump: Boolean = false,
     ): Long {
         target.parentFile?.mkdirs()
         val entries = linkedMapOf<String, ByteArray>()
@@ -264,12 +266,24 @@ class DiagnosticExportEngine @Inject constructor(
         }
         entries["product-health-ledger.json"] = productHealthLedger.diagnosticJson().toByteArray(Charsets.UTF_8)
         entries["logcat-tail.txt"] = buildLogcatTail().toByteArray(Charsets.UTF_8)
-        entries["manifest.txt"] = buildManifest(entries).toByteArray(Charsets.UTF_8)
+        // A heap dump holds whatever was in memory, project names and captions
+        // included, and no redaction can reach inside it, so it only goes in when
+        // the user turned it on. It's streamed: dumps run to hundreds of megabytes.
+        val heapDump = if (includeHeapDump) processExitRecorder.latestHeapDumpFile() else null
+        val heapDumpEntry = heapDump?.let { "memory-dump/" + it.name.replace(Regex("[^A-Za-z0-9._-]"), "_") }
+        val manifest = buildManifest(entries) +
+            (heapDumpEntry?.let { "$it\t${heapDump.length()} bytes (heap dump, included because it was turned on)\n" } ?: "")
+        entries["manifest.txt"] = manifest.toByteArray(Charsets.UTF_8)
         target.outputStream().use { fos ->
             ZipOutputStream(fos).use { zos ->
                 for ((name, bytes) in entries) {
                     zos.putNextEntry(ZipEntry(name))
                     zos.write(bytes)
+                    zos.closeEntry()
+                }
+                if (heapDump != null && heapDumpEntry != null) {
+                    zos.putNextEntry(ZipEntry(heapDumpEntry))
+                    heapDump.inputStream().use { it.copyTo(zos) }
                     zos.closeEntry()
                 }
             }

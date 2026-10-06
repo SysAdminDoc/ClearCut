@@ -3,6 +3,7 @@ package com.novacut.editor.engine
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import com.novacut.editor.engine.AppLog
+import java.io.File
 
 /**
  * Centralizes ONNX Runtime execution-provider selection for on-device models.
@@ -31,12 +32,14 @@ object OnnxSessionFactory {
         val session: OrtSession,
         val provider: ExecutionProvider,
         private val options: OrtSession.SessionOptions,
+        private val modelName: String,
     ) : AutoCloseable {
         override fun close() {
             try {
                 session.close()
             } finally {
                 options.close()
+                MemoryBudgetLedger.modelReleased(modelName)
             }
         }
     }
@@ -116,7 +119,8 @@ object OnnxSessionFactory {
             try {
                 val session = environment.createSession(modelPath, options)
                 AppLog.d(TAG, "Using XNNPACK for ${modelPath.substringAfterLast('/')}")
-                return SessionHandle(session, ExecutionProvider.XNNPACK, options)
+                MemoryBudgetLedger.modelLoaded(modelName(modelPath), File(modelPath).length())
+                return SessionHandle(session, ExecutionProvider.XNNPACK, options, modelName(modelPath))
             } catch (failure: Throwable) {
                 if (!isRecoverableProviderFailure(failure)) throw failure
                 closeQuietly(options)
@@ -133,7 +137,8 @@ object OnnxSessionFactory {
         return try {
             val session = environment.createSession(modelPath, cpuOptions)
             AppLog.d(TAG, "Using CPU for ${modelPath.substringAfterLast('/')}")
-            SessionHandle(session, ExecutionProvider.CPU, cpuOptions)
+            MemoryBudgetLedger.modelLoaded(modelName(modelPath), File(modelPath).length())
+            SessionHandle(session, ExecutionProvider.CPU, cpuOptions, modelName(modelPath))
         } catch (failure: Throwable) {
             closeQuietly(cpuOptions)
             throw failure
@@ -162,6 +167,9 @@ object OnnxSessionFactory {
             throw failure
         }
     }
+
+    /** The model's file name, which is all the memory ledger needs to tell models apart. */
+    private fun modelName(modelPath: String): String = "onnx:" + modelPath.substringAfterLast('/')
 
     private fun closeQuietly(options: OrtSession.SessionOptions?) {
         try {

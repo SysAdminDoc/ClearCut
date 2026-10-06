@@ -339,4 +339,47 @@ class DiagnosticExportBundlePrivacyTest {
             incidentStore.clear()
         }
     }
+
+    @Test
+    fun aHeapDumpGoesInOnlyWhenTurnedOn() {
+        val context = RuntimeEnvironment.getApplication().applicationContext as Context
+        val recorder = ProcessExitRecorder(context)
+        val dump = File(context.filesDir, "profiling/heap dump 1.hprof").apply {
+            parentFile?.mkdirs()
+            writeBytes(ByteArray(64 * 1024) { (it % 251).toByte() })
+        }
+        recorder.recordHeapDump(HeapDumpResult(ProcessExitRecorder.TRIGGER_TYPE_ANOMALY, 0, null, dump.path), nowEpochMs = 1_000L)
+        val engine = DiagnosticExportEngine(
+            context = context,
+            crashRecordStore = CrashRecordStore(context),
+            memoryTrimBreadcrumbStore = MemoryTrimBreadcrumbStore.forContextFilesDir(context.filesDir),
+            processExitRecorder = recorder,
+            settingsResetReportStore = SettingsResetReportStore(context),
+            exportIncidentStore = ExportIncidentStore.forContext(context),
+            productHealthLedger = ProductHealthLedger(context),
+        )
+        val withoutDump = temp.newFile("without-dump.zip")
+        val withDump = temp.newFile("with-dump.zip")
+
+        engine.writeBundle(withoutDump, modelRegistry = emptyList(), now = 1_718_200_000_000)
+        engine.writeBundle(withDump, modelRegistry = emptyList(), now = 1_718_200_000_000, includeHeapDump = true)
+
+        ZipFile(withoutDump).use { zip ->
+            assertFalse(zip.entries().toList().any { it.name.startsWith("memory-dump/") })
+            val manifest = zip.getInputStream(zip.getEntry("manifest.txt")).bufferedReader().use { it.readText() }
+            assertFalse(manifest.contains("memory-dump/"))
+            // Its name and size are still listed, without where it sits on the phone.
+            val exits = zip.getInputStream(zip.getEntry(ProcessExitRecorder.BUNDLE_ENTRY)).bufferedReader().use { it.readText() }
+            assertTrue(exits.contains("heap dump 1.hprof"))
+            assertFalse(exits.contains("profiling"))
+        }
+        ZipFile(withDump).use { zip ->
+            val entry = zip.getEntry("memory-dump/heap_dump_1.hprof")
+            assertTrue("The dump entry is missing", entry != null)
+            val bytes = zip.getInputStream(entry).use { it.readBytes() }
+            assertTrue(bytes.contentEquals(dump.readBytes()))
+            val manifest = zip.getInputStream(zip.getEntry("manifest.txt")).bufferedReader().use { it.readText() }
+            assertTrue(manifest.contains("memory-dump/heap_dump_1.hprof\t65536 bytes"))
+        }
+    }
 }

@@ -59,6 +59,7 @@ data class AppSettings(
      * call to make, explicitly.
      */
     val includeDiagnosticRawErrorText: Boolean = false,
+    val includeDiagnosticHeapDump: Boolean = false,
     val appearanceMode: AppearanceMode = AppearanceMode.DARK,
     // Opt-in passive update check for sideload / GitHub-release installs. Off by
     // default so no network request is ever made without explicit consent.
@@ -113,6 +114,7 @@ internal object SettingsPreferenceKeys {
     val ACOUSTID_KEY = stringPreferencesKey("acoustid_api_key")
     val INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE = booleanPreferencesKey("include_diagnostic_timeline_shape")
     val INCLUDE_DIAGNOSTIC_RAW_ERROR_TEXT = booleanPreferencesKey("include_diagnostic_raw_error_text")
+    val INCLUDE_DIAGNOSTIC_HEAP_DUMP = booleanPreferencesKey("include_diagnostic_heap_dump")
     val APPEARANCE_MODE = stringPreferencesKey("appearance_mode")
     val UPDATE_CHECK_ENABLED = booleanPreferencesKey("update_check_enabled")
     val MEDIA_PIPE_CONSENT_VERSION = intPreferencesKey("mediapipe_consent_version")
@@ -150,6 +152,7 @@ internal fun mapPreferencesToAppSettings(prefs: Preferences): AppSettings = AppS
     acoustIdApiKey = prefs[SettingsPreferenceKeys.ACOUSTID_KEY] ?: "",
     includeDiagnosticTimelineShape = prefs[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_TIMELINE_SHAPE] ?: false,
     includeDiagnosticRawErrorText = prefs[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_RAW_ERROR_TEXT] ?: false,
+    includeDiagnosticHeapDump = prefs[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_HEAP_DUMP] ?: false,
     appearanceMode = prefs[SettingsPreferenceKeys.APPEARANCE_MODE]?.enumOrNull<AppearanceMode>()
         ?: AppearanceMode.DARK,
     updateCheckEnabled = prefs[SettingsPreferenceKeys.UPDATE_CHECK_ENABLED] ?: false,
@@ -336,6 +339,10 @@ class SettingsRepository internal constructor(
 
     suspend fun updateIncludeDiagnosticRawErrorText(value: Boolean) {
         dataStore.edit { it[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_RAW_ERROR_TEXT] = value }
+    }
+
+    suspend fun updateIncludeDiagnosticHeapDump(value: Boolean) {
+        dataStore.edit { it[SettingsPreferenceKeys.INCLUDE_DIAGNOSTIC_HEAP_DUMP] = value }
     }
 
     suspend fun updateAppearanceMode(value: AppearanceMode) {

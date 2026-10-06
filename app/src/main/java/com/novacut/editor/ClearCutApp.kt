@@ -78,6 +78,7 @@ class ClearCutApp : Application(), Configuration.Provider {
         registerActivityLifecycleCallbacks(activityLifecycleCallbacks)
         CrashRecordStore(this).installGlobalHandler(VERSION)
         processExitRecorder.recordStartupExitReasons()
+        processExitRecorder.startMemoryCapture()
         createNotificationChannels()
         applicationScope.launch {
             mediaStorePendingRowSweeper.sweep()

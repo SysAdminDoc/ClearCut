@@ -292,6 +292,9 @@ class SettingsViewModel @Inject constructor(
     fun setIncludeDiagnosticRawErrorText(v: Boolean) =
         viewModelScope.launch { repo.updateIncludeDiagnosticRawErrorText(v) }
 
+    fun setIncludeDiagnosticHeapDump(v: Boolean) =
+        viewModelScope.launch { repo.updateIncludeDiagnosticHeapDump(v) }
+
     fun exportDiagnosticBundle() {
         if (_diagnosticExport.value.isExporting) return
         viewModelScope.launch {

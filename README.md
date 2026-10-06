@@ -477,6 +477,7 @@ Planning files are local-only in the development checkout:
 - Archive Transfer for local project rollback and device moves; remote sync remains planned behind explicit backend gates
 - **Editor walkthrough**: replayable on demand from Settings; it never opens automatically when an editor session starts
 - **Crash reports you control**: after a crash, or when Android closes ClearCut for not responding or running low on memory while it's in use, the projects screen offers to save the redacted diagnostic ZIP with a prefilled GitHub issue inside, or to copy the issue text. Nothing is sent anywhere unless you share it
+- **Memory kills explained**: when Android closes ClearCut for memory, including Android 17's per-app memory limit, the diagnostic ZIP records the phone's RAM size and what ClearCut was holding at the time (buffered audio, open models). On Android 17 and later you can also include the last heap dump, which stays off unless you turn it on
 
 ### Settings
 - Default resolution, frame rate, aspect ratio, export codec
