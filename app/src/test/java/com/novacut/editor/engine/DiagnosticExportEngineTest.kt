@@ -98,10 +98,10 @@ class DiagnosticExportEngineTest {
 
     @Test
     fun redactSensitive_stripsEmailAddresses() {
-        val line = "D/X: user matt@mavenimaging.com signed in"
+        val line = "D/X: user someone@example.org signed in"
         val redacted = DiagnosticExportEngine.redactSensitive(line)
-        assertFalse(redacted.contains("matt@"))
-        assertFalse(redacted.contains("mavenimaging"))
+        assertFalse(redacted.contains("someone@"))
+        assertFalse(redacted.contains("example.org"))
     }
 
     @Test
